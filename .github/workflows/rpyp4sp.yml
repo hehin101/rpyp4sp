@@ -1,0 +1,34 @@
+name: rpyp4sp
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: kaist-plrg/p4-spectec
+          path: p4-spectec
+
+      - name: install opam and dependencies
+        run: |
+          make install-opam-dependencies
+
+      - name: build p4-spectec
+        run: |
+          cd p4-spectec
+          make build-spec
+          cd ..
