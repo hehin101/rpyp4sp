@@ -3,6 +3,27 @@ class AstBase(object):
     def __eq__(self, other):
         return type(self) == type(other) and self.__dict__ == other.__dict__
 
+def define_enum(basename, *names):
+    class Base(AstBase):
+        @staticmethod
+        def fromjson(value):
+            content, = value
+            for name, cls in unrolling_tups:
+                if name == content:
+                    return cls()
+
+        def __repr__(self):
+            return type(self).__name__ + "()"
+    Base.__name__ = basename
+    subs = []
+    for name in names:
+        class Sub(Base):
+            pass
+        Sub.__name__ = name
+        subs.append(Sub)
+    unrolling_tups = [(name, cls) for name, cls in zip(names, subs)]
+    return [Base] + subs
+
 
 # type pos = { file : string; line : int; column : int } [@@deriving yojson]
 # type region = { left : pos; right : pos } [@@deriving yojson]
@@ -16,7 +37,7 @@ class Position(AstBase):
     @staticmethod
     def fromjson(value):
         return Position(value['file'], value['line'], value['column'])
-    
+
     def __repr__(self):
         return "Position(file=%s, line=%d, column=%d)" % (self.file, self.line, self.column)
 
@@ -47,7 +68,7 @@ class Id(AstBase):
     def __init__(self, value, region):
         self.value = value # type: str
         self.region = region # type: Region
-    
+
     @staticmethod
     def fromjson(value):
         """ example:{
@@ -67,7 +88,62 @@ class Id(AstBase):
 
     def __repr__(self):
         return "Id(value=%s, region=%s)" % (self.value, self.region)
+    
+class TParam(AstBase):
+    def __init__(self, value, region):
+        self.value = value # type: str
+        self.region = region # type: Region
 
+    @staticmethod
+    def fromjson(value):
+        return TParam(
+            value['it'],
+            Region.fromjson(value['at'])
+        )
+
+    def __repr__(self):
+        return "TParam(value=%s, region=%s)" % (self.value, self.region)
+
+# and targ = targ' phrase [@@deriving yojson]
+# and targ' = typ' [@@deriving yojson]
+
+class TArg(AstBase):
+    def __init__(self, typ, region):
+        self.typ = typ # type: Type
+        self.region = region # type: Region
+
+    @staticmethod
+    def fromjson(value):
+        return TArg(
+            Type.fromjson(value['it']),
+            Region.fromjson(value['at'])
+        )
+
+    def __repr__(self):
+        return "TArg(typ=%s, region=%s)" % (self.typ, self.region)
+
+
+# type iter =
+#   | Opt       (* `?` *)
+#   | List      (* `*` *)
+
+Iter, Opt, List = define_enum('Iter', 'Opt', 'List')
+
+# type var = id * typ * iter list
+
+class Var(AstBase):
+    def __init__(self, id, typ, iter):
+        self.id = id
+        self.typ = typ
+        self.iter = iter
+
+    @staticmethod
+    def fromjson(content):
+        return Var(
+            id=Id.fromjson(content[0]),
+            typ=Type.fromjson(content[1]),
+            iter=[Iter.fromjson(i) for i in content[2]]
+        )
 
 # type def = def' phrase
 # and def' =
@@ -81,14 +157,22 @@ class Id(AstBase):
 class Def(AstBase):
     @staticmethod
     def fromjson(value):
-        assert isinstance(value, list)
-        what = value[0]
+        assert value['note'] is None
+        region = Region.fromjson(value['at'])
+        content = value['it']
+        what = content[0]
+        assert isinstance(content, list)
+        what = content[0]
         if what == 'DecD':
-            return DecD.fromjson(value)
+            ast = DecD.fromjson(content)
         elif what == 'TypD':
-            return TypD.fromjson(value)
+            ast = TypD.fromjson(content)
         elif what == 'RelD':
-            return RelD.fromjson(value)
+            ast = RelD.fromjson(content)
+        else:
+            raise ValueError("Unknown Def type: %s" % what)
+        ast.region = region
+        return ast
 
 
 class TypD(Def):
@@ -101,11 +185,11 @@ class TypD(Def):
     def fromjson(value):
         _, id, tparams_value, deftype_value = value
         tparams = [TParam.fromjson(p) for p in tparams_value]
-        deftype = DefType.fromjson(deftype_value)
+        deftyp = DefTyp.fromjson(deftype_value)
         return TypD(
             id=Id.fromjson(id),
             tparams=tparams,
-            deftype=deftype
+            deftyp=deftyp
         )
 
 
@@ -150,3 +234,1087 @@ class DecD(Def):
             args=args,
             instrs=instrs
         )
+
+# and arg = arg' phrase
+# and arg' =
+#   | ExpA of exp   (* exp *)
+#   | DefA of id    (* `$`id *)
+
+class Arg(AstBase):
+    @staticmethod
+    def fromjson(value):
+        assert value['note'] is None
+        region = Region.fromjson(value['at'])
+        content = value['it']
+        what = content[0]
+        assert isinstance(content, list)
+        what = content[0]
+        if what == 'ExpA':
+            return ExpA.fromjson(content)
+        elif what == 'DefA':
+            return DefA.fromjson(content)
+        else:
+            raise ValueError("Unknown Arg type: %s" % what)
+
+class ExpA(Arg):
+    def __init__(self, exp):
+        self.exp = exp # typ: Exp
+
+    @staticmethod
+    def fromjson(value):
+        assert isinstance(value, list)
+        _, exp_value = value
+        return ExpA(
+            exp=Exp.fromjson(exp_value)
+        )
+
+class DefA(Arg):
+    def __init__(self, id):
+        self.id = id # typ: Id
+
+    @staticmethod
+    def fromjson(value):
+        assert isinstance(value, list)
+        _, id_value = value
+        return DefA(
+            id=Id.fromjson(id_value)
+        )
+
+# and exp = (exp', typ') note_phrase
+# and exp' =
+#   | BoolE of bool                         (* bool *)
+#   | NumE of num                           (* num *)
+#   | TextE of text                         (* text *)
+#   | VarE of id                            (* varid *)
+#   | UnE of unop * optyp * exp             (* unop exp *)
+#   | BinE of binop * optyp * exp * exp     (* exp binop exp *)
+#   | CmpE of cmpop * optyp * exp * exp     (* exp cmpop exp *)
+#   | UpCastE of typ * exp                  (* exp as typ *)
+#   | DownCastE of typ * exp                (* exp as typ *)
+#   | SubE of exp * typ                     (* exp `<:` typ *)
+#   | MatchE of exp * pattern               (* exp `matches` pattern *)
+#   | TupleE of exp list                    (* `(` exp* `)` *)
+#   | CaseE of notexp                       (* notexp *)
+#   | StrE of (atom * exp) list             (* { expfield* } *)
+#   | OptE of exp option                    (* exp? *)
+#   | ListE of exp list                     (* `[` exp* `]` *)
+#   | ConsE of exp * exp                    (* exp `::` exp *)
+#   | CatE of exp * exp                     (* exp `++` exp *)
+#   | MemE of exp * exp                     (* exp `<-` exp *)
+#   | LenE of exp                           (* `|` exp `|` *)
+#   | DotE of exp * atom                    (* exp.atom *)
+#   | IdxE of exp * exp                     (* exp `[` exp `]` *)
+#   | SliceE of exp * exp * exp             (* exp `[` exp `:` exp `]` *)
+#   | UpdE of exp * path * exp              (* exp `[` path `=` exp `]` *)
+#   | CallE of id * targ list * arg list    (* $id`<` targ* `>``(` arg* `)` *)
+#   | HoldE of id * notexp                  (* id `:` notexp `holds` *)
+#   | IterE of exp * iterexp                (* exp iterexp *)
+
+
+class Exp(AstBase):
+    # has .typ (with is in 'note' field of json) and a region
+
+    @staticmethod
+    def fromjson(value):
+        typ = Type.fromjson(value['note'])
+        region = Region.fromjson(value['at'])
+        content = value['it']
+        what = content[0]
+        if what == 'BoolE':
+            ast = BoolE.fromjson(content)
+        elif what == 'NumE':
+            ast = NumE.fromjson(content)
+        elif what == 'TextE':
+            ast = TextE.fromjson(content)
+        elif what == 'VarE':
+            ast = VarE.fromjson(content)
+        elif what == 'UnE':
+            ast = UnE.fromjson(content)
+        elif what == 'BinE':
+            ast = BinE.fromjson(content)
+        elif what == 'CmpE':
+            ast = CmpE.fromjson(content)
+        elif what == 'UpCastE':
+            ast = UpCastE.fromjson(content)
+        elif what == 'DownCastE':
+            ast = DownCastE.fromjson(content)
+        elif what == 'SubE':
+            ast = SubE.fromjson(content)
+        elif what == 'MatchE':
+            ast = MatchE.fromjson(content)
+        elif what == 'TupleE':
+            ast = TupleE.fromjson(content)
+        elif what == 'CaseE':
+            ast = CaseE.fromjson(content)
+        elif what == 'StrE':
+            ast = StrE.fromjson(content)
+        elif what == 'OptE':
+            ast = OptE.fromjson(content)
+        elif what == 'ListE':
+            ast = ListE.fromjson(content)
+        elif what == 'ConsE':
+            ast = ConsE.fromjson(content)
+        elif what == 'CatE':
+            ast = CatE.fromjson(content)
+        elif what == 'MemE':
+            ast = MemE.fromjson(content)
+        elif what == 'LenE':
+            ast = LenE.fromjson(content)
+        elif what == 'DotE':
+            ast = DotE.fromjson(content)
+        elif what == 'IdxE':
+            ast = IdxE.fromjson(content)
+        elif what == 'SliceE':
+            ast = SliceE.fromjson(content)
+        elif what == 'UpdE':
+            ast = UpdE.fromjson(content)
+        elif what == 'CallE':
+            ast = CallE.fromjson(content)
+        elif what == 'HoldE':
+            ast = HoldE.fromjson(content)
+        elif what == 'IterE':
+            ast = IterE.fromjson(content)
+        else:
+            raise ValueError("Unknown Exp type: %s" % what)
+        ast.typ = typ
+        ast.region = region
+        return ast
+
+class BoolE(Exp):
+    def __init__(self, value):
+        assert isinstance(value, bool)
+        self.value = value # typ: bool
+
+    @staticmethod
+    def fromjson(content):
+        return BoolE(
+            value=content[1]
+        )
+
+class NumE(Exp):
+    def __init__(self, value):
+        self.value = value
+
+    @staticmethod
+    def fromjson(content):
+        return NumE(
+            # TODO
+            value=content[1]
+        )
+
+class TextE(Exp):
+    def __init__(self, value):
+        self.value = value # typ: str
+
+    @staticmethod
+    def fromjson(content):
+        return TextE(
+            value=content[1]
+        )
+
+class VarE(Exp):
+    def __init__(self, id):
+        self.id = id # typ: id
+
+    @staticmethod
+    def fromjson(content):
+        return VarE(
+            id=Id.fromjson(content[1])
+        )
+
+class UnE(Exp):
+    #   | UnE of unop * optyp * exp             (* unop exp *)
+    def __init__(self, op, exp):
+        self.op = op # typ: unop
+        self.exp = exp # typ: Exp
+
+    @staticmethod
+    def fromjson(content):
+        return UnE(
+            op=content[1],
+            exp=Exp.fromjson(content[2])
+        )
+
+class BinE(Exp):
+    #   | BinE of binop * optyp * exp * exp     (* exp binop exp *)
+    def __init__(self, binop, optyp, left, right):
+        self.binop = binop # typ: binop
+        self.optyp = optyp # typ: optyp
+        self.left = left # typ: Exp
+        self.right = right # typ: Exp
+
+    @staticmethod
+    def fromjson(content):
+        return BinE(
+            binop=content[1],
+            optyp=content[2],
+            left=Exp.fromjson(content[3]),
+            right=Exp.fromjson(content[4])
+        )
+
+class CmpE(Exp):
+#   | CmpE of cmpop * optyp * exp * exp     (* exp cmpop exp *)
+    def __init__(self, cmpop, optyp, left, right):
+        self.cmpop = cmpop # typ: cmpop
+        self.optyp = optyp # typ: optyp
+        self.left = left # typ: Exp
+        self.right = right # typ: Exp
+
+    @staticmethod
+    def fromjson(content):
+        return CmpE(
+            cmpop=content[1],
+            optyp=content[2],
+            left=Exp.fromjson(content[3]),
+            right=Exp.fromjson(content[4])
+        )
+
+class UpCastE(Exp):
+#   | UpCastE of typ * exp                  (* exp as typ *)
+    def __init__(self, typ, exp):
+        self.typ = typ # typ: Typ
+        self.exp = exp # typ: Exp
+
+    @staticmethod
+    def fromjson(content):
+        return UpCastE(
+            typ=Type.fromjson(content[1]),
+            exp=Exp.fromjson(content[2]),
+        )
+
+class DownCastE(Exp):
+#   | DownCastE of typ * exp                (* exp as typ *)
+    def __init__(self, typ, exp):
+        self.typ = typ # typ: typ
+        self.exp = exp # typ: exp
+
+    @staticmethod
+    def fromjson(content):
+        return DownCastE(
+            typ=Type.fromjson(content[1]),
+            exp=Exp.fromjson(content[2]),
+        )
+
+class SubE(Exp):
+#   | SubE of exp * typ                     (* exp `<:` typ *)
+    def __init__(self, exp, typ):
+        self.exp = exp
+        self.typ = typ
+
+    @staticmethod
+    def fromjson(content):
+        return SubE(
+            exp=Exp.fromjson(content[1]),
+            typ=Type.fromjson(content[2])
+        )
+
+class MatchE(Exp):
+#   | MatchE of exp * pattern               (* exp `matches` pattern *)
+    def __init__(self, exp, pattern):
+        self.exp = exp
+        self.pattern = pattern
+
+    @staticmethod
+    def fromjson(content):
+        return MatchE(
+            exp=Exp.fromjson(content[1]),
+            pattern=Pattern.fromjson(content[2])
+        )
+
+class TupleE(Exp):
+#   | TupleE of exp list                    (* `(` exp* `)` *)
+    def __init__(self, elts):
+        self.elts = elts # typ: exp list
+
+    @staticmethod
+    def fromjson(content):
+        return TupleE(
+            elts=[Exp.fromjson(elt) for elt in content[1]]
+        )
+
+class CaseE(Exp):
+#   | CaseE of notexp                       (* notexp *)
+    def __init__(self, notexp):
+        self.notexp = notexp
+
+    @staticmethod
+    def fromjson(content):
+        return CaseE(
+            notexp=NotExp.fromjson(content[1])
+        )
+
+class StrE(Exp):
+#   | StrE of (atom * exp) list             (* { expfield* } *)
+    @staticmethod
+    def fromjson(content):
+        assert 0
+
+class OptE(Exp):
+#   | OptE of exp option                    (* exp? *)
+    def __init__(self, exp):
+        self.exp = exp # typ: Exp | None
+
+    @staticmethod
+    def fromjson(content):
+        if content[1] is None:
+            return OptE(exp=None)
+        return OptE(
+            exp=Exp.fromjson(content[1])
+        )
+
+class ListE(Exp):
+#   | ListE of exp list                     (* `[` exp* `]` *)
+    def __init__(self, elts):
+        self.elts = elts # typ: exp list
+
+    @staticmethod
+    def fromjson(content):
+        return ListE(
+            elts=[Exp.fromjson(elt) for elt in content[1]]
+        )
+
+class ConsE(Exp):
+#   | ConsE of exp * exp                    (* exp `::` exp *)
+    def __init__(self, head, tail):
+        self.head = head # typ: exp
+        self.tail = tail # typ: exp
+
+    @staticmethod
+    def fromjson(content):
+        return ConsE(
+            head=Exp.fromjson(content[1]),
+            tail=Exp.fromjson(content[2])
+        )
+
+class CatE(Exp):
+#   | CatE of exp * exp                     (* exp `++` exp *)
+    def __init__(self, left, right):
+        self.left = left # typ: exp
+        self.right = right # typ: exp
+
+    @staticmethod
+    def fromjson(content):
+        return CatE(
+            left=Exp.fromjson(content[1]),
+            right=Exp.fromjson(content[2])
+        )
+
+
+class MemE(Exp):
+#   | MemE of exp * exp                     (* exp `<-` exp *)
+    def __init__(self, elem, lst):
+        self.elem = elem # typ: exp
+        self.lst = lst # typ: exp
+
+    @staticmethod
+    def fromjson(content):
+        return MemE(
+            elem=Exp.fromjson(content[1]),
+            lst=Exp.fromjson(content[2])
+        )
+
+class LenE(Exp):
+#   | LenE of exp                           (* `|` exp `|` *)
+    def __init__(self, lst):
+        self.lst = lst # typ: exp
+
+    @staticmethod
+    def fromjson(content):
+        return LenE(
+            lst=Exp.fromjson(content[1])
+        )
+
+class DotE(Exp):
+#   | DotE of exp * atom                    (* exp.atom *)
+    def __init__(self, obj, field):
+        self.obj = obj # typ: exp
+        self.field = field # typ: string
+
+    @staticmethod
+    def fromjson(content):
+        import pdb;pdb.set_trace()
+        return DotE(
+            obj=Exp.fromjson(content[1]),
+            field=content[2]
+        )
+
+class IdxE(Exp):
+#   | IdxE of exp * exp                     (* exp `[` exp `]` *)
+    def __init__(self, lst, idx):
+        self.lst = lst # typ: exp
+        self.idx = idx # typ: exp
+
+    @staticmethod
+    def fromjson(content):
+        return IdxE(
+            lst=Exp.fromjson(content[1]),
+            idx=Exp.fromjson(content[2])
+        )
+
+class SliceE(Exp):
+#   | SliceE of exp * exp * exp             (* exp `[` exp `:` exp `]` *)
+    def __init__(self, lst, start, stop):
+        self.lst = lst # typ: exp
+        self.start = start # typ: exp
+        self.stop = stop # typ: exp
+
+    @staticmethod
+    def fromjson(content):
+        return SliceE(
+            lst=Exp.fromjson(content[1]),
+            start=Exp.fromjson(content[2]),
+            stop=Exp.fromjson(content[3])
+        )
+
+class UpdE(Exp):
+#   | UpdE of exp * path * exp              (* exp `[` path `=` exp `]` *)
+    pass
+
+class CallE(Exp):
+#   | CallE of id * targ list * arg list    (* $id`<` targ* `>``(` arg* `)` *)
+    def __init__(self, func, targs, args):
+        self.func = func # typ: Id
+        self.targs = targs
+        self.args = args # typ: exp list
+
+    @staticmethod
+    def fromjson(content):
+        return CallE(
+            func=Id.fromjson(content[1]),
+            targs=[TArg.fromjson(targ) for targ in content[2]],
+            args=[Arg.fromjson(arg) for arg in content[3]]
+        )
+
+class HoldE(Exp):
+#   | HoldE of id * notexp                  (* id `:` notexp `holds` *)
+    pass
+
+class IterE(Exp):
+#   | IterE of exp * iterexp                (* exp iterexp *)
+    def __init__(self, exp, iter):
+        self.exp = exp
+        self.iter = iter
+
+    @staticmethod
+    def fromjson(content):
+        return IterE(
+            exp=Exp.fromjson(content[1]),
+            iter=content[2]
+        )
+
+# and notexp = mixop * exp list
+
+class NotExp(AstBase):
+    def __init__(self, mixop, exps):
+        self.mixop = mixop
+        self.exps = exps
+
+    @staticmethod
+    def fromjson(content):
+        return NotExp(
+            mixop=MixOp.fromjson(content[0]),
+            exps=[Exp.fromjson(exp) for exp in content[1]]
+        )
+    def __repr__(self):
+        return "NotExp(%s, %s)" % (self.mixop, self.exps)
+
+# and iterexp = iter * var list
+
+
+# _________________________________________________________________
+
+
+# type typ = [ `NatT | `IntT ] [@@deriving yojson]
+
+NumTyp, NatT, IntT = define_enum('NumTyp', 'NatT', 'IntT')
+
+# types
+#   | NumT of Num.typ         (* numtyp *)
+#   | TextT                   (* `text` *)
+#   | VarT of id * targ list  (* id (`<` list(targ, `,`) `>`)? *)
+#   | TupleT of typ list      (* `(` list(typ, `,`) `)` *)
+#   | IterT of typ * iter     (* typ iter *)
+#   | FuncT                   (* `func` *)
+
+class Type(AstBase):
+    # has a .region, but only sometimes (eg exp uses typ')
+    @staticmethod
+    def fromjson(value):
+        if isinstance(value, dict):
+            region = Region.fromjson(value['at'])
+            content = value['it']
+        else:
+            region = None
+            content = value
+        what = content[0]
+        if what == 'BoolT':
+            ast = BoolT.fromjson(content)
+        elif what == 'NumT':
+            ast = NumT.fromjson(content)
+        elif what == 'TextT':
+            ast = TextT.fromjson(content)
+        elif what == 'VarT':
+            ast = VarT.fromjson(content)
+        elif what == 'TupleT':
+            ast = TupleT.fromjson(content)
+        elif what == 'IterT':
+            ast = IterT.fromjson(content)
+        elif what == 'FuncT':
+            ast = FuncT.fromjson(content)
+        else:
+            raise ValueError("Unknown Type: %s" % what)
+        ast.region = region
+        return ast
+
+class BoolT(Type):
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def fromjson(content):
+        return BoolT()
+
+class NumT(Type):
+    def __init__(self, typ):
+        self.typ = typ
+
+    @staticmethod
+    def fromjson(content):
+        return NumT(NumTyp.fromjson(content[1]))
+
+
+class TextT(Type):
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def fromjson(content):
+        return TextT()
+
+class VarT(Type):
+    def __init__(self, id, targs):
+        self.id = id
+        self.targs = targs
+
+    @staticmethod
+    def fromjson(content):
+        return VarT(
+            id=content[1],
+            targs=[Type.fromjson(targ) for targ in content[2]]
+        )
+
+class TupleT(Type):
+    def __init__(self, elts):
+        self.elts = elts
+
+    @staticmethod
+    def fromjson(content):
+        return TupleT(
+            elts=[Type.fromjson(elt) for elt in content[1]]
+        )
+
+class IterT(Type):
+    def __init__(self, typ, iter):
+        self.typ = typ
+        self.iter = iter
+
+    @staticmethod
+    def fromjson(content):
+        return IterT(
+            typ=Type.fromjson(content[1]),
+            iter=content[2]
+        )
+
+class FuncT(Type):
+    def __init__(self, params, ret):
+        self.params = params
+        self.ret = ret
+
+    @staticmethod
+    def fromjson(content):
+        return FuncT(
+            params=[Type.fromjson(param) for param in content[1]],
+            ret=Type.fromjson(content[2])
+        )
+
+# and nottyp = nottyp' phrase
+# [@@deriving yojson]
+# and nottyp' = mixop * typ list
+# [@@deriving yojson]
+
+class NotTyp(AstBase):
+    def __init__(self, mixop, typs):
+        self.mixop = mixop
+        self.typs = typs
+
+    @staticmethod
+    def fromjson(value):
+        region = Region.fromjson(value['at'])
+        content = value['it']
+        return NotTyp(
+            mixop=MixOp.fromjson(content[0]),
+            typs=[Type.fromjson(typ) for typ in content[1]]
+        )
+
+# and deftyp = deftyp' phrase
+# and deftyp' =
+#   | PlainT of typ
+#   | StructT of typfield list
+#   | VariantT of typcase list
+
+class DefTyp(AstBase):
+    # base class
+    @staticmethod
+    def fromjson(value):
+        region = Region.fromjson(value['at'])
+        content = value['it']
+        what = content[0]
+        if what == 'PlainT':
+            ast = PlainT.fromjson(content)
+        elif what == 'StructT':
+            ast = StructT.fromjson(content)
+        elif what == 'VariantT':
+            ast = VariantT.fromjson(content)
+        else:
+            raise ValueError("Unknown DefTyp: %s" % what)
+        ast.region = region
+        return ast
+    
+class PlainT(DefTyp):
+    def __init__(self, typ):
+        self.typ = typ
+
+    @staticmethod
+    def fromjson(content):
+        return PlainT(
+            typ=Type.fromjson(content[1])
+        )
+
+    def __repr__(self):
+        return "PlainT(typ=%s)" % (self.typ,)
+
+class StructT(DefTyp):
+    def __init__(self, fields):
+        self.fields = fields
+
+    @staticmethod
+    def fromjson(content):
+        return StructT(
+            fields=[TypeField.fromjson(field) for field in content[1]]
+        )
+
+    def __repr__(self):
+        return "StructT(fields=%s)" % (self.fields,)
+
+class VariantT(DefTyp):
+    def __init__(self, cases):
+        self.cases = cases
+
+    @staticmethod
+    def fromjson(content):
+        return VariantT(
+            cases=[TypeCase.fromjson(case) for case in content[1]]
+        )
+
+    def __repr__(self):
+        return "VariantT(cases=%s)" % (self.cases,)
+
+# and typfield = atom * typ
+# and typcase = nottyp
+
+TypeCase = NotTyp
+
+# _____________________________________
+# instrs
+
+# and instr = instr' phrase [@@deriving yojson]
+# and instr' =
+#   | IfI of exp * iterexp list * instr list * phantom option
+#   | CaseI of exp * case list * phantom option 
+#   | OtherwiseI of instr
+#   | LetI of exp * exp * iterexp list
+#   | RuleI of id * notexp * iterexp list
+#   | ResultI of exp list
+#   | ReturnI of exp
+
+class Instr(AstBase):
+    # has a .region
+    @staticmethod
+    def fromjson(value):
+        assert value['note'] is None
+        region = Region.fromjson(value['at'])
+        content = value['it']
+        what = content[0]
+        if what == 'IfI':
+            ast = IfI.fromjson(content)
+        elif what == 'CaseI':
+            ast = CaseI.fromjson(content)
+        elif what == 'OtherwiseI':
+            ast = OtherwiseI.fromjson(content)
+        elif what == 'LetI':
+            ast = LetI.fromjson(content)
+        elif what == 'RuleI':
+            ast = RuleI.fromjson(content)
+        elif what == 'ResultI':
+            ast = ResultI.fromjson(content)
+        elif what == 'ReturnI':
+            ast = ReturnI.fromjson(content)
+        else:
+            raise ValueError("Unknown Instr: %s" % what)
+        ast.region = region
+        return ast
+
+class IfI(Instr):
+    def __init__(self, exp, iters, instrs, phantom):
+        self.exp = exp
+        self.iters = iters
+        self.instrs = instrs
+        self.phantom = phantom
+
+    @staticmethod
+    def fromjson(content):
+        return IfI(
+            exp=Exp.fromjson(content[1]),
+            iters=[IterExp.fromjson(ite) for ite in content[2]],
+            instrs=[Instr.fromjson(instr) for instr in content[3]],
+            phantom=content[4]
+        )
+
+class CaseI(Instr):
+    def __init__(self, exp, cases, phantom):
+        self.exp = exp
+        self.cases = cases
+        self.phantom = phantom
+
+    @staticmethod
+    def fromjson(content):
+        return CaseI(
+            exp=Exp.fromjson(content[1]),
+            cases=[Case.fromjson(case) for case in content[2]],
+            phantom=content[3]
+        )
+
+class OtherwiseI(Instr):
+    def __init__(self, instr):
+        self.instr = instr
+
+    @staticmethod
+    def fromjson(content):
+        return OtherwiseI(
+            instr=Instr.fromjson(content[1])
+        )
+
+class LetI(Instr):
+    def __init__(self, var, value, iters):
+        self.var = var
+        self.value = value
+        self.iters = iters
+
+    @staticmethod
+    def fromjson(content):
+        return LetI(
+            var=Exp.fromjson(content[1]),
+            value=Exp.fromjson(content[2]),
+            iters=[IterExp.fromjson(ite) for ite in content[3]]
+        )
+
+class RuleI(Instr):
+    def __init__(self, id, notexp, iters):
+        self.id = id
+        self.notexp = notexp
+        self.iters = iters
+
+    @staticmethod
+    def fromjson(content):
+        return RuleI(
+            id=Id.fromjson(content[1]),
+            notexp=NotExp.fromjson(content[2]),
+            iters=[IterExp.fromjson(ite) for ite in content[3]]
+        )
+
+class ResultI(Instr):
+    def __init__(self, exps):
+        self.exps = exps
+
+    @staticmethod
+    def fromjson(content):
+        return ResultI(
+            exps=[Exp.fromjson(elt) for elt in content[1]]
+        )
+
+class ReturnI(Instr):
+    def __init__(self, exp):
+        self.exp = exp
+
+    @staticmethod
+    def fromjson(content):
+        return ReturnI(
+            exp=Exp.fromjson(content[1])
+        )
+    
+# cases
+# and case = guard * instr list
+
+# and guard =
+#   | BoolG of bool
+#   | CmpG of cmpop * optyp * exp
+#   | SubG of typ
+#   | MatchG of pattern
+#   | MemG of exp
+
+class Case(AstBase):
+    def __init__(self, guard, instrs):
+        self.guard = guard
+        self.instrs = instrs
+
+    @staticmethod
+    def fromjson(content):
+        return Case(
+            guard=Guard.fromjson(content[0]),
+            instrs=[Instr.fromjson(instr) for instr in content[1]]
+        )
+
+class Guard(AstBase):
+    @staticmethod
+    def fromjson(content):
+        kind = content[0]
+        if kind == 'BoolG':
+            return BoolG.fromjson(content)
+        elif kind == 'CmpG':
+            return CmpG.fromjson(content)
+        elif kind == 'SubG':
+            return SubG.fromjson(content)
+        elif kind == 'MatchG':
+            return MatchG.fromjson(content)
+        elif kind == 'MemG':
+            return MemG.fromjson(content)
+        else:
+            raise ValueError("Unknown Guard: %s" % kind)
+        
+class BoolG(Guard):
+    def __init__(self, value):
+        self.value = value # typ: bool
+
+    @staticmethod
+    def fromjson(content):
+        return BoolG(
+            value=content[1]
+        )
+
+class CmpG(Guard):
+    def __init__(self, op, typ, exp):
+        self.op = op # typ: cmpop
+        self.typ = typ # typ: optyp
+        self.exp = exp # typ: exp
+
+    @staticmethod
+    def fromjson(content):
+        return CmpG(
+            op=content[1],
+            typ=content[2],
+            exp=Exp.fromjson(content[3])
+        )
+
+class SubG(Guard):
+    def __init__(self, typ):
+        self.typ = typ # typ: typ
+
+    @staticmethod
+    def fromjson(content):
+        return SubG(
+            typ=content[1]
+        )
+
+class MatchG(Guard):
+    def __init__(self, pattern):
+        self.pattern = pattern # typ: pattern
+
+    @staticmethod
+    def fromjson(content):
+        return MatchG(
+            pattern=Pattern.fromjson(content[1])
+        )
+
+class MemG(Guard):
+    def __init__(self, exp):
+        self.exp = exp # typ: exp
+
+    @staticmethod
+    def fromjson(content):
+        return MemG(
+            exp=Exp.fromjson(content[1])
+        )
+    
+# and pattern =
+#   | casep of mixop
+#   | listp of [ `cons | `fixed of int | `nil ]
+#   | optp of [ `some | `none ]
+
+class Pattern(AstBase):
+    @staticmethod
+    def fromjson(content):
+        kind = content[0]
+        if kind == 'CaseP':
+            return CaseP.fromjson(content)
+        elif kind == 'ListP':
+            return ListP.fromjson(content)
+        elif kind == 'OptP':
+            return OptP.fromjson(content)
+        else:
+            raise ValueError("Unknown Pattern: %s" % kind)
+
+class CaseP(Pattern):
+    def __init__(self, mixop):
+        self.mixop = mixop # typ: mixop
+
+    @staticmethod
+    def fromjson(content):
+        return CaseP(
+            mixop=content[1]
+        )
+
+class ListP(Pattern):
+    def __init__(self, element):
+        self.element = element # typ: ListPElem
+
+    @staticmethod
+    def fromjson(content):
+        return ListP(
+            element=ListPElem.fromjson(content[1])
+        )
+
+class OptP(Pattern):
+    def __init__(self, kind):
+        self.kind = kind # typ: optp_kind
+
+    @staticmethod
+    def fromjson(content):
+        return OptP(
+            kind=content[1]
+        )
+    
+# [ `cons | `fixed of int | `nil ]
+
+class ListPElem(AstBase):
+    @staticmethod
+    def fromjson(content):
+        kind = content[0]
+        if kind == 'Cons':
+            return Cons()
+        elif kind == 'Fixed':
+            return Fixed(content[1])
+        elif kind == 'Nil':
+            return Nil()
+        else:
+            raise ValueError("Unknown ListPElem: %s" % kind)
+
+class Cons(ListPElem):
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def fromjson(content):
+        return Cons()
+
+class Fixed(ListPElem):
+    def __init__(self, value):
+        self.value = value # typ: int
+
+    @staticmethod
+    def fromjson(content):
+        return Fixed(
+            value=content[1]
+        )
+
+class Nil(ListPElem):
+    @staticmethod
+    def fromjson(content):
+        return Nil()
+
+
+# type Mixop.t = Atom.t phrase list list
+
+class MixOp(AstBase):
+    def __init__(self, phrases):
+        self.phrases = phrases
+
+    @staticmethod
+    def fromjson(content):
+        return MixOp(
+            phrases=[[AtomT.fromjson(phrase) for phrase in group] for group in content]
+        )
+
+class AtomT(AstBase):
+    def __init__(self, value, region):
+        self.value = value
+        self.region = region
+
+    @staticmethod
+    def fromjson(value):
+        region = Region.fromjson(value['at'])
+        content = value['it']
+        kind = content[0]
+        if kind == 'Atom':
+            return AtomT(
+                value=content[1],
+                region=region
+            )
+        else:
+            return AtomT(
+                value=atom_type_to_value(kind),
+                region=region
+            )
+
+def atom_type_to_value(kind):
+    return atom_type_map[kind]
+
+atom_type_map = {
+    'Infinity': 'infinity',
+    'Bot': '_|_',
+    'Top': '^|^',
+    'Dot': '.',
+    'Dot2': '..',
+    'Dot3': '...',
+    'Semicolon': ';',
+    'Backslash': '\\',
+    'Mem': '<-',
+    'Arrow': '->',
+    'Arrow2': '=>',
+    'ArrowSub': '->_',
+    'Arrow2Sub': '=>_',
+    'Colon': ':',
+    'Sub': '<:',
+    'Sup': ':>',
+    'Assign': ':=',
+    'Equal': '=',
+    'NotEqual': '=/=',
+    'Less': '<',
+    'Greater': '>',
+    'LessEqual': '<=',
+    'GreaterEqual': '>=',
+    'Equiv': '==',
+    'Approx': '~~',
+    'SqArrow': '~>',
+    'SqArrowStar': '~>*',
+    'Prec': '<<',
+    'Succ': '>>',
+    'Tilesturn': '-|',
+    'Turnstile': '|-',
+    'Quest': '?',
+    'Plus': '+',
+    'Star': '*',
+    'Comma': ',',
+    'Cat': '++',
+    'Bar': '|',
+    'BigAnd': '(/\\)',
+    'BigOr': '(\\/)',
+    'BigAdd': '(+)',
+    'BigMul': '(*)',
+    'BigCat': '(++)',
+    'LParen': '(',
+    'LBrack': '[',
+    'LBrace': '{',
+    'RParen': ')',
+    'RBrack': ']',
+    'RBrace': '}',
+}
