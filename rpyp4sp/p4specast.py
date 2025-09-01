@@ -194,23 +194,24 @@ class TypD(Def):
 
 
 class RelD(Def):
-    def __init__(self, id, mixop, hints, exps, instrs):
+    def __init__(self, id, mixop, ints, exps, instrs):
         self.id = id            # type: Id
-        self.mixop = mixop      # type: mixop
-        self.hints = hints      # type: list[hint]
-        self.exps = exps        # type: list[exp]
-        self.instrs = instrs    # type: list[instr]
+        self.mixop = mixop      # type: MixOp
+        self.ints = ints      # type: list[int]
+        self.exps = exps        # type: list[Exp]
+        self.instrs = instrs    # type: list[Instr]
 
     @staticmethod
     def fromjson(value):
-        _, id, mixop, hints_value, exps_value, instrs_value = value
-        hints = [Hint.fromjson(h) for h in hints_value]
+        _, id, mixop_and_ints, exps_value, instrs_value = value
+        mixop = MixOp.fromjson(mixop_and_ints[0])
+        ints = [int(i) for i in mixop_and_ints[1]]
         exps = [Exp.fromjson(e) for e in exps_value]
         instrs = [Instr.fromjson(i) for i in instrs_value]
         return RelD(
             id=Id.fromjson(id),
             mixop=mixop,
-            hints=hints,
+            ints=ints,
             exps=exps,
             instrs=instrs
         )
@@ -424,15 +425,17 @@ class VarE(Exp):
 
 class UnE(Exp):
     #   | UnE of unop * optyp * exp             (* unop exp *)
-    def __init__(self, op, exp):
+    def __init__(self, op, optyp, exp):
         self.op = op # typ: unop
+        self.optyp = optyp # typ: optyp
         self.exp = exp # typ: Exp
 
     @staticmethod
     def fromjson(content):
         return UnE(
             op=content[1],
-            exp=Exp.fromjson(content[2])
+            optyp=content[2],
+            exp=Exp.fromjson(content[3])
         )
 
 class BinE(Exp):
@@ -545,9 +548,14 @@ class CaseE(Exp):
 
 class StrE(Exp):
 #   | StrE of (atom * exp) list             (* { expfield* } *)
+    def __init__(self, fields):
+        self.fields = fields
+
     @staticmethod
     def fromjson(content):
-        assert 0
+        return StrE(
+            fields=[(AtomT.fromjson(field[0]), Exp.fromjson(field[1])) for field in content[1]]
+        )
 
 class OptE(Exp):
 #   | OptE of exp option                    (* exp? *)
@@ -632,10 +640,9 @@ class DotE(Exp):
 
     @staticmethod
     def fromjson(content):
-        import pdb;pdb.set_trace()
         return DotE(
             obj=Exp.fromjson(content[1]),
-            field=content[2]
+            field=AtomT.fromjson(content[2])
         )
 
 class IdxE(Exp):
@@ -668,7 +675,18 @@ class SliceE(Exp):
 
 class UpdE(Exp):
 #   | UpdE of exp * path * exp              (* exp `[` path `=` exp `]` *)
-    pass
+    def __init__(self, exp, path, value):
+        self.exp = exp
+        self.path = path
+        self.value = value
+
+    @staticmethod
+    def fromjson(content):
+        return UpdE(
+            exp=Exp.fromjson(content[1]),
+            path=Path.fromjson(content[2]),
+            value=Exp.fromjson(content[3])
+        )
 
 class CallE(Exp):
 #   | CallE of id * targ list * arg list    (* $id`<` targ* `>``(` arg* `)` *)
@@ -687,7 +705,16 @@ class CallE(Exp):
 
 class HoldE(Exp):
 #   | HoldE of id * notexp                  (* id `:` notexp `holds` *)
-    pass
+    def __init__(self, id, notexp):
+        self.id = id
+        self.notexp = notexp
+
+    @staticmethod
+    def fromjson(content):
+        return HoldE(
+            id=Id.fromjson(content[1]),
+            notexp=NotExp.fromjson(content[2])
+        )
 
 class IterE(Exp):
 #   | IterE of exp * iterexp                (* exp iterexp *)
@@ -720,6 +747,17 @@ class NotExp(AstBase):
 
 # and iterexp = iter * var list
 
+class IterExp(AstBase):
+    def __init__(self, iter, vars):
+        self.iter = iter
+        self.vars = vars
+
+    @staticmethod
+    def fromjson(content):
+        return IterExp(
+            iter=Iter.fromjson(content[0]),
+            vars=[Var.fromjson(var) for var in content[1]]
+        )
 
 # _________________________________________________________________
 
@@ -900,7 +938,7 @@ class StructT(DefTyp):
     @staticmethod
     def fromjson(content):
         return StructT(
-            fields=[TypeField.fromjson(field) for field in content[1]]
+            fields=[TypField.fromjson(field) for field in content[1]]
         )
 
     def __repr__(self):
@@ -920,6 +958,19 @@ class VariantT(DefTyp):
         return "VariantT(cases=%s)" % (self.cases,)
 
 # and typfield = atom * typ
+
+class TypField(AstBase):
+    def __init__(self, name, typ):
+        self.name = name
+        self.typ = typ
+
+    @staticmethod
+    def fromjson(content):
+        return TypField(
+            name=AtomT.fromjson(content[0]),
+            typ=Type.fromjson(content[1])
+        )
+
 # and typcase = nottyp
 
 TypeCase = NotTyp
@@ -1232,6 +1283,79 @@ class Nil(ListPElem):
         return Nil()
 
 
+
+# and path = (path', typ') note_phrase
+# and path' =
+#   | RootP                        (*  *)
+#   | IdxP of path * exp           (* path `[` exp `]` *)
+#   | SliceP of path * exp * exp   (* path `[` exp `:` exp `]` *)
+#   | DotP of path * atom          (* path `.` atom *)
+
+class Path(AstBase):
+    # has a region and a type (in the 'note' json field)
+    @staticmethod
+    def fromjson(value):
+        region = Region.fromjson(value['at'])
+        content = value['it']
+        typ = Type.fromjson(value['note'])
+        kind = content[0]
+        if kind == 'RootP':
+            ast = RootP()
+        elif kind == 'IdxP':
+            ast = IdxP.fromjson(content)
+        elif kind == 'SliceP':
+            ast = SliceP.fromjson(content)
+        elif kind == 'DotP':
+            ast = DotP.fromjson(content)
+        else:
+            raise ValueError("Unknown Path: %s" % kind)
+        ast.region = region
+        ast.typ = typ
+        return ast
+
+class RootP(Path):
+    @staticmethod
+    def fromjson(content):
+        return RootP()
+
+class IdxP(Path):
+    def __init__(self, path, exp):
+        self.path = path
+        self.exp = exp
+
+    @staticmethod
+    def fromjson(content):
+        return IdxP(
+            path=Path.fromjson(content[1]),
+            exp=Exp.fromjson(content[2])
+        )
+
+class SliceP(Path):
+    def __init__(self, path, start, end):
+        self.path = path
+        self.start = start
+        self.end = end
+
+    @staticmethod
+    def fromjson(content):
+        return SliceP(
+            path=Path.fromjson(content[1]),
+            start=Exp.fromjson(content[2]),
+            end=Exp.fromjson(content[3])
+        )
+
+class DotP(Path):
+    def __init__(self, path, atom):
+        self.path = path
+        self.atom = atom
+
+    @staticmethod
+    def fromjson(content):
+        return DotP(
+            path=Path.fromjson(content[1]),
+            atom=AtomT.fromjson(content[2])
+        )
+
 # type Mixop.t = Atom.t phrase list list
 
 class MixOp(AstBase):
@@ -1248,6 +1372,9 @@ class AtomT(AstBase):
     def __init__(self, value, region):
         self.value = value
         self.region = region
+
+    def __repr__(self):
+        return "AtomT(%r, %r)" % (self.value, self.region)
 
     @staticmethod
     def fromjson(value):

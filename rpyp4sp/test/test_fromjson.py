@@ -50,7 +50,7 @@ def test_full_ast():
         try:
             defs[i] = p4specast.Def.fromjson(d)
         except Exception as e:
-            #import pdb; pdb.xpm()
+            import pdb; pdb.xpm()
             print("Error processing definition %d: %s" % (i, e))
     print("worked: %s, failed: %s, percent %s" % (len(defs), len(value) - len(defs), 100 * len(defs) / len(value)))
 
