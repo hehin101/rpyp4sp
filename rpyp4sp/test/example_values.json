@@ -1,0 +1,1365 @@
+{
+  "it": [
+    "ListV",
+    [
+      {
+        "it": [
+          "CaseV",
+          [
+            [
+              [
+                {
+                  "it": [ "Atom", "ActionD" ],
+                  "note": null,
+                  "at": {
+                    "left": { "file": "", "line": 0, "column": 0 },
+                    "right": { "file": "", "line": 0, "column": 0 }
+                  }
+                }
+              ],
+              [],
+              [],
+              []
+            ],
+            [
+              {
+                "it": [ "TextV", "a" ],
+                "note": {
+                  "vid": 0,
+                  "typ": [
+                    "VarT",
+                    {
+                      "it": "id",
+                      "note": null,
+                      "at": {
+                        "left": { "file": "", "line": 0, "column": 0 },
+                        "right": { "file": "", "line": 0, "column": 0 }
+                      }
+                    },
+                    []
+                  ]
+                },
+                "at": null
+              },
+              {
+                "it": [
+                  "ListV",
+                  [
+                    {
+                      "it": [
+                        "CaseV",
+                        [
+                          [ [], [], [], [], [] ],
+                          [
+                            {
+                              "it": [ "TextV", "x" ],
+                              "note": {
+                                "vid": 1,
+                                "typ": [
+                                  "VarT",
+                                  {
+                                    "it": "id",
+                                    "note": null,
+                                    "at": {
+                                      "left": {
+                                        "file": "",
+                                        "line": 0,
+                                        "column": 0
+                                      },
+                                      "right": {
+                                        "file": "",
+                                        "line": 0,
+                                        "column": 0
+                                      }
+                                    }
+                                  },
+                                  []
+                                ]
+                              },
+                              "at": null
+                            },
+                            {
+                              "it": [
+                                "CaseV",
+                                [
+                                  [
+                                    [
+                                      {
+                                        "it": [ "Atom", "INOUT" ],
+                                        "note": null,
+                                        "at": {
+                                          "left": {
+                                            "file": "",
+                                            "line": 0,
+                                            "column": 0
+                                          },
+                                          "right": {
+                                            "file": "",
+                                            "line": 0,
+                                            "column": 0
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  ],
+                                  []
+                                ]
+                              ],
+                              "note": {
+                                "vid": 2,
+                                "typ": [
+                                  "VarT",
+                                  {
+                                    "it": "dir",
+                                    "note": null,
+                                    "at": {
+                                      "left": {
+                                        "file": "",
+                                        "line": 0,
+                                        "column": 0
+                                      },
+                                      "right": {
+                                        "file": "",
+                                        "line": 0,
+                                        "column": 0
+                                      }
+                                    }
+                                  },
+                                  []
+                                ]
+                              },
+                              "at": null
+                            },
+                            {
+                              "it": [
+                                "CaseV",
+                                [
+                                  [
+                                    [
+                                      {
+                                        "it": [ "Atom", "FBitT" ],
+                                        "note": null,
+                                        "at": {
+                                          "left": {
+                                            "file": "",
+                                            "line": 0,
+                                            "column": 0
+                                          },
+                                          "right": {
+                                            "file": "",
+                                            "line": 0,
+                                            "column": 0
+                                          }
+                                        }
+                                      }
+                                    ],
+                                    []
+                                  ],
+                                  [
+                                    {
+                                      "it": [
+                                        "CaseV",
+                                        [
+                                          [
+                                            [
+                                              {
+                                                "it": [ "Atom", "NumE" ],
+                                                "note": null,
+                                                "at": {
+                                                  "left": {
+                                                    "file": "",
+                                                    "line": 0,
+                                                    "column": 0
+                                                  },
+                                                  "right": {
+                                                    "file": "",
+                                                    "line": 0,
+                                                    "column": 0
+                                                  }
+                                                }
+                                              }
+                                            ],
+                                            []
+                                          ],
+                                          [
+                                            {
+                                              "it": [
+                                                "CaseV",
+                                                [
+                                                  [
+                                                    [
+                                                      {
+                                                        "it": [
+                                                          "Atom", "INT"
+                                                        ],
+                                                        "note": null,
+                                                        "at": {
+                                                          "left": {
+                                                            "file": "",
+                                                            "line": 0,
+                                                            "column": 0
+                                                          },
+                                                          "right": {
+                                                            "file": "",
+                                                            "line": 0,
+                                                            "column": 0
+                                                          }
+                                                        }
+                                                      }
+                                                    ],
+                                                    []
+                                                  ],
+                                                  [
+                                                    {
+                                                      "it": [
+                                                        "NumV",
+                                                        [ "Int", "32" ]
+                                                      ],
+                                                      "note": {
+                                                        "vid": 3,
+                                                        "typ": [
+                                                          "NumT", [ "IntT" ]
+                                                        ]
+                                                      },
+                                                      "at": null
+                                                    }
+                                                  ]
+                                                ]
+                                              ],
+                                              "note": {
+                                                "vid": 4,
+                                                "typ": [
+                                                  "VarT",
+                                                  {
+                                                    "it": "num",
+                                                    "note": null,
+                                                    "at": {
+                                                      "left": {
+                                                        "file": "",
+                                                        "line": 0,
+                                                        "column": 0
+                                                      },
+                                                      "right": {
+                                                        "file": "",
+                                                        "line": 0,
+                                                        "column": 0
+                                                      }
+                                                    }
+                                                  },
+                                                  []
+                                                ]
+                                              },
+                                              "at": null
+                                            }
+                                          ]
+                                        ]
+                                      ],
+                                      "note": {
+                                        "vid": 5,
+                                        "typ": [
+                                          "VarT",
+                                          {
+                                            "it": "expr",
+                                            "note": null,
+                                            "at": {
+                                              "left": {
+                                                "file": "",
+                                                "line": 0,
+                                                "column": 0
+                                              },
+                                              "right": {
+                                                "file": "",
+                                                "line": 0,
+                                                "column": 0
+                                              }
+                                            }
+                                          },
+                                          []
+                                        ]
+                                      },
+                                      "at": null
+                                    }
+                                  ]
+                                ]
+                              ],
+                              "note": {
+                                "vid": 6,
+                                "typ": [
+                                  "VarT",
+                                  {
+                                    "it": "type",
+                                    "note": null,
+                                    "at": {
+                                      "left": {
+                                        "file": "",
+                                        "line": 0,
+                                        "column": 0
+                                      },
+                                      "right": {
+                                        "file": "",
+                                        "line": 0,
+                                        "column": 0
+                                      }
+                                    }
+                                  },
+                                  []
+                                ]
+                              },
+                              "at": null
+                            },
+                            {
+                              "it": [ "OptV", null ],
+                              "note": {
+                                "vid": 7,
+                                "typ": [
+                                  "IterT",
+                                  {
+                                    "it": [
+                                      "VarT",
+                                      {
+                                        "it": "expr",
+                                        "note": null,
+                                        "at": {
+                                          "left": {
+                                            "file": "",
+                                            "line": 0,
+                                            "column": 0
+                                          },
+                                          "right": {
+                                            "file": "",
+                                            "line": 0,
+                                            "column": 0
+                                          }
+                                        }
+                                      },
+                                      []
+                                    ],
+                                    "note": null,
+                                    "at": {
+                                      "left": {
+                                        "file": "",
+                                        "line": 0,
+                                        "column": 0
+                                      },
+                                      "right": {
+                                        "file": "",
+                                        "line": 0,
+                                        "column": 0
+                                      }
+                                    }
+                                  },
+                                  [ "Opt" ]
+                                ]
+                              },
+                              "at": null
+                            }
+                          ]
+                        ]
+                      ],
+                      "note": {
+                        "vid": 8,
+                        "typ": [
+                          "VarT",
+                          {
+                            "it": "param",
+                            "note": null,
+                            "at": {
+                              "left": { "file": "", "line": 0, "column": 0 },
+                              "right": { "file": "", "line": 0, "column": 0 }
+                            }
+                          },
+                          []
+                        ]
+                      },
+                      "at": null
+                    }
+                  ]
+                ],
+                "note": {
+                  "vid": 9,
+                  "typ": [
+                    "IterT",
+                    {
+                      "it": [
+                        "VarT",
+                        {
+                          "it": "param",
+                          "note": null,
+                          "at": {
+                            "left": { "file": "", "line": 0, "column": 0 },
+                            "right": { "file": "", "line": 0, "column": 0 }
+                          }
+                        },
+                        []
+                      ],
+                      "note": null,
+                      "at": {
+                        "left": { "file": "", "line": 0, "column": 0 },
+                        "right": { "file": "", "line": 0, "column": 0 }
+                      }
+                    },
+                    [ "List" ]
+                  ]
+                },
+                "at": null
+              },
+              {
+                "it": [
+                  "CaseV",
+                  [
+                    [
+                      [
+                        {
+                          "it": [ "Atom", "BlockB" ],
+                          "note": null,
+                          "at": {
+                            "left": { "file": "", "line": 0, "column": 0 },
+                            "right": { "file": "", "line": 0, "column": 0 }
+                          }
+                        }
+                      ],
+                      []
+                    ],
+                    [
+                      {
+                        "it": [
+                          "ListV",
+                          [
+                            {
+                              "it": [
+                                "CaseV",
+                                [
+                                  [
+                                    [
+                                      {
+                                        "it": [ "Atom", "AssignS" ],
+                                        "note": null,
+                                        "at": {
+                                          "left": {
+                                            "file": "",
+                                            "line": 0,
+                                            "column": 0
+                                          },
+                                          "right": {
+                                            "file": "",
+                                            "line": 0,
+                                            "column": 0
+                                          }
+                                        }
+                                      }
+                                    ],
+                                    [],
+                                    []
+                                  ],
+                                  [
+                                    {
+                                      "it": [
+                                        "CaseV",
+                                        [
+                                          [
+                                            [
+                                              {
+                                                "it": [ "Atom", "NameE" ],
+                                                "note": null,
+                                                "at": {
+                                                  "left": {
+                                                    "file": "",
+                                                    "line": 0,
+                                                    "column": 0
+                                                  },
+                                                  "right": {
+                                                    "file": "",
+                                                    "line": 0,
+                                                    "column": 0
+                                                  }
+                                                }
+                                              }
+                                            ],
+                                            []
+                                          ],
+                                          [
+                                            {
+                                              "it": [
+                                                "CaseV",
+                                                [
+                                                  [
+                                                    [
+                                                      {
+                                                        "it": [
+                                                          "Atom", "CURRENT"
+                                                        ],
+                                                        "note": null,
+                                                        "at": {
+                                                          "left": {
+                                                            "file": "",
+                                                            "line": 0,
+                                                            "column": 0
+                                                          },
+                                                          "right": {
+                                                            "file": "",
+                                                            "line": 0,
+                                                            "column": 0
+                                                          }
+                                                        }
+                                                      }
+                                                    ],
+                                                    []
+                                                  ],
+                                                  [
+                                                    {
+                                                      "it": [ "TextV", "x" ],
+                                                      "note": {
+                                                        "vid": 10,
+                                                        "typ": [
+                                                          "VarT",
+                                                          {
+                                                            "it": "id",
+                                                            "note": null,
+                                                            "at": {
+                                                              "left": {
+                                                                "file": "",
+                                                                "line": 0,
+                                                                "column": 0
+                                                              },
+                                                              "right": {
+                                                                "file": "",
+                                                                "line": 0,
+                                                                "column": 0
+                                                              }
+                                                            }
+                                                          },
+                                                          []
+                                                        ]
+                                                      },
+                                                      "at": null
+                                                    }
+                                                  ]
+                                                ]
+                                              ],
+                                              "note": {
+                                                "vid": 11,
+                                                "typ": [
+                                                  "VarT",
+                                                  {
+                                                    "it": "name",
+                                                    "note": null,
+                                                    "at": {
+                                                      "left": {
+                                                        "file": "",
+                                                        "line": 0,
+                                                        "column": 0
+                                                      },
+                                                      "right": {
+                                                        "file": "",
+                                                        "line": 0,
+                                                        "column": 0
+                                                      }
+                                                    }
+                                                  },
+                                                  []
+                                                ]
+                                              },
+                                              "at": null
+                                            }
+                                          ]
+                                        ]
+                                      ],
+                                      "note": {
+                                        "vid": 12,
+                                        "typ": [
+                                          "VarT",
+                                          {
+                                            "it": "expr",
+                                            "note": null,
+                                            "at": {
+                                              "left": {
+                                                "file": "",
+                                                "line": 0,
+                                                "column": 0
+                                              },
+                                              "right": {
+                                                "file": "",
+                                                "line": 0,
+                                                "column": 0
+                                              }
+                                            }
+                                          },
+                                          []
+                                        ]
+                                      },
+                                      "at": null
+                                    },
+                                    {
+                                      "it": [
+                                        "CaseV",
+                                        [
+                                          [
+                                            [
+                                              {
+                                                "it": [ "Atom", "BinE" ],
+                                                "note": null,
+                                                "at": {
+                                                  "left": {
+                                                    "file": "",
+                                                    "line": 0,
+                                                    "column": 0
+                                                  },
+                                                  "right": {
+                                                    "file": "",
+                                                    "line": 0,
+                                                    "column": 0
+                                                  }
+                                                }
+                                              }
+                                            ],
+                                            [],
+                                            [],
+                                            []
+                                          ],
+                                          [
+                                            {
+                                              "it": [
+                                                "CaseV",
+                                                [
+                                                  [
+                                                    [
+                                                      {
+                                                        "it": [
+                                                          "Atom", "SHR"
+                                                        ],
+                                                        "note": null,
+                                                        "at": {
+                                                          "left": {
+                                                            "file": "",
+                                                            "line": 0,
+                                                            "column": 0
+                                                          },
+                                                          "right": {
+                                                            "file": "",
+                                                            "line": 0,
+                                                            "column": 0
+                                                          }
+                                                        }
+                                                      }
+                                                    ]
+                                                  ],
+                                                  []
+                                                ]
+                                              ],
+                                              "note": {
+                                                "vid": 13,
+                                                "typ": [
+                                                  "VarT",
+                                                  {
+                                                    "it": "binop",
+                                                    "note": null,
+                                                    "at": {
+                                                      "left": {
+                                                        "file": "",
+                                                        "line": 0,
+                                                        "column": 0
+                                                      },
+                                                      "right": {
+                                                        "file": "",
+                                                        "line": 0,
+                                                        "column": 0
+                                                      }
+                                                    }
+                                                  },
+                                                  []
+                                                ]
+                                              },
+                                              "at": null
+                                            },
+                                            {
+                                              "it": [
+                                                "CaseV",
+                                                [
+                                                  [
+                                                    [
+                                                      {
+                                                        "it": [
+                                                          "Atom", "BinE"
+                                                        ],
+                                                        "note": null,
+                                                        "at": {
+                                                          "left": {
+                                                            "file": "",
+                                                            "line": 0,
+                                                            "column": 0
+                                                          },
+                                                          "right": {
+                                                            "file": "",
+                                                            "line": 0,
+                                                            "column": 0
+                                                          }
+                                                        }
+                                                      }
+                                                    ],
+                                                    [],
+                                                    [],
+                                                    []
+                                                  ],
+                                                  [
+                                                    {
+                                                      "it": [
+                                                        "CaseV",
+                                                        [
+                                                          [
+                                                            [
+                                                              {
+                                                                "it": [
+                                                                  "Atom",
+                                                                  "SHR"
+                                                                ],
+                                                                "note": null,
+                                                                "at": {
+                                                                  "left": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                  },
+                                                                  "right": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                  }
+                                                                }
+                                                              }
+                                                            ]
+                                                          ],
+                                                          []
+                                                        ]
+                                                      ],
+                                                      "note": {
+                                                        "vid": 14,
+                                                        "typ": [
+                                                          "VarT",
+                                                          {
+                                                            "it": "binop",
+                                                            "note": null,
+                                                            "at": {
+                                                              "left": {
+                                                                "file": "",
+                                                                "line": 0,
+                                                                "column": 0
+                                                              },
+                                                              "right": {
+                                                                "file": "",
+                                                                "line": 0,
+                                                                "column": 0
+                                                              }
+                                                            }
+                                                          },
+                                                          []
+                                                        ]
+                                                      },
+                                                      "at": null
+                                                    },
+                                                    {
+                                                      "it": [
+                                                        "CaseV",
+                                                        [
+                                                          [
+                                                            [
+                                                              {
+                                                                "it": [
+                                                                  "Atom",
+                                                                  "NameE"
+                                                                ],
+                                                                "note": null,
+                                                                "at": {
+                                                                  "left": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                  },
+                                                                  "right": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                  }
+                                                                }
+                                                              }
+                                                            ],
+                                                            []
+                                                          ],
+                                                          [
+                                                            {
+                                                              "it": [
+                                                                "CaseV",
+                                                                [
+                                                                  [
+                                                                    [
+                                                                    {
+                                                                    "it": [
+                                                                    "Atom",
+                                                                    "CURRENT"
+                                                                    ],
+                                                                    "note": null,
+                                                                    "at": {
+                                                                    "left": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                    },
+                                                                    "right": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                    }
+                                                                    }
+                                                                    }
+                                                                    ],
+                                                                    []
+                                                                  ],
+                                                                  [
+                                                                    {
+                                                                    "it": [
+                                                                    "TextV",
+                                                                    "x"
+                                                                    ],
+                                                                    "note": {
+                                                                    "vid": 15,
+                                                                    "typ": [
+                                                                    "VarT",
+                                                                    {
+                                                                    "it": "id",
+                                                                    "note": null,
+                                                                    "at": {
+                                                                    "left": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                    },
+                                                                    "right": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                    }
+                                                                    }
+                                                                    },
+                                                                    []
+                                                                    ]
+                                                                    },
+                                                                    "at": null
+                                                                    }
+                                                                  ]
+                                                                ]
+                                                              ],
+                                                              "note": {
+                                                                "vid": 16,
+                                                                "typ": [
+                                                                  "VarT",
+                                                                  {
+                                                                    "it": "name",
+                                                                    "note": null,
+                                                                    "at": {
+                                                                    "left": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                    },
+                                                                    "right": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                    }
+                                                                    }
+                                                                  },
+                                                                  []
+                                                                ]
+                                                              },
+                                                              "at": null
+                                                            }
+                                                          ]
+                                                        ]
+                                                      ],
+                                                      "note": {
+                                                        "vid": 17,
+                                                        "typ": [
+                                                          "VarT",
+                                                          {
+                                                            "it": "expr",
+                                                            "note": null,
+                                                            "at": {
+                                                              "left": {
+                                                                "file": "",
+                                                                "line": 0,
+                                                                "column": 0
+                                                              },
+                                                              "right": {
+                                                                "file": "",
+                                                                "line": 0,
+                                                                "column": 0
+                                                              }
+                                                            }
+                                                          },
+                                                          []
+                                                        ]
+                                                      },
+                                                      "at": null
+                                                    },
+                                                    {
+                                                      "it": [
+                                                        "CaseV",
+                                                        [
+                                                          [
+                                                            [
+                                                              {
+                                                                "it": [
+                                                                  "Atom",
+                                                                  "NumE"
+                                                                ],
+                                                                "note": null,
+                                                                "at": {
+                                                                  "left": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                  },
+                                                                  "right": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                  }
+                                                                }
+                                                              }
+                                                            ],
+                                                            []
+                                                          ],
+                                                          [
+                                                            {
+                                                              "it": [
+                                                                "CaseV",
+                                                                [
+                                                                  [
+                                                                    [
+                                                                    {
+                                                                    "it": [
+                                                                    "Atom",
+                                                                    "INT"
+                                                                    ],
+                                                                    "note": null,
+                                                                    "at": {
+                                                                    "left": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                    },
+                                                                    "right": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                    }
+                                                                    }
+                                                                    }
+                                                                    ],
+                                                                    []
+                                                                  ],
+                                                                  [
+                                                                    {
+                                                                    "it": [
+                                                                    "NumV",
+                                                                    [
+                                                                    "Int",
+                                                                    "3"
+                                                                    ]
+                                                                    ],
+                                                                    "note": {
+                                                                    "vid": 18,
+                                                                    "typ": [
+                                                                    "NumT",
+                                                                    [
+                                                                    "IntT"
+                                                                    ]
+                                                                    ]
+                                                                    },
+                                                                    "at": null
+                                                                    }
+                                                                  ]
+                                                                ]
+                                                              ],
+                                                              "note": {
+                                                                "vid": 19,
+                                                                "typ": [
+                                                                  "VarT",
+                                                                  {
+                                                                    "it": "num",
+                                                                    "note": null,
+                                                                    "at": {
+                                                                    "left": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                    },
+                                                                    "right": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                    }
+                                                                    }
+                                                                  },
+                                                                  []
+                                                                ]
+                                                              },
+                                                              "at": null
+                                                            }
+                                                          ]
+                                                        ]
+                                                      ],
+                                                      "note": {
+                                                        "vid": 20,
+                                                        "typ": [
+                                                          "VarT",
+                                                          {
+                                                            "it": "expr",
+                                                            "note": null,
+                                                            "at": {
+                                                              "left": {
+                                                                "file": "",
+                                                                "line": 0,
+                                                                "column": 0
+                                                              },
+                                                              "right": {
+                                                                "file": "",
+                                                                "line": 0,
+                                                                "column": 0
+                                                              }
+                                                            }
+                                                          },
+                                                          []
+                                                        ]
+                                                      },
+                                                      "at": null
+                                                    }
+                                                  ]
+                                                ]
+                                              ],
+                                              "note": {
+                                                "vid": 21,
+                                                "typ": [
+                                                  "VarT",
+                                                  {
+                                                    "it": "expr",
+                                                    "note": null,
+                                                    "at": {
+                                                      "left": {
+                                                        "file": "",
+                                                        "line": 0,
+                                                        "column": 0
+                                                      },
+                                                      "right": {
+                                                        "file": "",
+                                                        "line": 0,
+                                                        "column": 0
+                                                      }
+                                                    }
+                                                  },
+                                                  []
+                                                ]
+                                              },
+                                              "at": null
+                                            },
+                                            {
+                                              "it": [
+                                                "CaseV",
+                                                [
+                                                  [
+                                                    [
+                                                      {
+                                                        "it": [
+                                                          "Atom", "NumE"
+                                                        ],
+                                                        "note": null,
+                                                        "at": {
+                                                          "left": {
+                                                            "file": "",
+                                                            "line": 0,
+                                                            "column": 0
+                                                          },
+                                                          "right": {
+                                                            "file": "",
+                                                            "line": 0,
+                                                            "column": 0
+                                                          }
+                                                        }
+                                                      }
+                                                    ],
+                                                    []
+                                                  ],
+                                                  [
+                                                    {
+                                                      "it": [
+                                                        "CaseV",
+                                                        [
+                                                          [
+                                                            [
+                                                              {
+                                                                "it": [
+                                                                  "Atom",
+                                                                  "INT"
+                                                                ],
+                                                                "note": null,
+                                                                "at": {
+                                                                  "left": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                  },
+                                                                  "right": {
+                                                                    "file": "",
+                                                                    "line": 0,
+                                                                    "column": 0
+                                                                  }
+                                                                }
+                                                              }
+                                                            ],
+                                                            []
+                                                          ],
+                                                          [
+                                                            {
+                                                              "it": [
+                                                                "NumV",
+                                                                [
+                                                                  "Int", "8"
+                                                                ]
+                                                              ],
+                                                              "note": {
+                                                                "vid": 22,
+                                                                "typ": [
+                                                                  "NumT",
+                                                                  [ "IntT" ]
+                                                                ]
+                                                              },
+                                                              "at": null
+                                                            }
+                                                          ]
+                                                        ]
+                                                      ],
+                                                      "note": {
+                                                        "vid": 23,
+                                                        "typ": [
+                                                          "VarT",
+                                                          {
+                                                            "it": "num",
+                                                            "note": null,
+                                                            "at": {
+                                                              "left": {
+                                                                "file": "",
+                                                                "line": 0,
+                                                                "column": 0
+                                                              },
+                                                              "right": {
+                                                                "file": "",
+                                                                "line": 0,
+                                                                "column": 0
+                                                              }
+                                                            }
+                                                          },
+                                                          []
+                                                        ]
+                                                      },
+                                                      "at": null
+                                                    }
+                                                  ]
+                                                ]
+                                              ],
+                                              "note": {
+                                                "vid": 24,
+                                                "typ": [
+                                                  "VarT",
+                                                  {
+                                                    "it": "expr",
+                                                    "note": null,
+                                                    "at": {
+                                                      "left": {
+                                                        "file": "",
+                                                        "line": 0,
+                                                        "column": 0
+                                                      },
+                                                      "right": {
+                                                        "file": "",
+                                                        "line": 0,
+                                                        "column": 0
+                                                      }
+                                                    }
+                                                  },
+                                                  []
+                                                ]
+                                              },
+                                              "at": null
+                                            }
+                                          ]
+                                        ]
+                                      ],
+                                      "note": {
+                                        "vid": 25,
+                                        "typ": [
+                                          "VarT",
+                                          {
+                                            "it": "expr",
+                                            "note": null,
+                                            "at": {
+                                              "left": {
+                                                "file": "",
+                                                "line": 0,
+                                                "column": 0
+                                              },
+                                              "right": {
+                                                "file": "",
+                                                "line": 0,
+                                                "column": 0
+                                              }
+                                            }
+                                          },
+                                          []
+                                        ]
+                                      },
+                                      "at": null
+                                    }
+                                  ]
+                                ]
+                              ],
+                              "note": {
+                                "vid": 26,
+                                "typ": [
+                                  "VarT",
+                                  {
+                                    "it": "stmt",
+                                    "note": null,
+                                    "at": {
+                                      "left": {
+                                        "file": "",
+                                        "line": 0,
+                                        "column": 0
+                                      },
+                                      "right": {
+                                        "file": "",
+                                        "line": 0,
+                                        "column": 0
+                                      }
+                                    }
+                                  },
+                                  []
+                                ]
+                              },
+                              "at": null
+                            }
+                          ]
+                        ],
+                        "note": {
+                          "vid": 27,
+                          "typ": [
+                            "IterT",
+                            {
+                              "it": [
+                                "VarT",
+                                {
+                                  "it": "stmt",
+                                  "note": null,
+                                  "at": {
+                                    "left": {
+                                      "file": "",
+                                      "line": 0,
+                                      "column": 0
+                                    },
+                                    "right": {
+                                      "file": "",
+                                      "line": 0,
+                                      "column": 0
+                                    }
+                                  }
+                                },
+                                []
+                              ],
+                              "note": null,
+                              "at": {
+                                "left": {
+                                  "file": "",
+                                  "line": 0,
+                                  "column": 0
+                                },
+                                "right": {
+                                  "file": "",
+                                  "line": 0,
+                                  "column": 0
+                                }
+                              }
+                            },
+                            [ "List" ]
+                          ]
+                        },
+                        "at": null
+                      }
+                    ]
+                  ]
+                ],
+                "note": {
+                  "vid": 28,
+                  "typ": [
+                    "VarT",
+                    {
+                      "it": "block",
+                      "note": null,
+                      "at": {
+                        "left": { "file": "", "line": 0, "column": 0 },
+                        "right": { "file": "", "line": 0, "column": 0 }
+                      }
+                    },
+                    []
+                  ]
+                },
+                "at": null
+              }
+            ]
+          ]
+        ],
+        "note": {
+          "vid": 29,
+          "typ": [
+            "VarT",
+            {
+              "it": "decl",
+              "note": null,
+              "at": {
+                "left": { "file": "", "line": 0, "column": 0 },
+                "right": { "file": "", "line": 0, "column": 0 }
+              }
+            },
+            []
+          ]
+        },
+        "at": null
+      }
+    ]
+  ],
+  "note": {
+    "vid": 30,
+    "typ": [
+      "IterT",
+      {
+        "it": [
+          "VarT",
+          {
+            "it": "decl",
+            "note": null,
+            "at": {
+              "left": { "file": "", "line": 0, "column": 0 },
+              "right": { "file": "", "line": 0, "column": 0 }
+            }
+          },
+          []
+        ],
+        "note": null,
+        "at": {
+          "left": { "file": "", "line": 0, "column": 0 },
+          "right": { "file": "", "line": 0, "column": 0 }
+        }
+      },
+      [ "List" ]
+    ]
+  },
+  "at": null
+
+}

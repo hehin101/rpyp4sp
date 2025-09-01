@@ -1,5 +1,7 @@
 from __future__ import print_function
-from rpyp4sp import p4specast
+import os
+from rpyp4sp import p4specast, objects
+from rpyp4sp.rpyjson import loads
 
 decd_example = [
       "DecD",
@@ -39,8 +41,6 @@ def test_decd_example():
     )
 
 def test_full_ast_rpython():
-    from rpyp4sp.rpyjson import loads
-    import os
     currfile = os.path.abspath(__file__)
     basedir = os.path.dirname(os.path.dirname(os.path.dirname(currfile)))
     fn = os.path.join(basedir, "ast.json")
@@ -49,3 +49,14 @@ def test_full_ast_rpython():
     defs = {}
     for i, d in enumerate(value.value_array()):
         defs[i] = p4specast.Def.fromjson(d)
+
+
+def test_example_values_load():
+    from rpyp4sp.rpyjson import loads
+    import os
+    currfile = os.path.abspath(__file__)
+    testdir = os.path.dirname(currfile)
+    fn = os.path.join(testdir, "example_values.json")
+    with open(fn) as f:
+        value = loads(f.read())
+    res = objects.W_Base.fromjson(value)

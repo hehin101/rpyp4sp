@@ -71,7 +71,7 @@ class Position(AstBase):
 
     @staticmethod
     def fromjson(value):
-        return Position(value['file'], value['line'].value_int(), value['column'].value_int())
+        return Position(value['file'].value_string(), value['line'].value_int(), value['column'].value_int())
 
     def __repr__(self):
         return "Position(file=%s, line=%d, column=%d)" % (self.file, self.line, self.column)
