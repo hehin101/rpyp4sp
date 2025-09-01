@@ -71,7 +71,7 @@ class Position(AstBase):
 
     @staticmethod
     def fromjson(value):
-        return Position(value['file'], value['line'], value['column'])
+        return Position(value['file'], value['line'].value_int(), value['column'].value_int())
 
     def __repr__(self):
         return "Position(file=%s, line=%d, column=%d)" % (self.file, self.line, self.column)
@@ -132,7 +132,7 @@ class TParam(AstBase):
     @staticmethod
     def fromjson(value):
         return TParam(
-            value['it'],
+            value['it'].value_string(),
             Region.fromjson(value['at'])
         )
 
@@ -747,15 +747,18 @@ class HoldE(Exp):
 
 class IterE(Exp):
 #   | IterE of exp * iterexp                (* exp iterexp *)
-    def __init__(self, exp, iter):
+# iterexp = iter * var list
+    def __init__(self, exp, iter, varlist):
         self.exp = exp
         self.iter = iter
+        self.varlist = varlist
 
     @staticmethod
     def fromjson(content):
         return IterE(
             exp=Exp.fromjson(content[1]),
-            iter=content[2]
+            iter=Iter.fromjson(content[2][0]),
+            varlist=[Var.fromjson(value) for value in content[2][1].value_array()],
         )
 
 # and notexp = mixop * exp list
