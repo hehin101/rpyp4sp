@@ -20,6 +20,8 @@ class AstBase(object):
         arcs = []
         label = [type(self).__name__]
         for key, value in self.__dict__.items():
+            if key == 'phantom':
+                continue
             if isinstance(value, (Region, Position)):
                 continue
             if isinstance(value, AstBase):
