@@ -3,6 +3,39 @@ class AstBase(object):
     def __eq__(self, other):
         return type(self) == type(other) and self.__dict__ == other.__dict__
 
+    def __ne__(self, other):
+        return not (self == other)
+
+    def view(self):
+        from rpython.translator.tool.make_dot import DotGen
+        from dotviewer import graphclient
+        import pytest
+        dotgen = DotGen('G')
+        self._dot(dotgen)
+        p = pytest.ensuretemp("pyparser").join("temp.dot")
+        p.write(dotgen.generate(target=None))
+        graphclient.display_dot_file(str(p))
+
+    def _dot(self, dotgen):
+        arcs = []
+        label = [type(self).__name__]
+        for key, value in self.__dict__.items():
+            if isinstance(value, (Region, Position)):
+                continue
+            if isinstance(value, AstBase):
+                arcs.append((value, key))
+                value._dot(dotgen)
+            elif isinstance(value, list) and value and isinstance(value[0], AstBase):
+                for index, item in enumerate(value):
+                    arcs.append((item, "%s[%s]" % (key, index)))
+                    item._dot(dotgen)
+            else:
+                label.append("%s = %r" % (key, value))
+        dotgen.emit_node(str(id(self)), shape="box", label = "\n".join(label))
+        for target, label in arcs:
+            dotgen.emit_edge(str(id(self)), str(id(target)), label)
+
+
 def define_enum(basename, *names):
     class Base(AstBase):
         @staticmethod
