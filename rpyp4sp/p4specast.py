@@ -7,10 +7,12 @@ def define_enum(basename, *names):
     class Base(AstBase):
         @staticmethod
         def fromjson(value):
-            content, = value
+            content, = value.value_array()
+            content = content.value_string()
             for name, cls in unrolling_tups:
                 if name == content:
                     return cls()
+            assert 0
 
         def __repr__(self):
             return type(self).__name__ + "()"
@@ -26,7 +28,7 @@ def define_enum(basename, *names):
 
 
 # type pos = { file : string; line : int; column : int } [@@deriving yojson]
-# type region = { left : pos; right : pos } [@@deriving yojson]
+
 
 class Position(AstBase):
     def __init__(self, file, line, column):
@@ -41,6 +43,7 @@ class Position(AstBase):
     def __repr__(self):
         return "Position(file=%s, line=%d, column=%d)" % (self.file, self.line, self.column)
 
+# type region = { left : pos; right : pos } [@@deriving yojson]
 
 class Region(AstBase):
     def __init__(self, left, right):
@@ -79,10 +82,9 @@ class Id(AstBase):
           "right": { "file": "spec/0-aux.watsup", "line": 18, "column": 9 }
         }
       },"""
-        assert isinstance(value, dict)
         region = Region.fromjson(value['at'])
         return Id(
-            value["it"],
+            value["it"].value_string(),
             region
         )
 
@@ -142,7 +144,7 @@ class Var(AstBase):
         return Var(
             id=Id.fromjson(content[0]),
             typ=Type.fromjson(content[1]),
-            iter=[Iter.fromjson(i) for i in content[2]]
+            iter=[Iter.fromjson(i) for i in content[2].value_array()]
         )
 
 # type def = def' phrase
@@ -157,12 +159,10 @@ class Var(AstBase):
 class Def(AstBase):
     @staticmethod
     def fromjson(value):
-        assert value['note'] is None
+        assert value['note'].is_null
         region = Region.fromjson(value['at'])
         content = value['it']
-        what = content[0]
-        assert isinstance(content, list)
-        what = content[0]
+        what = content[0].value_string()
         if what == 'DecD':
             ast = DecD.fromjson(content)
         elif what == 'TypD':
@@ -205,7 +205,7 @@ class RelD(Def):
     def fromjson(value):
         _, id, mixop_and_ints, exps_value, instrs_value = value
         mixop = MixOp.fromjson(mixop_and_ints[0])
-        ints = [int(i) for i in mixop_and_ints[1]]
+        ints = [i.value_int() for i in mixop_and_ints[1].value_array()]
         exps = [Exp.fromjson(e) for e in exps_value]
         instrs = [Instr.fromjson(i) for i in instrs_value]
         return RelD(
@@ -244,12 +244,10 @@ class DecD(Def):
 class Arg(AstBase):
     @staticmethod
     def fromjson(value):
-        assert value['note'] is None
+        assert value['note'].is_null
         region = Region.fromjson(value['at'])
         content = value['it']
-        what = content[0]
-        assert isinstance(content, list)
-        what = content[0]
+        what = content[0].value_string()
         if what == 'ExpA':
             return ExpA.fromjson(content)
         elif what == 'DefA':
@@ -263,7 +261,6 @@ class ExpA(Arg):
 
     @staticmethod
     def fromjson(value):
-        assert isinstance(value, list)
         _, exp_value = value
         return ExpA(
             exp=Exp.fromjson(exp_value)
@@ -275,7 +272,6 @@ class DefA(Arg):
 
     @staticmethod
     def fromjson(value):
-        assert isinstance(value, list)
         _, id_value = value
         return DefA(
             id=Id.fromjson(id_value)
@@ -320,7 +316,7 @@ class Exp(AstBase):
         typ = Type.fromjson(value['note'])
         region = Region.fromjson(value['at'])
         content = value['it']
-        what = content[0]
+        what = content[0].value_string()
         if what == 'BoolE':
             ast = BoolE.fromjson(content)
         elif what == 'NumE':
@@ -389,7 +385,7 @@ class BoolE(Exp):
     @staticmethod
     def fromjson(content):
         return BoolE(
-            value=content[1]
+            value=content[1].value_bool()
         )
 
 class NumE(Exp):
@@ -410,7 +406,7 @@ class TextE(Exp):
     @staticmethod
     def fromjson(content):
         return TextE(
-            value=content[1]
+            value=content[1].value_string()
         )
 
 class VarE(Exp):
@@ -433,8 +429,8 @@ class UnE(Exp):
     @staticmethod
     def fromjson(content):
         return UnE(
-            op=content[1],
-            optyp=content[2],
+            op=content[1][0].value_string(),
+            optyp=content[2][0].value_string(),
             exp=Exp.fromjson(content[3])
         )
 
@@ -449,8 +445,8 @@ class BinE(Exp):
     @staticmethod
     def fromjson(content):
         return BinE(
-            binop=content[1],
-            optyp=content[2],
+            binop=content[1][0].value_string(),
+            optyp=content[2][0].value_string(),
             left=Exp.fromjson(content[3]),
             right=Exp.fromjson(content[4])
         )
@@ -466,8 +462,8 @@ class CmpE(Exp):
     @staticmethod
     def fromjson(content):
         return CmpE(
-            cmpop=content[1],
-            optyp=content[2],
+            cmpop=content[1][0].value_string(),
+            optyp=content[2][0].value_string(),
             left=Exp.fromjson(content[3]),
             right=Exp.fromjson(content[4])
         )
@@ -532,7 +528,7 @@ class TupleE(Exp):
     @staticmethod
     def fromjson(content):
         return TupleE(
-            elts=[Exp.fromjson(elt) for elt in content[1]]
+            elts=[Exp.fromjson(elt) for elt in content[1].value_array()]
         )
 
 class CaseE(Exp):
@@ -554,7 +550,7 @@ class StrE(Exp):
     @staticmethod
     def fromjson(content):
         return StrE(
-            fields=[(AtomT.fromjson(field[0]), Exp.fromjson(field[1])) for field in content[1]]
+            fields=[(AtomT.fromjson(field[0]), Exp.fromjson(field[1])) for field in content[1].value_array()]
         )
 
 class OptE(Exp):
@@ -564,7 +560,7 @@ class OptE(Exp):
 
     @staticmethod
     def fromjson(content):
-        if content[1] is None:
+        if content[1].is_null:
             return OptE(exp=None)
         return OptE(
             exp=Exp.fromjson(content[1])
@@ -578,7 +574,7 @@ class ListE(Exp):
     @staticmethod
     def fromjson(content):
         return ListE(
-            elts=[Exp.fromjson(elt) for elt in content[1]]
+            elts=[Exp.fromjson(elt) for elt in content[1].value_array()]
         )
 
 class ConsE(Exp):
@@ -699,8 +695,8 @@ class CallE(Exp):
     def fromjson(content):
         return CallE(
             func=Id.fromjson(content[1]),
-            targs=[TArg.fromjson(targ) for targ in content[2]],
-            args=[Arg.fromjson(arg) for arg in content[3]]
+            targs=[TArg.fromjson(targ) for targ in content[2].value_array()],
+            args=[Arg.fromjson(arg) for arg in content[3].value_array()]
         )
 
 class HoldE(Exp):
@@ -740,7 +736,7 @@ class NotExp(AstBase):
     def fromjson(content):
         return NotExp(
             mixop=MixOp.fromjson(content[0]),
-            exps=[Exp.fromjson(exp) for exp in content[1]]
+            exps=[Exp.fromjson(exp) for exp in content[1].value_array()]
         )
     def __repr__(self):
         return "NotExp(%s, %s)" % (self.mixop, self.exps)
@@ -756,7 +752,7 @@ class IterExp(AstBase):
     def fromjson(content):
         return IterExp(
             iter=Iter.fromjson(content[0]),
-            vars=[Var.fromjson(var) for var in content[1]]
+            vars=[Var.fromjson(var) for var in content[1].value_array()]
         )
 
 # _________________________________________________________________
@@ -778,13 +774,13 @@ class Type(AstBase):
     # has a .region, but only sometimes (eg exp uses typ')
     @staticmethod
     def fromjson(value):
-        if isinstance(value, dict):
+        if value.is_object:
             region = Region.fromjson(value['at'])
             content = value['it']
         else:
             region = None
             content = value
-        what = content[0]
+        what = content[0].value_string()
         if what == 'BoolT':
             ast = BoolT.fromjson(content)
         elif what == 'NumT':
@@ -837,8 +833,8 @@ class VarT(Type):
     @staticmethod
     def fromjson(content):
         return VarT(
-            id=content[1],
-            targs=[Type.fromjson(targ) for targ in content[2]]
+            id=Id.fromjson(content[1]),
+            targs=[Type.fromjson(targ) for targ in content[2].value_array()]
         )
 
 class TupleT(Type):
@@ -848,7 +844,7 @@ class TupleT(Type):
     @staticmethod
     def fromjson(content):
         return TupleT(
-            elts=[Type.fromjson(elt) for elt in content[1]]
+            elts=[Type.fromjson(elt) for elt in content[1].value_array()]
         )
 
 class IterT(Type):
@@ -860,7 +856,7 @@ class IterT(Type):
     def fromjson(content):
         return IterT(
             typ=Type.fromjson(content[1]),
-            iter=content[2]
+            iter=Iter.fromjson(content[2]),
         )
 
 class FuncT(Type):
@@ -871,7 +867,7 @@ class FuncT(Type):
     @staticmethod
     def fromjson(content):
         return FuncT(
-            params=[Type.fromjson(param) for param in content[1]],
+            params=[Type.fromjson(param) for param in content[1].value_array()],
             ret=Type.fromjson(content[2])
         )
 
@@ -891,7 +887,7 @@ class NotTyp(AstBase):
         content = value['it']
         return NotTyp(
             mixop=MixOp.fromjson(content[0]),
-            typs=[Type.fromjson(typ) for typ in content[1]]
+            typs=[Type.fromjson(typ) for typ in content[1].value_array()]
         )
 
 # and deftyp = deftyp' phrase
@@ -906,7 +902,7 @@ class DefTyp(AstBase):
     def fromjson(value):
         region = Region.fromjson(value['at'])
         content = value['it']
-        what = content[0]
+        what = content[0].value_string()
         if what == 'PlainT':
             ast = PlainT.fromjson(content)
         elif what == 'StructT':
@@ -938,7 +934,7 @@ class StructT(DefTyp):
     @staticmethod
     def fromjson(content):
         return StructT(
-            fields=[TypField.fromjson(field) for field in content[1]]
+            fields=[TypField.fromjson(field) for field in content[1].value_array()]
         )
 
     def __repr__(self):
@@ -951,7 +947,7 @@ class VariantT(DefTyp):
     @staticmethod
     def fromjson(content):
         return VariantT(
-            cases=[TypeCase.fromjson(case) for case in content[1]]
+            cases=[TypeCase.fromjson(case) for case in content[1].value_array()]
         )
 
     def __repr__(self):
@@ -992,10 +988,10 @@ class Instr(AstBase):
     # has a .region
     @staticmethod
     def fromjson(value):
-        assert value['note'] is None
+        assert value['note'].is_null
         region = Region.fromjson(value['at'])
         content = value['it']
-        what = content[0]
+        what = content[0].value_string()
         if what == 'IfI':
             ast = IfI.fromjson(content)
         elif what == 'CaseI':
@@ -1026,8 +1022,8 @@ class IfI(Instr):
     def fromjson(content):
         return IfI(
             exp=Exp.fromjson(content[1]),
-            iters=[IterExp.fromjson(ite) for ite in content[2]],
-            instrs=[Instr.fromjson(instr) for instr in content[3]],
+            iters=[IterExp.fromjson(ite) for ite in content[2].value_array()],
+            instrs=[Instr.fromjson(instr) for instr in content[3].value_array()],
             phantom=content[4]
         )
 
@@ -1041,7 +1037,7 @@ class CaseI(Instr):
     def fromjson(content):
         return CaseI(
             exp=Exp.fromjson(content[1]),
-            cases=[Case.fromjson(case) for case in content[2]],
+            cases=[Case.fromjson(case) for case in content[2].value_array()],
             phantom=content[3]
         )
 
@@ -1066,7 +1062,7 @@ class LetI(Instr):
         return LetI(
             var=Exp.fromjson(content[1]),
             value=Exp.fromjson(content[2]),
-            iters=[IterExp.fromjson(ite) for ite in content[3]]
+            iters=[IterExp.fromjson(ite) for ite in content[3].value_array()]
         )
 
 class RuleI(Instr):
@@ -1080,7 +1076,7 @@ class RuleI(Instr):
         return RuleI(
             id=Id.fromjson(content[1]),
             notexp=NotExp.fromjson(content[2]),
-            iters=[IterExp.fromjson(ite) for ite in content[3]]
+            iters=[IterExp.fromjson(ite) for ite in content[3].value_array()]
         )
 
 class ResultI(Instr):
@@ -1090,7 +1086,7 @@ class ResultI(Instr):
     @staticmethod
     def fromjson(content):
         return ResultI(
-            exps=[Exp.fromjson(elt) for elt in content[1]]
+            exps=[Exp.fromjson(elt) for elt in content[1].value_array()]
         )
 
 class ReturnI(Instr):
@@ -1122,13 +1118,13 @@ class Case(AstBase):
     def fromjson(content):
         return Case(
             guard=Guard.fromjson(content[0]),
-            instrs=[Instr.fromjson(instr) for instr in content[1]]
+            instrs=[Instr.fromjson(instr) for instr in content[1].value_array()]
         )
 
 class Guard(AstBase):
     @staticmethod
     def fromjson(content):
-        kind = content[0]
+        kind = content[0].value_string()
         if kind == 'BoolG':
             return BoolG.fromjson(content)
         elif kind == 'CmpG':
@@ -1149,7 +1145,7 @@ class BoolG(Guard):
     @staticmethod
     def fromjson(content):
         return BoolG(
-            value=content[1]
+            value=content[1].value_bool()
         )
 
 class CmpG(Guard):
@@ -1161,24 +1157,24 @@ class CmpG(Guard):
     @staticmethod
     def fromjson(content):
         return CmpG(
-            op=content[1],
-            typ=content[2],
+            op=content[1][0].value_string(),
+            typ=content[2][0].value_string(),
             exp=Exp.fromjson(content[3])
         )
 
 class SubG(Guard):
     def __init__(self, typ):
-        self.typ = typ # typ: typ
+        self.typ = typ # typ: Type
 
     @staticmethod
     def fromjson(content):
         return SubG(
-            typ=content[1]
+            typ=Type.fromjson(content[1])
         )
 
 class MatchG(Guard):
     def __init__(self, pattern):
-        self.pattern = pattern # typ: pattern
+        self.pattern = pattern # typ: Pattern
 
     @staticmethod
     def fromjson(content):
@@ -1188,7 +1184,7 @@ class MatchG(Guard):
 
 class MemG(Guard):
     def __init__(self, exp):
-        self.exp = exp # typ: exp
+        self.exp = exp # typ: Exp
 
     @staticmethod
     def fromjson(content):
@@ -1204,7 +1200,7 @@ class MemG(Guard):
 class Pattern(AstBase):
     @staticmethod
     def fromjson(content):
-        kind = content[0]
+        kind = content[0].value_string()
         if kind == 'CaseP':
             return CaseP.fromjson(content)
         elif kind == 'ListP':
@@ -1221,7 +1217,7 @@ class CaseP(Pattern):
     @staticmethod
     def fromjson(content):
         return CaseP(
-            mixop=content[1]
+            mixop=MixOp.fromjson(content[1])
         )
 
 class ListP(Pattern):
@@ -1236,12 +1232,12 @@ class ListP(Pattern):
 
 class OptP(Pattern):
     def __init__(self, kind):
-        self.kind = kind # typ: optp_kind
+        self.kind = kind # "Some" | "None"
 
     @staticmethod
     def fromjson(content):
         return OptP(
-            kind=content[1]
+            kind=content[1][0].value_string()
         )
     
 # [ `cons | `fixed of int | `nil ]
@@ -1249,38 +1245,25 @@ class OptP(Pattern):
 class ListPElem(AstBase):
     @staticmethod
     def fromjson(content):
-        kind = content[0]
+        kind = content[0].value_string()
         if kind == 'Cons':
             return Cons()
         elif kind == 'Fixed':
-            return Fixed(content[1])
+            return Fixed(content[1].value_int())
         elif kind == 'Nil':
             return Nil()
         else:
             raise ValueError("Unknown ListPElem: %s" % kind)
 
 class Cons(ListPElem):
-    def __init__(self):
-        pass
-
-    @staticmethod
-    def fromjson(content):
-        return Cons()
+    pass
 
 class Fixed(ListPElem):
     def __init__(self, value):
         self.value = value # typ: int
 
-    @staticmethod
-    def fromjson(content):
-        return Fixed(
-            value=content[1]
-        )
-
 class Nil(ListPElem):
-    @staticmethod
-    def fromjson(content):
-        return Nil()
+    pass
 
 
 
@@ -1298,7 +1281,7 @@ class Path(AstBase):
         region = Region.fromjson(value['at'])
         content = value['it']
         typ = Type.fromjson(value['note'])
-        kind = content[0]
+        kind = content[0].value_string()
         if kind == 'RootP':
             ast = RootP()
         elif kind == 'IdxP':
@@ -1365,7 +1348,7 @@ class MixOp(AstBase):
     @staticmethod
     def fromjson(content):
         return MixOp(
-            phrases=[[AtomT.fromjson(phrase) for phrase in group] for group in content]
+            phrases=[[AtomT.fromjson(phrase) for phrase in group.value_array()] for group in content.value_array()]
         )
 
 class AtomT(AstBase):
@@ -1380,10 +1363,10 @@ class AtomT(AstBase):
     def fromjson(value):
         region = Region.fromjson(value['at'])
         content = value['it']
-        kind = content[0]
+        kind = content[0].value_string()
         if kind == 'Atom':
             return AtomT(
-                value=content[1],
+                value=content[1].value_string(),
                 region=region
             )
         else:

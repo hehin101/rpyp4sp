@@ -38,19 +38,14 @@ def test_decd_example():
         instrs=[]
     )
 
-def test_full_ast():
-    import json, os
+def test_full_ast_rpython():
+    from rpyp4sp.rpyjson import loads
+    import os
     currfile = os.path.abspath(__file__)
     basedir = os.path.dirname(os.path.dirname(os.path.dirname(currfile)))
     fn = os.path.join(basedir, "ast.json")
     with open(fn) as f:
-        value = json.loads(f.read())
+        value = loads(f.read())
     defs = {}
-    for i, d in enumerate(value):
-        try:
-            defs[i] = p4specast.Def.fromjson(d)
-        except Exception as e:
-            import pdb; pdb.xpm()
-            print("Error processing definition %d: %s" % (i, e))
-    print("worked: %s, failed: %s, percent %s" % (len(defs), len(value) - len(defs), 100 * len(defs) / len(value)))
-
+    for i, d in enumerate(value.value_array()):
+        defs[i] = p4specast.Def.fromjson(d)
