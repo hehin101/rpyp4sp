@@ -58,6 +58,9 @@ class W_BoolV(W_Base):
         self.vid = vid
         self.typ = typ
     
+    def __repr__(self):
+        return "W_BoolV(%r, %r, %r)" % (self.value, self.vid, self.typ)
+
     @staticmethod
     def fromjson(content):
         return W_BoolV(content[1].value_bool())
@@ -67,6 +70,9 @@ class W_NumV(W_Base):
         self.value = value
         self.vid = vid
         self.typ = typ
+
+    def __repr__(self):
+        return "W_NumV(%r, %r, %r)" % (self.value, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
@@ -78,6 +84,9 @@ class W_TextV(W_Base):
         self.vid = vid
         self.typ = typ
 
+    def __repr__(self):
+        return "W_TextV(%r, %r, %r)" % (self.value, self.vid, self.typ)
+
     @staticmethod
     def fromjson(content):
         return W_TextV(content[1].value_string())
@@ -88,10 +97,13 @@ class W_StructV(W_Base):
         self.vid = vid
         self.typ = typ
 
+    def __repr__(self):
+        return "W_StructV(%r, %r, %r)" % (self.fields, self.vid, self.typ)
+
     @staticmethod
     def fromjson(content):
         fields = []
-        import pdb;pdb.set_trace()
+        import pdb;pdb.set_trace() # TODO: we don't have a test for this yet
         for f in content[1].value_array():
             atom_content, field_content = f.value_array()
             atom = p4specast.Atom.fromjson(atom_content)
@@ -106,6 +118,9 @@ class W_CaseV(W_Base):
         self.vid = vid
         self.typ = typ
 
+    def __repr__(self):
+        return "W_CaseV(%r, %r, %r)" % (self.mixop, self.values, self.vid, self.typ)
+
     @staticmethod
     def fromjson(content):
         mixop_content, valuelist_content = content[1].value_array()
@@ -119,6 +134,9 @@ class W_TupleV(W_Base):
         self.vid = vid
         self.typ = typ
 
+    def __repr__(self):
+        return "W_TupleV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
+
     @staticmethod
     def fromjson(content):
         import pdb;pdb.set_trace()
@@ -127,22 +145,28 @@ class W_TupleV(W_Base):
 
 class W_OptV(W_Base):
     def __init__(self, value, vid=-1, typ=None):
-        self.value = value # type: W_Base | None
+        self.w_value = value # type: W_Base | None
         self.vid = vid
         self.typ = typ
 
+    def __repr__(self):
+        return "W_OptV(%r, %r, %r)" % (self.w_value, self.vid, self.typ)
+
     @staticmethod
     def fromjson(content):
-        value = None
+        w_value = None
         if not content[1].is_null:
-            value = W_Base.fromjson(content[1])
-        return W_OptV(value)
+            w_value = W_Base.fromjson(content[1])
+        return W_OptV(w_value)
 
 class W_ListV(W_Base):
     def __init__(self, elements, vid=-1, typ=None):
         self.elements = elements
         self.vid = vid
         self.typ = typ
+
+    def __repr__(self):
+        return "W_ListV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
@@ -154,6 +178,9 @@ class W_FuncV(W_Base):
         self.id = id
         self.vid = vid
         self.typ = typ
+
+    def __repr__(self):
+        return "W_FuncV(%r, %r, %r)" % (self.id, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
