@@ -2,7 +2,10 @@ import pytest
 import sys
 
 from rpyp4sp.integers import Integer, SmallInteger, BigInteger, MININT
-from hypothesis import given, strategies, assume, example, settings
+try:
+    from hypothesis import given, strategies, assume, example, settings
+except ImportError:
+    pytest.skip("missing hypothesis")
 
 from rpython.rlib.rbigint import rbigint
 

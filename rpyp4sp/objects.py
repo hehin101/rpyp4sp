@@ -119,7 +119,7 @@ class W_CaseV(W_Base):
         self.typ = typ
 
     def __repr__(self):
-        return "W_CaseV(%r, %r, %r)" % (self.mixop, self.values, self.vid, self.typ)
+        return "W_CaseV(%r, %r, %r, %r)" % (self.mixop, self.values, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
