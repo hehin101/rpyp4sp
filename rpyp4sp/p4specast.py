@@ -1,3 +1,20 @@
+def ast_anywhere_in_list(l):
+    for index, el in enumerate(l):
+        if isinstance(el, list):
+            if ast_anywhere_in_list(el):
+                return True
+        elif isinstance(el, AstBase):
+            return True
+    return False
+
+def flatten_list_with_access_string(l, prefix):
+    for index, el in enumerate(l):
+        path = "%s[%s]" % (prefix, index)
+        if isinstance(el, list):
+            for sub in flatten_list_with_access_string(el, path):
+                yield sub
+        else:
+            yield el, path
 
 class AstBase(object):
     def __eq__(self, other):
@@ -27,9 +44,9 @@ class AstBase(object):
             if isinstance(value, AstBase):
                 arcs.append((value, key))
                 value._dot(dotgen)
-            elif isinstance(value, list) and value and isinstance(value[0], AstBase):
-                for index, item in enumerate(value):
-                    arcs.append((item, "%s[%s]" % (key, index)))
+            elif isinstance(value, list) and ast_anywhere_in_list(value):
+                for item, path in flatten_list_with_access_string(value, key):
+                    arcs.append((item, path))
                     item._dot(dotgen)
             else:
                 label.append("%s = %r" % (key, value))
