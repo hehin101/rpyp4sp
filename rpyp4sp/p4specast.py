@@ -76,7 +76,7 @@ class Position(AstBase):
         return Position(value['file'].value_string(), value['line'].value_int(), value['column'].value_int())
 
     def __repr__(self):
-        return "Position(file=%s, line=%d, column=%d)" % (self.file, self.line, self.column)
+        return "Position(%r, %d, %d)" % (self.file, self.line, self.column)
 
 # type region = { left : pos; right : pos } [@@deriving yojson]
 
@@ -124,8 +124,8 @@ class Id(AstBase):
         )
 
     def __repr__(self):
-        return "Id(value=%s, region=%s)" % (self.value, self.region)
-    
+        return "Id(%r, %s)" % (self.value, self.region)
+
 class TParam(AstBase):
     def __init__(self, value, region):
         self.value = value # type: str
@@ -174,6 +174,9 @@ class Var(AstBase):
         self.typ = typ
         self.iter = iter
 
+    def __repr__(self):
+        return "Var(id=%s, typ=%s, iter=%s)" % (self.id, self.typ, self.iter)
+
     @staticmethod
     def fromjson(content):
         return Var(
@@ -216,6 +219,9 @@ class TypD(Def):
         self.tparams = tparams  # type: list[tparam]
         self.deftyp = deftyp    # type: deftyp
 
+    def __repr__(self):
+        return "TypD(%s, %s, %s)" % (self.id, self.tparams, self.deftyp)
+
     @staticmethod
     def fromjson(value):
         _, id, tparams_value, deftype_value = value
@@ -235,6 +241,9 @@ class RelD(Def):
         self.ints = ints      # type: list[int]
         self.exps = exps        # type: list[Exp]
         self.instrs = instrs    # type: list[Instr]
+
+    def __repr__(self):
+        return "RelD(%r, %r, %r, %r, %r)" % (self.id, self.mixop, self.ints, self.exps, self.instrs)
 
     @staticmethod
     def fromjson(value):
@@ -257,6 +266,9 @@ class DecD(Def):
         self.tparams = tparams  # type: list[tparam]
         self.args = args        # type: list[arg]
         self.instrs = instrs    # type: list[instr]
+
+    def __repr__(self):
+        return "DecD(%r, %r, %r, %r)" % (self.id, self.tparams, self.args, self.instrs)
 
     @staticmethod
     def fromjson(value):
@@ -294,6 +306,9 @@ class ExpA(Arg):
     def __init__(self, exp):
         self.exp = exp # typ: Exp
 
+    def __repr__(self):
+        return "ExpA(%r)" % (self.exp,)
+
     @staticmethod
     def fromjson(value):
         _, exp_value = value
@@ -304,6 +319,9 @@ class ExpA(Arg):
 class DefA(Arg):
     def __init__(self, id):
         self.id = id # typ: Id
+
+    def __repr__(self):
+        return "DefA(%r)" % (self.id,)
 
     @staticmethod
     def fromjson(value):
@@ -423,6 +441,9 @@ class BoolE(Exp):
             value=content[1].value_bool()
         )
 
+    def __repr__(self):
+        return "BoolE(%r)" % (self.value,)
+
 class NumE(Exp):
     def __init__(self, value):
         self.value = value
@@ -434,6 +455,9 @@ class NumE(Exp):
             value=content[1]
         )
 
+    def __repr__(self):
+        return "NumE(%r)" % (self.value,)
+
 class TextE(Exp):
     def __init__(self, value):
         self.value = value # typ: str
@@ -443,6 +467,9 @@ class TextE(Exp):
         return TextE(
             value=content[1].value_string()
         )
+
+    def __repr__(self):
+        return "TextE(%r)" % (self.value,)
 
 class VarE(Exp):
     def __init__(self, id):
@@ -454,12 +481,18 @@ class VarE(Exp):
             id=Id.fromjson(content[1])
         )
 
+    def __repr__(self):
+        return "VarE(%r)" % (self.id,)
+
 class UnE(Exp):
     #   | UnE of unop * optyp * exp             (* unop exp *)
     def __init__(self, op, optyp, exp):
         self.op = op # typ: unop
         self.optyp = optyp # typ: optyp
         self.exp = exp # typ: Exp
+
+    def __repr__(self):
+        return "UnE(%r, %r, %r)" % (self.op, self.optyp, self.exp)
 
     @staticmethod
     def fromjson(content):
@@ -476,6 +509,9 @@ class BinE(Exp):
         self.optyp = optyp # typ: optyp
         self.left = left # typ: Exp
         self.right = right # typ: Exp
+
+    def __repr__(self):
+        return "BinE(%r, %r, %r, %r)" % (self.binop, self.optyp, self.left, self.right)
 
     @staticmethod
     def fromjson(content):
@@ -494,6 +530,9 @@ class CmpE(Exp):
         self.left = left # typ: Exp
         self.right = right # typ: Exp
 
+    def __repr__(self):
+        return "CmpE(%r, %r, %r, %r)" % (self.cmpop, self.optyp, self.left, self.right)
+
     @staticmethod
     def fromjson(content):
         return CmpE(
@@ -509,6 +548,9 @@ class UpCastE(Exp):
         self.typ = typ # typ: Typ
         self.exp = exp # typ: Exp
 
+    def __repr__(self):
+        return "UpCastE(%r, %r)" % (self.typ, self.exp)
+
     @staticmethod
     def fromjson(content):
         return UpCastE(
@@ -521,6 +563,9 @@ class DownCastE(Exp):
     def __init__(self, typ, exp):
         self.typ = typ # typ: typ
         self.exp = exp # typ: exp
+
+    def __repr__(self):
+        return "DownCastE(%r, %r)" % (self.typ, self.exp)
 
     @staticmethod
     def fromjson(content):
@@ -542,6 +587,9 @@ class SubE(Exp):
             typ=Type.fromjson(content[2])
         )
 
+    def __repr__(self):
+        return "SubE(%r, %r)" % (self.exp, self.typ)
+
 class MatchE(Exp):
 #   | MatchE of exp * pattern               (* exp `matches` pattern *)
     def __init__(self, exp, pattern):
@@ -555,6 +603,9 @@ class MatchE(Exp):
             pattern=Pattern.fromjson(content[2])
         )
 
+    def __repr__(self):
+        return "MatchE(%r, %r)" % (self.exp, self.pattern)
+
 class TupleE(Exp):
 #   | TupleE of exp list                    (* `(` exp* `)` *)
     def __init__(self, elts):
@@ -565,6 +616,9 @@ class TupleE(Exp):
         return TupleE(
             elts=[Exp.fromjson(elt) for elt in content[1].value_array()]
         )
+
+    def __repr__(self):
+        return "TupleE(%r)" % (self.elts,)
 
 class CaseE(Exp):
 #   | CaseE of notexp                       (* notexp *)
@@ -577,6 +631,9 @@ class CaseE(Exp):
             notexp=NotExp.fromjson(content[1])
         )
 
+    def __repr__(self):
+        return "CaseE(%r)" % (self.notexp,)
+
 class StrE(Exp):
 #   | StrE of (atom * exp) list             (* { expfield* } *)
     def __init__(self, fields):
@@ -587,6 +644,9 @@ class StrE(Exp):
         return StrE(
             fields=[(AtomT.fromjson(field[0]), Exp.fromjson(field[1])) for field in content[1].value_array()]
         )
+
+    def __repr__(self):
+        return "StrE(%r)" % (self.fields,)
 
 class OptE(Exp):
 #   | OptE of exp option                    (* exp? *)
@@ -601,6 +661,9 @@ class OptE(Exp):
             exp=Exp.fromjson(content[1])
         )
 
+    def __repr__(self):
+        return "OptE(%r)" % (self.exp,)
+
 class ListE(Exp):
 #   | ListE of exp list                     (* `[` exp* `]` *)
     def __init__(self, elts):
@@ -611,6 +674,9 @@ class ListE(Exp):
         return ListE(
             elts=[Exp.fromjson(elt) for elt in content[1].value_array()]
         )
+
+    def __repr__(self):
+        return "ListE(%r)" % (self.elts,)
 
 class ConsE(Exp):
 #   | ConsE of exp * exp                    (* exp `::` exp *)
@@ -625,6 +691,9 @@ class ConsE(Exp):
             tail=Exp.fromjson(content[2])
         )
 
+    def __repr__(self):
+        return "ConsE(%r, %r)" % (self.head, self.tail)
+
 class CatE(Exp):
 #   | CatE of exp * exp                     (* exp `++` exp *)
     def __init__(self, left, right):
@@ -638,6 +707,8 @@ class CatE(Exp):
             right=Exp.fromjson(content[2])
         )
 
+    def __repr__(self):
+        return "CatE(%r, %r)" % (self.left, self.right)
 
 class MemE(Exp):
 #   | MemE of exp * exp                     (* exp `<-` exp *)
@@ -652,6 +723,9 @@ class MemE(Exp):
             lst=Exp.fromjson(content[2])
         )
 
+    def __repr__(self):
+        return "MemE(%r, %r)" % (self.elem, self.lst)
+
 class LenE(Exp):
 #   | LenE of exp                           (* `|` exp `|` *)
     def __init__(self, lst):
@@ -662,6 +736,9 @@ class LenE(Exp):
         return LenE(
             lst=Exp.fromjson(content[1])
         )
+
+    def __repr__(self):
+        return "LenE(%r)" % (self.lst,)
 
 class DotE(Exp):
 #   | DotE of exp * atom                    (* exp.atom *)
@@ -676,6 +753,9 @@ class DotE(Exp):
             field=AtomT.fromjson(content[2])
         )
 
+    def __repr__(self):
+        return "DotE(%r, %r)" % (self.obj, self.field)
+
 class IdxE(Exp):
 #   | IdxE of exp * exp                     (* exp `[` exp `]` *)
     def __init__(self, lst, idx):
@@ -688,6 +768,9 @@ class IdxE(Exp):
             lst=Exp.fromjson(content[1]),
             idx=Exp.fromjson(content[2])
         )
+
+    def __repr__(self):
+        return "IdxE(%r, %r)" % (self.lst, self.idx)
 
 class SliceE(Exp):
 #   | SliceE of exp * exp * exp             (* exp `[` exp `:` exp `]` *)
@@ -704,6 +787,9 @@ class SliceE(Exp):
             stop=Exp.fromjson(content[3])
         )
 
+    def __repr__(self):
+        return "SliceE(%r, %r, %r)" % (self.lst, self.start, self.stop)
+
 class UpdE(Exp):
 #   | UpdE of exp * path * exp              (* exp `[` path `=` exp `]` *)
     def __init__(self, exp, path, value):
@@ -718,6 +804,9 @@ class UpdE(Exp):
             path=Path.fromjson(content[2]),
             value=Exp.fromjson(content[3])
         )
+
+    def __repr__(self):
+        return "UpdE(%r, %r, %r)" % (self.exp, self.path, self.value)
 
 class CallE(Exp):
 #   | CallE of id * targ list * arg list    (* $id`<` targ* `>``(` arg* `)` *)
@@ -734,11 +823,17 @@ class CallE(Exp):
             args=[Arg.fromjson(arg) for arg in content[3].value_array()]
         )
 
+    def __repr__(self):
+        return "CallE(%r, %r, %r)" % (self.func, self.targs, self.args)
+
 class HoldE(Exp):
 #   | HoldE of id * notexp                  (* id `:` notexp `holds` *)
     def __init__(self, id, notexp):
         self.id = id
         self.notexp = notexp
+
+    def __repr__(self):
+        return "HoldE(%r, %r)" % (self.id, self.notexp)
 
     @staticmethod
     def fromjson(content):
@@ -754,6 +849,9 @@ class IterE(Exp):
         self.exp = exp
         self.iter = iter
         self.varlist = varlist
+
+    def __repr__(self):
+        return "IterE(%r, %r, %r)" % (self.exp, self.iter, self.varlist)
 
     @staticmethod
     def fromjson(content):
@@ -792,6 +890,9 @@ class IterExp(AstBase):
             iter=Iter.fromjson(content[0]),
             vars=[Var.fromjson(var) for var in content[1].value_array()]
         )
+
+    def __repr__(self):
+        return "IterExp(%r, %r)" % (self.iter, self.vars)
 
 # _________________________________________________________________
 
@@ -841,14 +942,20 @@ class Type(AstBase):
 class BoolT(Type):
     def __init__(self):
         pass
+    def __repr__(self):
+        return "BoolT()"
 
     @staticmethod
     def fromjson(content):
         return BoolT()
 
+
 class NumT(Type):
     def __init__(self, typ):
         self.typ = typ
+
+    def __repr__(self):
+        return "NumT(%r)" % (self.typ,)
 
     @staticmethod
     def fromjson(content):
@@ -859,6 +966,9 @@ class TextT(Type):
     def __init__(self):
         pass
 
+    def __repr__(self):
+        return "TextT()"
+
     @staticmethod
     def fromjson(content):
         return TextT()
@@ -867,6 +977,9 @@ class VarT(Type):
     def __init__(self, id, targs):
         self.id = id
         self.targs = targs
+
+    def __repr__(self):
+        return "VarT(%r, %r)" % (self.id, self.targs)
 
     @staticmethod
     def fromjson(content):
@@ -879,6 +992,9 @@ class TupleT(Type):
     def __init__(self, elts):
         self.elts = elts
 
+    def __repr__(self):
+        return "TupleT(%r)" % (self.elts,)
+
     @staticmethod
     def fromjson(content):
         return TupleT(
@@ -889,6 +1005,9 @@ class IterT(Type):
     def __init__(self, typ, iter):
         self.typ = typ
         self.iter = iter
+
+    def __repr__(self):
+        return "IterT(%r, %r)" % (self.typ, self.iter)
 
     @staticmethod
     def fromjson(content):
@@ -901,6 +1020,9 @@ class FuncT(Type):
     def __init__(self, params, ret):
         self.params = params
         self.ret = ret
+
+    def __repr__(self):
+        return "FuncT(%r, %r)" % (self.params, self.ret)
 
     @staticmethod
     def fromjson(content):
@@ -918,6 +1040,9 @@ class NotTyp(AstBase):
     def __init__(self, mixop, typs):
         self.mixop = mixop
         self.typs = typs
+
+    def __repr__(self):
+        return "NotTyp(%r, %r)" % (self.mixop, self.typs)
 
     @staticmethod
     def fromjson(value):
@@ -951,7 +1076,7 @@ class DefTyp(AstBase):
             raise ValueError("Unknown DefTyp: %s" % what)
         ast.region = region
         return ast
-    
+
 class PlainT(DefTyp):
     def __init__(self, typ):
         self.typ = typ
@@ -998,6 +1123,9 @@ class TypField(AstBase):
         self.name = name
         self.typ = typ
 
+    def __repr__(self):
+        return "TypField(%r, %r)" % (self.name, self.typ)
+
     @staticmethod
     def fromjson(content):
         return TypField(
@@ -1015,7 +1143,7 @@ TypeCase = NotTyp
 # and instr = instr' phrase [@@deriving yojson]
 # and instr' =
 #   | IfI of exp * iterexp list * instr list * phantom option
-#   | CaseI of exp * case list * phantom option 
+#   | CaseI of exp * case list * phantom option
 #   | OtherwiseI of instr
 #   | LetI of exp * exp * iterexp list
 #   | RuleI of id * notexp * iterexp list
@@ -1050,11 +1178,12 @@ class Instr(AstBase):
         return ast
 
 class IfI(Instr):
-    def __init__(self, exp, iters, instrs, phantom):
+    def __init__(self, exp, iters, instrs, phantom, region=None):
         self.exp = exp
         self.iters = iters
         self.instrs = instrs
         self.phantom = phantom
+        self.region = region
 
     @staticmethod
     def fromjson(content):
@@ -1065,11 +1194,15 @@ class IfI(Instr):
             phantom=content[4]
         )
 
+    def __repr__(self):
+        return "IfI(%r, %r, %r, %r%s)" % (self.exp, self.iters, self.instrs, self.phantom, (", " + repr(self.region)) if self.region is not None else '')
+
 class CaseI(Instr):
-    def __init__(self, exp, cases, phantom):
+    def __init__(self, exp, cases, phantom, region=None):
         self.exp = exp
         self.cases = cases
         self.phantom = phantom
+        self.region = region
 
     @staticmethod
     def fromjson(content):
@@ -1079,9 +1212,13 @@ class CaseI(Instr):
             phantom=content[3]
         )
 
+    def __repr__(self):
+        return "CaseI(%r, %r, %r%s)" % (self.exp, self.cases, self.phantom, (", " + repr(self.region)) if self.region is not None else '')
+
 class OtherwiseI(Instr):
-    def __init__(self, instr):
+    def __init__(self, instr, region=None):
         self.instr = instr
+        self.region = region
 
     @staticmethod
     def fromjson(content):
@@ -1089,11 +1226,15 @@ class OtherwiseI(Instr):
             instr=Instr.fromjson(content[1])
         )
 
+    def __repr__(self):
+        return "OtherwiseI(%r)" % (self.instr,)
+
 class LetI(Instr):
-    def __init__(self, var, value, iters):
+    def __init__(self, var, value, iters, region=None):
         self.var = var
         self.value = value
         self.iters = iters
+        self.region = region
 
     @staticmethod
     def fromjson(content):
@@ -1103,11 +1244,15 @@ class LetI(Instr):
             iters=[IterExp.fromjson(ite) for ite in content[3].value_array()]
         )
 
+    def __repr__(self):
+        return "LetI(%r, %r, %r%s)" % (self.var, self.value, self.iters, (", " + repr(self.region)) if self.region is not None else '')
+
 class RuleI(Instr):
-    def __init__(self, id, notexp, iters):
+    def __init__(self, id, notexp, iters, region=None):
         self.id = id
         self.notexp = notexp
         self.iters = iters
+        self.region = region
 
     @staticmethod
     def fromjson(content):
@@ -1117,9 +1262,13 @@ class RuleI(Instr):
             iters=[IterExp.fromjson(ite) for ite in content[3].value_array()]
         )
 
+    def __repr__(self):
+        return "RuleI(%r, %r, %r%s)" % (self.id, self.notexp, self.iters, (", " + repr(self.region)) if self.region is not None else '')
+
 class ResultI(Instr):
-    def __init__(self, exps):
+    def __init__(self, exps, region=None):
         self.exps = exps
+        self.region = region
 
     @staticmethod
     def fromjson(content):
@@ -1127,16 +1276,24 @@ class ResultI(Instr):
             exps=[Exp.fromjson(elt) for elt in content[1].value_array()]
         )
 
+    def __repr__(self):
+        return "ResultI(%r%s)" % (self.exps, (", " + repr(self.region)) if self.region is not None else '')
+
 class ReturnI(Instr):
-    def __init__(self, exp):
+    def __init__(self, exp, region=None):
         self.exp = exp
+        self.region = region
 
     @staticmethod
     def fromjson(content):
         return ReturnI(
             exp=Exp.fromjson(content[1])
         )
-    
+
+    def __repr__(self):
+        return "ReturnI(%r%s)" % (self.exp, (", " + repr(self.region)) if self.region is not None else '')
+
+
 # cases
 # and case = guard * instr list
 
@@ -1159,6 +1316,10 @@ class Case(AstBase):
             instrs=[Instr.fromjson(instr) for instr in content[1].value_array()]
         )
 
+    def __repr__(self):
+        return "Case(%r, %r)" % (self.guard, self.instrs)
+
+
 class Guard(AstBase):
     @staticmethod
     def fromjson(content):
@@ -1175,7 +1336,7 @@ class Guard(AstBase):
             return MemG.fromjson(content)
         else:
             raise ValueError("Unknown Guard: %s" % kind)
-        
+
 class BoolG(Guard):
     def __init__(self, value):
         self.value = value # typ: bool
@@ -1185,6 +1346,9 @@ class BoolG(Guard):
         return BoolG(
             value=content[1].value_bool()
         )
+
+    def __repr__(self):
+        return "BoolG(%r)" % (self.value,)
 
 class CmpG(Guard):
     def __init__(self, op, typ, exp):
@@ -1200,6 +1364,9 @@ class CmpG(Guard):
             exp=Exp.fromjson(content[3])
         )
 
+    def __repr__(self):
+        return "CmpG(%r, %r, %r)" % (self.op, self.typ, self.exp)
+
 class SubG(Guard):
     def __init__(self, typ):
         self.typ = typ # typ: Type
@@ -1209,6 +1376,9 @@ class SubG(Guard):
         return SubG(
             typ=Type.fromjson(content[1])
         )
+
+    def __repr__(self):
+        return "SubG(%r)" % (self.typ,)
 
 class MatchG(Guard):
     def __init__(self, pattern):
@@ -1220,6 +1390,9 @@ class MatchG(Guard):
             pattern=Pattern.fromjson(content[1])
         )
 
+    def __repr__(self):
+        return "MatchG(%r)" % (self.pattern,)
+
 class MemG(Guard):
     def __init__(self, exp):
         self.exp = exp # typ: Exp
@@ -1229,7 +1402,10 @@ class MemG(Guard):
         return MemG(
             exp=Exp.fromjson(content[1])
         )
-    
+
+    def __repr__(self):
+        return "MemG(%r)" % (self.exp,)
+
 # and pattern =
 #   | casep of mixop
 #   | listp of [ `cons | `fixed of int | `nil ]
@@ -1258,6 +1434,9 @@ class CaseP(Pattern):
             mixop=MixOp.fromjson(content[1])
         )
 
+    def __repr__(self):
+        return "CaseP(%r)" % (self.mixop,)
+
 class ListP(Pattern):
     def __init__(self, element):
         self.element = element # typ: ListPElem
@@ -1268,6 +1447,9 @@ class ListP(Pattern):
             element=ListPElem.fromjson(content[1])
         )
 
+    def __repr__(self):
+        return "ListP(%r)" % (self.element,)
+
 class OptP(Pattern):
     def __init__(self, kind):
         self.kind = kind # "Some" | "None"
@@ -1277,7 +1459,10 @@ class OptP(Pattern):
         return OptP(
             kind=content[1][0].value_string()
         )
-    
+
+    def __repr__(self):
+        return "OptP(%r)" % (self.kind,)
+
 # [ `cons | `fixed of int | `nil ]
 
 class ListPElem(AstBase):
@@ -1294,14 +1479,19 @@ class ListPElem(AstBase):
             raise ValueError("Unknown ListPElem: %s" % kind)
 
 class Cons(ListPElem):
-    pass
+    def __repr__(self):
+        return "Cons()"
 
 class Fixed(ListPElem):
     def __init__(self, value):
         self.value = value # typ: int
 
+    def __repr__(self):
+        return "Fixed(%r)" % (self.value,)
+
 class Nil(ListPElem):
-    pass
+    def __repr__(self):
+        return "Nil()"
 
 
 
@@ -1339,6 +1529,9 @@ class RootP(Path):
     def fromjson(content):
         return RootP()
 
+    def __repr__(self):
+        return "RootP()"
+
 class IdxP(Path):
     def __init__(self, path, exp):
         self.path = path
@@ -1350,6 +1543,9 @@ class IdxP(Path):
             path=Path.fromjson(content[1]),
             exp=Exp.fromjson(content[2])
         )
+
+    def __repr__(self):
+        return "IdxP(%r, %r)" % (self.path, self.exp)
 
 class SliceP(Path):
     def __init__(self, path, start, end):
@@ -1365,6 +1561,9 @@ class SliceP(Path):
             end=Exp.fromjson(content[3])
         )
 
+    def __repr__(self):
+        return "SliceP(%r, %r, %r)" % (self.path, self.start, self.end)
+
 class DotP(Path):
     def __init__(self, path, atom):
         self.path = path
@@ -1377,6 +1576,9 @@ class DotP(Path):
             atom=AtomT.fromjson(content[2])
         )
 
+    def __repr__(self):
+        return "DotP(%r, %r)" % (self.path, self.atom)
+
 # type Mixop.t = Atom.t phrase list list
 
 class MixOp(AstBase):
@@ -1388,6 +1590,9 @@ class MixOp(AstBase):
         return MixOp(
             phrases=[[AtomT.fromjson(phrase) for phrase in group.value_array()] for group in content.value_array()]
         )
+
+    def __repr__(self):
+        return "MixOp(%r)" % (self.phrases,)
 
 class AtomT(AstBase):
     def __init__(self, value, region):

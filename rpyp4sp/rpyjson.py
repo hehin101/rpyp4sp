@@ -50,7 +50,7 @@ class JsonBase(object):
 
     def value_int(self):
         raise TypeError
-    
+
     def __getitem__(self, index):
         if self.is_array:
             assert isinstance(self, JsonArray)
@@ -59,6 +59,9 @@ class JsonBase(object):
             assert isinstance(self, JsonObject)
             return self.value[index]
         raise TypeError("Invalid index access %s %s" % (self, index))
+
+    def __repr__(self):
+        import pdb;pdb.set_trace()
 
 
 class JsonPrimitive(JsonBase):
@@ -77,6 +80,9 @@ class JsonNull(JsonPrimitive):
     def _unpack_deep(self):
         return None
 
+    def __repr__(self):
+        return "rpyjson.JsonNull()"
+
 class JsonFalse(JsonPrimitive):
     is_bool = True
 
@@ -88,6 +94,9 @@ class JsonFalse(JsonPrimitive):
 
     def _unpack_deep(self):
         return False
+
+    def __repr__(self):
+        return "rpyjson.JsonFalse()"
 
 
 class JsonTrue(JsonPrimitive):
@@ -101,6 +110,9 @@ class JsonTrue(JsonPrimitive):
 
     def _unpack_deep(self):
         return True
+
+    def __repr__(self):
+        return "rpyjson.JsonTrue()"
 
 class JsonInt(JsonPrimitive):
     is_int = True
@@ -117,6 +129,9 @@ class JsonInt(JsonPrimitive):
     def value_int(self):
         return self.value
 
+    def __repr__(self):
+        return "rpyjson.JsonInt(%d)" % (self.value,)
+
 class JsonFloat(JsonPrimitive):
     is_float = True
 
@@ -131,6 +146,10 @@ class JsonFloat(JsonPrimitive):
 
     def _unpack_deep(self):
         return self.value
+
+    def __repr__(self):
+        return "rpyjson.JsonFloat(%r)" % (self.value,)
+
 
 class JsonString(JsonPrimitive):
     is_string = True
@@ -149,14 +168,8 @@ class JsonString(JsonPrimitive):
     def value_string(self):
         return self.value
 
-    def hash_w(self):
-        x = compute_hash(self.value)
-        x -= (x == -1)
-        return x
-
-    def eq_w(self, w_other):
-        assert isinstance(w_other, JsonString)
-        return self.value == w_other.value
+    def __repr__(self):
+        return "rpyjson.JsonString(%r)" % (self.value,)
 
 class JsonObject(JsonBase):
     is_object = True
@@ -176,6 +189,9 @@ class JsonObject(JsonBase):
     def value_object(self):
         return self.value
 
+    def __repr__(self):
+        return "rpyjson.JsonObject(%r)" % (self.value,)
+
 class JsonArray(JsonBase):
     is_array = True
 
@@ -190,6 +206,9 @@ class JsonArray(JsonBase):
 
     def value_array(self):
         return self.value
+
+    def __repr__(self):
+        return "rpyjson.JsonArray(%r)" % (self.value,)
 
 json_null = JsonNull()
 

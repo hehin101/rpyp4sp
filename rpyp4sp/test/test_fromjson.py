@@ -12,6 +12,7 @@ def test_full_ast_rpython():
     defs = {}
     for i, d in enumerate(value.value_array()):
         defs[i] = p4specast.Def.fromjson(d)
+        repr(defs[i])
 
 
 def test_example_values_load():
