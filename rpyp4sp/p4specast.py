@@ -544,51 +544,51 @@ class CmpE(Exp):
 
 class UpCastE(Exp):
 #   | UpCastE of typ * exp                  (* exp as typ *)
-    def __init__(self, typ, exp):
-        self.typ = typ # typ: Typ
+    def __init__(self, check_typ, exp):
+        self.check_typ = check_typ # typ: Typ
         self.exp = exp # typ: Exp
 
     def __repr__(self):
-        return "UpCastE(%r, %r)" % (self.typ, self.exp)
+        return "UpCastE(%r, %r)" % (self.check_typ, self.exp)
 
     @staticmethod
     def fromjson(content):
         return UpCastE(
-            typ=Type.fromjson(content[1]),
+            check_typ=Type.fromjson(content[1]),
             exp=Exp.fromjson(content[2]),
         )
 
 class DownCastE(Exp):
 #   | DownCastE of typ * exp                (* exp as typ *)
-    def __init__(self, typ, exp):
-        self.typ = typ # typ: typ
+    def __init__(self, check_typ, exp):
+        self.check_typ = check_typ # typ: typ
         self.exp = exp # typ: exp
 
     def __repr__(self):
-        return "DownCastE(%r, %r)" % (self.typ, self.exp)
+        return "DownCastE(%r, %r)" % (self.check_typ, self.exp)
 
     @staticmethod
     def fromjson(content):
         return DownCastE(
-            typ=Type.fromjson(content[1]),
+            check_typ=Type.fromjson(content[1]),
             exp=Exp.fromjson(content[2]),
         )
 
 class SubE(Exp):
 #   | SubE of exp * typ                     (* exp `<:` typ *)
-    def __init__(self, exp, typ):
+    def __init__(self, exp, check_typ):
         self.exp = exp
-        self.typ = typ
+        self.check_typ = check_typ
 
     @staticmethod
     def fromjson(content):
         return SubE(
             exp=Exp.fromjson(content[1]),
-            typ=Type.fromjson(content[2])
+            check_typ=Type.fromjson(content[2])
         )
 
     def __repr__(self):
-        return "SubE(%r, %r)" % (self.exp, self.typ)
+        return "SubE(%r, %r)" % (self.exp, self.check_typ)
 
 class MatchE(Exp):
 #   | MatchE of exp * pattern               (* exp `matches` pattern *)
