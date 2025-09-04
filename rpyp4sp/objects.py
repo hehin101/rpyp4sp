@@ -1,4 +1,4 @@
-from rpyp4sp import p4specast
+from rpyp4sp import p4specast, integers
 # and vid = int [@@deriving yojson]
 # and vnote = { vid : vid; typ : typ' } [@@deriving yojson]
 
@@ -73,17 +73,26 @@ class W_BoolV(W_Base):
         return W_BoolV(content[1].value_bool())
 
 class W_NumV(W_Base):
-    def __init__(self, value, vid=-1, typ=None):
-        self.value = value
-        self.vid = vid
-        self.typ = typ
+    def __init__(self, value, what, vid=-1, typ=None):
+        self.value = value # type: integer.Integer
+        self.what = what # type: str
+        self.vid = vid # type: int
+        self.typ = typ # type: Type | None
 
     def __repr__(self):
-        return "objects.W_NumV(%r, %r, %r)" % (self.value, self.vid, self.typ)
+        return "objects.W_NumV.fromstr(%r, %r, %r, %r)" % (
+            self.value.str(), self.what, self.vid, self.typ)
+
+    @staticmethod
+    def fromstr(value, what, vid=-1, typ=None):
+        return W_NumV(integers.Integer.fromstr(value), what, vid, typ)
 
     @staticmethod
     def fromjson(content):
-        return W_NumV(content[1])
+        inner = content[1]
+        what = inner[0].value_string() # 'Int' or 'Nat'
+        value = inner[1].value_string()
+        return W_NumV.fromstr(value, what)
 
 class W_TextV(W_Base):
     def __init__(self, value, vid=-1, typ=None):
