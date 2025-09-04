@@ -71,7 +71,7 @@ def define_enum(basename, *names):
             assert 0
 
         def __repr__(self):
-            return type(self).__name__ + "()"
+            return "p4specast." + type(self).__name__ + "()"
     Base.__name__ = basename
     subs = []
     for name in names:
@@ -97,7 +97,7 @@ class Position(AstBase):
         return Position(value['file'].value_string(), value['line'].value_int(), value['column'].value_int())
 
     def __repr__(self):
-        return "Position(%r, %d, %d)" % (self.file, self.line, self.column)
+        return "p4specast.Position(%r, %d, %d)" % (self.file, self.line, self.column)
 
 # type region = { left : pos; right : pos } [@@deriving yojson]
 
@@ -115,7 +115,7 @@ class Region(AstBase):
         return Region(Position.fromjson(value['left']), Position.fromjson(value['right']))
 
     def __repr__(self):
-        return "Region(left=%s, right=%s)" % (self.left, self.right)
+        return "p4specast.Region(%s, %s)" % (self.left, self.right)
 
 # type ('a, 'b, 'c) info = { it : 'a; note : 'b; at : 'c } [@@deriving yojson]
 # type 'a phrase = ('a, unit, region) info [@@deriving yojson]
@@ -145,7 +145,7 @@ class Id(AstBase):
         )
 
     def __repr__(self):
-        return "Id(%r, %s)" % (self.value, self.region)
+        return "p4specast.Id(%r, %s)" % (self.value, self.region)
 
 class TParam(AstBase):
     def __init__(self, value, region):
@@ -160,7 +160,7 @@ class TParam(AstBase):
         )
 
     def __repr__(self):
-        return "TParam(value=%s, region=%s)" % (self.value, self.region)
+        return "p4specast.TParam(value=%s, region=%s)" % (self.value, self.region)
 
 # and targ = targ' phrase [@@deriving yojson]
 # and targ' = typ' [@@deriving yojson]
@@ -178,7 +178,7 @@ class TArg(AstBase):
         )
 
     def __repr__(self):
-        return "TArg(typ=%s, region=%s)" % (self.typ, self.region)
+        return "p4specast.TArg(typ=%s, region=%s)" % (self.typ, self.region)
 
 
 # type iter =
@@ -196,7 +196,7 @@ class Var(AstBase):
         self.iter = iter
 
     def __repr__(self):
-        return "Var(id=%s, typ=%s, iter=%s)" % (self.id, self.typ, self.iter)
+        return "p4specast.Var(id=%s, typ=%s, iter=%s)" % (self.id, self.typ, self.iter)
 
     @staticmethod
     def fromjson(content):
@@ -241,7 +241,7 @@ class TypD(Def):
         self.deftyp = deftyp    # type: deftyp
 
     def __repr__(self):
-        return "TypD(%s, %s, %s)" % (self.id, self.tparams, self.deftyp)
+        return "p4specast.TypD(%s, %s, %s)" % (self.id, self.tparams, self.deftyp)
 
     @staticmethod
     def fromjson(value):
@@ -264,7 +264,7 @@ class RelD(Def):
         self.instrs = instrs    # type: list[Instr]
 
     def __repr__(self):
-        return "RelD(%r, %r, %r, %r, %r)" % (self.id, self.mixop, self.ints, self.exps, self.instrs)
+        return "p4specast.RelD(%r, %r, %r, %r, %r)" % (self.id, self.mixop, self.ints, self.exps, self.instrs)
 
     @staticmethod
     def fromjson(value):
@@ -289,7 +289,7 @@ class DecD(Def):
         self.instrs = instrs    # type: list[instr]
 
     def __repr__(self):
-        return "DecD(%r, %r, %r, %r)" % (self.id, self.tparams, self.args, self.instrs)
+        return "p4specast.DecD(%r, %r, %r, %r)" % (self.id, self.tparams, self.args, self.instrs)
 
     @staticmethod
     def fromjson(value):
@@ -328,7 +328,7 @@ class ExpA(Arg):
         self.exp = exp # typ: Exp
 
     def __repr__(self):
-        return "ExpA(%r)" % (self.exp,)
+        return "p4specast.ExpA(%r)" % (self.exp,)
 
     @staticmethod
     def fromjson(value):
@@ -342,7 +342,7 @@ class DefA(Arg):
         self.id = id # typ: Id
 
     def __repr__(self):
-        return "DefA(%r)" % (self.id,)
+        return "p4specast.DefA(%r)" % (self.id,)
 
     @staticmethod
     def fromjson(value):
@@ -463,7 +463,7 @@ class BoolE(Exp):
         )
 
     def __repr__(self):
-        return "BoolE(%r)" % (self.value,)
+        return "p4specast.BoolE(%r)" % (self.value,)
 
 class NumE(Exp):
     def __init__(self, value):
@@ -477,7 +477,7 @@ class NumE(Exp):
         )
 
     def __repr__(self):
-        return "NumE(%r)" % (self.value,)
+        return "p4specast.NumE(%r)" % (self.value,)
 
 class TextE(Exp):
     def __init__(self, value):
@@ -490,7 +490,7 @@ class TextE(Exp):
         )
 
     def __repr__(self):
-        return "TextE(%r)" % (self.value,)
+        return "p4specast.TextE(%r)" % (self.value,)
 
 class VarE(Exp):
     def __init__(self, id):
@@ -503,7 +503,7 @@ class VarE(Exp):
         )
 
     def __repr__(self):
-        return "VarE(%r)" % (self.id,)
+        return "p4specast.VarE(%r)" % (self.id,)
 
 class UnE(Exp):
     #   | UnE of unop * optyp * exp             (* unop exp *)
@@ -513,7 +513,7 @@ class UnE(Exp):
         self.exp = exp # typ: Exp
 
     def __repr__(self):
-        return "UnE(%r, %r, %r)" % (self.op, self.optyp, self.exp)
+        return "p4specast.UnE(%r, %r, %r)" % (self.op, self.optyp, self.exp)
 
     @staticmethod
     def fromjson(content):
@@ -532,7 +532,7 @@ class BinE(Exp):
         self.right = right # typ: Exp
 
     def __repr__(self):
-        return "BinE(%r, %r, %r, %r)" % (self.binop, self.optyp, self.left, self.right)
+        return "p4specast.BinE(%r, %r, %r, %r)" % (self.binop, self.optyp, self.left, self.right)
 
     @staticmethod
     def fromjson(content):
@@ -552,7 +552,7 @@ class CmpE(Exp):
         self.right = right # typ: Exp
 
     def __repr__(self):
-        return "CmpE(%r, %r, %r, %r)" % (self.cmpop, self.optyp, self.left, self.right)
+        return "p4specast.CmpE(%r, %r, %r, %r)" % (self.cmpop, self.optyp, self.left, self.right)
 
     @staticmethod
     def fromjson(content):
@@ -570,7 +570,7 @@ class UpCastE(Exp):
         self.exp = exp # typ: Exp
 
     def __repr__(self):
-        return "UpCastE(%r, %r)" % (self.check_typ, self.exp)
+        return "p4specast.UpCastE(%r, %r)" % (self.check_typ, self.exp)
 
     @staticmethod
     def fromjson(content):
@@ -586,7 +586,7 @@ class DownCastE(Exp):
         self.exp = exp # typ: exp
 
     def __repr__(self):
-        return "DownCastE(%r, %r)" % (self.check_typ, self.exp)
+        return "p4specast.DownCastE(%r, %r)" % (self.check_typ, self.exp)
 
     @staticmethod
     def fromjson(content):
@@ -609,7 +609,7 @@ class SubE(Exp):
         )
 
     def __repr__(self):
-        return "SubE(%r, %r)" % (self.exp, self.check_typ)
+        return "p4specast.SubE(%r, %r)" % (self.exp, self.check_typ)
 
 class MatchE(Exp):
 #   | MatchE of exp * pattern               (* exp `matches` pattern *)
@@ -625,7 +625,7 @@ class MatchE(Exp):
         )
 
     def __repr__(self):
-        return "MatchE(%r, %r)" % (self.exp, self.pattern)
+        return "p4specast.MatchE(%r, %r)" % (self.exp, self.pattern)
 
 class TupleE(Exp):
 #   | TupleE of exp list                    (* `(` exp* `)` *)
@@ -639,7 +639,7 @@ class TupleE(Exp):
         )
 
     def __repr__(self):
-        return "TupleE(%r)" % (self.elts,)
+        return "p4specast.TupleE(%r)" % (self.elts,)
 
 class CaseE(Exp):
 #   | CaseE of notexp                       (* notexp *)
@@ -653,7 +653,7 @@ class CaseE(Exp):
         )
 
     def __repr__(self):
-        return "CaseE(%r)" % (self.notexp,)
+        return "p4specast.CaseE(%r)" % (self.notexp,)
 
 class StrE(Exp):
 #   | StrE of (atom * exp) list             (* { expfield* } *)
@@ -667,7 +667,7 @@ class StrE(Exp):
         )
 
     def __repr__(self):
-        return "StrE(%r)" % (self.fields,)
+        return "p4specast.StrE(%r)" % (self.fields,)
 
 class OptE(Exp):
 #   | OptE of exp option                    (* exp? *)
@@ -683,7 +683,7 @@ class OptE(Exp):
         )
 
     def __repr__(self):
-        return "OptE(%r)" % (self.exp,)
+        return "p4specast.OptE(%r)" % (self.exp,)
 
 class ListE(Exp):
 #   | ListE of exp list                     (* `[` exp* `]` *)
@@ -697,7 +697,7 @@ class ListE(Exp):
         )
 
     def __repr__(self):
-        return "ListE(%r)" % (self.elts,)
+        return "p4specast.ListE(%r)" % (self.elts,)
 
 class ConsE(Exp):
 #   | ConsE of exp * exp                    (* exp `::` exp *)
@@ -713,7 +713,7 @@ class ConsE(Exp):
         )
 
     def __repr__(self):
-        return "ConsE(%r, %r)" % (self.head, self.tail)
+        return "p4specast.ConsE(%r, %r)" % (self.head, self.tail)
 
 class CatE(Exp):
 #   | CatE of exp * exp                     (* exp `++` exp *)
@@ -729,7 +729,7 @@ class CatE(Exp):
         )
 
     def __repr__(self):
-        return "CatE(%r, %r)" % (self.left, self.right)
+        return "p4specast.CatE(%r, %r)" % (self.left, self.right)
 
 class MemE(Exp):
 #   | MemE of exp * exp                     (* exp `<-` exp *)
@@ -745,7 +745,7 @@ class MemE(Exp):
         )
 
     def __repr__(self):
-        return "MemE(%r, %r)" % (self.elem, self.lst)
+        return "p4specast.MemE(%r, %r)" % (self.elem, self.lst)
 
 class LenE(Exp):
 #   | LenE of exp                           (* `|` exp `|` *)
@@ -759,7 +759,7 @@ class LenE(Exp):
         )
 
     def __repr__(self):
-        return "LenE(%r)" % (self.lst,)
+        return "p4specast.LenE(%r)" % (self.lst,)
 
 class DotE(Exp):
 #   | DotE of exp * atom                    (* exp.atom *)
@@ -775,7 +775,7 @@ class DotE(Exp):
         )
 
     def __repr__(self):
-        return "DotE(%r, %r)" % (self.obj, self.field)
+        return "p4specast.DotE(%r, %r)" % (self.obj, self.field)
 
 class IdxE(Exp):
 #   | IdxE of exp * exp                     (* exp `[` exp `]` *)
@@ -791,7 +791,7 @@ class IdxE(Exp):
         )
 
     def __repr__(self):
-        return "IdxE(%r, %r)" % (self.lst, self.idx)
+        return "p4specast.IdxE(%r, %r)" % (self.lst, self.idx)
 
 class SliceE(Exp):
 #   | SliceE of exp * exp * exp             (* exp `[` exp `:` exp `]` *)
@@ -809,7 +809,7 @@ class SliceE(Exp):
         )
 
     def __repr__(self):
-        return "SliceE(%r, %r, %r)" % (self.lst, self.start, self.stop)
+        return "p4specast.SliceE(%r, %r, %r)" % (self.lst, self.start, self.stop)
 
 class UpdE(Exp):
 #   | UpdE of exp * path * exp              (* exp `[` path `=` exp `]` *)
@@ -827,7 +827,7 @@ class UpdE(Exp):
         )
 
     def __repr__(self):
-        return "UpdE(%r, %r, %r)" % (self.exp, self.path, self.value)
+        return "p4specast.UpdE(%r, %r, %r)" % (self.exp, self.path, self.value)
 
 class CallE(Exp):
 #   | CallE of id * targ list * arg list    (* $id`<` targ* `>``(` arg* `)` *)
@@ -845,7 +845,7 @@ class CallE(Exp):
         )
 
     def __repr__(self):
-        return "CallE(%r, %r, %r)" % (self.func, self.targs, self.args)
+        return "p4specast.CallE(%r, %r, %r)" % (self.func, self.targs, self.args)
 
 class HoldE(Exp):
 #   | HoldE of id * notexp                  (* id `:` notexp `holds` *)
@@ -854,7 +854,7 @@ class HoldE(Exp):
         self.notexp = notexp
 
     def __repr__(self):
-        return "HoldE(%r, %r)" % (self.id, self.notexp)
+        return "p4specast.HoldE(%r, %r)" % (self.id, self.notexp)
 
     @staticmethod
     def fromjson(content):
@@ -872,7 +872,7 @@ class IterE(Exp):
         self.varlist = varlist
 
     def __repr__(self):
-        return "IterE(%r, %r, %r)" % (self.exp, self.iter, self.varlist)
+        return "p4specast.IterE(%r, %r, %r)" % (self.exp, self.iter, self.varlist)
 
     @staticmethod
     def fromjson(content):
@@ -896,7 +896,7 @@ class NotExp(AstBase):
             exps=[Exp.fromjson(exp) for exp in content[1].value_array()]
         )
     def __repr__(self):
-        return "NotExp(%s, %s)" % (self.mixop, self.exps)
+        return "p4specast.NotExp(%s, %s)" % (self.mixop, self.exps)
 
 # and iterexp = iter * var list
 
@@ -913,7 +913,7 @@ class IterExp(AstBase):
         )
 
     def __repr__(self):
-        return "IterExp(%r, %r)" % (self.iter, self.vars)
+        return "p4specast.IterExp(%r, %r)" % (self.iter, self.vars)
 
 # _________________________________________________________________
 
@@ -964,7 +964,7 @@ class BoolT(Type):
     def __init__(self):
         pass
     def __repr__(self):
-        return "BoolT()"
+        return "p4specast.BoolT()"
 
     @staticmethod
     def fromjson(content):
@@ -976,7 +976,7 @@ class NumT(Type):
         self.typ = typ
 
     def __repr__(self):
-        return "NumT(%r)" % (self.typ,)
+        return "p4specast.NumT(%r)" % (self.typ,)
 
     @staticmethod
     def fromjson(content):
@@ -988,7 +988,7 @@ class TextT(Type):
         pass
 
     def __repr__(self):
-        return "TextT()"
+        return "p4specast.TextT()"
 
     @staticmethod
     def fromjson(content):
@@ -1000,7 +1000,7 @@ class VarT(Type):
         self.targs = targs
 
     def __repr__(self):
-        return "VarT(%r, %r)" % (self.id, self.targs)
+        return "p4specast.VarT(%r, %r)" % (self.id, self.targs)
 
     @staticmethod
     def fromjson(content):
@@ -1014,7 +1014,7 @@ class TupleT(Type):
         self.elts = elts
 
     def __repr__(self):
-        return "TupleT(%r)" % (self.elts,)
+        return "p4specast.TupleT(%r)" % (self.elts,)
 
     @staticmethod
     def fromjson(content):
@@ -1028,7 +1028,7 @@ class IterT(Type):
         self.iter = iter
 
     def __repr__(self):
-        return "IterT(%r, %r)" % (self.typ, self.iter)
+        return "p4specast.IterT(%r, %r)" % (self.typ, self.iter)
 
     @staticmethod
     def fromjson(content):
@@ -1043,7 +1043,7 @@ class FuncT(Type):
         self.ret = ret
 
     def __repr__(self):
-        return "FuncT(%r, %r)" % (self.params, self.ret)
+        return "p4specast.FuncT(%r, %r)" % (self.params, self.ret)
 
     @staticmethod
     def fromjson(content):
@@ -1063,7 +1063,7 @@ class NotTyp(AstBase):
         self.typs = typs
 
     def __repr__(self):
-        return "NotTyp(%r, %r)" % (self.mixop, self.typs)
+        return "p4specast.NotTyp(%r, %r)" % (self.mixop, self.typs)
 
     @staticmethod
     def fromjson(value):
@@ -1109,7 +1109,7 @@ class PlainT(DefTyp):
         )
 
     def __repr__(self):
-        return "PlainT(typ=%s)" % (self.typ,)
+        return "p4specast.PlainT(typ=%s)" % (self.typ,)
 
 class StructT(DefTyp):
     def __init__(self, fields):
@@ -1122,7 +1122,7 @@ class StructT(DefTyp):
         )
 
     def __repr__(self):
-        return "StructT(fields=%s)" % (self.fields,)
+        return "p4specast.StructT(fields=%s)" % (self.fields,)
 
 class VariantT(DefTyp):
     def __init__(self, cases):
@@ -1135,7 +1135,7 @@ class VariantT(DefTyp):
         )
 
     def __repr__(self):
-        return "VariantT(cases=%s)" % (self.cases,)
+        return "p4specast.VariantT(cases=%s)" % (self.cases,)
 
 # and typfield = atom * typ
 
@@ -1145,7 +1145,7 @@ class TypField(AstBase):
         self.typ = typ
 
     def __repr__(self):
-        return "TypField(%r, %r)" % (self.name, self.typ)
+        return "p4specast.TypField(%r, %r)" % (self.name, self.typ)
 
     @staticmethod
     def fromjson(content):
@@ -1216,7 +1216,7 @@ class IfI(Instr):
         )
 
     def __repr__(self):
-        return "IfI(%r, %r, %r, %r%s)" % (self.exp, self.iters, self.instrs, self.phantom, (", " + repr(self.region)) if self.region is not None else '')
+        return "p4specast.IfI(%r, %r, %r, %r%s)" % (self.exp, self.iters, self.instrs, self.phantom, (", " + repr(self.region)) if self.region is not None else '')
 
 class CaseI(Instr):
     def __init__(self, exp, cases, phantom, region=None):
@@ -1234,7 +1234,7 @@ class CaseI(Instr):
         )
 
     def __repr__(self):
-        return "CaseI(%r, %r, %r%s)" % (self.exp, self.cases, self.phantom, (", " + repr(self.region)) if self.region is not None else '')
+        return "p4specast.CaseI(%r, %r, %r%s)" % (self.exp, self.cases, self.phantom, (", " + repr(self.region)) if self.region is not None else '')
 
 class OtherwiseI(Instr):
     def __init__(self, instr, region=None):
@@ -1248,7 +1248,7 @@ class OtherwiseI(Instr):
         )
 
     def __repr__(self):
-        return "OtherwiseI(%r)" % (self.instr,)
+        return "p4specast.OtherwiseI(%r)" % (self.instr,)
 
 class LetI(Instr):
     def __init__(self, var, value, iters, region=None):
@@ -1266,7 +1266,7 @@ class LetI(Instr):
         )
 
     def __repr__(self):
-        return "LetI(%r, %r, %r%s)" % (self.var, self.value, self.iters, (", " + repr(self.region)) if self.region is not None else '')
+        return "p4specast.LetI(%r, %r, %r%s)" % (self.var, self.value, self.iters, (", " + repr(self.region)) if self.region is not None else '')
 
 class RuleI(Instr):
     def __init__(self, id, notexp, iters, region=None):
@@ -1284,7 +1284,7 @@ class RuleI(Instr):
         )
 
     def __repr__(self):
-        return "RuleI(%r, %r, %r%s)" % (self.id, self.notexp, self.iters, (", " + repr(self.region)) if self.region is not None else '')
+        return "p4specast.RuleI(%r, %r, %r%s)" % (self.id, self.notexp, self.iters, (", " + repr(self.region)) if self.region is not None else '')
 
 class ResultI(Instr):
     def __init__(self, exps, region=None):
@@ -1298,7 +1298,7 @@ class ResultI(Instr):
         )
 
     def __repr__(self):
-        return "ResultI(%r%s)" % (self.exps, (", " + repr(self.region)) if self.region is not None else '')
+        return "p4specast.ResultI(%r%s)" % (self.exps, (", " + repr(self.region)) if self.region is not None else '')
 
 class ReturnI(Instr):
     def __init__(self, exp, region=None):
@@ -1312,7 +1312,7 @@ class ReturnI(Instr):
         )
 
     def __repr__(self):
-        return "ReturnI(%r%s)" % (self.exp, (", " + repr(self.region)) if self.region is not None else '')
+        return "p4specast.ReturnI(%r%s)" % (self.exp, (", " + repr(self.region)) if self.region is not None else '')
 
 
 # cases
@@ -1338,7 +1338,7 @@ class Case(AstBase):
         )
 
     def __repr__(self):
-        return "Case(%r, %r)" % (self.guard, self.instrs)
+        return "p4specast.Case(%r, %r)" % (self.guard, self.instrs)
 
 
 class Guard(AstBase):
@@ -1369,7 +1369,7 @@ class BoolG(Guard):
         )
 
     def __repr__(self):
-        return "BoolG(%r)" % (self.value,)
+        return "p4specast.BoolG(%r)" % (self.value,)
 
 class CmpG(Guard):
     def __init__(self, op, typ, exp):
@@ -1386,7 +1386,7 @@ class CmpG(Guard):
         )
 
     def __repr__(self):
-        return "CmpG(%r, %r, %r)" % (self.op, self.typ, self.exp)
+        return "p4specast.CmpG(%r, %r, %r)" % (self.op, self.typ, self.exp)
 
 class SubG(Guard):
     def __init__(self, typ):
@@ -1399,7 +1399,7 @@ class SubG(Guard):
         )
 
     def __repr__(self):
-        return "SubG(%r)" % (self.typ,)
+        return "p4specast.SubG(%r)" % (self.typ,)
 
 class MatchG(Guard):
     def __init__(self, pattern):
@@ -1412,7 +1412,7 @@ class MatchG(Guard):
         )
 
     def __repr__(self):
-        return "MatchG(%r)" % (self.pattern,)
+        return "p4specast.MatchG(%r)" % (self.pattern,)
 
 class MemG(Guard):
     def __init__(self, exp):
@@ -1425,7 +1425,7 @@ class MemG(Guard):
         )
 
     def __repr__(self):
-        return "MemG(%r)" % (self.exp,)
+        return "p4specast.MemG(%r)" % (self.exp,)
 
 # and pattern =
 #   | casep of mixop
@@ -1456,7 +1456,7 @@ class CaseP(Pattern):
         )
 
     def __repr__(self):
-        return "CaseP(%r)" % (self.mixop,)
+        return "p4specast.CaseP(%r)" % (self.mixop,)
 
 class ListP(Pattern):
     def __init__(self, element):
@@ -1469,7 +1469,7 @@ class ListP(Pattern):
         )
 
     def __repr__(self):
-        return "ListP(%r)" % (self.element,)
+        return "p4specast.ListP(%r)" % (self.element,)
 
 class OptP(Pattern):
     def __init__(self, kind):
@@ -1482,7 +1482,7 @@ class OptP(Pattern):
         )
 
     def __repr__(self):
-        return "OptP(%r)" % (self.kind,)
+        return "p4specast.OptP(%r)" % (self.kind,)
 
 # [ `cons | `fixed of int | `nil ]
 
@@ -1501,18 +1501,18 @@ class ListPElem(AstBase):
 
 class Cons(ListPElem):
     def __repr__(self):
-        return "Cons()"
+        return "p4specast.Cons()"
 
 class Fixed(ListPElem):
     def __init__(self, value):
         self.value = value # typ: int
 
     def __repr__(self):
-        return "Fixed(%r)" % (self.value,)
+        return "p4specast.Fixed(%r)" % (self.value,)
 
 class Nil(ListPElem):
     def __repr__(self):
-        return "Nil()"
+        return "p4specast.Nil()"
 
 
 
@@ -1551,7 +1551,7 @@ class RootP(Path):
         return RootP()
 
     def __repr__(self):
-        return "RootP()"
+        return "p4specast.RootP()"
 
 class IdxP(Path):
     def __init__(self, path, exp):
@@ -1566,7 +1566,7 @@ class IdxP(Path):
         )
 
     def __repr__(self):
-        return "IdxP(%r, %r)" % (self.path, self.exp)
+        return "p4specast.IdxP(%r, %r)" % (self.path, self.exp)
 
 class SliceP(Path):
     def __init__(self, path, start, end):
@@ -1583,7 +1583,7 @@ class SliceP(Path):
         )
 
     def __repr__(self):
-        return "SliceP(%r, %r, %r)" % (self.path, self.start, self.end)
+        return "p4specast.SliceP(%r, %r, %r)" % (self.path, self.start, self.end)
 
 class DotP(Path):
     def __init__(self, path, atom):
@@ -1598,7 +1598,7 @@ class DotP(Path):
         )
 
     def __repr__(self):
-        return "DotP(%r, %r)" % (self.path, self.atom)
+        return "p4specast.DotP(%r, %r)" % (self.path, self.atom)
 
 # type Mixop.t = Atom.t phrase list list
 
@@ -1613,7 +1613,7 @@ class MixOp(AstBase):
         )
 
     def __repr__(self):
-        return "MixOp(%r)" % (self.phrases,)
+        return "p4specast.MixOp(%r)" % (self.phrases,)
 
 class AtomT(AstBase):
     def __init__(self, value, region):
@@ -1621,7 +1621,7 @@ class AtomT(AstBase):
         self.region = region
 
     def __repr__(self):
-        return "AtomT(%r, %r)" % (self.value, self.region)
+        return "p4specast.AtomT(%r, %r)" % (self.value, self.region)
 
     @staticmethod
     def fromjson(value):

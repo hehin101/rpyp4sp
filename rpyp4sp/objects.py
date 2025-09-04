@@ -66,7 +66,7 @@ class W_BoolV(W_Base):
         return self.value
     
     def __repr__(self):
-        return "W_BoolV(%r, %r, %r)" % (self.value, self.vid, self.typ)
+        return "objects.W_BoolV(%r, %r, %r)" % (self.value, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
@@ -79,7 +79,7 @@ class W_NumV(W_Base):
         self.typ = typ
 
     def __repr__(self):
-        return "W_NumV(%r, %r, %r)" % (self.value, self.vid, self.typ)
+        return "objects.W_NumV(%r, %r, %r)" % (self.value, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
@@ -92,7 +92,7 @@ class W_TextV(W_Base):
         self.typ = typ
 
     def __repr__(self):
-        return "W_TextV(%r, %r, %r)" % (self.value, self.vid, self.typ)
+        return "objects.W_TextV(%r, %r, %r)" % (self.value, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
@@ -105,7 +105,7 @@ class W_StructV(W_Base):
         self.typ = typ
 
     def __repr__(self):
-        return "W_StructV(%r, %r, %r)" % (self.fields, self.vid, self.typ)
+        return "objects.W_StructV(%r, %r, %r)" % (self.fields, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
@@ -126,7 +126,7 @@ class W_CaseV(W_Base):
         self.typ = typ
 
     def __repr__(self):
-        return "W_CaseV(%r, %r, %r, %r)" % (self.mixop, self.values, self.vid, self.typ)
+        return "objects.W_CaseV(%r, %r, %r, %r)" % (self.mixop, self.values, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
@@ -142,7 +142,7 @@ class W_TupleV(W_Base):
         self.typ = typ
 
     def __repr__(self):
-        return "W_TupleV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
+        return "objects.W_TupleV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
@@ -157,7 +157,7 @@ class W_OptV(W_Base):
         self.typ = typ
 
     def __repr__(self):
-        return "W_OptV(%r, %r, %r)" % (self.w_value, self.vid, self.typ)
+        return "objects.W_OptV(%r, %r, %r)" % (self.w_value, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
@@ -173,7 +173,7 @@ class W_ListV(W_Base):
         self.typ = typ
 
     def __repr__(self):
-        return "W_ListV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
+        return "objects.W_ListV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
@@ -187,7 +187,7 @@ class W_FuncV(W_Base):
         self.typ = typ
 
     def __repr__(self):
-        return "W_FuncV(%r, %r, %r)" % (self.id, self.vid, self.typ)
+        return "objects.W_FuncV(%r, %r, %r)" % (self.id, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
