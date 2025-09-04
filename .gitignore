@@ -1,0 +1,5 @@
+/pypy/
+/pypy_binary/
+.cache
+*.pyc
+ast.json
