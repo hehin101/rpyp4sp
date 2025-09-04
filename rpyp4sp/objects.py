@@ -52,11 +52,18 @@ class W_Base(object):
         value.typ = typ
         return value
 
+    def get_bool(self):
+        raise TypeError("not a bool")
+
 class W_BoolV(W_Base):
     def __init__(self, value, vid=-1, typ=None):
+        # TODO: assign a vid if the argument is -1
         self.value = value
         self.vid = vid
         self.typ = typ
+
+    def get_bool(self):
+        return self.value
     
     def __repr__(self):
         return "W_BoolV(%r, %r, %r)" % (self.value, self.vid, self.typ)

@@ -30,5 +30,23 @@ class Context(object):
                 assert isinstance(definition, p4specast.DecD)
                 self.glbl.fenv[definition.id.value] = definition
 
+    def find_value_local(self, id, iterlist):
+        assert iterlist == []
+        return self.local.venv[id.value]
 
+    def find_typdef_local(self, id):
+        # TODO: actually use the local tdenv
+        decl = self.glbl.tdenv[id.value]
+        return decl.tparams, decl.deftyp
+
+    def add_value_local(self, id, iterlist, value):
+        assert iterlist == []
+        result = Context(self.filename, self.derive)
+        result.glbl = self.glbl
+        result.local = LocalContext()
+        result.local.tdenv = self.local.tdenv
+        result.local.fenv = self.local.fenv
+        result.local.venv = self.local.venv.copy()
+        result.local.venv[id.value] = value
+        return result
 

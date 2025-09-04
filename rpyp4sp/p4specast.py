@@ -1,3 +1,5 @@
+from rpython.tool.pairtype import extendabletype
+
 def ast_anywhere_in_list(l):
     for index, el in enumerate(l):
         if isinstance(el, list):
@@ -17,6 +19,8 @@ def flatten_list_with_access_string(l, prefix):
             yield el, path
 
 class AstBase(object):
+    __metaclass__ = extendabletype
+
     def __eq__(self, other):
         return type(self) == type(other) and self.__dict__ == other.__dict__
 

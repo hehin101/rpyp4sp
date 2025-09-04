@@ -28,63 +28,14 @@ def test_is_fbitt():
     # def $is_fbitt(FBitT _) = true
     # def $is_fbitt(typ) = false
     #   -- otherwise
-    value_json = """{
-            "it": [
-              "CaseV",
-              [
-                [
-                  [
-                    {
-                      "it": [ "Atom", "IntT" ],
-                      "note": null,
-                      "at": {
-                        "left": {
-                          "file": "spec/2c1-runtime-type.watsup",
-                          "line": 36,
-                          "column": 4
-                        },
-                        "right": {
-                          "file": "spec/2c1-runtime-type.watsup",
-                          "line": 36,
-                          "column": 8
-                        }
-                      }
-                    }
-                  ]
-                ],
-                []
-              ]
-            ],
-            "note": {
-              "vid": 432,
-              "typ": [
-                "VarT",
-                {
-                  "it": "numtyp",
-                  "note": null,
-                  "at": {
-                    "left": {
-                      "file": "spec/2c1-runtime-type.watsup",
-                      "line": 35,
-                      "column": 7
-                    },
-                    "right": {
-                      "file": "spec/2c1-runtime-type.watsup",
-                      "line": 35,
-                      "column": 13
-                    }
-                  }
-                },
-                []
-              ]
-            },
-            "at": null
-
-          }"""
-    arg = objects.W_Base.fromjson(loads(value_json))
-    print(arg)
     spec = load()
+
+    # returns False
     ctx = Context('dummy')
     ctx.load_spec(spec)
     func = ctx.glbl.fenv["is_fbitt"]
-    interp.invoke_func_def_attempt_clauses(ctx, func, [arg])
+    arg = objects.W_CaseV(p4specast.MixOp([[p4specast.AtomT('IntT', p4specast.Region(left=p4specast.Position('spec/2c1-runtime-type.watsup', 36, 4), right=p4specast.Position('spec/2c1-runtime-type.watsup', 36, 8)))]]), [], 432, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region(left=p4specast.Position('spec/2c1-runtime-type.watsup', 35, 7), right=p4specast.Position('spec/2c1-runtime-type.watsup', 35, 13))), []))
+    ctx.local.venv['typ'] = arg # TODO: will be done by assign_args later
+    ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, [arg])
+    assert value.get_bool() == False
+
