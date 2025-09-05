@@ -178,7 +178,6 @@ def assign_exp(ctx, exp, value):
     #     let ctx = Ctx.add_value Local ctx (id, []) value in
         ctx = ctx.add_value_local(exp.id, [], value)
         return ctx
-    import pdb;pdb.set_trace()
     #     ctx
     # | TupleE exps_inner, TupleV values_inner ->
     #     let ctx = assign_exps ctx exps_inner values_inner in
@@ -193,6 +192,16 @@ def assign_exp(ctx, exp, value):
     #       (fun value_inner -> Ctx.add_edge ctx value_inner value Dep.Edges.Assign)
     #       values_inner;
     #     ctx
+    elif isinstance(exp, p4specast.CaseE) and\
+        isinstance(value, objects.W_CaseV):
+            notexp = exp.notexp
+            mixop_exp, exps_inner = notexp.mixop, notexp.exps
+            values_inner = value.values
+            ctx = assign_exps(ctx, exps_inner, values_inner)
+            # for value_inner in values_inner:
+            #    assert False, "ctx.add_edge(ctx, value_inner, value, dep.edges.Assign)"
+            return ctx
+    import pdb;pdb.set_trace()
     # | OptE exp_opt, OptV value_opt -> (
     #     match (exp_opt, value_opt) with
     #     | Some exp_inner, Some value_inner ->
@@ -283,6 +292,21 @@ def assign_exp(ctx, exp, value):
     #       (F.asprintf "(TODO) match failed %s <- %s"
     #          (Sl.Print.string_of_exp exp)
     #          (Sl.Print.string_of_value ~short:true value))
+
+def assign_exps(ctx, exps, values):
+    #assign_exps (ctx : Ctx.t) (exps : exp list) (values : value list) : Ctx.t =
+    #   check
+    #     (List.length exps = List.length values)
+    #     (over_region (List.map at exps))
+    #     (F.asprintf
+    #        "mismatch in number of expressions and values while assigning, expected \
+    #         %d value(s) but got %d"
+    #        (List.length exps) (List.length values));
+    #   List.fold_left2 assign_exp ctx exps values
+    assert len(exps) == len(values), "mismatch in number of expressions and values while assigning, expected %d value(s) but got %d" % (len(exps), len(values))
+    for (exp, value) in zip(exps, values):
+        ctx = assign_exp(ctx, exp, value)
+    return ctx
 
 
 def eval_return_instr(ctx, instr):
