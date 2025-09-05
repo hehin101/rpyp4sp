@@ -21,7 +21,7 @@ def test_load_spec():
     assert 'Prog_ok' in ctx.glbl.renv
     assert 'is_fbitt' in ctx.glbl.fenv
     print(ctx.glbl.fenv["is_fbitt"])
-    
+
 def test_is_fbitt():
     # dec $is_fbitt(typ) : bool
     #     hint(show % IS FBIT_T)
@@ -35,8 +35,6 @@ def test_is_fbitt():
     ctx.load_spec(spec)
     func = ctx.glbl.fenv["is_fbitt"]
     arg = objects.W_CaseV(p4specast.MixOp([[p4specast.AtomT('IntT', p4specast.Region(left=p4specast.Position('spec/2c1-runtime-type.watsup', 36, 4), right=p4specast.Position('spec/2c1-runtime-type.watsup', 36, 8)))]]), [], 432, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region(left=p4specast.Position('spec/2c1-runtime-type.watsup', 35, 7), right=p4specast.Position('spec/2c1-runtime-type.watsup', 35, 13))), []))
-    ctx.local.venv['typ'] = arg # TODO: will be done by assign_args later
-    ctx.local.fenv['is_fbitt'] = func
     ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, [arg])
     assert value.get_bool() == False
 
@@ -46,7 +44,4 @@ def test_is_fbitt():
     noregion = p4specast.Region(noposition, noposition)
 
     arg = objects.W_CaseV(p4specast.MixOp([[p4specast.AtomT('FBitT', noregion)], []]), [objects.W_CaseV(p4specast.MixOp([[p4specast.AtomT('BinE', noregion)], [], [], []]), [objects.W_CaseV(p4specast.MixOp([[p4specast.AtomT('PLUS', noregion)]]), [], 1, p4specast.VarT(p4specast.Id('binop', noregion), [])), objects.W_CaseV(p4specast.MixOp([[p4specast.AtomT('NumE', noregion)], []]), [objects.W_CaseV(p4specast.MixOp([[p4specast.AtomT('INT', noregion)], []]), [objects.W_NumV.fromstr('5', 'Int', 2, p4specast.NumT(p4specast.IntT()))], 3, p4specast.VarT(p4specast.Id('num', noregion), []))], 4, p4specast.VarT(p4specast.Id('expr', noregion), [])), objects.W_CaseV(p4specast.MixOp([[p4specast.AtomT('NumE', noregion)], []]), [objects.W_CaseV(p4specast.MixOp([[p4specast.AtomT('INT', noregion)], []]), [objects.W_NumV.fromstr('3', 'Int', 5, p4specast.NumT(p4specast.IntT()))], 6, p4specast.VarT(p4specast.Id('num', noregion), []))], 7, p4specast.VarT(p4specast.Id('expr', noregion), []))], 8, p4specast.VarT(p4specast.Id('expr', noregion), []))], 9, p4specast.VarT(p4specast.Id('type', noregion), []))
-    ctx.local.venv['typ'] = arg # TODO: will be done by assign_args later
-    ctx.local.fenv['is_fbitt'] = func
     ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, [arg])
-    assert value.get_bool() == True

@@ -1,3 +1,4 @@
+import pdb
 from rpyp4sp import p4specast, objects
 
 class Sign(object):
@@ -17,7 +18,7 @@ class Ret(Sign):
 
 def invoke_func_def_attempt_clauses(ctx, func, values_input):
     # INCOMPLETE
-    # and invoke_func_def (ctx : Ctx.t) (id : id) (targs : targ list) (args : arg list) : Ctx.t * value =    
+    # and invoke_func_def (ctx : Ctx.t) (id : id) (targs : targ list) (args : arg list) : Ctx.t * value =
     # let tparams, args_input, instrs = Ctx.find_func Local ctx id in
     func = ctx.find_func_local(func.id)
     tparams, args_input, instrs = func.tparams, func.args, func.instrs
@@ -27,7 +28,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input):
     # let ctx_local = assign_args ctx ctx_local args_input values_input in
     ctx_local = assign_args(ctx, ctx_local, args_input, values_input)
     # let ctx_local, sign = eval_instrs ctx_local Cont instrs in
-    ctx_local, sign = eval_instrs(ctx, Cont(), func.instrs)
+    ctx_local, sign = eval_instrs(ctx_local, Cont(), func.instrs)
     # let ctx = Ctx.commit ctx ctx_local in
     # match sign with
     if isinstance(sign, Ret):
@@ -327,7 +328,7 @@ def assign_arg(ctx_caller, ctx_callee, arg, value):
     elif isinstance(arg, p4specast.DefA):
         return assign_arg_def(ctx_caller, ctx_callee, arg.id, value)
     else:
-        assert False, "invalid type of arg " + str(arg)    
+        assert False, "invalid type of arg " + str(arg)
 
 #and assign_args (ctx_caller : Ctx.t) (ctx_callee : Ctx.t) (args : arg list)
 #    (values : value list) : Ctx.t =
@@ -343,7 +344,7 @@ def assign_arg(ctx_caller, ctx_callee, arg, value):
 def assign_args(ctx_caller, ctx_callee, args, values):
     assert len(args) == len(values), \
         "mismatch in number of arguments while assigning, expected %d value(s) but got %d" (len(args), len(values))
-    for arg, value in zip(args, values):        
+    for arg, value in zip(args, values):
         ctx_callee = assign_arg(ctx_caller, ctx_callee, arg, value)
     return ctx_callee
 
@@ -365,6 +366,7 @@ assign_arg_exp = assign_exp
 def assign_arg_def(ctx_caller, ctx_callee, id, value):
     if isinstance(value, objects.W_FuncV):
         func = ctx_caller.find_func_local(value.id)
+        import pdb; pdb.set_trace()
         ctx_callee.add_func_local(id, func)
         return ctx_callee
     else:
@@ -588,4 +590,3 @@ def mixop_eq(a, b):
             if atoma.value != atomb.value:
                 return False
     return True
-
