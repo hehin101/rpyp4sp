@@ -12,6 +12,7 @@ class LocalContext(object):
         self.tdenv = {}
         self.fenv = {}
         self.venv = {}
+    
 
 class Context(object):
     def __init__(self, filename, derive=False):
@@ -30,6 +31,12 @@ class Context(object):
                 assert isinstance(definition, p4specast.DecD)
                 self.glbl.fenv[definition.id.value] = definition
 
+    def localize(self):
+        ctx = Context(self.filename, self.derive)
+        ctx.glbl = self.glbl
+        ctx.local = LocalContext()
+        return ctx
+
     def find_value_local(self, id, iterlist):
         assert iterlist == []
         return self.local.venv[id.value]
@@ -47,6 +54,10 @@ class Context(object):
         result.local.tdenv = self.local.tdenv
         result.local.fenv = self.local.fenv
         result.local.venv = self.local.venv.copy()
-        result.local.venv[id.value] = value
+        result.local.venv[id.value] = value        
         return result
+    
+    def find_func_local(self, id):
+        func = self.local.fenv[id.value]
+        return func
 

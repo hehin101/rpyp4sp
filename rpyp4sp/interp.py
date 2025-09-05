@@ -17,8 +17,15 @@ class Ret(Sign):
 
 def invoke_func_def_attempt_clauses(ctx, func, values_input):
     # INCOMPLETE
+    # and invoke_func_def (ctx : Ctx.t) (id : id) (targs : targ list) (args : arg list) : Ctx.t * value =    
+    # let tparams, args_input, instrs = Ctx.find_func Local ctx id in
+    func = ctx.find_func_local(func.id)
+    tparams, args_input, instrs = func.tparams, func.args, func.instrs
+    # let ctx_local = Ctx.localize ctx in
+    ctx_local = ctx.localize()
     # let ctx_local = Ctx.localize_inputs ctx_local values_input in
     # let ctx_local = assign_args ctx ctx_local args_input values_input in
+    ctx_local = assign_args(ctx, ctx_local, args_input, values_input)
     # let ctx_local, sign = eval_instrs ctx_local Cont instrs in
     ctx_local, sign = eval_instrs(ctx, Cont(), func.instrs)
     # let ctx = Ctx.commit ctx ctx_local in
@@ -307,6 +314,62 @@ def assign_exps(ctx, exps, values):
     for (exp, value) in zip(exps, values):
         ctx = assign_exp(ctx, exp, value)
     return ctx
+
+
+#and assign_arg (ctx_caller : Ctx.t) (ctx_callee : Ctx.t) (arg : arg)
+#    (value : value) : Ctx.t =
+#  match arg.it with
+#  | ExpA exp -> assign_arg_exp ctx_callee exp value
+#  | DefA id -> assign_arg_def ctx_caller ctx_callee id value
+def assign_arg(ctx_caller, ctx_callee, arg, value):
+    if isinstance(arg, p4specast.ExpA):
+        return assign_arg_exp(ctx_callee, arg.exp, value)
+    elif isinstance(arg, p4specast.DefA):
+        return assign_arg_def(ctx_caller, ctx_callee, arg.id, value)
+    else:
+        assert False, "invalid type of arg " + str(arg)    
+
+#and assign_args (ctx_caller : Ctx.t) (ctx_callee : Ctx.t) (args : arg list)
+#    (values : value list) : Ctx.t =
+#  check
+#    (List.length args = List.length values)
+#    (over_region (List.map at args))
+#    (F.asprintf
+#       "mismatch in number of arguments and values while assigning, expected \
+#        %d value(s) but got %d"
+#       (List.length args) (List.length values));
+#  List.fold_left2 (assign_arg ctx_caller) ctx_callee args values
+
+def assign_args(ctx_caller, ctx_callee, args, values):
+    assert len(args) == len(values), \
+        "mismatch in number of arguments while assigning, expected %d value(s) but got %d" (len(args), len(values))
+    for arg, value in zip(args, values):        
+        ctx_callee = assign_arg(ctx_caller, ctx_callee, arg, value)
+    return ctx_callee
+
+# and assign_arg_exp (ctx : Ctx.t) (exp : exp) (value : value) : Ctx.t =
+#   assign_exp ctx exp value
+assign_arg_exp = assign_exp
+
+# and assign_arg_def (ctx_caller : Ctx.t) (ctx_callee : Ctx.t) (id : id)
+#     (value : value) : Ctx.t =
+#   match value.it with
+#   | FuncV id_f ->
+#       let func = Ctx.find_func Local ctx_caller id_f in
+#       Ctx.add_func Local ctx_callee id func
+#   | _ ->
+#       error id.at
+#         (F.asprintf "cannot assign a value %s to a definition %s"
+#            (Sl.Print.string_of_value ~short:true value)
+#            id.it)
+def assign_arg_def(ctx_caller, ctx_callee, id, value):
+    if isinstance(value, objects.W_FuncV):
+        func = ctx_caller.find_func_local(value.id)
+        ctx_callee.add_func_local(id, func)
+        return ctx_callee
+    else:
+        assert False, "cannot assign a value %s to a definition %s" % (
+            str(value), str(id))
 
 
 def eval_return_instr(ctx, instr):
