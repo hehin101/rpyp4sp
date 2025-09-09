@@ -694,6 +694,38 @@ class __extend__(p4specast.CallE):
         # let ctx, value_res = invoke_func ctx id targs args in
         # (ctx, value_res)
         return invoke_func(ctx, self)
+
+class __extend__(p4specast.HoldE):
+    def eval_exp(self, ctx):
+        # let _, exps_input = notexp in
+        exps_input = self.notexp.exps
+        # let ctx, values_input = eval_exps ctx exps_input in
+        ctx, values_input = eval_exps(ctx, exps_input)
+        # let ctx, hold =
+        #   match invoke_rel ctx id values_input with
+        #   | Some (ctx, _) -> (ctx, true)
+        #   | None -> (ctx, false)
+        relctx, _ = invoke_rel(ctx, self.id, values_input)
+        if relctx is not None:
+            ctx = relctx
+            hold = True
+        else:
+            hold = False
+        # in
+        # let value_res =
+        #   let vid = Value.fresh () in
+        #   let typ = note in
+        #   Il.Ast.(BoolV hold $$$ { vid; typ })
+        value_res = objects.W_BoolV(self.value, typ=self.typ)
+        # in
+        # Ctx.add_node ctx value_res;
+        # List.iteri
+        #   (fun idx value_input ->
+        #     Ctx.add_edge ctx value_res value_input (Dep.Edges.Rel (id, idx)))
+        #   values_input;
+        # (ctx, value_res)
+        return ctx, value_res
+
 # ____________________________________________________________
 
 def subtyp(ctx, typ, value):
