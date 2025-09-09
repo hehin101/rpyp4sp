@@ -1,5 +1,5 @@
 import pdb
-from rpyp4sp import p4specast, objects
+from rpyp4sp import p4specast, objects, builtin
 
 class Sign(object):
     # abstract base
@@ -15,6 +15,59 @@ class Res(Sign):
 class Ret(Sign):
     def __init__(self, value):
         self.value = value
+
+
+def invoke_func(ctx, calle):
+    # if Builtin.is_builtin id then invoke_func_builtin ctx id targs args
+    if builtin.is_builtin(calle.func):
+        return invoke_func_builtin(ctx, calle)
+    # else invoke_func_def ctx id targs args
+    return invoke_func_def(ctx, calle)
+
+def invoke_func_builtin(self, calle):
+    # let ctx, values_input = eval_args ctx args in
+    ctx, values_input = eval_args(ctx, calle.args)
+    # let value_output = Builtin.invoke ctx id targs values_input in
+    value_output = builtin.invoke(ctx, calle.func, calle.targs, values_input)
+    # List.iteri
+    #   (fun idx_arg value_input ->
+    #     Ctx.add_edge ctx value_output value_input (Dep.Edges.Func (id, idx_arg)))
+    #   values_input;
+    # (ctx, value_output)
+    return ctx, value_output
+
+def invoke_func_def(ctx, calle):
+    # let tparams, args_input, instrs = Ctx.find_func Local ctx id in
+    func = ctx.find_func_local(calle.func)
+    # check (instrs <> []) id.at "function has no instructions";
+    assert func.instrs
+    # let ctx_local = Ctx.localize ctx in
+    ctx_local = ctx.localize()
+    # check
+    #   (List.length targs = List.length tparams)
+    #   id.at "arity mismatch in type arguments";
+    assert len(calle.targs) == len(func.tparams), "arity mismatch in type arguments"
+    assert calle.targs == [], "TODO"
+    # let targs =
+    #   let theta =
+    #     TDEnv.bindings ctx.global.tdenv @ TDEnv.bindings ctx.local.tdenv
+    #     |> List.filter_map (fun (tid, (_tparams, deftyp)) ->
+    #            match deftyp.it with
+    #            | Il.Ast.PlainT typ -> Some (tid, typ)
+    #            | _ -> None)
+    #     |> TIdMap.of_list
+    #   in
+    #   List.map (Typ.subst_typ theta) targs
+    # in
+    # let ctx_local =
+    #   List.fold_left2
+    #     (fun ctx_local tparam targ ->
+    #       Ctx.add_typdef Local ctx_local tparam ([], Il.Ast.PlainT targ $ targ.at))
+    #     ctx_local tparams targs
+    # in
+    # let ctx, values_input = eval_args ctx args in
+    ctx, values_input = eval_args(ctx, calle.args)
+    return invoke_func_def_attempt_clauses(ctx, func, values_input)
 
 def invoke_func_def_attempt_clauses(ctx, func, values_input):
     # INCOMPLETE
@@ -42,7 +95,33 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input):
         return ctx, sign.value
     # | _ -> error id.at "function was not matched"
 
+def eval_arg(ctx, arg):
+    # INCOMPLETE
+    # match arg.it with
+    # | ExpA exp -> eval_exp ctx exp
+    if isinstance(arg, p4specast.ExpA):
+        return eval_exp(ctx, arg.exp)
+    # | DefA id ->
+    #     let value_res =
+    #       let vid = Value.fresh () in
+    #       let typ = Il.Ast.FuncT in
+    #       Il.Ast.(FuncV id $$$ { vid; typ })
+    #     in
+    #     Ctx.add_node ctx value_res;
+    #     (ctx, value_res)
+    import pdb;pdb.set_trace()
 
+def eval_args(ctx, args):
+    # List.fold_left
+    #   (fun (ctx, values) arg ->
+    #     let ctx, value = eval_arg ctx arg in
+    #     (ctx, values @ [ value ]))
+    #   (ctx, []) args
+    values = []
+    for arg in args:
+        ctx, value = eval_arg(ctx, arg)
+        values.append(value)
+    return ctx, values
 
 # ____________________________________________________________
 # instructions
@@ -473,6 +552,11 @@ class __extend__(p4specast.MatchE):
         # (ctx, value_res)
         return ctx, value_res
 
+class __extend__(p4specast.CallE):
+    def eval_exp(self, ctx):
+        # let ctx, value_res = invoke_func ctx id targs args in
+        # (ctx, value_res)
+        return invoke_func(ctx, self)
 # ____________________________________________________________
 
 def subtyp(ctx, typ, value):
