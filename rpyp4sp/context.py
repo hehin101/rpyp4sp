@@ -58,6 +58,9 @@ class Context(object):
         return result
     
     def find_func_local(self, id):
-        func = self.local.fenv[id.value]
+        if id.value in self.local.fenv:
+            func = self.local.fenv[id.value]
+        else:
+            func = self.glbl.fenv[id.value]
         return func
 
