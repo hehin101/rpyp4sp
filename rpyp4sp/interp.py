@@ -465,6 +465,18 @@ def eval_return_instr(ctx, instr):
 def eval_exp(ctx, exp):
     return exp.eval_exp(ctx)
 
+def eval_exps(ctx, exps):
+    # List.fold_left
+    #   (fun (ctx, values) exp ->
+    #     let ctx, value = eval_exp ctx exp in
+    #     (ctx, values @ [ value ]))
+    #   (ctx, []) exps
+    values = []
+    for exp in exps:
+        ctx, value = eval_exp(ctx, exp)
+        values.append(value)
+    return ctx, values
+
 class __extend__(p4specast.Exp):
     def eval_exp(self, ctx):
         import pdb;pdb.set_trace()
