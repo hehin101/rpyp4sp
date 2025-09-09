@@ -7,11 +7,18 @@ class GlobalContext(object):
         self.fenv = {}
 
 class LocalContext(object):
-    def __init__(self):
-        self.values_input = []
-        self.tdenv = {}
-        self.fenv = {}
-        self.venv = {}
+    def __init__(self, values_input=None, tdenv=None, fenv=None, venv=None):
+        self.values_input = values_input if values_input is not None else []
+        self.tdenv = tdenv if tdenv is not None else {}
+        self.fenv = fenv if fenv is not None else {}
+        self.venv = venv if venv is not None else {}
+
+    def copy_and_change(self, values_input=None, tdenv=None, fenv=None, venv=None):
+        values_input = values_input if values_input is not None else self.values_input
+        tdenv = tdenv if tdenv is not None else self.tdenv
+        fenv = fenv if fenv is not None else self.fenv
+        venv = venv if venv is not None else self.venv
+        return LocalContext(values_input, tdenv, fenv, venv)
     
 
 class Context(object):
@@ -37,6 +44,12 @@ class Context(object):
         ctx.local = LocalContext()
         return ctx
 
+    def localize_inputs(self, values_input):
+        ctx = Context(self.filename, self.derive)
+        ctx.glbl = self.glbl
+        ctx.local = ctx.local.copy_and_change(values_input=values_input)
+        return ctx
+
     def find_value_local(self, id, iterlist):
         assert iterlist == []
         return self.local.venv[id.value]
@@ -45,6 +58,9 @@ class Context(object):
         # TODO: actually use the local tdenv
         decl = self.glbl.tdenv[id.value]
         return decl.tparams, decl.deftyp
+
+    def find_rel_local(self, id):
+        return self.glbl.renv[id.value]
 
     def add_value_local(self, id, iterlist, value):
         assert iterlist == []
