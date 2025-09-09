@@ -124,6 +124,52 @@ def eval_args(ctx, args):
     return ctx, values
 
 # ____________________________________________________________
+# relations
+
+
+def invoke_rel(ctx, id, values_input):
+    # returns (Ctx.t * value list) option =
+
+    # let _inputs, exps_input, instrs = Ctx.find_rel Local ctx id in
+    reld = ctx.find_rel_local(id)
+    import pdb;pdb.set_trace()
+    # check (instrs <> []) id.at "relation has no instructions";
+    # let attempt_rules () =
+    #   let ctx_local = Ctx.localize ctx in
+    ctx_local = ctx.localize()
+    #   let ctx_local = Ctx.localize_inputs ctx_local values_input in
+    ctx_local = ctx_local.localize_inputs(values_input)
+    #   let ctx_local = assign_exps ctx_local exps_input values_input in
+    ctx_local = assign_exps(ctx_local, reld.exps, values_input)
+    #   let ctx_local, sign = eval_instrs ctx_local Cont instrs in
+    ctx_local, sign = eval_instrs(ctx_local, Cont(), reld.instrs)
+    ctx = ctx.commit(ctx_local)
+    #   let ctx = Ctx.commit ctx ctx_local in
+    import pdb;pdb.set_trace()
+    #   match sign with
+    #   | Res values_output ->
+    #       List.iteri
+    #         (fun idx_arg value_input ->
+    #           List.iter
+    #             (fun value_output ->
+    #               Ctx.add_edge ctx value_output value_input
+    #                 (Dep.Edges.Rel (id, idx_arg)))
+    #             values_output)
+    #         values_input;
+    #       Some (ctx, values_output)
+    #   | _ -> None
+    # in
+    # if (not ctx.derive) && Cache.is_cached_rule id.it then (
+    #   let cache_result = Cache.Cache.find_opt !rule_cache (id.it, values_input) in
+    #   match cache_result with
+    #   | Some values_output -> Some (ctx, values_output)
+    #   | None ->
+    #       let* ctx, values_output = attempt_rules () in
+    #       Cache.Cache.add !rule_cache (id.it, values_input) values_output;
+    #       Some (ctx, values_output))
+    # else attempt_rules ()
+
+# ____________________________________________________________
 # instructions
 
 def eval_instrs(ctx, sign, instrs):
