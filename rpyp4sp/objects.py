@@ -155,7 +155,6 @@ class W_TupleV(W_Base):
 
     @staticmethod
     def fromjson(content):
-        import pdb;pdb.set_trace()
         elements = [W_Base.fromjson(e) for e in content[1].value_array()]
         return W_TupleV(elements)
 
