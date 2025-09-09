@@ -149,6 +149,8 @@ def eval_instr(ctx, instr):
     if isinstance(instr, p4specast.IfI):
         return eval_if_instr(ctx, instr)
     #   | CaseI (exp, cases, phantom_opt) -> eval_case_instr ctx exp cases phantom_opt
+    if isinstance(instr, p4specast.CaseI):
+        return eval_case_instr(ctx, instr)
     #   | OtherwiseI instr -> eval_instr ctx instr
     if isinstance(instr, p4specast.OtherwiseI):
         return eval_instr(ctx, instr.instr)
@@ -224,6 +226,83 @@ def eval_if_cond(ctx, exp_cond):
     cond = value_cond.get_bool()
     # (ctx, cond, value_cond)
     return ctx, cond, value_cond
+
+def eval_cases(ctx, exp, cases):
+    # returns  Ctx.t * instr list option * value =
+    # cases
+    block_match = None
+    values_cond = []
+    # |> List.fold_left
+    for case in cases:
+        #  (fun (ctx, block_match, values_cond) (guard, block) ->
+        #    match block_match with
+        #    | Some _ -> (ctx, block_match, values_cond)
+        if block_match is not None:
+            continue
+        #    | None ->
+    #            let exp_cond =
+    #              match guard with
+        guard = case.guard
+        #          | BoolG true -> exp.it
+        if isinstance(guard, p4specast.BoolG):
+            exp_cond = exp
+        #          | BoolG false -> Il.Ast.UnE (`NotOp, `BoolT, exp)
+        #          | CmpG (cmpop, optyp, exp_r) ->
+        #              Il.Ast.CmpE (cmpop, optyp, exp, exp_r)
+        #          | SubG typ -> Il.Ast.SubE (exp, typ)
+        elif isinstance(guard, p4specast.SubG):
+            exp_cond = p4specast.SubE(exp, guard.typ)
+        #          | MatchG pattern -> Il.Ast.MatchE (exp, pattern)
+        elif isinstance(guard, p4specast.MatchG):
+            exp_cond = p4specast.MatchE(exp, guard.pattern)
+        #          | MemG exp_s -> Il.Ast.MemE (exp, exp_s)
+        else:
+            import pdb;pdb.set_trace()
+            assert 0, 'missing case'
+        exp_cond.typ = p4specast.BoolT()
+
+        #        in
+        #        let exp_cond = exp_cond $$ (exp.at, Il.Ast.BoolT) in
+        #        let ctx, value_cond = eval_exp ctx exp_cond in
+        ctx, value_cond = eval_exp(ctx, exp_cond)
+        #        let values_cond = values_cond @ [ value_cond ] in
+        values_cond.append(values_cond)
+        #        let cond = Value.get_bool value_cond in
+        cond = value_cond.get_bool()
+        #        if cond then (ctx, Some block, values_cond)
+        if cond:
+            block_match = case.instrs
+        #        else (ctx, None, values_cond))
+        else:
+            assert block_match is None
+    #      (ctx, None, [])
+    # |> fun (ctx, block_match, values_cond) ->
+    # let value_cond =
+    #   let vid = Value.fresh () in
+    #   let typ = Il.Ast.IterT (Il.Ast.BoolT $ no_region, Il.Ast.List) in
+    #   Il.Ast.(ListV values_cond $$$ { vid; typ })
+    value_cond = None # INCOMPLETE
+    # in
+    # Ctx.add_node ctx value_cond;
+    # (ctx, block_match, value_cond)
+    return ctx, block_match, value_cond
+
+def eval_case_instr(ctx, case_instr):
+    # let ctx, instrs_opt, value_cond = eval_cases ctx exp cases in
+    ctx, instrs_opt, value_cond = eval_cases(ctx, case_instr.exp, case_instr.cases)
+    assert value_cond is None
+    # let vid = value_cond.note.vid in
+    # let ctx =
+    #   match phantom_opt with
+    #   | Some (pid, _) -> Ctx.cover ctx (Option.is_none instrs_opt) pid vid
+    #   | None -> ctx
+    # in
+    # match instrs_opt with
+    # | Some instrs -> eval_instrs ctx Cont instrs
+    if instrs_opt is not None:
+        return eval_instrs(ctx, Cont(), instrs_opt)
+    # | None -> (ctx, Cont)
+    return ctx, Cont
 
 def eval_let_instr(ctx, let_instr):
     # let ctx = eval_let_iter ctx exp_l exp_r iterexps in
