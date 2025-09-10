@@ -228,7 +228,6 @@ class W_FuncV(W_Base):
 
     @staticmethod
     def fromjson(content):
-        import pdb;pdb.set_trace()
         id = p4specast.Id.fromjson(content[1])
         return W_FuncV(id)
 

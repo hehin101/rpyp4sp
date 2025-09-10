@@ -1038,19 +1038,15 @@ class IterT(Type):
         )
 
 class FuncT(Type):
-    def __init__(self, params, ret):
-        self.params = params
-        self.ret = ret
+    def __init__(self):
+        pass
 
     def __repr__(self):
-        return "p4specast.FuncT(%r, %r)" % (self.params, self.ret)
+        return "p4specast.FuncT()"
 
     @staticmethod
     def fromjson(content):
-        return FuncT(
-            params=[Type.fromjson(param) for param in content[1].value_array()],
-            ret=Type.fromjson(content[2])
-        )
+        return FuncT()
 
 # and nottyp = nottyp' phrase
 # [@@deriving yojson]
