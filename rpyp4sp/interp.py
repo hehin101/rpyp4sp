@@ -189,7 +189,7 @@ def eval_instrs(ctx, sign, instrs):
         if isinstance(sign, Cont):
             ctx, sign = eval_instr(ctx, instr)
         else:
-            pass
+            assert sign is not Cont
     return ctx, sign
 
 def eval_instr(ctx, instr):
@@ -356,7 +356,7 @@ def eval_case_instr(ctx, case_instr):
     if instrs_opt is not None:
         return eval_instrs(ctx, Cont(), instrs_opt)
     # | None -> (ctx, Cont)
-    return ctx, Cont
+    return ctx, Cont()
 
 def eval_let_instr(ctx, let_instr):
     # let ctx = eval_let_iter ctx exp_l exp_r iterexps in
