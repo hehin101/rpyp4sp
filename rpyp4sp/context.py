@@ -72,7 +72,14 @@ class Context(object):
         result.local.venv = self.local.venv.copy()
         result.local.venv[id.value] = value        
         return result
-    
+
+    def add_func_local(self, id, func):
+        result = Context(self.filename, self.derive)
+        result.glbl = self.glbl
+        result.local = self.local.copy_and_change(fenv=self.local.fenv.copy())
+        result.local.fenv[id.value] = func
+        return result
+
     def find_func_local(self, id):
         if id.value in self.local.fenv:
             func = self.local.fenv[id.value]

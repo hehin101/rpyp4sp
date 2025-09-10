@@ -94,13 +94,17 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input):
     #     (ctx, value_output)
         return ctx, sign.value
     # | _ -> error id.at "function was not matched"
+    import pdb; pdb.set_trace()
 
 def eval_arg(ctx, arg):
     # INCOMPLETE
     # match arg.it with
     # | ExpA exp -> eval_exp ctx exp
     if isinstance(arg, p4specast.ExpA):
-        return eval_exp(ctx, arg.exp)
+        res = eval_exp(ctx, arg.exp)
+        if res is not None:
+            return res
+
     # | DefA id ->
     #     let value_res =
     #       let vid = Value.fresh () in
@@ -574,9 +578,7 @@ assign_arg_exp = assign_exp
 def assign_arg_def(ctx_caller, ctx_callee, id, value):
     if isinstance(value, objects.W_FuncV):
         func = ctx_caller.find_func_local(value.id)
-        import pdb; pdb.set_trace()
-        ctx_callee.add_func_local(id, func)
-        return ctx_callee
+        return ctx_callee.add_func_local(id, func)
     else:
         assert False, "cannot assign a value %s to a definition %s" % (
             str(value), str(id))
