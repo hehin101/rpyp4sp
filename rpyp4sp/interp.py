@@ -731,6 +731,81 @@ class __extend__(p4specast.CmpE):
         # (ctx, value_res)
         return ctx, value_res
 
+def eval_binop_bool(binop, value_l, value_r, typ):
+    # let bool_l = Value.get_bool value_l in
+    bool_l = value_l.get_bool()
+    # let bool_r = Value.get_bool value_r in
+    bool_r = value_r.get_bool()
+    # match binop with
+    # | `AndOp -> Il.Ast.BoolV (bool_l && bool_r)
+    if binop == 'AndOp':
+        res_bool = objects.W_BoolV(bool_l and bool_r)
+    # | `OrOp -> Il.Ast.BoolV (bool_l || bool_r)
+    elif binop == 'OrOp':
+        res_bool = objects.W_BoolV(bool_l or bool_r)
+    # | `ImplOp -> Il.Ast.BoolV ((not bool_l) || bool_r)
+    elif binop == 'ImplOp':
+        res_bool = objects.W_BoolV((not bool_l) or bool_r)
+    # | `EquivOp -> Il.Ast.BoolV (bool_l = bool_r)
+    elif binop == 'EquivOp':
+        res_bool = objects.W_BoolV(bool_l == bool_r)
+    else:
+        assert 0, "should be unreachable"
+    return objects.W_BoolV(res_bool, typ=typ)
+
+def eval_binop_num(binop, value_l, value_r, typ):
+    # let num_l = Value.get_num value_l in
+    # let num_r = Value.get_num value_r in
+    # Il.Ast.NumV (Num.bin binop num_l num_r)
+    assert value_l.what == value_r.what
+    num_l = value_l.get_num()
+    num_r = value_r.get_num()
+    if binop == 'AddOp':
+        res_num = num_l.add(num_r)
+    elif binop == 'SubOp':
+        res_num = num_l.sub(num_r)
+    elif binop == 'MulOp':
+        res_num = num_l.mul(num_r)
+    elif binop == 'DivOp':
+        raise NotImplementedError("DivOp")
+    elif binop == 'ModOp':
+        raise NotImplementedError("ModOp")
+    elif binop == 'PowOp':
+        raise NotImplementedError("PowOp")
+    else:
+        assert 0, "should be unreachable"
+    return objects.W_NumV(res_num, value_l.what, typ=typ)
+
+class __extend__(p4specast.BinE):
+    def eval_exp(self, ctx):
+        # let ctx, value_l = eval_exp ctx exp_l in
+        ctx, value_l = eval_exp(ctx, self.left)
+        # let ctx, value_r = eval_exp ctx exp_r in
+        ctx, value_r = eval_exp(ctx, self.right)
+        # let value_res =
+        #   match binop with
+        #   | #Bool.binop as binop -> eval_bin_bool binop value_l value_r
+        if self.binop in ('AndOp', 'OrOp', 'ImplOp', 'EquivOp'):
+            value_res = eval_binop_bool(self.binop, value_l, value_r, self.typ)
+        #   | #Num.binop as binop -> eval_bin_num binop value_l value_r
+        elif self.binop in ('AddOp', 'SubOp', 'MulOp', 'DivOp', 'ModOp', 'PowOp'):
+            value_res = eval_binop_num(self.binop, value_l, value_r, self.typ)
+        else:
+            assert 0, "should be unreachable"
+        # in
+        # let value_res =
+        #   let vid = Value.fresh () in
+        #   let typ = note in
+        #   Il.Ast.(value_res $$$ { vid; typ })
+        # in
+        # Ctx.add_node ctx value_res;
+        # Ctx.add_edge ctx value_res value_l (Dep.Edges.Op (BinOp binop));
+        # Ctx.add_edge ctx value_res value_r (Dep.Edges.Op (BinOp binop));
+        # (ctx, value_res)
+        return ctx, value_res
+
+
+
 class __extend__(p4specast.SubE):
     def eval_exp(self, ctx):
         typ = self.check_typ
@@ -843,6 +918,28 @@ class __extend__(p4specast.StrE):
         #   Il.Ast.(StructV fields $$$ { vid; typ })
         # in
         value_res = objects.W_StructV(fields, typ=self.typ)
+        # Ctx.add_node ctx value_res;
+        # if List.length values = 0 then
+        #   List.iter
+        #     (fun value_input ->
+        #       Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
+        #     ctx.local.values_input;
+        # (ctx, value_res)
+        return ctx, value_res
+
+class __extend__(p4specast.CaseE):
+    def eval_exp(self, ctx):
+        # let mixop, exps = notexp in
+        mixop = self.notexp.mixop
+        exps = self.notexp.exps
+        # let ctx, values = eval_exps ctx exps in
+        ctx, values = eval_exps(ctx, exps)
+        # let value_res =
+        #   let vid = Value.fresh () in
+        #   let typ = note in
+        #   Il.Ast.(CaseV (mixop, values) $$$ { vid; typ })
+        value_res = objects.W_CaseV(mixop, values, typ=self.typ)
+        # in
         # Ctx.add_node ctx value_res;
         # if List.length values = 0 then
         #   List.iter

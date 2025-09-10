@@ -55,6 +55,9 @@ class W_Base(object):
     def get_bool(self):
         raise TypeError("not a bool")
 
+    def get_num(self):
+        raise TypeError("not a num")
+
     def eq(self, other):
         return self.compare(other) == 0
 
@@ -99,6 +102,9 @@ class W_NumV(W_Base):
     def __repr__(self):
         return "objects.W_NumV.fromstr(%r, %r, %r, %r)" % (
             self.value.str(), self.what, self.vid, self.typ)
+
+    def get_num(self):
+        return self.value
 
     @staticmethod
     def fromstr(value, what, vid=-1, typ=None):
