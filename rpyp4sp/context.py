@@ -80,3 +80,6 @@ class Context(object):
             func = self.glbl.fenv[id.value]
         return func
 
+    def commit(self, sub_ctx):
+        # TODO: later add cover
+        return self

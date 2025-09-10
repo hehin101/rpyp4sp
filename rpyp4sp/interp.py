@@ -132,7 +132,6 @@ def invoke_rel(ctx, id, values_input):
 
     # let _inputs, exps_input, instrs = Ctx.find_rel Local ctx id in
     reld = ctx.find_rel_local(id)
-    import pdb;pdb.set_trace()
     # check (instrs <> []) id.at "relation has no instructions";
     # let attempt_rules () =
     #   let ctx_local = Ctx.localize ctx in
@@ -148,6 +147,8 @@ def invoke_rel(ctx, id, values_input):
     import pdb;pdb.set_trace()
     #   match sign with
     #   | Res values_output ->
+    if isinstance(sign, Res):
+        return ctx, values_output
     #       List.iteri
     #         (fun idx_arg value_input ->
     #           List.iter
@@ -157,6 +158,8 @@ def invoke_rel(ctx, id, values_input):
     #             values_output)
     #         values_input;
     #       Some (ctx, values_output)
+    else:
+        return None, None
     #   | _ -> None
     # in
     # if (not ctx.derive) && Cache.is_cached_rule id.it then (
@@ -628,6 +631,50 @@ class __extend__(p4specast.VarE):
         value = ctx.find_value_local(self.id, [])
         return ctx, value
 
+def eval_cmp_bool(cmpop, value_l, value_r):
+    # let eq = Value.eq value_l value_r in
+    eq = value_l.eq(value_r)
+    # match cmpop with `EqOp -> Il.Ast.BoolV eq | `NeOp -> Il.Ast.BoolV (not eq)
+    value = eq if cmpop == 'EqOp' else not eq
+    return objects.W_BoolV(value)
+
+
+def eval_cmp_num(cmpop, value_l, value_r):
+    # let num_l = Value.get_num value_l in
+    # let num_r = Value.get_num value_r in
+    # Il.Ast.BoolV (Num.cmp cmpop num_l num_r)
+    import pdb;pdb.set_trace()
+
+
+class __extend__(p4specast.CmpE):
+    def eval_exp(self, ctx):
+        import pdb;pdb.set_trace()
+        # let ctx, value_l = eval_exp ctx exp_l in
+        ctx, value_l = eval_exp(ctx, self.left)
+        # let ctx, value_r = eval_exp ctx exp_r in
+        ctx, value_r = eval_exp(ctx, self.right)
+        # let value_res =
+        #   match cmpop with
+        #   | #Bool.cmpop as cmpop -> eval_cmp_bool cmpop value_l value_r
+        if self.cmpop in ('EqOp', 'NeOp'):
+            value_res = eval_cmp_bool(self.cmpop, value_l, value_r)
+        #   | #Num.cmpop as cmpop -> eval_cmp_num cmpop value_l value_r
+        elif self.cmpop in ('LtOp', 'GtOp', 'LeOp', 'GeOp'):
+            value_res = eval_cmp_num(self.cmpop, value_l, value_r)
+        else:
+            assert 0, 'should be unreachable'
+        # in
+        # let value_res =
+        #   let vid = Value.fresh () in
+        #   let typ = note in
+        #   Il.Ast.(value_res $$$ { vid; typ })
+        # in
+        # Ctx.add_node ctx value_res;
+        # Ctx.add_edge ctx value_res value_l (Dep.Edges.Op (CmpOp cmpop));
+        # Ctx.add_edge ctx value_res value_r (Dep.Edges.Op (CmpOp cmpop));
+        # (ctx, value_res)
+        return ctx, value_res
+
 class __extend__(p4specast.SubE):
     def eval_exp(self, ctx):
         typ = self.check_typ
@@ -716,7 +763,7 @@ class __extend__(p4specast.HoldE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(BoolV hold $$$ { vid; typ })
-        value_res = objects.W_BoolV(self.value, typ=self.typ)
+        value_res = objects.W_BoolV(hold, typ=self.typ)
         # in
         # Ctx.add_node ctx value_res;
         # List.iteri

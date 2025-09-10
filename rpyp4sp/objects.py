@@ -55,7 +55,24 @@ class W_Base(object):
     def get_bool(self):
         raise TypeError("not a bool")
 
+    def eq(self, other):
+        return self.compare(other) == 0
+
+    def compare(self, other):
+        import pdb;pdb.set_trace()
+        assert 0
+
+    def _base_compare(self, other):
+        if self._compare_tag == other._compare_tag:
+            return 0
+        if self._compare_tag < other._compare_tag:
+            return -1
+        return 1
+
+
 class W_BoolV(W_Base):
+    _compare_tag = 0
+
     def __init__(self, value, vid=-1, typ=None):
         # TODO: assign a vid if the argument is -1
         self.value = value
@@ -143,6 +160,11 @@ class W_CaseV(W_Base):
         mixop = p4specast.MixOp.fromjson(mixop_content)
         values = [W_Base.fromjson(v) for v in valuelist_content.value_array()]
         return W_CaseV(mixop, values)
+
+    def compare(self, other):
+        if not isinstance(other, W_CaseV):
+            return self._base_compare(other)
+
 
 class W_TupleV(W_Base):
     def __init__(self, elements, vid=-1, typ=None):
