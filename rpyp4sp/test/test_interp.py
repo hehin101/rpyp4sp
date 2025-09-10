@@ -71,3 +71,26 @@ def test_reduce_senums_binary():
     ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, [arg0, arg1, arg2])
 
     assert value.eq(expected)
+
+
+
+def test_empty_context():
+    spec = load()
+    ctx = Context('dummy')
+    ctx.load_spec(spec)
+    func = ctx.glbl.fenv["empty_context"]
+    ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, [])
+
+
+def test_bin_plus():
+    spec = load()
+    ctx = Context('dummy')
+    ctx.load_spec(spec)
+    func = ctx.glbl.fenv["bin_plus"]
+    arg0 = objects.W_CaseV(p4specast.MixOp([[p4specast.AtomT('IntV', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 13, 4), p4specast.Position('spec/2b2-runtime-value.watsup', 13, 8)))], []]), [objects.W_NumV.fromstr('5', 'Int', 2, p4specast.NumT(p4specast.IntT()))], 220, p4specast.VarT(p4specast.Id('val', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 7, 7), p4specast.Position('spec/2b2-runtime-value.watsup', 7, 10))), []))
+
+    arg1 = objects.W_CaseV(p4specast.MixOp([[p4specast.AtomT('IntV', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 13, 4), p4specast.Position('spec/2b2-runtime-value.watsup', 13, 8)))], []]), [objects.W_NumV.fromstr('3', 'Int', 5, p4specast.NumT(p4specast.IntT()))], 231, p4specast.VarT(p4specast.Id('val', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 7, 7), p4specast.Position('spec/2b2-runtime-value.watsup', 7, 10))), []))
+
+    res = objects.W_CaseV(p4specast.MixOp([[p4specast.AtomT('IntV', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 13, 4), p4specast.Position('spec/2b2-runtime-value.watsup', 13, 8)))], []]), [objects.W_NumV.fromstr('8', 'Int', 240, p4specast.NumT(p4specast.IntT()))], 241, p4specast.VarT(p4specast.Id('val', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 7, 7), p4specast.Position('spec/2b2-runtime-value.watsup', 7, 10))), []))
+    ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, [arg0, arg1])
+    assert value.eq(res)

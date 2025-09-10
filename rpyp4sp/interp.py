@@ -829,6 +829,29 @@ class __extend__(p4specast.HoldE):
         # (ctx, value_res)
         return ctx, value_res
 
+class __extend__(p4specast.StrE):
+    def eval_exp(self, ctx):
+        # let atoms, exps = List.split fields in
+        exps = [exp for (atom, exp) in self.fields]
+        # let ctx, values = eval_exps ctx exps in
+        ctx, values = eval_exps(ctx, exps)
+        # let fields = List.combine atoms values in
+        fields = [(atom, value) for ((atom, exp), value) in zip(self.fields, values)]
+        # let value_res =
+        #   let vid = Value.fresh () in
+        #   let typ = note in
+        #   Il.Ast.(StructV fields $$$ { vid; typ })
+        # in
+        value_res = objects.W_StructV(fields, typ=self.typ)
+        # Ctx.add_node ctx value_res;
+        # if List.length values = 0 then
+        #   List.iter
+        #     (fun value_input ->
+        #       Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
+        #     ctx.local.values_input;
+        # (ctx, value_res)
+        return ctx, value_res
+
 # ____________________________________________________________
 
 def subtyp(ctx, typ, value):

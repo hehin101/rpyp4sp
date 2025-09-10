@@ -2,7 +2,7 @@ from rpython.tool.pairtype import extendabletype
 
 def ast_anywhere_in_list(l):
     for index, el in enumerate(l):
-        if isinstance(el, list):
+        if isinstance(el, (list, tuple)):
             if ast_anywhere_in_list(el):
                 return True
         elif isinstance(el, AstBase):
@@ -12,7 +12,7 @@ def ast_anywhere_in_list(l):
 def flatten_list_with_access_string(l, prefix):
     for index, el in enumerate(l):
         path = "%s[%s]" % (prefix, index)
-        if isinstance(el, list):
+        if isinstance(el, (list, tuple)):
             for sub in flatten_list_with_access_string(el, path):
                 yield sub
         else:
