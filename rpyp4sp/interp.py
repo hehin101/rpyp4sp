@@ -1,5 +1,5 @@
 import pdb
-from rpyp4sp import p4specast, objects, builtin
+from rpyp4sp import p4specast, objects, builtin, context
 
 class Sign(object):
     # abstract base
@@ -148,7 +148,7 @@ def invoke_rel(ctx, id, values_input):
     #   match sign with
     #   | Res values_output ->
     if isinstance(sign, Res):
-        return ctx, values_output
+        return ctx, sign.values
     #       List.iteri
     #         (fun idx_arg value_input ->
     #           List.iter
@@ -208,6 +208,8 @@ def eval_instr(ctx, instr):
         return eval_let_instr(ctx, instr)
     #   | RuleI (id, notexp, iterexps) -> eval_rule_instr ctx id notexp iterexps
     #   | ResultI exps -> eval_result_instr ctx exps
+    if isinstance(instr, p4specast.ResultI):
+        return eval_result_instr(ctx, instr)
     #   | ReturnI exp -> eval_return_instr ctx exp
     if isinstance(instr, p4specast.ReturnI):
         return eval_return_instr(ctx, instr)
@@ -580,6 +582,12 @@ def assign_arg_def(ctx_caller, ctx_callee, id, value):
         assert False, "cannot assign a value %s to a definition %s" % (
             str(value), str(id))
 
+def eval_result_instr(ctx, instr):
+    # type: (context.Context, p4specast.ResultI) -> tuple[context.Context, Res]
+    #  let ctx, values = eval_exps ctx exps in
+    #  (ctx, Res values)
+    ctx, values = eval_exps(ctx, instr.exps)
+    return ctx, Res(values)
 
 def eval_return_instr(ctx, instr):
     # let ctx, value = eval_exp ctx exp in
@@ -648,7 +656,6 @@ def eval_cmp_num(cmpop, value_l, value_r):
 
 class __extend__(p4specast.CmpE):
     def eval_exp(self, ctx):
-        import pdb;pdb.set_trace()
         # let ctx, value_l = eval_exp ctx exp_l in
         ctx, value_l = eval_exp(ctx, self.left)
         # let ctx, value_r = eval_exp ctx exp_r in

@@ -164,6 +164,13 @@ class W_CaseV(W_Base):
     def compare(self, other):
         if not isinstance(other, W_CaseV):
             return self._base_compare(other)
+        # let cmp_mixop = Mixop.compare mixop_l mixop_r in
+        cmp_mixop = self.mixop.compare(other.mixop)
+        # if cmp_mixop <> 0 then cmp_mixop else compares values_l values_r
+        if cmp_mixop != 0:
+            return cmp_mixop
+        else:
+            return compares(self.values, other.values)
 
 
 class W_TupleV(W_Base):
@@ -224,3 +231,29 @@ class W_FuncV(W_Base):
         import pdb;pdb.set_trace()
         id = p4specast.Id.fromjson(content[1])
         return W_FuncV(id)
+
+def compares(values_l, values_r):
+    # type: (list[W_Base], list[W_Base]) -> int
+    # TODO: change recursion to loop
+    if values_l == [] and values_r == []:
+        return 0
+    elif values_l == [] and len(values_r) >= 1:
+        return -1
+    elif len(values_l) >= 1 and values_r == []:
+        return 1
+    else:
+        value_l, values_l = values_l[0], values_l[1:]
+        value_r, values_r = values_r[0], values_r[1:]
+        cmp = value_l.compare(value_r)
+        if cmp != 0:
+            return cmp
+        else:
+            return compares(values_l, values_r)
+    # match (values_l, values_r) with
+    #   | [], [] -> 0
+    #   | [], _ :: _ -> -1
+    #   | _ :: _, [] -> 1
+    #   | value_l :: values_l, value_r :: values_r ->
+    #       let cmp = compare value_l value_r in
+    #       if cmp <> 0 then cmp else compares values_l values_r
+

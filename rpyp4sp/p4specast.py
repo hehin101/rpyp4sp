@@ -1604,7 +1604,15 @@ class DotP(Path):
 
 class MixOp(AstBase):
     def __init__(self, phrases):
-        self.phrases = phrases
+        self.phrases = phrases # type: list[list[AtomT]]
+
+    def compare(self, other):
+        # type: (MixOp, MixOp) -> int
+        assert len(self.phrases) == 1 and len(self.phrases[0]) == 1
+        assert len(other.phrases) == 1 and len(other.phrases[0]) == 1
+        atom_l = self.phrases[0][0]
+        atom_r = other.phrases[0][0]
+        return atom_l.compare(atom_r)
 
     @staticmethod
     def fromjson(content):
@@ -1615,13 +1623,19 @@ class MixOp(AstBase):
     def __repr__(self):
         return "p4specast.MixOp(%r)" % (self.phrases,)
 
+
 class AtomT(AstBase):
     def __init__(self, value, region):
-        self.value = value
-        self.region = region
+        self.value = value # type: str
+        self.region = region # type: Region
 
     def __repr__(self):
         return "p4specast.AtomT(%r, %r)" % (self.value, self.region)
+
+    def compare(self, other):
+        # type: (AtomT, AtomT) -> int
+        # TODO: is this right?
+        return cmp(self.value, other.value)
 
     @staticmethod
     def fromjson(value):
