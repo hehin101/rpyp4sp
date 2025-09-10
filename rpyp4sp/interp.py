@@ -144,7 +144,6 @@ def invoke_rel(ctx, id, values_input):
     ctx_local, sign = eval_instrs(ctx_local, Cont(), reld.instrs)
     ctx = ctx.commit(ctx_local)
     #   let ctx = Ctx.commit ctx ctx_local in
-    import pdb;pdb.set_trace()
     #   match sign with
     #   | Res values_output ->
     if isinstance(sign, Res):
@@ -638,6 +637,54 @@ class __extend__(p4specast.VarE):
         # let value = Ctx.find_value Local ctx (id, []) in
         value = ctx.find_value_local(self.id, [])
         return ctx, value
+
+class __extend__(p4specast.OptE):
+    def eval_exp(self, ctx):
+        #     Ctx.t * value =
+        #   let ctx, value_opt =
+        #     match exp_opt with
+        if self.exp is not None:
+            ctx, value = eval_exp(ctx, self.exp)
+        else:
+            value = None
+        #     | Some exp ->
+        #         let ctx, value = eval_exp ctx exp in
+        #         (ctx, Some value)
+        #     | None -> (ctx, None)
+        #   in
+        #   let value_res =
+        #     let vid = Value.fresh () in
+        #     let typ = note in
+        #     Il.Ast.(OptV value_opt $$$ { vid; typ })
+        value_res = objects.W_OptV(value, typ=self.typ)
+        return ctx, value_res
+        #   in
+        #   Ctx.add_node ctx value_res;
+        #   if Option.is_none value_opt then
+        #     List.iter
+        #       (fun value_input ->
+        #         Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
+        #       ctx.local.values_input;
+        #   (ctx, value_res)
+
+class __extend__(p4specast.TupleE):
+    def eval_exp(self, ctx):
+        #   let ctx, values = eval_exps ctx exps in
+        ctx, values = eval_exps(ctx, self.elts)
+        #   let value_res =
+        #     let vid = Value.fresh () in
+        #     let typ = note in
+        #     Il.Ast.(TupleV values $$$ { vid; typ })
+        value_res = objects.W_TupleV(values, typ=self.typ)
+        #   in
+        #   Ctx.add_node ctx value_res;
+        #   if List.length values = 0 then
+        #     List.iter
+        #       (fun value_input ->
+        #         Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
+        #       ctx.local.values_input;
+        #   (ctx, value_res)
+        return ctx, value_res
 
 def eval_cmp_bool(cmpop, value_l, value_r):
     # let eq = Value.eq value_l value_r in
