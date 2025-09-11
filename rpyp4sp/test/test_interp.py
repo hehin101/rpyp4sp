@@ -168,7 +168,7 @@ def test_all():
     spec = load()
     ctx = Context('dummy')
     ctx.load_spec(spec)
-    for name, input_values, res_value in []: #func_cases:
+    for name, input_values, res_value in func_cases:
         if name not in ctx.glbl.fenv:
             continue
         func = ctx.glbl.fenv[name]
@@ -179,10 +179,9 @@ def test_all():
             else:
                 print("Function test passed:", name)
         except Exception as e:
-            import pdb; pdb.xpm()
+            #import pdb; pdb.xpm()
             print("Function test exception:", name, e)
             continue
-    import pdb;pdb.set_trace()
     for name, input_values, res_values in relation_cases:
         try:
             ctx, values = interp.invoke_rel(ctx, p4specast.AtomT(name, None), input_values)
@@ -191,6 +190,6 @@ def test_all():
             #else:
             #    print("Function test passed:", name)
         except Exception as e:
-            import pdb; pdb.xpm()
+            #import pdb; pdb.xpm()
             print("Function test exception:", name, e)
             continue

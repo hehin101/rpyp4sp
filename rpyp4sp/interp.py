@@ -210,6 +210,8 @@ def eval_instr(ctx, instr):
     if isinstance(instr, p4specast.LetI):
         return eval_let_instr(ctx, instr)
     #   | RuleI (id, notexp, iterexps) -> eval_rule_instr ctx id notexp iterexps
+    if isinstance(instr, p4specast.RuleI):
+        return eval_rule_instr(ctx, instr)
     #   | ResultI exps -> eval_result_instr ctx exps
     if isinstance(instr, p4specast.ResultI):
         return eval_result_instr(ctx, instr)
@@ -312,6 +314,8 @@ def eval_cases(ctx, exp, cases):
         elif isinstance(guard, p4specast.MatchG):
             exp_cond = p4specast.MatchE(exp, guard.pattern)
         #          | MemG exp_s -> Il.Ast.MemE (exp, exp_s)
+        elif isinstance(guard, p4specast.MemG):
+            exp_cond = p4specast.MemE(exp, guard.exp)
         else:
             import pdb;pdb.set_trace()
             assert 0, 'missing case'
@@ -390,6 +394,76 @@ def eval_let(ctx, exp_l, exp_r):
     ctx, value = eval_exp(ctx, exp_r)
     # assign_exp ctx exp_l value
     return assign_exp(ctx, exp_l, value)
+
+def split_exps_without_idx(inputs, exps):
+    assert sorted(inputs) == inputs # inputs is sorted
+    exps_input = []
+    exps_output = []
+    for index, exp in enumerate(exps):
+        if index in inputs:
+            exps_input.append(exp)
+        else:
+            exps_output.append(exp)
+    return exps_input, exps_output
+
+# and eval_rule (ctx : Ctx.t) (id : id) (notexp : notexp) : Ctx.t =
+def eval_rule(ctx, id, notexp):
+    #   let rel = Ctx.find_rel Local ctx id in
+    rel = ctx.find_rel_local(id)
+    #   let exps_input, exps_output =
+    #     let inputs, _, _ = rel in
+    #     let _, exps = notexp in
+    #     Hint.split_exps_without_idx inputs exps
+    inputs = rel.inputs
+    _, exps = notexp.mixop, notexp.exps
+    exps_input, exps_output = split_exps_without_idx(inputs, exps)
+    #   let ctx, values_input = eval_exps ctx exps_input in
+    ctx, values_input = eval_exps(ctx, exps_input)
+    #   let ctx, values_output =
+    #     match invoke_rel ctx id values_input with
+    #     | Some (ctx, values_output) -> (ctx, values_output)
+    #     | None -> error id.at "relation was not matched"
+    relctx, values_output = invoke_rel(ctx, id, values_input)
+    if relctx is None:
+        raise ValueError("relation was not matched: %s" % id.value)
+    ctx = relctx
+    #   assign_exps ctx exps_output values_output
+    ctx = assign_exps(ctx, exps_output, values_output)
+    return ctx
+
+
+def eval_rule_iter_tick(ctx, id, notexp, iterexps):
+    # match iterexps with
+    #   match iterexps with
+    #   | [] -> eval_rule ctx id notexp
+    if not iterexps:
+        return eval_rule(ctx, id, notexp)
+    assert 0, "not properly implemented"
+    #   | iterexp_h :: iterexps_t -> (
+    #       let iter_h, vars_h = iterexp_h in
+    #       match iter_h with
+    #       | Opt -> eval_rule_opt ctx id notexp vars_h iterexps_t
+    #       | List -> eval_rule_list ctx id notexp vars_h iterexps_t)
+    iter_h, vars_h = iterexps[0]
+    iterexps_t = iterexps[1:]
+    if iter_h == 'Opt':
+        return eval_rule_opt(ctx, id, notexp, vars_h, iterexps_t)
+    elif iter_h == 'List':
+        return eval_rule_list(ctx, id, notexp, vars_h, iterexps_t)
+    else:
+        assert False, "unknown iter_h: %s" % iter_h
+
+def eval_rule_iter(ctx, instr):
+    # let iterexps = List.rev iterexps in
+    # eval_rule_iter' ctx id notexp iterexps
+    iterexps = instr.iters[::-1]
+    return eval_rule_iter_tick(ctx, instr.id, instr.notexp, iterexps)
+
+def eval_rule_instr(ctx, instr):
+    # let ctx = eval_rule_iter ctx id notexp iterexps in
+    ctx = eval_rule_iter(ctx, instr)
+    return ctx, Cont()
+
 
 def assign_exp(ctx, exp, value):
     # INCOMPLETE

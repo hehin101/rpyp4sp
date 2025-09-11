@@ -256,27 +256,27 @@ class TypD(Def):
 
 
 class RelD(Def):
-    def __init__(self, id, mixop, ints, exps, instrs):
+    def __init__(self, id, mixop, inputs, exps, instrs):
         self.id = id            # type: Id
         self.mixop = mixop      # type: MixOp
-        self.ints = ints      # type: list[int]
+        self.inputs = inputs    # type: list[Input]
         self.exps = exps        # type: list[Exp]
         self.instrs = instrs    # type: list[Instr]
 
     def __repr__(self):
-        return "p4specast.RelD(%r, %r, %r, %r, %r)" % (self.id, self.mixop, self.ints, self.exps, self.instrs)
+        return "p4specast.RelD(%r, %r, %r, %r, %r)" % (self.id, self.mixop, self.inputs, self.exps, self.instrs)
 
     @staticmethod
     def fromjson(value):
         _, id, mixop_and_ints, exps_value, instrs_value = value
         mixop = MixOp.fromjson(mixop_and_ints[0])
-        ints = [i.value_int() for i in mixop_and_ints[1].value_array()]
+        inputs = [i.value_int() for i in mixop_and_ints[1].value_array()]
         exps = [Exp.fromjson(e) for e in exps_value]
         instrs = [Instr.fromjson(i) for i in instrs_value]
         return RelD(
             id=Id.fromjson(id),
             mixop=mixop,
-            ints=ints,
+            inputs=inputs,
             exps=exps,
             instrs=instrs
         )
