@@ -279,21 +279,20 @@ class FuncV(BaseV):
 
 def compares(values_l, values_r):
     # type: (list[BaseV], list[BaseV]) -> int
-    # TODO: change recursion to loop
-    if values_l == [] and values_r == []:
-        return 0
-    elif values_l == [] and len(values_r) >= 1:
-        return -1
-    elif len(values_l) >= 1 and values_r == []:
-        return 1
-    else:
-        value_l, values_l = values_l[0], values_l[1:]
-        value_r, values_r = values_r[0], values_r[1:]
-        cmp = value_l.compare(value_r)
+    # lexicographic ordering, iterative version
+    len_l = len(values_l)
+    len_r = len(values_r)
+    min_len = min(len_l, len_r)
+    for i in range(min_len):
+        cmp = values_l[i].compare(values_r[i])
         if cmp != 0:
             return cmp
-        else:
-            return compares(values_l, values_r)
+    if len_l == len_r:
+        return 0
+    elif len_l < len_r:
+        return -1
+    else:
+        return 1
     # match (values_l, values_r) with
     #   | [], [] -> 0
     #   | [], _ :: _ -> -1
