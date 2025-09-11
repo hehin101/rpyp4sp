@@ -630,7 +630,7 @@ def eval_exps(ctx, exps):
 class __extend__(p4specast.Exp):
     def eval_exp(self, ctx):
         import pdb;pdb.set_trace()
-        raise NotImplementedError("abstract base class")
+        raise NotImplementedError("abstract base class %s" % self)
 
 class __extend__(p4specast.BoolE):
     def eval_exp(self, ctx):
