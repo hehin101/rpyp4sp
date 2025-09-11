@@ -1,3 +1,4 @@
+from rpyp4sp import p4specast, objects
 
 all_builtins = {}
 
@@ -87,9 +88,35 @@ def sets_sub_set(ctx, name, targs, values_input):
 def sets_eq_set(ctx, name, targs, values_input):
     raise NotImplementedError("sets_eq_set is not implemented yet")
 
+# _________________________________________________________________
+
+map_mixop = p4specast.MixOp(
+    [[p4specast.AtomT('{', p4specast.NO_REGION)],
+     [p4specast.AtomT('}', p4specast.NO_REGION)]])
+arrow_mixop = p4specast.MixOp(
+    [[],
+     [p4specast.AtomT('->', p4specast.NO_REGION)],
+     []])
+
 @register_builtin("find_map")
 def maps_find_map(ctx, name, targs, values_input):
-    raise NotImplementedError("maps_find_map is not implemented yet")
+    key_typ, value_typ = targs
+    map_value, key_value = values_input
+    assert map_value.mixop.eq(map_mixop)
+    content, = map_value.values
+    assert isinstance(content, objects.ListV)
+    found_value = None
+    for el in content.elements:
+        assert isinstance(el, objects.CaseV)
+        assert el.mixop.eq(arrow_mixop)
+        key, value = el.values
+        if key.eq(key_value):
+            found_value = value
+            break
+    typ = p4specast.IterT(key_typ, p4specast.Opt())
+    typ.region = p4specast.NO_REGION
+    return objects.OptV(found_value, typ=typ)
+
 
 @register_builtin("find_maps")
 def maps_find_maps(ctx, name, targs, values_input):

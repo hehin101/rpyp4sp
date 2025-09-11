@@ -58,6 +58,12 @@ class AstBase(object):
         for target, label in arcs:
             dotgen.emit_edge(str(id(self)), str(id(target)), label)
 
+    def eq(self, other):
+        return self.compare(other) == 0
+
+    def compare(self, other):
+        raise NotImplementedError('abstract base')
+
 
 def define_enum(basename, *names):
     class Base(AstBase):
@@ -116,6 +122,9 @@ class Region(AstBase):
 
     def __repr__(self):
         return "p4specast.Region(%s, %s)" % (self.left, self.right)
+
+NO_REGION = Region(Position('', 0, 0), Position('', 0, 0))
+
 
 # type ('a, 'b, 'c) info = { it : 'a; note : 'b; at : 'c } [@@deriving yojson]
 # type 'a phrase = ('a, unit, region) info [@@deriving yojson]
