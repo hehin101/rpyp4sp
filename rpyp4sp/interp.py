@@ -497,9 +497,8 @@ def assign_exp(ctx, exp, value):
     #     in
         values = value.elements
         ctxs = []
-        ctx_local = ctx
         for value in values:
-            ctx_local = ctx_local.localize_venv(venv={})
+            ctx_local = ctx.localize_venv(venv={})
             ctx_local = assign_exp(ctx_local, exp, value)
             ctxs.append(ctx_local)
     #     (* Per iterated variable, collect its elementwise value,
