@@ -142,6 +142,18 @@ def test_assign_exp():
     ctx_returned = interp.assign_exp(ctx, exp, value)
     print(ctx_returned)
 
+def test_concat_text():
+    input_values = [objects.ListV([objects.TextV('CounterType', 254, p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('', 0, 0), p4specast.Position('', 0, 0))), [])), objects.TextV('.', 7650, p4specast.TextT()), objects.TextV('packets_and_bytes', 257, p4specast.VarT(p4specast.Id('member', p4specast.Region(p4specast.Position('', 0, 0), p4specast.Position('', 0, 0))), []))], 7651, p4specast.IterT(p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 21, 7), p4specast.Position('spec/1a-syntax-el.watsup', 21, 9))), []), p4specast.List()))]
+    name = 'concat_text'
+    expected = objects.TextV('CounterType.packets_and_bytes', 7689, p4specast.TextT())
+
+    spec = load()
+    ctx = Context('dummy')
+    ctx.load_spec(spec)
+    func = ctx.glbl.fenv[name]
+    ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+    assert value.eq(expected)
+
 def test_all():
     # load test cases from line-based json file
     func_cases = []

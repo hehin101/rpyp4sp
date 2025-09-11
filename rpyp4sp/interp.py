@@ -512,18 +512,27 @@ def assign_exp(ctx, exp, value):
     #       values_inner;
     #     ctx
     # | ConsE (exp_h, exp_t), ListV values_inner ->
+    elif isinstance(exp, p4specast.ConsE) and \
+         isinstance(value, objects.ListV):
+        values_inner = value.elements
+        assert values_inner, "cannot assign empty list to ConsE"
     #     let value_h = List.hd values_inner in
+        value_h = values_inner[0]
     #     let value_t =
     #       let vid = Value.fresh () in
     #       let typ = note in
     #       Il.Ast.(ListV (List.tl values_inner) $$$ { vid; typ })
+        value_t = objects.ListV(values_inner[1:], typ=value.typ)
     #     in
     #     Ctx.add_node ctx value_t;
     #     let ctx = assign_exp ctx exp_h value_h in
+        ctx = assign_exp(ctx, exp.head, value_h)
     #     Ctx.add_edge ctx value_h value Dep.Edges.Assign;
     #     let ctx = assign_exp ctx exp_t value_t in
+        ctx = assign_exp(ctx, exp.tail, value_t)
     #     Ctx.add_edge ctx value_t value Dep.Edges.Assign;
     #     ctx
+        return ctx
     # | IterE (_, (Opt, vars)), OptV None ->
     #     (* Per iterated variable, make an option out of the value *)
     #     List.fold_left
@@ -556,7 +565,6 @@ def assign_exp(ctx, exp, value):
     # | IterE (exp, (List, vars)), ListV values ->
     elif isinstance(exp, p4specast.IterE) and \
         isinstance(value, objects.ListV):
-    # TODO: needs testing
     #     (* Map over the value list elements,
     #        and assign each value to the iterated expression *)
     #     let ctxs =
@@ -568,13 +576,14 @@ def assign_exp(ctx, exp, value):
     #           let ctx = assign_exp ctx exp value in
     #           ctxs @ [ ctx ])
     #         [] values
-    #     in
-        values = value.elements
         ctxs = []
-        for value in values:
+        values = value.elements
+        for value_elem in values:
             ctx_local = ctx.localize_venv(venv={})
-            ctx_local = assign_exp(ctx_local, exp, value)
+            ctx_local = assign_exp(ctx_local, exp.exp, value_elem)
             ctxs.append(ctx_local)
+
+    #     in
     #     (* Per iterated variable, collect its elementwise value,
     #        then make a sequence out of them *)
     #     List.fold_left
@@ -591,7 +600,14 @@ def assign_exp(ctx, exp, value):
     #         Ctx.add_edge ctx value_sub value Dep.Edges.Assign;
     #         Ctx.add_value Local ctx (id, iters @ [ Il.Ast.List ]) value_sub)
     #       ctx vars
-        return ctx_local
+
+        for var in exp.varlist:
+            # collect elementwise values from each ctx in ctxs
+            values = [ctx_elem.find_value_local(var.id, var.iter) for ctx_elem in ctxs]
+            # create a ListV value for these
+            value_sub = objects.ListV(values, typ=var.typ)
+            ctx = ctx.add_value_local(var.id, var.iter + [p4specast.List()], value_sub)
+        return ctx
 
     import pdb;pdb.set_trace()
     # | _ ->
@@ -1029,21 +1045,34 @@ class __extend__(p4specast.MatchE):
         ctx, value = eval_exp(ctx, self.exp)
         # let matches =
         #   match (pattern, value.it) with
-        if (isinstance(self.pattern, p4specast.CaseP) and
+        pattern = self.pattern
+        if (isinstance(pattern, p4specast.CaseP) and
                 isinstance(value, objects.CaseV)):
-            matches = mixop_eq(self.pattern.mixop, value.mixop)
+            matches = mixop_eq(pattern.mixop, value.mixop)
         #   | CaseP mixop_p, CaseV (mixop_v, _) -> Mixop.eq mixop_p mixop_v
-        else:
-            import pdb;pdb.set_trace()
         #   | ListP listpattern, ListV values -> (
+        elif (isinstance(pattern, p4specast.ListP) and
+                isinstance(value, objects.ListV)):
+            listpattern = pattern.element
+            len_v = len(value.elements)
         #       let len_v = List.length values in
         #       match listpattern with
         #       | `Cons -> len_v > 0
+            if isinstance(listpattern, p4specast.Cons):
+                matches = (len_v > 0)
         #       | `Fixed len_p -> len_v = len_p
+            elif isinstance(listpattern, p4specast.Fixed):
+                matches = (len_v == listpattern.length)
         #       | `Nil -> len_v = 0)
+            elif isinstance(listpattern, p4specast.Nil):
+                matches = (len_v == 0)
+            else:
+                assert 0, "should be unreachable"
         #   | OptP `Some, OptV (Some _) -> true
         #   | OptP `None, OptV None -> true
         #   | _ -> false
+        else:
+            import pdb;pdb.set_trace()
         # in
         # let value_res =
         #   let vid = Value.fresh () in
@@ -1137,6 +1166,81 @@ class __extend__(p4specast.CaseE):
         #     ctx.local.values_input;
         # (ctx, value_res)
         return ctx, value_res
+
+class __extend__(p4specast.CatE):
+    def eval_exp(self, ctx):
+        #   let ctx, value_l = eval_exp ctx exp_l in
+        ctx, value_l = eval_exp(ctx, self.left)
+        #   let ctx, value_r = eval_exp ctx exp_r in
+        ctx, value_r = eval_exp(ctx, self.right)
+        #   let value_res =
+        #     match (value_l.it, value_r.it) with
+        #     | TextV s_l, TextV s_r -> Il.Ast.TextV (s_l ^ s_r)
+        if isinstance(value_l, objects.TextV) and isinstance(value_r, objects.TextV):
+            value_res = objects.TextV(value_l.value + value_r.value, typ=self.typ)
+        #     | ListV values_l, ListV values_r -> Il.Ast.ListV (values_l @ values_r)
+        else:
+            import pdb;pdb.set_trace()
+        #     | _ -> error at "concatenation expects either two texts or two lists"
+        #   in
+        #   let value_res =
+        #     let vid = Value.fresh () in
+        #     let typ = note in
+        #     Il.Ast.(value_res $$$ { vid; typ })
+        #   in
+        #   Ctx.add_node ctx value_res;
+        #   Ctx.add_edge ctx value_res value_l (Dep.Edges.Op CatOp);
+        #   Ctx.add_edge ctx value_res value_r (Dep.Edges.Op CatOp);
+        #   (ctx, value_res)
+        return ctx, value_res
+
+
+def eval_iter_exp_opt(note, ctx, exp, vars):
+    import pdb;pdb.set_trace()
+
+def eval_iter_exp_list(note, ctx, exp, vars):
+    # let ctxs_sub = Ctx.sub_list ctx vars in
+    ctxs_sub = ctx.sub_list(vars)
+    # let ctx, values =
+    values = []
+    for ctx_sub in ctxs_sub:
+        #   List.fold_left
+        #     (fun (ctx, values) ctx_sub ->
+        #       let ctx_sub, value = eval_exp ctx_sub exp in
+        ctx_sub, value = eval_exp(ctx_sub, exp)
+        #       let ctx = Ctx.commit ctx ctx_sub in
+        ctx = ctx.commit(ctx_sub)
+        #       (ctx, values @ [ value ]))
+        #     (ctx, []) ctxs_sub
+        values.append(value)
+    # in
+    # let value_res =
+    #   let vid = Value.fresh () in
+    #   let typ = note in
+    #   Il.Ast.(ListV values $$$ { vid; typ })
+    # in
+    value_res = objects.ListV(values, typ=note)
+    # Ctx.add_node ctx value_res;
+    # List.iter
+    #   (fun (id, _typ, iters) ->
+    #     let value_sub = Ctx.find_value Local ctx (id, iters @ [ Il.Ast.List ]) in
+    #     Ctx.add_edge ctx value_res value_sub Dep.Edges.Iter)
+    #   vars;
+    # (ctx, value_res)
+    return ctx, value_res
+
+class __extend__(p4specast.IterE):
+    def eval_exp(self, ctx):
+        # let iter, vars = iterexp in
+        # match iter with
+        if isinstance(self.iter, p4specast.Opt):
+            # | Opt -> eval_iter_exp_opt note ctx exp vars
+            return eval_iter_exp_opt(self.typ, ctx, self.exp, self.varlist)
+        if isinstance(self.iter, p4specast.List):
+            # | List -> eval_iter_exp_list note ctx exp vars
+            return eval_iter_exp_list(self.typ, ctx, self.exp, self.varlist)
+        else:
+            assert False, "Unknown iter kind: %s" % iter
 
 # ____________________________________________________________
 

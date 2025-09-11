@@ -19,7 +19,18 @@ class LocalContext(object):
         fenv = fenv if fenv is not None else self.fenv
         venv = venv if venv is not None else self.venv
         return LocalContext(values_input, tdenv, fenv, venv)
-    
+
+def iterlist_to_key(l):
+    if not l:
+        return ''
+    key = []
+    for iter in l:
+        if isinstance(iter, p4specast.Opt):
+            key.append('?')
+        else:
+            assert isinstance(iter, p4specast.List)
+            key.append('*')
+    return ''.join(key)
 
 class Context(object):
     def __init__(self, filename, derive=False):
@@ -57,8 +68,7 @@ class Context(object):
         return ctx
 
     def find_value_local(self, id, iterlist):
-        assert iterlist == []
-        return self.local.venv[id.value]
+        return self.local.venv[id.value, iterlist_to_key(iterlist)]
 
     def find_typdef_local(self, id):
         # TODO: actually use the local tdenv
@@ -69,14 +79,13 @@ class Context(object):
         return self.glbl.renv[id.value]
 
     def add_value_local(self, id, iterlist, value):
-        assert iterlist == []
         result = Context(self.filename, self.derive)
         result.glbl = self.glbl
         result.local = LocalContext()
         result.local.tdenv = self.local.tdenv
         result.local.fenv = self.local.fenv
         result.local.venv = self.local.venv.copy()
-        result.local.venv[id.value] = value        
+        result.local.venv[id.value, iterlist_to_key(iterlist)] = value
         return result
 
     def add_func_local(self, id, func):
@@ -96,3 +105,56 @@ class Context(object):
     def commit(self, sub_ctx):
         # TODO: later add cover
         return self
+
+    def sub_list(self, vars):
+        # First break the values that are to be iterated over,
+        # into a batch of values
+        #   let values_batch =
+        #     List.map
+        #       (fun (id, _typ, iters) ->
+        #         find_value Local ctx (id, iters @ [ Il.Ast.List ]) |> Value.get_list)
+        #       vars
+        #     |> transpose
+        values_batch = []
+        for var in vars:
+            value = self.find_value_local(var.id, var.iter + [p4specast.List()])
+            values_batch.append(value.get_list())
+        value_matrix = transpose(values_batch)
+        #   in
+        #   (* For each batch of values, create a sub-context *)
+        #   List.fold_left
+        #     (fun ctxs_sub value_batch ->
+        #       let ctx_sub =
+        #         List.fold_left2
+        #           (fun ctx_sub (id, _typ, iters) value ->
+        #             add_value Local ctx_sub (id, iters) value)
+        #           ctx vars value_batch
+        #       in
+        #       ctxs_sub @ [ ctx_sub ])
+        #     [] values_batch
+        ctxs_sub = []
+        for value_batch in value_matrix:
+            ctx_sub = self
+            for var, value in zip(vars, value_batch):
+                ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value)
+            ctxs_sub.append(ctx_sub)
+        return ctxs_sub
+
+
+def transpose(value_matrix):
+    if not value_matrix:
+        # | [] -> []
+        return []
+    # | _ ->
+    width = len(value_matrix[0])  # let width = List.length (List.hd value_matrix) in
+    # check
+    for value_row in value_matrix:
+        if len(value_row) != width:
+            raise ValueError("cannot transpose a matrix of value batches")
+    # List.init width (fun j ->
+    #     List.init (List.length value_matrix) (fun i ->
+    #         List.nth (List.nth value_matrix i) j))
+    return [[value_matrix[i][j] for i in range(len(value_matrix))] for j in range(width)]
+
+
+
