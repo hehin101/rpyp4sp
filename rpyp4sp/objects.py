@@ -108,6 +108,7 @@ class W_BoolV(W_Base):
 class W_NumV(W_Base):
     def __init__(self, value, what, vid=-1, typ=None):
         self.value = value # type: integer.Integer
+        assert what in ('Int', 'Nat')
         self.what = what # type: str
         self.vid = vid # type: int
         self.typ = typ # type: Type | None

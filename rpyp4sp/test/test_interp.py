@@ -95,6 +95,18 @@ def test_bin_plus():
     ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, [arg0, arg1])
     assert value.eq(res)
 
+def test_cast_int():
+    args = [objects.W_CaseV(p4specast.MixOp([[p4specast.AtomT('FBitT', p4specast.Region(p4specast.Position('spec/2c1-runtime-type.watsup', 38, 4), p4specast.Position('spec/2c1-runtime-type.watsup', 38, 9)))], []]), [objects.W_NumV.fromstr('8', 'Nat', 247, p4specast.NumT(p4specast.NatT()))], 248, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region(p4specast.Position('spec/2c1-runtime-type.watsup', 35, 7), p4specast.Position('spec/2c1-runtime-type.watsup', 35, 13))), [])), objects.W_NumV.fromstr('10', 'Int', 10, p4specast.NumT(p4specast.IntT()))]
+    name = "cast_int'"
+    spec = load()
+    ctx = Context('dummy')
+    ctx.load_spec(spec)
+    func = ctx.glbl.fenv[name]
+    ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, args)
+    expected = objects.W_CaseV(p4specast.MixOp([[p4specast.AtomT('FBitV', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 15, 4), p4specast.Position('spec/2b2-runtime-value.watsup', 15, 9)))], [], []]), [objects.W_NumV.fromstr('8', 'Nat', 247, p4specast.NumT(p4specast.NatT())), objects.W_NumV.fromstr('10', 'Int', 370, p4specast.NumT(p4specast.IntT()))], 371, p4specast.VarT(p4specast.Id('val', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 7, 7), p4specast.Position('spec/2b2-runtime-value.watsup', 7, 10))), []))
+    assert value.eq(expected)
+
+
 def test_all():
     # load test cases from line-based json file
     func_cases = []

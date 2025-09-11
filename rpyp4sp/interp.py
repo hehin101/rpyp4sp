@@ -865,6 +865,14 @@ class __extend__(p4specast.DownCastE):
         # (ctx, value_res)
         return downcast(ctx, self.check_typ, value)
 
+class __extend__(p4specast.UpCastE):
+    def eval_exp(self, ctx):
+        # let ctx, value = eval_exp ctx exp in
+        ctx, value = eval_exp(ctx, self.exp)
+        # let ctx, value_res = upcast ctx typ value in
+        # (ctx, value_res)
+        return upcast(ctx, self.check_typ, value)
+
 class __extend__(p4specast.MatchE):
     def eval_exp(self, ctx):
         # INCOMPLETE
@@ -1084,6 +1092,57 @@ def downcast(ctx, typ, value):
     #     | _ -> assert false)
     # | _ -> (ctx, value)
     return ctx, value
+
+def upcast(ctx, typ, value):
+    # INCOMPLETE
+    #   match typ.it with
+    #   | NumT `IntT -> (
+    if isinstance(typ, p4specast.NumT) and isinstance(typ.typ, p4specast.IntT):
+    #       match value.it with
+        assert value.what == 'Nat'
+    #       | NumV (`Nat n) ->
+    #           let value_res =
+    #             let vid = Value.fresh () in
+    #             let typ = typ.it in
+    #             Il.Ast.(NumV (`Int n) $$$ { vid; typ })
+        value_res = objects.W_NumV(value.get_num(), 'Int', typ=typ)
+        return ctx, value_res
+    #           in
+    #           Ctx.add_node ctx value_res;
+    #           Ctx.add_edge ctx value_res value (Dep.Edges.Op (CastOp typ));
+    #           (ctx, value_res)
+    #       | NumV (`Int _) -> (ctx, value)
+    #       | _ -> assert false)
+
+    import pdb;pdb.set_trace()
+    #   | VarT (tid, targs) -> (
+    #       let tparams, deftyp = Ctx.find_typdef Local ctx tid in
+    #       let theta = List.combine tparams targs |> TIdMap.of_list in
+    #       match deftyp.it with
+    #       | PlainT typ ->
+    #           let typ = Typ.subst_typ theta typ in
+    #           upcast ctx typ value
+    #       | _ -> (ctx, value))
+    #   | TupleT typs -> (
+    #       match value.it with
+    #       | TupleV values ->
+    #           let ctx, values =
+    #             List.fold_left2
+    #               (fun (ctx, values) typ value ->
+    #                 let ctx, value = upcast ctx typ value in
+    #                 (ctx, values @ [ value ]))
+    #               (ctx, []) typs values
+    #           in
+    #           let value_res =
+    #             let vid = Value.fresh () in
+    #             let typ = typ.it in
+    #             Il.Ast.(TupleV values $$$ { vid; typ })
+    #           in
+    #           Ctx.add_node ctx value_res;
+    #           Ctx.add_edge ctx value_res value (Dep.Edges.Op (CastOp typ));
+    #           (ctx, value_res)
+    #       | _ -> assert false)
+    #   | _ -> (ctx, value)
 
 
 def mixop_eq(a, b):
