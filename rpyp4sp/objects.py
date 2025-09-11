@@ -148,7 +148,7 @@ class TextV(BaseV):
         self.typ = typ
 
     def compare(self, other):
-        if not isinstance(other, W_TextV):
+        if not isinstance(other, TextV):
             return self._base_compare(other)
         if self.value == other.value:
             return 0
@@ -221,6 +221,11 @@ class TupleV(BaseV):
         self.vid = vid
         self.typ = typ
 
+    def compare(self, other):
+        if not isinstance(other, TupleV):
+            return self._base_compare(other)
+        return compares(self.elements, other.elements)
+
     def __repr__(self):
         return "objects.TupleV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
 
@@ -234,6 +239,19 @@ class OptV(BaseV):
         self.value = value # type: BaseV | None
         self.vid = vid
         self.typ = typ
+
+    def compare(self, other):
+        if not isinstance(other, OptV):
+            return self._base_compare(other)
+        if self.w_value is not None and other.w_value is not None:
+            return self.w_value.compare(other.w_value)
+        elif self.w_value is not None and other.w_value is None:
+            return 1
+        elif self.w_value is None and other.w_value is not None:
+            return -1
+        else:  # both None
+            return 0
+
 
     def __repr__(self):
         return "objects.OptV(%r, %r, %r)" % (self.value, self.vid, self.typ)
@@ -253,6 +271,11 @@ class ListV(BaseV):
 
     def get_list(self):
         return self.elements
+
+    def compare(self, other):
+        if not isinstance(other, ListV):
+            return self._base_compare(other)
+        return compares(self.elements, other.elements)
 
     def __repr__(self):
         return "objects.ListV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
