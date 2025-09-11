@@ -243,11 +243,11 @@ class OptV(BaseV):
     def compare(self, other):
         if not isinstance(other, OptV):
             return self._base_compare(other)
-        if self.w_value is not None and other.w_value is not None:
-            return self.w_value.compare(other.w_value)
-        elif self.w_value is not None and other.w_value is None:
+        if self.value is not None and other.value is not None:
+            return self.value.compare(other.value)
+        elif self.value is not None and other.value is None:
             return 1
-        elif self.w_value is None and other.w_value is not None:
+        elif self.value is None and other.value is not None:
             return -1
         else:  # both None
             return 0
