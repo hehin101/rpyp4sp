@@ -17,4 +17,4 @@ ifeq (, $(shell opam switch list | grep 5.1.0))
 	eval $(opam env)
 endif
 	opam switch 5.1.0
-	opam --yes install dune bignum menhir core core_unix bisect_ppx yojson
+	opam --yes install dune bignum menhir core core_unix bisect_ppx yojson ppx_deriving_yojson
