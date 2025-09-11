@@ -12,9 +12,9 @@ def is_builtin(name):
     return name in all_builtins
 
 def invoke(ctx, name, targs, values_input):
-    if not is_builtin(name):
-        raise ValueError("Unknown built-in function: %s" % name)
-    func = all_builtins[name]
+    if not is_builtin(name.value):
+        raise ValueError("Unknown built-in function: %s" % name.value)
+    func = all_builtins[name.value]
     return func(ctx, name, targs, values_input)
 
 @register_builtin("sum")
@@ -133,7 +133,11 @@ def numerics_to_int(ctx, name, targs, values_input):
 
 @register_builtin("to_bitstr")
 def numerics_to_bitstr(ctx, name, targs, values_input):
-    raise NotImplementedError("numerics_to_bitstr is not implemented yet")
+    width, num = values_input
+    width_num = width.get_num()
+    num_num = num.get_num()
+    assert 0 <= num_num.toint() < (1 << width_num.toint()) # TODO: handle otherwise
+    return num
 
 @register_builtin("bneg")
 def numerics_bneg(ctx, name, targs, values_input):

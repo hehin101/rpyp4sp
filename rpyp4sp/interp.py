@@ -19,12 +19,12 @@ class Ret(Sign):
 
 def invoke_func(ctx, calle):
     # if Builtin.is_builtin id then invoke_func_builtin ctx id targs args
-    if builtin.is_builtin(calle.func):
+    if builtin.is_builtin(calle.func.value):
         return invoke_func_builtin(ctx, calle)
     # else invoke_func_def ctx id targs args
     return invoke_func_def(ctx, calle)
 
-def invoke_func_builtin(self, calle):
+def invoke_func_builtin(ctx, calle):
     # let ctx, values_input = eval_args ctx args in
     ctx, values_input = eval_args(ctx, calle.args)
     # let value_output = Builtin.invoke ctx id targs values_input in
@@ -303,6 +303,8 @@ def eval_cases(ctx, exp, cases):
         #          | BoolG false -> Il.Ast.UnE (`NotOp, `BoolT, exp)
         #          | CmpG (cmpop, optyp, exp_r) ->
         #              Il.Ast.CmpE (cmpop, optyp, exp, exp_r)
+        elif isinstance(guard, p4specast.CmpG):
+            exp_cond = p4specast.CmpE(guard.op, guard.typ, exp, guard.exp)
         #          | SubG typ -> Il.Ast.SubE (exp, typ)
         elif isinstance(guard, p4specast.SubG):
             exp_cond = p4specast.SubE(exp, guard.typ)
