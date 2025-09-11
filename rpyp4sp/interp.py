@@ -692,8 +692,21 @@ class __extend__(p4specast.TupleE):
 
 class __extend__(p4specast.ListE):
     def eval_exp(self, ctx):
+        #   let ctx, values = eval_exps ctx exps in
         ctx, values = eval_exps(ctx, self.elts)
+        #   let value_res =
+        #     let vid = Value.fresh () in
+        #     let typ = note in
+        #     Il.Ast.(ListV values $$$ { vid; typ })
         value_res = objects.W_ListV(values, typ=self.typ)
+        #   in
+        #   Ctx.add_node ctx value_res;
+        #   if List.length values = 0 then
+        #     List.iter
+        #       (fun value_input ->
+        #         Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
+        #       ctx.local.values_input;        
+        #   (ctx, value_res)
         return ctx, value_res
 
 def eval_cmp_bool(cmpop, value_l, value_r):

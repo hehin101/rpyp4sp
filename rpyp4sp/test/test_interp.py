@@ -113,7 +113,7 @@ def test_all():
     relation_cases = []
     # check if file exists
     if not os.path.exists(os.path.join(os.path.dirname(__file__), 'interp_tests.json')):
-        return
+        assert False
     with open(os.path.join(os.path.dirname(__file__), 'interp_tests.json'), 'r') as f:
         for line in f:
             if not line.startswith('{'):
