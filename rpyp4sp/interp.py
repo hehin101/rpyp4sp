@@ -415,14 +415,14 @@ def assign_exp(ctx, exp, value):
     #       values_inner;
     #     ctx
     elif isinstance(exp, p4specast.CaseE) and\
-        isinstance(value, objects.CaseV):
-            notexp = exp.notexp
-            mixop_exp, exps_inner = notexp.mixop, notexp.exps
-            values_inner = value.values
-            ctx = assign_exps(ctx, exps_inner, values_inner)
-            # for value_inner in values_inner:
-            #    assert False, "ctx.add_edge(ctx, value_inner, value, dep.edges.Assign)"
-            return ctx
+         isinstance(value, objects.CaseV):
+        notexp = exp.notexp
+        mixop_exp, exps_inner = notexp.mixop, notexp.exps
+        values_inner = value.values
+        ctx = assign_exps(ctx, exps_inner, values_inner)
+        # for value_inner in values_inner:
+        #    assert False, "ctx.add_edge(ctx, value_inner, value, dep.edges.Assign)"
+        return ctx
     # | OptE exp_opt, OptV value_opt -> (
     #     match (exp_opt, value_opt) with
     #     | Some exp_inner, Some value_inner ->
