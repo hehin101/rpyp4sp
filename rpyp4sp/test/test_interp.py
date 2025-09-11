@@ -107,14 +107,22 @@ def test_cast_int():
     assert value.eq(expected)
 
 
+def test_assign_exp():
+    # TODO: incomplete, what do we actually expect?
+    ctx = Context('dummy')
+    exp = p4specast.IterE(p4specast.VarE(p4specast.Id('text', p4specast.Region(p4specast.Position('spec/0-aux.watsup', 32, 17), p4specast.Position('spec/0-aux.watsup', 32, 20)))), p4specast.List(), [p4specast.Var(id=p4specast.Id('text', p4specast.Region(p4specast.Position('spec/0-aux.watsup', 32, 17), p4specast.Position('spec/0-aux.watsup', 32, 20))), typ=p4specast.TextT(), iter=[])])
+    value = objects.W_ListV([], 1540, p4specast.IterT(p4specast.TextT(), p4specast.List()))
+    ctx_returned = interp.assign_exp(ctx, exp, value)
+    print(ctx_returned)
+
 def test_all():
     # load test cases from line-based json file
     func_cases = []
     relation_cases = []
     # check if file exists
-    if not os.path.exists(os.path.join(os.path.dirname(__file__), 'interp_tests.json')):
+    if not os.path.exists(os.path.join(os.path.dirname(__file__), 'interp_tests_bak.json')):
         assert False
-    with open(os.path.join(os.path.dirname(__file__), 'interp_tests.json'), 'r') as f:
+    with open(os.path.join(os.path.dirname(__file__), 'interp_tests_bak.json'), 'r') as f:
         for line in f:
             if not line.startswith('{'):
                 continue

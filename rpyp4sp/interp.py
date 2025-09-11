@@ -423,7 +423,6 @@ def assign_exp(ctx, exp, value):
             # for value_inner in values_inner:
             #    assert False, "ctx.add_edge(ctx, value_inner, value, dep.edges.Assign)"
             return ctx
-    import pdb;pdb.set_trace()
     # | OptE exp_opt, OptV value_opt -> (
     #     match (exp_opt, value_opt) with
     #     | Some exp_inner, Some value_inner ->
@@ -481,6 +480,9 @@ def assign_exp(ctx, exp, value):
     #         Ctx.add_value Local ctx (id, iters @ [ Il.Ast.Opt ]) value_sub)
     #       ctx vars
     # | IterE (exp, (List, vars)), ListV values ->
+    elif isinstance(exp, p4specast.IterE) and \
+        isinstance(value, objects.W_ListV):
+    # TODO: needs testing
     #     (* Map over the value list elements,
     #        and assign each value to the iterated expression *)
     #     let ctxs =
@@ -493,6 +495,13 @@ def assign_exp(ctx, exp, value):
     #           ctxs @ [ ctx ])
     #         [] values
     #     in
+        values = value.elements
+        ctxs = []
+        ctx_local = ctx
+        for value in values:
+            ctx_local = ctx_local.localize_venv(venv={})
+            ctx_local = assign_exp(ctx_local, exp, value)
+            ctxs.append(ctx_local)
     #     (* Per iterated variable, collect its elementwise value,
     #        then make a sequence out of them *)
     #     List.fold_left
@@ -509,6 +518,9 @@ def assign_exp(ctx, exp, value):
     #         Ctx.add_edge ctx value_sub value Dep.Edges.Assign;
     #         Ctx.add_value Local ctx (id, iters @ [ Il.Ast.List ]) value_sub)
     #       ctx vars
+        return ctx_local
+
+    import pdb;pdb.set_trace()
     # | _ ->
     #     error exp.at
     #       (F.asprintf "(TODO) match failed %s <- %s"

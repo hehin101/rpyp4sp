@@ -49,6 +49,12 @@ class Context(object):
         ctx.glbl = self.glbl
         ctx.local = ctx.local.copy_and_change(values_input=values_input)
         return ctx
+    
+    def localize_venv(self, venv):
+        ctx = Context(self.filename, self.derive)
+        ctx.glbl = self.glbl
+        ctx.local = ctx.local.copy_and_change(venv=venv)
+        return ctx
 
     def find_value_local(self, id, iterlist):
         assert iterlist == []
