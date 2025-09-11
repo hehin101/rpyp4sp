@@ -147,6 +147,16 @@ class TextV(BaseV):
         self.vid = vid
         self.typ = typ
 
+    def compare(self, other):
+        if not isinstance(other, W_TextV):
+            return self._base_compare(other)
+        if self.value == other.value:
+            return 0
+        elif self.value < other.value:
+            return -1
+        else:
+            return 1
+
     def __repr__(self):
         return "objects.TextV(%r, %r, %r)" % (self.value, self.vid, self.typ)
 

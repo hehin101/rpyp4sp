@@ -117,6 +117,13 @@ def test_find_styp():
     ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
     assert value.eq(expected)
 
+def test_text_exp():
+    exp = p4specast.TextE('main')
+    exp.typ = p4specast.TextT()
+    ctx, value = interp.eval_exp(None, exp)
+    expected = objects.TextV('main', typ=p4specast.TextT())
+    assert value.eq(expected)
+
 
 def test_assign_exp():
     # TODO: incomplete, what do we actually expect?

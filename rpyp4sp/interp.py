@@ -647,6 +647,10 @@ class __extend__(p4specast.BoolE):
         # (ctx, value_res)
         return ctx, objects.BoolV(self.value, typ=self.typ)
 
+class __extend__(p4specast.TextE):
+    def eval_exp(self, ctx):
+        return ctx, objects.W_TextV(self.value, typ=self.typ)
+
 class __extend__(p4specast.VarE):
     def eval_exp(self, ctx):
         # let value = Ctx.find_value Local ctx (id, []) in
