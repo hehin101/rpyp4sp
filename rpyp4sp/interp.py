@@ -723,7 +723,7 @@ class __extend__(p4specast.BoolE):
 
 class __extend__(p4specast.TextE):
     def eval_exp(self, ctx):
-        return ctx, objects.W_TextV(self.value, typ=self.typ)
+        return ctx, objects.TextV(self.value, typ=self.typ)
 
 class __extend__(p4specast.VarE):
     def eval_exp(self, ctx):
@@ -912,6 +912,37 @@ class __extend__(p4specast.BinE):
         # Ctx.add_edge ctx value_res value_l (Dep.Edges.Op (BinOp binop));
         # Ctx.add_edge ctx value_res value_r (Dep.Edges.Op (BinOp binop));
         # (ctx, value_res)
+        return ctx, value_res
+
+def eval_unop_bool(unop, value, typ):
+    # match unop with `NotOp -> Il.Ast.BoolV (not (Value.get_bool value))
+    if unop == 'NotOp':
+        return objects.BoolV(not value.get_bool(), typ=typ)
+    else:
+        assert 0, "Unknown boolean unary operator: %s" % unop
+
+def eval_unop_num(unop, value, typ):
+    # let num = Value.get_num value in
+    num = value.get_num()
+    # match unop with
+    if unop == 'PlusOp':
+        return objects.NumV(num, value.what, typ=typ)
+    elif unop == 'MinusOp':
+        return objects.NumV(num.neg(), value.what, typ=typ)
+    else:
+        assert 0, "Unknown numeric unary operator: %s" % unop
+
+class __extend__(p4specast.UnE):
+    def eval_exp(self, ctx):
+        # let ctx, value = eval_exp ctx exp in
+        ctx, value = eval_exp(ctx, self.exp)
+        unop = self.unop
+        if unop in ('NotOp',):
+            value_res = eval_unop_bool(unop, value, self.typ)
+        elif unop in ('PlusOp', 'MinusOp'):
+            value_res = eval_unop_num(unop, value, self.typ)
+        else:
+            assert 0, "Unknown unary operator: %s" % unop
         return ctx, value_res
 
 class __extend__(p4specast.MemE):
