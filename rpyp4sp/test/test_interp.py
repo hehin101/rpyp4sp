@@ -94,3 +94,44 @@ def test_bin_plus():
     res = objects.W_CaseV(p4specast.MixOp([[p4specast.AtomT('IntV', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 13, 4), p4specast.Position('spec/2b2-runtime-value.watsup', 13, 8)))], []]), [objects.W_NumV.fromstr('8', 'Int', 240, p4specast.NumT(p4specast.IntT()))], 241, p4specast.VarT(p4specast.Id('val', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 7, 7), p4specast.Position('spec/2b2-runtime-value.watsup', 7, 10))), []))
     ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, [arg0, arg1])
     assert value.eq(res)
+
+def test_all():
+    # load test cases from line-based json file
+    func_cases = []
+    relation_cases = []
+    # check if file exists
+    if not os.path.exists(os.path.join(os.path.dirname(__file__), 'interp_tests.json')):
+        return
+    with open(os.path.join(os.path.dirname(__file__), 'interp_tests.json'), 'r') as f:
+        for line in f:
+            if not line.startswith('{'):
+                continue
+            callspec = rpyjson.loads(line)
+            what = callspec['calltype'].value_string()
+            args = callspec['inputs']
+            input_values = [objects.W_Base.fromjson(arg) for arg in args]
+            if what == 'function':
+                res_value = objects.W_Base.fromjson(callspec['result'])
+                func_cases.append((callspec['name'].value_string(), input_values, res_value))
+            elif what == 'relation':
+                res_values = [objects.W_Base.fromjson(rv) for rv in callspec['results']]
+                relation_cases.append((callspec['name'].value_string(), input_values, res_values))
+            else:
+                assert 0
+    spec = load()
+    ctx = Context('dummy')
+    ctx.load_spec(spec)
+    for name, input_values, res_value in func_cases:
+        if name not in ctx.glbl.fenv:
+            continue
+        func = ctx.glbl.fenv[name]
+        try:
+            ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+            if not value.eq(res_value):
+                print("Function test failed:", name, value, res_value)
+            else:
+                print("Function test passed:", name)
+        except Exception as e:
+            #import pdb; pdb.xpm()
+            print("Function test exception:", name, e)
+            continue
