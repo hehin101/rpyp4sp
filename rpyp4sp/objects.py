@@ -142,10 +142,9 @@ class W_StructV(W_Base):
     @staticmethod
     def fromjson(content):
         fields = []
-        import pdb;pdb.set_trace() # TODO: we don't have a test for this yet
         for f in content[1].value_array():
             atom_content, field_content = f.value_array()
-            atom = p4specast.Atom.fromjson(atom_content)
+            atom = p4specast.AtomT.fromjson(atom_content)
             w_field = W_Base.fromjson(field_content)
             fields.append((atom, w_field))
         return W_StructV(fields)
