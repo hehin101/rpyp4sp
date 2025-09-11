@@ -688,6 +688,12 @@ class __extend__(p4specast.TupleE):
         #   (ctx, value_res)
         return ctx, value_res
 
+class __extend__(p4specast.ListE):
+    def eval_exp(self, ctx):
+        ctx, values = eval_exps(ctx, self.elts)
+        value_res = objects.W_ListV(values, typ=self.typ)
+        return ctx, value_res
+
 def eval_cmp_bool(cmpop, value_l, value_r):
     # let eq = Value.eq value_l value_r in
     eq = value_l.eq(value_r)
@@ -804,6 +810,30 @@ class __extend__(p4specast.BinE):
         # (ctx, value_res)
         return ctx, value_res
 
+class __extend__(p4specast.MemE):
+    def eval_exp(self, ctx):
+        #   let ctx, value_e = eval_exp ctx exp_e in
+        ctx, value_e = eval_exp(ctx, self.elem)
+        #   let ctx, value_s = eval_exp ctx exp_s in
+        ctx, value_s = eval_exp(ctx, self.lst)
+        #   let values_s = Value.get_list value_s in
+        values_s = value_s.get_list()
+        #   let value_res =
+        #     let vid = Value.fresh () in
+        #     let typ = note in
+        #     Il.Ast.(BoolV (List.exists (Value.eq value_e) values_s) $$$ { vid; typ })
+        res = False
+        for v in values_s:
+            if value_e.eq(v):
+                res = True
+                break
+        value_res = objects.W_BoolV(res, typ=self.typ)
+        return ctx, value_res
+        #   in
+        #   Ctx.add_node ctx value_res;
+        #   Ctx.add_edge ctx value_res value_e (Dep.Edges.Op MemOp);
+        #   Ctx.add_edge ctx value_res value_s (Dep.Edges.Op MemOp);
+        #   (ctx, value_res)
 
 
 class __extend__(p4specast.SubE):

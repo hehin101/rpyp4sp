@@ -58,6 +58,9 @@ class W_Base(object):
     def get_num(self):
         raise TypeError("not a num")
 
+    def get_list(self):
+        raise TypeError("not a list")
+
     def eq(self, other):
         return self.compare(other) == 0
 
@@ -214,6 +217,9 @@ class W_ListV(W_Base):
         self.vid = vid
         self.typ = typ
 
+    def get_list(self):
+        return self.elements
+
     def __repr__(self):
         return "objects.W_ListV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
 
@@ -221,6 +227,7 @@ class W_ListV(W_Base):
     def fromjson(content):
         elements = [W_Base.fromjson(e) for e in content[1].value_array()]
         return W_ListV(elements)
+
 
 class W_FuncV(W_Base):
     def __init__(self, id, vid=-1, typ=None):
