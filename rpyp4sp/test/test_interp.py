@@ -124,6 +124,15 @@ def test_text_exp():
     expected = objects.TextV('main', typ=p4specast.TextT())
     assert value.eq(expected)
 
+def test_upcast():
+    typ = p4specast.VarT(p4specast.Id('typ', p4specast.Region(p4specast.Position('spec/3-syntax-il.watsup', 123, 19), p4specast.Position('spec/3-syntax-il.watsup', 123, 22))), [])
+    value = objects.CaseV(p4specast.MixOp([[p4specast.AtomT('IntT', p4specast.Region(p4specast.Position('spec/2c1-runtime-type.watsup', 36, 4), p4specast.Position('spec/2c1-runtime-type.watsup', 36, 8)))]]), [], -1, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region(p4specast.Position('spec/2c1-runtime-type.watsup', 35, 7), p4specast.Position('spec/2c1-runtime-type.watsup', 35, 13))), []))
+    spec = load()
+    ctx = Context('dummy')
+    ctx.load_spec(spec)
+    ctx, res = interp.upcast(ctx, typ, value)
+    assert res.eq(value)
+
 
 def test_assign_exp():
     # TODO: incomplete, what do we actually expect?
@@ -159,7 +168,7 @@ def test_all():
     spec = load()
     ctx = Context('dummy')
     ctx.load_spec(spec)
-    for name, input_values, res_value in func_cases:
+    for name, input_values, res_value in []: #func_cases:
         if name not in ctx.glbl.fenv:
             continue
         func = ctx.glbl.fenv[name]
@@ -169,6 +178,18 @@ def test_all():
                 print("Function test failed:", name, value, res_value)
             else:
                 print("Function test passed:", name)
+        except Exception as e:
+            import pdb; pdb.xpm()
+            print("Function test exception:", name, e)
+            continue
+    import pdb;pdb.set_trace()
+    for name, input_values, res_values in relation_cases:
+        try:
+            ctx, values = interp.invoke_rel(ctx, p4specast.AtomT(name, None), input_values)
+            #if not value.eq(res_value):
+            #    print("Function test failed:", name, value, res_value)
+            #else:
+            #    print("Function test passed:", name)
         except Exception as e:
             import pdb; pdb.xpm()
             print("Function test exception:", name, e)

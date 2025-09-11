@@ -1157,12 +1157,18 @@ def upcast(ctx, typ, value):
     #           (ctx, value_res)
     #       | NumV (`Int _) -> (ctx, value)
     #       | _ -> assert false)
-
-    import pdb;pdb.set_trace()
     #   | VarT (tid, targs) -> (
+    if isinstance(typ, p4specast.VarT):
+        tparams, deftyp = ctx.find_typdef_local(typ.id)
+        assert tparams == [] # TODO
     #       let tparams, deftyp = Ctx.find_typdef Local ctx tid in
     #       let theta = List.combine tparams targs |> TIdMap.of_list in
     #       match deftyp.it with
+        if isinstance(deftyp, p4specast.PlainT):
+            import pdb;pdb.set_trace()
+        else:
+            return ctx, value
+    import pdb;pdb.set_trace()
     #       | PlainT typ ->
     #           let typ = Typ.subst_typ theta typ in
     #           upcast ctx typ value
