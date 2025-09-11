@@ -861,6 +861,22 @@ class __extend__(p4specast.MemE):
         #   Ctx.add_edge ctx value_res value_s (Dep.Edges.Op MemOp);
         #   (ctx, value_res)
 
+class __extend__(p4specast.DotE):
+    def eval_exp(self, ctx):
+        #   let ctx, value_b = eval_exp ctx exp_b in
+        ctx, value_b = eval_exp(ctx, self.obj)
+        #   let fields = Value.get_struct value_b in
+        fields = value_b.get_struct()
+        for (atom, value) in fields:
+            if atom.value == self.field.value:
+                return ctx, value
+        assert 0, "field not found"
+        #   let value_res =
+        #     fields
+        #     |> List.map (fun (atom, value) -> (atom.it, value))
+        #     |> List.assoc atom.it
+        #   in
+        #   (ctx, value_res)
 
 class __extend__(p4specast.SubE):
     def eval_exp(self, ctx):

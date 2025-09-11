@@ -61,6 +61,9 @@ class BaseV(object):
     def get_list(self):
         raise TypeError("not a list")
 
+    def get_struct(self):
+        raise TypeError("not a struct")
+
     def eq(self, other):
         return self.compare(other) == 0
 
@@ -156,6 +159,9 @@ class StructV(BaseV):
         self.fields = fields
         self.vid = vid
         self.typ = typ
+
+    def get_struct(self):
+        return self.fields
 
     def __repr__(self):
         return "objects.StructV(%r, %r, %r)" % (self.fields, self.vid, self.typ)
