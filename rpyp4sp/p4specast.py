@@ -1604,11 +1604,42 @@ class MixOp(AstBase):
 
     def compare(self, other):
         # type: (MixOp, MixOp) -> int
-        assert len(self.phrases) == 1 and len(self.phrases[0]) == 1
-        assert len(other.phrases) == 1 and len(other.phrases[0]) == 1
-        atom_l = self.phrases[0][0]
-        atom_r = other.phrases[0][0]
-        return atom_l.compare(atom_r)
+        """ Compare two MixOp objects lexicographically by their phrases
+        Each phrase is a list of AtomT
+        Returns -1 if self < other, 0 if equal, 1 if self > other """
+
+        def atom_compare(a, b):
+            return a.compare(b)
+
+        def phrase_compare(phrase_a, phrase_b):
+            # Compare two lists of AtomT
+            len_a = len(phrase_a)
+            len_b = len(phrase_b)
+            for i in range(min(len_a, len_b)):
+                cmp = atom_compare(phrase_a[i], phrase_b[i])
+                if cmp != 0:
+                    return cmp
+            if len_a < len_b:
+                return -1
+            elif len_a > len_b:
+                return 1
+            else:
+                return 0
+
+        phrases_a = self.phrases
+        phrases_b = other.phrases
+        len_a = len(phrases_a)
+        len_b = len(phrases_b)
+        for i in range(min(len_a, len_b)):
+            cmp = phrase_compare(phrases_a[i], phrases_b[i])
+            if cmp != 0:
+                return cmp
+        if len_a < len_b:
+            return -1
+        elif len_a > len_b:
+            return 1
+        else:
+            return 0
 
     @staticmethod
     def fromjson(content):
@@ -1618,6 +1649,13 @@ class MixOp(AstBase):
 
     def __repr__(self):
         return "p4specast.MixOp(%r)" % (self.phrases,)
+
+    def __str__(self):
+        mixop = self.phrases
+        smixop = "%".join(
+            ["".join([atom.value for atom in atoms]) for atoms in mixop]
+        )
+        return "`" + smixop + "`"
 
 
 class AtomT(AstBase):
