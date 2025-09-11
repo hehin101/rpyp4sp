@@ -23,4 +23,4 @@ def test_example_values_load():
     fn = os.path.join(testdir, "example_values.json")
     with open(fn) as f:
         value = loads(f.read())
-    res = objects.W_Base.fromjson(value)
+    res = objects.BaseV.fromjson(value)

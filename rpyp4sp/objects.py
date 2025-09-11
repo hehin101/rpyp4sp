@@ -19,7 +19,7 @@ from rpyp4sp import p4specast, integers
 # and valuefield = atom * value
 # and valuecase = mixop * value list
 
-class W_Base(object):
+class BaseV(object):
     # vid: int
     # typ: p4specast.Type
     @staticmethod
@@ -29,23 +29,23 @@ class W_Base(object):
         content = value['it']
         what = content[0].value_string()
         if what == 'BoolV':
-            value = W_BoolV.fromjson(content)
+            value = BoolV.fromjson(content)
         elif what == 'NumV':
-            value = W_NumV.fromjson(content)
+            value = NumV.fromjson(content)
         elif what == 'TextV':
-            value = W_TextV.fromjson(content)
+            value = TextV.fromjson(content)
         elif what == 'StructV':
-            value = W_StructV.fromjson(content)
+            value = StructV.fromjson(content)
         elif what == 'CaseV':
-            value = W_CaseV.fromjson(content)
+            value = CaseV.fromjson(content)
         elif what == 'TupleV':
-            value = W_TupleV.fromjson(content)
+            value = TupleV.fromjson(content)
         elif what == 'OptV':
-            value = W_OptV.fromjson(content)
+            value = OptV.fromjson(content)
         elif what == 'ListV':
-            value = W_ListV.fromjson(content)
+            value = ListV.fromjson(content)
         elif what == 'FuncV':
-            value = W_FuncV.fromjson(content)
+            value = FuncV.fromjson(content)
         else:
             raise ValueError("Unknown content type")
         value.vid = vid
@@ -76,7 +76,7 @@ class W_Base(object):
         return 1
 
 
-class W_BoolV(W_Base):
+class BoolV(BaseV):
     _compare_tag = 0
 
     def __init__(self, value, vid=-1, typ=None):
@@ -86,7 +86,7 @@ class W_BoolV(W_Base):
         self.typ = typ
 
     def compare(self, other):
-        if not isinstance(other, W_BoolV):
+        if not isinstance(other, BoolV):
             return self._base_compare(other)
         if self.value == other.value:
             return 0
@@ -99,13 +99,13 @@ class W_BoolV(W_Base):
         return self.value
     
     def __repr__(self):
-        return "objects.W_BoolV(%r, %r, %r)" % (self.value, self.vid, self.typ)
+        return "objects.BoolV(%r, %r, %r)" % (self.value, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
-        return W_BoolV(content[1].value_bool())
+        return BoolV(content[1].value_bool())
 
-class W_NumV(W_Base):
+class NumV(BaseV):
     def __init__(self, value, what, vid=-1, typ=None):
         self.value = value # type: integer.Integer
         assert what in ('Int', 'Nat')
@@ -114,14 +114,14 @@ class W_NumV(W_Base):
         self.typ = typ # type: Type | None
 
     def compare(self, other):
-        if not isinstance(other, W_NumV):
+        if not isinstance(other, NumV):
             return self._base_compare(other)
         if self.what != other.what:
             raise TypeError("cannot compare different kinds of numbers")
         return self.value.compare(other.value)
 
     def __repr__(self):
-        return "objects.W_NumV.fromstr(%r, %r, %r, %r)" % (
+        return "objects.NumV.fromstr(%r, %r, %r, %r)" % (
             self.value.str(), self.what, self.vid, self.typ)
 
     def get_num(self):
@@ -129,36 +129,36 @@ class W_NumV(W_Base):
 
     @staticmethod
     def fromstr(value, what, vid=-1, typ=None):
-        return W_NumV(integers.Integer.fromstr(value), what, vid, typ)
+        return NumV(integers.Integer.fromstr(value), what, vid, typ)
 
     @staticmethod
     def fromjson(content):
         inner = content[1]
         what = inner[0].value_string() # 'Int' or 'Nat'
         value = inner[1].value_string()
-        return W_NumV.fromstr(value, what)
+        return NumV.fromstr(value, what)
 
-class W_TextV(W_Base):
+class TextV(BaseV):
     def __init__(self, value, vid=-1, typ=None):
         self.value = value
         self.vid = vid
         self.typ = typ
 
     def __repr__(self):
-        return "objects.W_TextV(%r, %r, %r)" % (self.value, self.vid, self.typ)
+        return "objects.TextV(%r, %r, %r)" % (self.value, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
-        return W_TextV(content[1].value_string())
+        return TextV(content[1].value_string())
     
-class W_StructV(W_Base):
+class StructV(BaseV):
     def __init__(self, fields, vid=-1, typ=None):
         self.fields = fields
         self.vid = vid
         self.typ = typ
 
     def __repr__(self):
-        return "objects.W_StructV(%r, %r, %r)" % (self.fields, self.vid, self.typ)
+        return "objects.StructV(%r, %r, %r)" % (self.fields, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
@@ -166,11 +166,11 @@ class W_StructV(W_Base):
         for f in content[1].value_array():
             atom_content, field_content = f.value_array()
             atom = p4specast.AtomT.fromjson(atom_content)
-            w_field = W_Base.fromjson(field_content)
-            fields.append((atom, w_field))
-        return W_StructV(fields)
+            field = BaseV.fromjson(field_content)
+            fields.append((atom, field))
+        return StructV(fields)
 
-class W_CaseV(W_Base):
+class CaseV(BaseV):
     def __init__(self, mixop, values, vid=-1, typ=None):
         self.mixop = mixop
         self.values = values
@@ -178,17 +178,17 @@ class W_CaseV(W_Base):
         self.typ = typ
 
     def __repr__(self):
-        return "objects.W_CaseV(%r, %r, %r, %r)" % (self.mixop, self.values, self.vid, self.typ)
+        return "objects.CaseV(%r, %r, %r, %r)" % (self.mixop, self.values, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
         mixop_content, valuelist_content = content[1].value_array()
         mixop = p4specast.MixOp.fromjson(mixop_content)
-        values = [W_Base.fromjson(v) for v in valuelist_content.value_array()]
-        return W_CaseV(mixop, values)
+        values = [BaseV.fromjson(v) for v in valuelist_content.value_array()]
+        return CaseV(mixop, values)
 
     def compare(self, other):
-        if not isinstance(other, W_CaseV):
+        if not isinstance(other, CaseV):
             return self._base_compare(other)
         # let cmp_mixop = Mixop.compare mixop_l mixop_r in
         cmp_mixop = self.mixop.compare(other.mixop)
@@ -199,37 +199,37 @@ class W_CaseV(W_Base):
             return compares(self.values, other.values)
 
 
-class W_TupleV(W_Base):
+class TupleV(BaseV):
     def __init__(self, elements, vid=-1, typ=None):
         self.elements = elements
         self.vid = vid
         self.typ = typ
 
     def __repr__(self):
-        return "objects.W_TupleV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
+        return "objects.TupleV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
-        elements = [W_Base.fromjson(e) for e in content[1].value_array()]
-        return W_TupleV(elements)
+        elements = [BaseV.fromjson(e) for e in content[1].value_array()]
+        return TupleV(elements)
 
-class W_OptV(W_Base):
+class OptV(BaseV):
     def __init__(self, value, vid=-1, typ=None):
-        self.w_value = value # type: W_Base | None
+        self.value = value # type: BaseV | None
         self.vid = vid
         self.typ = typ
 
     def __repr__(self):
-        return "objects.W_OptV(%r, %r, %r)" % (self.w_value, self.vid, self.typ)
+        return "objects.OptV(%r, %r, %r)" % (self.value, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
-        w_value = None
+        value = None
         if not content[1].is_null:
-            w_value = W_Base.fromjson(content[1])
-        return W_OptV(w_value)
+            value = BaseV.fromjson(content[1])
+        return OptV(value)
 
-class W_ListV(W_Base):
+class ListV(BaseV):
     def __init__(self, elements, vid=-1, typ=None):
         self.elements = elements
         self.vid = vid
@@ -239,30 +239,30 @@ class W_ListV(W_Base):
         return self.elements
 
     def __repr__(self):
-        return "objects.W_ListV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
+        return "objects.ListV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
-        elements = [W_Base.fromjson(e) for e in content[1].value_array()]
-        return W_ListV(elements)
+        elements = [BaseV.fromjson(e) for e in content[1].value_array()]
+        return ListV(elements)
 
 
-class W_FuncV(W_Base):
+class FuncV(BaseV):
     def __init__(self, id, vid=-1, typ=None):
         self.id = id
         self.vid = vid
         self.typ = typ
 
     def __repr__(self):
-        return "objects.W_FuncV(%r, %r, %r)" % (self.id, self.vid, self.typ)
+        return "objects.FuncV(%r, %r, %r)" % (self.id, self.vid, self.typ)
 
     @staticmethod
     def fromjson(content):
         id = p4specast.Id.fromjson(content[1])
-        return W_FuncV(id)
+        return FuncV(id)
 
 def compares(values_l, values_r):
-    # type: (list[W_Base], list[W_Base]) -> int
+    # type: (list[BaseV], list[BaseV]) -> int
     # TODO: change recursion to loop
     if values_l == [] and values_r == []:
         return 0

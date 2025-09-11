@@ -415,7 +415,7 @@ def assign_exp(ctx, exp, value):
     #       values_inner;
     #     ctx
     elif isinstance(exp, p4specast.CaseE) and\
-        isinstance(value, objects.W_CaseV):
+        isinstance(value, objects.CaseV):
             notexp = exp.notexp
             mixop_exp, exps_inner = notexp.mixop, notexp.exps
             values_inner = value.values
@@ -481,7 +481,7 @@ def assign_exp(ctx, exp, value):
     #       ctx vars
     # | IterE (exp, (List, vars)), ListV values ->
     elif isinstance(exp, p4specast.IterE) and \
-        isinstance(value, objects.W_ListV):
+        isinstance(value, objects.ListV):
     # TODO: needs testing
     #     (* Map over the value list elements,
     #        and assign each value to the iterated expression *)
@@ -589,7 +589,7 @@ assign_arg_exp = assign_exp
 #            (Sl.Print.string_of_value ~short:true value)
 #            id.it)
 def assign_arg_def(ctx_caller, ctx_callee, id, value):
-    if isinstance(value, objects.W_FuncV):
+    if isinstance(value, objects.FuncV):
         func = ctx_caller.find_func_local(value.id)
         return ctx_callee.add_func_local(id, func)
     else:
@@ -645,7 +645,7 @@ class __extend__(p4specast.BoolE):
         #     Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
         #   ctx.local.values_input;
         # (ctx, value_res)
-        return ctx, objects.W_BoolV(self.value, typ=self.typ)
+        return ctx, objects.BoolV(self.value, typ=self.typ)
 
 class __extend__(p4specast.VarE):
     def eval_exp(self, ctx):
@@ -671,7 +671,7 @@ class __extend__(p4specast.OptE):
         #     let vid = Value.fresh () in
         #     let typ = note in
         #     Il.Ast.(OptV value_opt $$$ { vid; typ })
-        value_res = objects.W_OptV(value, typ=self.typ)
+        value_res = objects.OptV(value, typ=self.typ)
         return ctx, value_res
         #   in
         #   Ctx.add_node ctx value_res;
@@ -690,7 +690,7 @@ class __extend__(p4specast.TupleE):
         #     let vid = Value.fresh () in
         #     let typ = note in
         #     Il.Ast.(TupleV values $$$ { vid; typ })
-        value_res = objects.W_TupleV(values, typ=self.typ)
+        value_res = objects.TupleV(values, typ=self.typ)
         #   in
         #   Ctx.add_node ctx value_res;
         #   if List.length values = 0 then
@@ -709,7 +709,7 @@ class __extend__(p4specast.ListE):
         #     let vid = Value.fresh () in
         #     let typ = note in
         #     Il.Ast.(ListV values $$$ { vid; typ })
-        value_res = objects.W_ListV(values, typ=self.typ)
+        value_res = objects.ListV(values, typ=self.typ)
         #   in
         #   Ctx.add_node ctx value_res;
         #   if List.length values = 0 then
@@ -725,7 +725,7 @@ def eval_cmp_bool(cmpop, value_l, value_r):
     eq = value_l.eq(value_r)
     # match cmpop with `EqOp -> Il.Ast.BoolV eq | `NeOp -> Il.Ast.BoolV (not eq)
     value = eq if cmpop == 'EqOp' else not eq
-    return objects.W_BoolV(value)
+    return objects.BoolV(value)
 
 
 def eval_cmp_num(cmpop, value_l, value_r):
@@ -771,19 +771,19 @@ def eval_binop_bool(binop, value_l, value_r, typ):
     # match binop with
     # | `AndOp -> Il.Ast.BoolV (bool_l && bool_r)
     if binop == 'AndOp':
-        res_bool = objects.W_BoolV(bool_l and bool_r)
+        res_bool = objects.BoolV(bool_l and bool_r)
     # | `OrOp -> Il.Ast.BoolV (bool_l || bool_r)
     elif binop == 'OrOp':
-        res_bool = objects.W_BoolV(bool_l or bool_r)
+        res_bool = objects.BoolV(bool_l or bool_r)
     # | `ImplOp -> Il.Ast.BoolV ((not bool_l) || bool_r)
     elif binop == 'ImplOp':
-        res_bool = objects.W_BoolV((not bool_l) or bool_r)
+        res_bool = objects.BoolV((not bool_l) or bool_r)
     # | `EquivOp -> Il.Ast.BoolV (bool_l = bool_r)
     elif binop == 'EquivOp':
-        res_bool = objects.W_BoolV(bool_l == bool_r)
+        res_bool = objects.BoolV(bool_l == bool_r)
     else:
         assert 0, "should be unreachable"
-    return objects.W_BoolV(res_bool, typ=typ)
+    return objects.BoolV(res_bool, typ=typ)
 
 def eval_binop_num(binop, value_l, value_r, typ):
     # let num_l = Value.get_num value_l in
@@ -806,7 +806,7 @@ def eval_binop_num(binop, value_l, value_r, typ):
         raise NotImplementedError("PowOp")
     else:
         assert 0, "should be unreachable"
-    return objects.W_NumV(res_num, value_l.what, typ=typ)
+    return objects.NumV(res_num, value_l.what, typ=typ)
 
 class __extend__(p4specast.BinE):
     def eval_exp(self, ctx):
@@ -853,7 +853,7 @@ class __extend__(p4specast.MemE):
             if value_e.eq(v):
                 res = True
                 break
-        value_res = objects.W_BoolV(res, typ=self.typ)
+        value_res = objects.BoolV(res, typ=self.typ)
         return ctx, value_res
         #   in
         #   Ctx.add_node ctx value_res;
@@ -874,7 +874,7 @@ class __extend__(p4specast.SubE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(BoolV sub $$$ { vid; typ })
-        value_res = objects.W_BoolV(sub, typ=note)
+        value_res = objects.BoolV(sub, typ=note)
         # in
         # Ctx.add_node ctx value_res;
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op (SubOp typ));
@@ -905,7 +905,7 @@ class __extend__(p4specast.MatchE):
         # let matches =
         #   match (pattern, value.it) with
         if (isinstance(self.pattern, p4specast.CaseP) and
-                isinstance(value, objects.W_CaseV)):
+                isinstance(value, objects.CaseV)):
             matches = mixop_eq(self.pattern.mixop, value.mixop)
         #   | CaseP mixop_p, CaseV (mixop_v, _) -> Mixop.eq mixop_p mixop_v
         else:
@@ -924,7 +924,7 @@ class __extend__(p4specast.MatchE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(BoolV matches $$$ { vid; typ })
-        value_res = objects.W_BoolV(matches, typ=self.typ)
+        value_res = objects.BoolV(matches, typ=self.typ)
         # in
         # Ctx.add_node ctx value_res;
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op (MatchOp pattern));
@@ -958,7 +958,7 @@ class __extend__(p4specast.HoldE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(BoolV hold $$$ { vid; typ })
-        value_res = objects.W_BoolV(hold, typ=self.typ)
+        value_res = objects.BoolV(hold, typ=self.typ)
         # in
         # Ctx.add_node ctx value_res;
         # List.iteri
@@ -981,7 +981,7 @@ class __extend__(p4specast.StrE):
         #   let typ = note in
         #   Il.Ast.(StructV fields $$$ { vid; typ })
         # in
-        value_res = objects.W_StructV(fields, typ=self.typ)
+        value_res = objects.StructV(fields, typ=self.typ)
         # Ctx.add_node ctx value_res;
         # if List.length values = 0 then
         #   List.iter
@@ -1002,7 +1002,7 @@ class __extend__(p4specast.CaseE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(CaseV (mixop, values) $$$ { vid; typ })
-        value_res = objects.W_CaseV(mixop, values, typ=self.typ)
+        value_res = objects.CaseV(mixop, values, typ=self.typ)
         # in
         # Ctx.add_node ctx value_res;
         # if List.length values = 0 then
@@ -1038,7 +1038,7 @@ def subtyp(ctx, typ, value):
     #         subtyp ctx typ value
     #     | VariantT typcases, CaseV (mixop_v, _) ->
         if (isinstance(deftyp, p4specast.VariantT) and
-                isinstance(value, objects.W_CaseV)):
+                isinstance(value, objects.CaseV)):
             for nottyp in deftyp.cases:
                 if mixop_eq(nottyp.mixop, value.mixop):
                     return True
@@ -1129,7 +1129,7 @@ def upcast(ctx, typ, value):
     #             let vid = Value.fresh () in
     #             let typ = typ.it in
     #             Il.Ast.(NumV (`Int n) $$$ { vid; typ })
-        value_res = objects.W_NumV(value.get_num(), 'Int', typ=typ)
+        value_res = objects.NumV(value.get_num(), 'Int', typ=typ)
         return ctx, value_res
     #           in
     #           Ctx.add_node ctx value_res;
