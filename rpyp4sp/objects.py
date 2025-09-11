@@ -85,6 +85,16 @@ class W_BoolV(W_Base):
         self.vid = vid
         self.typ = typ
 
+    def compare(self, other):
+        if not isinstance(other, W_BoolV):
+            return self._base_compare(other)
+        if self.value == other.value:
+            return 0
+        elif self.value < other.value:
+            return -1
+        else:
+            return 1
+
     def get_bool(self):
         return self.value
     
@@ -101,6 +111,13 @@ class W_NumV(W_Base):
         self.what = what # type: str
         self.vid = vid # type: int
         self.typ = typ # type: Type | None
+
+    def compare(self, other):
+        if not isinstance(other, W_NumV):
+            return self._base_compare(other)
+        if self.what != other.what:
+            raise TypeError("cannot compare different kinds of numbers")
+        return self.value.compare(other.value)
 
     def __repr__(self):
         return "objects.W_NumV.fromstr(%r, %r, %r, %r)" % (

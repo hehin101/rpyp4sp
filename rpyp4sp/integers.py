@@ -34,6 +34,14 @@ class Integer(object):
     def tolong(self): # only for tests:
         return self.tobigint().tolong()
 
+    def compare(self, other):
+        if self.eq(other):
+            return 0
+        elif self.lt(other):
+            return -1
+        else:
+            return 1
+
 
 class SmallInteger(Integer):
     _immutable_fields_ = ['val']
