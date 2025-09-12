@@ -1787,6 +1787,13 @@ def subtyp(ctx, typ, value):
     #     | NumV (`Nat _) -> true
     #     | NumV (`Int i) -> Bigint.(i >= zero)
     #     | _ -> assert false)
+    if isinstance(typ, p4specast.NumT) and isinstance(typ.typ, p4specast.NatT):
+        if value.what == "Nat":
+            return True
+        elif value.what == "Int":
+            return value.value.ge(integers.Integer.fromint(0))
+        else:
+            assert 0
     # | VarT (tid, targs) -> (
     if isinstance(typ, p4specast.VarT):
     #     let tparams, deftyp = Ctx.find_typdef Local ctx tid in
@@ -1830,9 +1837,8 @@ def downcast(ctx, typ, value):
     # INCOMPLETE
     # match typ.it with
     # | NumT `NatT -> (
-    if isinstance(typ, p4specast.NumT):
-        import pdb;pdb.set_trace()
-        assert 0, "TODO downcast"
+    if (isinstance(typ, p4specast.NumT) and
+            isinstance(typ.typ, p4specast.NatT)):
     #     match value.it with
     #     | NumV (`Nat _) -> (ctx, value)
     #     | NumV (`Int i) when Bigint.(i >= zero) ->
@@ -1845,6 +1851,13 @@ def downcast(ctx, typ, value):
     #         Ctx.add_edge ctx value_res value (Dep.Edges.Op (CastOp typ));
     #         (ctx, value_res)
     #     | _ -> assert false)
+        if value.what == "Nat":
+            return ctx, value
+        elif value.what == "Int":
+            assert value.value.ge(integers.Integer.fromint(0))
+            return objects.NumV(value.value, 'Nat', typ=typ)
+        else:
+            assert 0
     # | VarT (tid, targs) -> (
     if isinstance(typ, p4specast.VarT):
         tparams, deftyp = ctx.find_typdef_local(typ.id)

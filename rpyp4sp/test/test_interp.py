@@ -34,6 +34,17 @@ def test_load_spec():
     assert 'is_fbitt' in ctx.glbl.fenv
     print(ctx.glbl.fenv["is_fbitt"])
 
+def test_subtyp_nat():
+    typ = p4specast.NumT(p4specast.NatT())
+    value = objects.NumV.fromstr('32', 'Int', 3, p4specast.NumT(p4specast.IntT()))
+    res = interp.subtyp(None, typ, value)
+    assert res is True
+
+def test_downcast_nat():
+    typ = p4specast.NumT(p4specast.NatT())
+    value = objects.NumV.fromstr('32', 'Int', 3, p4specast.NumT(p4specast.IntT()))
+    res = interp.downcast(None, typ, value)
+
 def test_is_fbitt():
     # dec $is_fbitt(typ) : bool
     #     hint(show % IS FBIT_T)
