@@ -18,3 +18,7 @@ ifeq (, $(shell opam switch list | grep 5.1.0))
 endif
 	opam switch 5.1.0
 	opam --yes install dune bignum menhir core core_unix bisect_ppx yojson ppx_deriving_yojson
+
+.PHONY: setup-pypy
+setup-pypy:
+	git clone https://github.com/pypy/pypy.git
