@@ -180,6 +180,12 @@ def test_check_arity():
     ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
     assert value.eq(res)
 
+    res = objects.BoolV(False, 4803, p4specast.BoolT())
+    name = 'check_arity_more'
+    func = ctx.glbl.fenv[name]
+    ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+    assert value.eq(res)
+
 def test_eval_num_expr():
     exp = p4specast.NumE.fromstr('0', 'Nat')
     exp.typ = p4specast.NumT(p4specast.NatT())

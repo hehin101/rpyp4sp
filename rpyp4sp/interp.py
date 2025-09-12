@@ -824,20 +824,32 @@ class __extend__(p4specast.ListE):
         #   (ctx, value_res)
         return ctx, value_res
 
-def eval_cmp_bool(cmpop, value_l, value_r):
+def eval_cmp_bool(cmpop, value_l, value_r, typ):
     # let eq = Value.eq value_l value_r in
     eq = value_l.eq(value_r)
     # match cmpop with `EqOp -> Il.Ast.BoolV eq | `NeOp -> Il.Ast.BoolV (not eq)
     value = eq if cmpop == 'EqOp' else not eq
-    return objects.BoolV(value)
+    return objects.BoolV(value, typ=typ)
 
 
-def eval_cmp_num(cmpop, value_l, value_r):
+def eval_cmp_num(cmpop, value_l, value_r, typ):
     # let num_l = Value.get_num value_l in
+    assert value_l.what == value_r.what
+    num_l = value_l.get_num()
     # let num_r = Value.get_num value_r in
+    num_r = value_r.get_num()
+    if cmpop == 'LtOp':
+        res = num_l.lt(num_r)
+    elif cmpop == 'GtOp':
+        res = num_l.gt(num_r)
+    elif cmpop == 'LeOp':
+        res = num_l.le(num_r)
+    elif cmpop == 'GeOp':
+        res = num_l.ge(num_r)
+    else:
+        assert 0, "should be unreachable"
+    return objects.BoolV(res, typ=typ)
     # Il.Ast.BoolV (Num.cmp cmpop num_l num_r)
-    import pdb;pdb.set_trace()
-    assert 0, "TODO eval_cmp_num"
 
 
 class __extend__(p4specast.CmpE):
@@ -850,10 +862,10 @@ class __extend__(p4specast.CmpE):
         #   match cmpop with
         #   | #Bool.cmpop as cmpop -> eval_cmp_bool cmpop value_l value_r
         if self.cmpop in ('EqOp', 'NeOp'):
-            value_res = eval_cmp_bool(self.cmpop, value_l, value_r)
+            value_res = eval_cmp_bool(self.cmpop, value_l, value_r, self.typ)
         #   | #Num.cmpop as cmpop -> eval_cmp_num cmpop value_l value_r
         elif self.cmpop in ('LtOp', 'GtOp', 'LeOp', 'GeOp'):
-            value_res = eval_cmp_num(self.cmpop, value_l, value_r)
+            value_res = eval_cmp_num(self.cmpop, value_l, value_r, self.typ)
         else:
             assert 0, 'should be unreachable'
         # in
