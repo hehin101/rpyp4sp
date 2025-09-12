@@ -94,7 +94,6 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input):
     #     (ctx, value_output)
         return ctx, sign.value
     # | _ -> error id.at "function was not matched"
-    import pdb; pdb.set_trace()
     assert 0, "TODO invoke_func_def_attempt_clauses"
 
 def eval_arg(ctx, arg):
@@ -652,6 +651,15 @@ def assign_exp(ctx, exp, value):
     #         ctx
     #     | None, None -> ctx
     #     | _ -> assert false)
+    elif isinstance(exp, p4specast.OptE) and \
+         isinstance(value, objects.OptV):
+        if exp.exp is not None and value.value is not None:
+            ctx = assign_exp(ctx, exp.exp, value.value)
+            return ctx
+        elif exp.exp is None and value.value is None:
+            return ctx
+        else:
+            assert False, "mismatched OptE and OptV"
     # | ListE exps_inner, ListV values_inner ->
     #     let ctx = assign_exps ctx exps_inner values_inner in
     #     List.iter
@@ -698,12 +706,15 @@ def assign_exp(ctx, exp, value):
     #         Ctx.add_value Local ctx (id, iters @ [ Il.Ast.Opt ]) value_sub)
     #       ctx vars
             for var in exp.varlist:
-                value_sub = objects.OptV(None, typ=var.typ)
+                typ = p4specast.IterT(var.typ, p4specast.Opt())
+                value_sub = objects.OptV(None, typ=typ)
                 ctx = ctx.add_value_local(var.id, var.iter + [p4specast.Opt()], value_sub)
             return ctx
     # | IterE (exp, (Opt, vars)), OptV (Some value) ->
+        else:
     #     (* Assign the value to the iterated expression *)
     #     let ctx = assign_exp ctx exp value in
+            ctx = assign_exp(ctx, exp.exp, value.value)
     #     (* Per iterated variable, make an option out of the value *)
     #     List.fold_left
     #       (fun ctx (id, typ, iters) ->
@@ -717,6 +728,12 @@ def assign_exp(ctx, exp, value):
     #         Ctx.add_edge ctx value_sub value Dep.Edges.Assign;
     #         Ctx.add_value Local ctx (id, iters @ [ Il.Ast.Opt ]) value_sub)
     #       ctx vars
+            for var in exp.varlist:
+                value_sub_inner = ctx.find_value_local(var.id, var.iter)
+                typ = p4specast.IterT(var.typ, p4specast.Opt())
+                value_sub = objects.OptV(value_sub_inner, typ=typ)
+                ctx = ctx.add_value_local(var.id, var.iter + [p4specast.Opt()], value_sub)
+            return ctx
     # | IterE (exp, (List, vars)), ListV values ->
     elif (isinstance(exp, p4specast.IterE) and 
           isinstance(exp.iter, p4specast.List) and
@@ -815,7 +832,7 @@ def assign_arg(ctx_caller, ctx_callee, arg, value):
 
 def assign_args(ctx_caller, ctx_callee, args, values):
     assert len(args) == len(values), \
-        "mismatch in number of arguments while assigning, expected %d value(s) but got %d" (len(args), len(values))
+        "mismatch in number of arguments while assigning, expected %d value(s) but got %d" % (len(args), len(values))
     for arg, value in zip(args, values):
         ctx_callee = assign_arg(ctx_caller, ctx_callee, arg, value)
     return ctx_callee
@@ -1484,7 +1501,6 @@ def eval_iter_exp_opt(note, ctx, exp, vars):
     #     match ctx_sub_opt with
     #     | Some ctx_sub ->
     if ctx_sub_opt is not None:
-        import pdb;pdb.set_trace()
         ctx_sub = ctx_sub_opt
     #         let ctx_sub, value = eval_exp ctx_sub exp in
         ctx_sub, value = eval_exp(ctx_sub, exp)

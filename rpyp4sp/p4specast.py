@@ -122,11 +122,21 @@ class Region(AstBase):
         #  "left": { "file": "spec/0-aux.watsup", "line": 18, "column": 5 },
         #  "right": { "file": "spec/0-aux.watsup", "line": 18, "column": 9 }
         # }
-        return Region(Position.fromjson(value['left']), Position.fromjson(value['right']))
+        left = Position.fromjson(value['left'])
+        right = Position.fromjson(value['right'])
+        if not left.has_information() and not right.has_information():
+            return NO_REGION
+        return Region(left, right)
 
     @staticmethod
     def line_span(file, line, column_start, column_end):
         return Region(Position(file, line, column_start), Position(file, line, column_end))
+
+    def is_line_span(self):
+        return (self.left.has_information() and
+                self.right.has_information() and
+                self.left.file == self.right.file and
+                self.left.line == self.right.line)
 
     def __repr__(self):
         if self.left.has_information() or self.right.has_information():
@@ -1690,17 +1700,35 @@ class MixOp(AstBase):
 
 
 class AtomT(AstBase):
-    def __init__(self, value, region):
+    def __init__(self, value, region=NO_REGION):
         self.value = value # type: str
         self.region = region # type: Region
 
     def __repr__(self):
-        return "p4specast.AtomT(%r, %r)" % (self.value, self.region)
+        repr_region = repr(self.region)
+        if repr_region == "p4specast.NO_REGION":
+            return "p4specast.AtomT(%r)" % (self.value,)
+        if self.region.is_line_span():
+            return "p4specast.AtomT.line_span(%r, %r, %r, %r, %r)" % (
+                self.value,
+                self.region.left.file,
+                self.region.left.line,
+                self.region.left.column,
+                self.region.right.column,
+            )
+        return "p4specast.AtomT(%r, %s)" % (self.value, repr_region)
 
     def compare(self, other):
         # type: (AtomT, AtomT) -> int
         # TODO: is this right?
         return cmp(self.value, other.value)
+
+    @staticmethod
+    def line_span(value, file, line, col_start, col_end):
+        return AtomT(
+            value=value,
+            region=Region.line_span(file, line, col_start, col_end)
+        )
 
     @staticmethod
     def fromjson(value):
