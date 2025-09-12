@@ -588,6 +588,7 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
 
 def eval_let_iter_tick(ctx, exp_l, exp_r, iterexps):
     # INCOMPLETE
+    # TODO: should test it
     # match iterexps with
     # | [] -> eval_let ctx exp_l exp_r
     if iterexps == []:
@@ -782,7 +783,12 @@ def assign_exp(ctx, exp, value):
         return ctx
     #     ctx
     # | TupleE exps_inner, TupleV values_inner ->
+    elif isinstance(exp, p4specast.TupleE) and \
+         isinstance(value, objects.TupleV):
     #     let ctx = assign_exps ctx exps_inner values_inner in
+        exps_inner = exp.elts
+        values_inner = value.elements
+        ctx = assign_exps(ctx, exps_inner, values_inner)
     #     List.iter
     #       (fun value_inner -> Ctx.add_edge ctx value_inner value Dep.Edges.Assign)
     #       values_inner;
@@ -827,11 +833,16 @@ def assign_exp(ctx, exp, value):
         else:
             assert False, "mismatched OptE and OptV"
     # | ListE exps_inner, ListV values_inner ->
+    if isinstance(exp, p4specast.ListE) and \
+       isinstance(value, objects.ListV):
+        import pdb; pdb.set_trace()
     #     let ctx = assign_exps ctx exps_inner values_inner in
+        ctx = assign_exps(ctx, exp.elts, value.elements)
     #     List.iter
     #       (fun value_inner -> Ctx.add_edge ctx value_inner value Dep.Edges.Assign)
     #       values_inner;
     #     ctx
+        return ctx
     # | ConsE (exp_h, exp_t), ListV values_inner ->
     elif isinstance(exp, p4specast.ConsE) and \
          isinstance(value, objects.ListV):
@@ -855,7 +866,7 @@ def assign_exp(ctx, exp, value):
     #     ctx
         return ctx
     # | IterE (_, (Opt, vars)), OptV None ->
-    elif (isinstance(exp, p4specast.IterE) and 
+    elif (isinstance(exp, p4specast.IterE) and
           isinstance(exp.iter, p4specast.Opt) and
           isinstance(value, objects.OptV)):
         if value.value is None:
@@ -901,7 +912,7 @@ def assign_exp(ctx, exp, value):
                 ctx = ctx.add_value_local(var.id, var.iter + [p4specast.Opt()], value_sub)
             return ctx
     # | IterE (exp, (List, vars)), ListV values ->
-    elif (isinstance(exp, p4specast.IterE) and 
+    elif (isinstance(exp, p4specast.IterE) and
           isinstance(exp.iter, p4specast.List) and
           isinstance(value, objects.ListV)):
     #     (* Map over the value list elements,
@@ -915,13 +926,13 @@ def assign_exp(ctx, exp, value):
     #           let ctx = assign_exp ctx exp value in
     #           ctxs @ [ ctx ])
     #         [] values
+    #     in
         ctxs = []
         values = value.elements
         for value_elem in values:
             ctx_local = ctx.localize_venv(venv={})
             ctx_local = assign_exp(ctx_local, exp.exp, value_elem)
             ctxs.append(ctx_local)
-
     #     in
     #     (* Per iterated variable, collect its elementwise value,
     #        then make a sequence out of them *)
@@ -939,7 +950,6 @@ def assign_exp(ctx, exp, value):
     #         Ctx.add_edge ctx value_sub value Dep.Edges.Assign;
     #         Ctx.add_value Local ctx (id, iters @ [ Il.Ast.List ]) value_sub)
     #       ctx vars
-
         for var in exp.varlist:
             # collect elementwise values from each ctx in ctxs
             values = [ctx_elem.find_value_local(var.id, var.iter) for ctx_elem in ctxs]
@@ -966,7 +976,8 @@ def assign_exps(ctx, exps, values):
     #         %d value(s) but got %d"
     #        (List.length exps) (List.length values));
     #   List.fold_left2 assign_exp ctx exps values
-    assert len(exps) == len(values), "mismatch in number of expressions and values while assigning, expected %d value(s) but got %d" % (len(exps), len(values))
+    assert len(exps) == len(values), \
+        "mismatch in number of expressions and values while assigning, expected %d value(s) but got %d" % (len(exps), len(values))
     for (exp, value) in zip(exps, values):
         ctx = assign_exp(ctx, exp, value)
     return ctx
@@ -1059,7 +1070,7 @@ def eval_exps(ctx, exps):
 
 class __extend__(p4specast.Exp):
     def eval_exp(self, ctx):
-        import pdb;pdb.set_trace()
+        #import pdb;pdb.set_trace()
         raise NotImplementedError("abstract base class %s" % self)
 
 class __extend__(p4specast.BoolE):
@@ -1154,7 +1165,7 @@ class __extend__(p4specast.ListE):
         #     List.iter
         #       (fun value_input ->
         #         Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
-        #       ctx.local.values_input;        
+        #       ctx.local.values_input;
         #   (ctx, value_res)
         return ctx, value_res
 
