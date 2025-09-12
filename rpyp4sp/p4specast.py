@@ -1136,8 +1136,9 @@ class DefTyp(AstBase):
         return ast
 
 class PlainT(DefTyp):
-    def __init__(self, typ):
+    def __init__(self, typ, region=None):
         self.typ = typ
+        self.region = region
 
     @staticmethod
     def fromjson(content):

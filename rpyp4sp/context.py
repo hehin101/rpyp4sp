@@ -98,6 +98,13 @@ class Context(object):
         result.local.fenv[id.value] = func
         return result
 
+    def add_typdef_local(self, id, typdef):
+        result = Context(self.filename, self.derive)
+        result.glbl = self.glbl
+        result.local = self.local.copy_and_change(tdenv=self.local.tdenv.copy())
+        result.local.tdenv[id.value] = typdef
+        return result
+
     def find_func_local(self, id):
         if id.value in self.local.fenv:
             func = self.local.fenv[id.value]

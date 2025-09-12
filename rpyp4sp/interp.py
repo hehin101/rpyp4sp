@@ -37,6 +37,7 @@ def invoke_func_builtin(ctx, calle):
     return ctx, value_output
 
 def invoke_func_def(ctx, calle):
+    from rpyp4sp.type_helpers import subst_typ
     # let tparams, args_input, instrs = Ctx.find_func Local ctx id in
     func = ctx.find_func_local(calle.func)
     # check (instrs <> []) id.at "function has no instructions";
@@ -47,7 +48,7 @@ def invoke_func_def(ctx, calle):
     #   (List.length targs = List.length tparams)
     #   id.at "arity mismatch in type arguments";
     assert len(calle.targs) == len(func.tparams), "arity mismatch in type arguments"
-    assert calle.targs == [], "TODO"
+    if calle.targs:
     # let targs =
     #   let theta =
     #     TDEnv.bindings ctx.global.tdenv @ TDEnv.bindings ctx.local.tdenv
@@ -56,8 +57,14 @@ def invoke_func_def(ctx, calle):
     #            | Il.Ast.PlainT typ -> Some (tid, typ)
     #            | _ -> None)
     #     |> TIdMap.of_list
-    #   in
-    #   List.map (Typ.subst_typ theta) targs
+        theta = {}
+        for tid, tdef in ctx.glbl.tdenv.items() + ctx.local.tdenv.items():
+            deftyp = tdef.deftyp
+            if isinstance(deftyp, p4specast.PlainT):
+                theta[tid] = deftyp.typ
+        #   in
+        #   List.map (Typ.subst_typ theta) targs
+        targs = [subst_typ(theta, targ.typ) for targ in calle.targs]
     # in
     # let ctx_local =
     #   List.fold_left2
@@ -66,18 +73,22 @@ def invoke_func_def(ctx, calle):
     #     ctx_local tparams targs
     # in
     # let ctx, values_input = eval_args ctx args in
+        for tparam, targ in zip(func.tparams, targs):
+            ctx_local = ctx_local.add_typdef_local(tparam, p4specast.PlainT(targ))
     ctx, values_input = eval_args(ctx, calle.args)
-    return invoke_func_def_attempt_clauses(ctx, func, values_input)
+    return invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=ctx_local)
 
-def invoke_func_def_attempt_clauses(ctx, func, values_input):
+def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     # INCOMPLETE
     # and invoke_func_def (ctx : Ctx.t) (id : id) (targs : targ list) (args : arg list) : Ctx.t * value =
     # let tparams, args_input, instrs = Ctx.find_func Local ctx id in
     func = ctx.find_func_local(func.id)
     tparams, args_input, instrs = func.tparams, func.args, func.instrs
     # let ctx_local = Ctx.localize ctx in
-    ctx_local = ctx.localize()
+    if ctx_local is None:
+        ctx_local = ctx.localize()
     # let ctx_local = Ctx.localize_inputs ctx_local values_input in
+    ctx_local = ctx_local.localize_inputs(values_input)
     # let ctx_local = assign_args ctx ctx_local args_input values_input in
     ctx_local = assign_args(ctx, ctx_local, args_input, values_input)
     # let ctx_local, sign = eval_instrs ctx_local Cont instrs in

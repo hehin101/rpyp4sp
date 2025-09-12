@@ -272,6 +272,13 @@ def test_merge_cstr():
     _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
     assert value.eq(res)
 
+def test_targs_type_wf():
+    input_values = [objects.CaseV(p4specast.MixOp([[p4specast.AtomT('{')], [p4specast.AtomT('}')]]), [objects.ListV([objects.TextV('T', 13, p4specast.VarT(p4specast.Id('tparam', p4specast.NO_REGION), []))], 1310, p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/4g-typing-decl.watsup', 20, 28, 31)), []), p4specast.List()))], 1311, p4specast.VarT(p4specast.Id('set', p4specast.NO_REGION), [p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/4g-typing-decl.watsup', 20, 28, 31)), [])])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('VarT', 'spec/2c1-runtime-type.watsup', 49, 4, 8)], []]), [objects.TextV('T', 13, p4specast.VarT(p4specast.Id('tparam', p4specast.NO_REGION), []))], 1194, p4specast.VarT(p4specast.Id('abstyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 48, 7, 13)), []))]
+    name = 'Type_wf'
+    ctx = make_context()
+    _, values = interp.invoke_rel(ctx, p4specast.AtomT(name, None), input_values)
+    assert values == []
+
 def iter_all(fn):
     with open(fn, 'r') as f:
         for line in f:
