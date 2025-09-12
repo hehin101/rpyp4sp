@@ -1931,13 +1931,14 @@ def upcast(ctx, typ, value):
             assert 0, "TODO upcast"
         else:
             return ctx, value
-    import pdb;pdb.set_trace()
-    assert 0, "TODO upcast"
     #       | PlainT typ ->
     #           let typ = Typ.subst_typ theta typ in
     #           upcast ctx typ value
     #       | _ -> (ctx, value))
     #   | TupleT typs -> (
+    if isinstance(typ, p4specast.TupleT):
+        import pdb;pdb.set_trace()
+        assert 0, "TODO upcast"
     #       match value.it with
     #       | TupleV values ->
     #           let ctx, values =
@@ -1957,6 +1958,7 @@ def upcast(ctx, typ, value):
     #           (ctx, value_res)
     #       | _ -> assert false)
     #   | _ -> (ctx, value)
+    return ctx, value
 
 
 def mixop_eq(a, b):

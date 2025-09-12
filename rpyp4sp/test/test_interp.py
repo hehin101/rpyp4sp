@@ -45,6 +45,12 @@ def test_downcast_nat():
     value = objects.NumV.fromstr('32', 'Int', 3, p4specast.NumT(p4specast.IntT()))
     res = interp.downcast(None, typ, value)
 
+def test_upcast_list():
+    typ = p4specast.IterT(p4specast.VarT(p4specast.Id('paramIL', p4specast.Region.line_span('spec/4g-typing-decl.watsup', 787, 32, 39)), []), p4specast.List())
+    value = objects.ListV([], -1, p4specast.IterT(p4specast.VarT(p4specast.Id('paramtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 18, 9, 17)), []), p4specast.List()))
+    _, res = interp.upcast(None, typ, value)
+    assert res is value
+
 def test_is_fbitt():
     # dec $is_fbitt(typ) : bool
     #     hint(show % IS FBIT_T)
