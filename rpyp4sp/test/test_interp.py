@@ -187,33 +187,46 @@ def test_all():
     spec = load()
     ctx = Context('dummy')
     ctx.load_spec(spec)
+    passed = 0
+    failed = 0
+    error = 0
     for calltype, name, input_values, res in iter_all(os.path.join(os.path.dirname(__file__), 'interp_tests.json')):
         if calltype == "function":
             if name not in ctx.glbl.fenv:
                 continue
             func = ctx.glbl.fenv[name]
             try:
-                ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+                _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
                 if not value.eq(res):
+                    failed += 1
                     print("Function test failed:", name, value, res)
                 else:
+                    passed += 1
                     print("Function test passed:", name)
             except Exception as e:
                 #import pdb; pdb.xpm()
+                error += 1
                 print("Function test exception:", name, e)
                 continue
         if calltype == "relation":
             try:
-                ctx, values = interp.invoke_rel(ctx, p4specast.AtomT(name, None), input_values)
+                _, values = interp.invoke_rel(ctx, p4specast.AtomT(name, None), input_values)
                 if len(values) != len(res):
+                    failed += 1
                     print("Relation test wrong number of results", name, len(values), len(res))
                 else:
                     for resval, resval_exp in zip(values, res):
                         if not resval.eq(resval_exp):
+                            failed += 1
                             print("Relation test failed:", name, resval, resval_exp)
                         else:
+                            passed += 1
                             print("Relation test passed:", name)
             except Exception as e:
                 #import pdb; pdb.xpm()
+                error += 1
                 print("Relation test exception:", name, e)
                 continue
+    print("PASSED:", passed)
+    print("FAILED", failed)
+    print("ERROR ", error)
