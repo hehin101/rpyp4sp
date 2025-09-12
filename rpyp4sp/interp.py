@@ -1165,6 +1165,28 @@ def eval_cmp_bool(cmpop, value_l, value_r, typ):
     value = eq if cmpop == 'EqOp' else not eq
     return objects.BoolV(value, typ=typ)
 
+class __extend__(p4specast.ConsE):
+    def eval_exp(self, ctx):
+        # and eval_cons_exp (note : typ') (ctx : Ctx.t) (exp_h : exp) (exp_t : exp) :
+        #     Ctx.t * value =
+        #   let ctx, value_h = eval_exp ctx exp_h in
+        #   let ctx, value_t = eval_exp ctx exp_t in
+        #   let values_t = Value.get_list value_t in
+        #   let value_res =
+        #     let vid = Value.fresh () in
+        #     let typ = note in
+        #     Il.Ast.(ListV (value_h :: values_t) $$$ { vid; typ })
+        #   in
+        #   Ctx.add_node ctx value_res;
+        #   (ctx, value_res)
+        exp_h = self.head
+        exp_t = self.tail
+        ctx, value_h = eval_exp(ctx, exp_h)
+        ctx, value_t = eval_exp(ctx, exp_t)
+        assert isinstance(value_t, objects.ListV)
+        values_t = value_t.get_list()
+        value_res = objects.ListV([value_h] + values_t, typ=self.typ)
+        return ctx, value_res
 
 def eval_cmp_num(cmpop, value_l, value_r, typ):
     # let num_l = Value.get_num value_l in
