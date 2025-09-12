@@ -97,14 +97,10 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input):
     assert 0, "TODO invoke_func_def_attempt_clauses"
 
 def eval_arg(ctx, arg):
-    # INCOMPLETE
     # match arg.it with
     # | ExpA exp -> eval_exp ctx exp
     if isinstance(arg, p4specast.ExpA):
-        res = eval_exp(ctx, arg.exp)
-        if res is not None:
-            return res
-
+        return eval_exp(ctx, arg.exp)
     # | DefA id ->
     #     let value_res =
     #       let vid = Value.fresh () in
@@ -113,8 +109,10 @@ def eval_arg(ctx, arg):
     #     in
     #     Ctx.add_node ctx value_res;
     #     (ctx, value_res)
-    import pdb;pdb.set_trace()
-    assert 0, "TODO eval_arg"
+    elif isinstance(arg, p4specast.DefA):
+        return ctx, objects.FuncV(arg.id, typ=p4specast.FuncT())
+    else:
+        assert 0, "unreachable"
 
 def eval_args(ctx, args):
     # List.fold_left

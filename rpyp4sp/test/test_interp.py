@@ -51,6 +51,11 @@ def test_upcast_list():
     _, res = interp.upcast(None, typ, value)
     assert res is value
 
+def test_eval_arg():
+    arg = p4specast.DefA(p4specast.Id('compatible_plusminusmult', p4specast.Region.line_span('spec/4e-typing-expr.watsup', 173, 84, 108)))
+    ctx = make_context()
+    ctx, res = interp.eval_arg(ctx, arg)
+
 def test_is_fbitt():
     # dec $is_fbitt(typ) : bool
     #     hint(show % IS FBIT_T)
