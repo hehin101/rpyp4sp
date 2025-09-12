@@ -802,11 +802,6 @@ def assign_exp(ctx, exp, value):
     #       (fun value_inner -> Ctx.add_edge ctx value_inner value Dep.Edges.Assign)
     #       values_inner;
     #     ctx
-    elif isinstance(exp, p4specast.TupleE) and \
-         isinstance(value, objects.TupleV):
-        exps_inner = exp.elts
-        values_inner = value.elements
-        ctx = assign_exps(ctx, exps_inner, values_inner)
         return ctx
     # | CaseE notexp, CaseV (_mixop_value, values_inner) ->
     #     let _mixop_exp, exps_inner = notexp in
@@ -844,7 +839,6 @@ def assign_exp(ctx, exp, value):
     # | ListE exps_inner, ListV values_inner ->
     if isinstance(exp, p4specast.ListE) and \
        isinstance(value, objects.ListV):
-        import pdb; pdb.set_trace()
     #     let ctx = assign_exps ctx exps_inner values_inner in
         ctx = assign_exps(ctx, exp.elts, value.elements)
     #     List.iter
