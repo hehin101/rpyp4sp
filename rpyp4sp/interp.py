@@ -95,6 +95,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input):
         return ctx, sign.value
     # | _ -> error id.at "function was not matched"
     import pdb; pdb.set_trace()
+    assert 0, "TODO invoke_func_def_attempt_clauses"
 
 def eval_arg(ctx, arg):
     # INCOMPLETE
@@ -114,6 +115,7 @@ def eval_arg(ctx, arg):
     #     Ctx.add_node ctx value_res;
     #     (ctx, value_res)
     import pdb;pdb.set_trace()
+    assert 0, "TODO eval_arg"
 
 def eval_args(ctx, args):
     # List.fold_left
@@ -219,6 +221,7 @@ def eval_instr(ctx, instr):
     if isinstance(instr, p4specast.ReturnI):
         return eval_return_instr(ctx, instr)
     import pdb; pdb.set_trace()
+    assert 0, "TODO eval_instr"
 
 def eval_if_instr(ctx, instr):
     # INCOMPLETE
@@ -251,6 +254,7 @@ def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
     if iterexps == []:
         return eval_if_cond(ctx, exp_cond)
     import pdb;pdb.set_trace()
+    assert 0, "TODO eval_if_cond_iter_tick"
     # | iterexp_h :: iterexps_t -> (
     #     let iter_h, vars_h = iterexp_h in
     #     match iter_h with
@@ -382,6 +386,7 @@ def eval_let_iter_tick(ctx, exp_l, exp_r, iterexps):
     #     | Opt -> eval_let_opt ctx exp_l exp_r vars_h iterexps_t
     #     | List -> eval_let_list ctx exp_l exp_r vars_h iterexps_t)
     import pdb;pdb.set_trace()
+    assert 0, "todo eval_let_iter_tick"
 
 def eval_let_iter(ctx, let_instr):
     # let iterexps = List.rev iterexps in
@@ -438,7 +443,7 @@ def eval_rule_iter_tick(ctx, id, notexp, iterexps):
     #   | [] -> eval_rule ctx id notexp
     if not iterexps:
         return eval_rule(ctx, id, notexp)
-    assert 0, "not properly implemented"
+    assert 0, "TODO eval_rule_iter_tick"
     #   | iterexp_h :: iterexps_t -> (
     #       let iter_h, vars_h = iterexp_h in
     #       match iter_h with
@@ -610,6 +615,7 @@ def assign_exp(ctx, exp, value):
         return ctx
 
     import pdb;pdb.set_trace()
+    assert 0, "todo assign_exp"
     # | _ ->
     #     error exp.at
     #       (F.asprintf "(TODO) match failed %s <- %s"
@@ -831,6 +837,7 @@ def eval_cmp_num(cmpop, value_l, value_r):
     # let num_r = Value.get_num value_r in
     # Il.Ast.BoolV (Num.cmp cmpop num_l num_r)
     import pdb;pdb.set_trace()
+    assert 0, "TODO eval_cmp_num"
 
 
 class __extend__(p4specast.CmpE):
@@ -1077,6 +1084,7 @@ class __extend__(p4specast.MatchE):
         #   | _ -> false
         else:
             import pdb;pdb.set_trace()
+            assert 0, "TODO MatchE"
         # in
         # let value_res =
         #   let vid = Value.fresh () in
@@ -1184,7 +1192,8 @@ class __extend__(p4specast.CatE):
             value_res = objects.TextV(value_l.value + value_r.value, typ=self.typ)
         #     | ListV values_l, ListV values_r -> Il.Ast.ListV (values_l @ values_r)
         else:
-            import pdb;pdb.set_trace()
+            import pdb;pdb.Set_trace()
+            assert 0, "TODO CatE"
         #     | _ -> error at "concatenation expects either two texts or two lists"
         #   in
         #   let value_res =
@@ -1201,6 +1210,7 @@ class __extend__(p4specast.CatE):
 
 def eval_iter_exp_opt(note, ctx, exp, vars):
     import pdb;pdb.set_trace()
+    assert 0, "TODO eval_iter_exp_opt"
 
 def eval_iter_exp_list(note, ctx, exp, vars):
     # let ctxs_sub = Ctx.sub_list ctx vars in
@@ -1265,6 +1275,7 @@ def subtyp(ctx, typ, value):
         assert typ.targs == []
         if isinstance(deftyp, p4specast.PlainT):
             import pdb;pdb.set_trace()
+            assert 0, "TODO subtyp"
     #     match (deftyp.it, value.it) with
     #     | PlainT typ, _ ->
     #         let typ = Typ.subst_typ theta typ in
@@ -1284,6 +1295,7 @@ def subtyp(ctx, typ, value):
     #           typcases
     #     | _ -> true)
     import pdb;pdb.set_trace()
+    assert 0, "TODO subtyp"
 
     # | TupleT typs -> (
     #     match value.it with
@@ -1299,6 +1311,7 @@ def downcast(ctx, typ, value):
     # | NumT `NatT -> (
     if isinstance(typ, p4specast.NumT):
         import pdb;pdb.set_trace()
+        assert 0, "TODO downcast"
     #     match value.it with
     #     | NumV (`Nat _) -> (ctx, value)
     #     | NumV (`Int i) when Bigint.(i >= zero) ->
@@ -1321,6 +1334,7 @@ def downcast(ctx, typ, value):
     #     | PlainT typ ->
         if isinstance(deftyp, p4specast.PlainT):
             import pdb;pdb.set_trace()
+            assert 0, "TODO downcast"
     #         let typ = Typ.subst_typ theta typ in
     #         downcast ctx typ value
     #     | _ -> (ctx, value))
@@ -1329,6 +1343,7 @@ def downcast(ctx, typ, value):
     # | TupleT typs -> (
     if isinstance(typ, p4specast.TupleT):
         import pdb;pdb.set_trace()
+        assert 0, "TODO downcast"
     #     match value.it with
     #     | TupleV values ->
     #         let ctx, values =
@@ -1379,9 +1394,11 @@ def upcast(ctx, typ, value):
     #       match deftyp.it with
         if isinstance(deftyp, p4specast.PlainT):
             import pdb;pdb.set_trace()
+            assert 0, "TODO upcast"
         else:
             return ctx, value
     import pdb;pdb.set_trace()
+    assert 0, "TODO upcast"
     #       | PlainT typ ->
     #           let typ = Typ.subst_typ theta typ in
     #           upcast ctx typ value
