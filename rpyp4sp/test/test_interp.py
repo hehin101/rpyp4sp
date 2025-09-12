@@ -148,15 +148,6 @@ def test_upcast():
     ctx, res = interp.upcast(ctx, typ, value)
     assert res.eq(value)
 
-
-def test_assign_exp():
-    # TODO: incomplete, what do we actually expect?
-    ctx = Context('dummy')
-    exp = p4specast.IterE(p4specast.VarE(p4specast.Id('text', p4specast.Region(p4specast.Position('spec/0-aux.watsup', 32, 17), p4specast.Position('spec/0-aux.watsup', 32, 20)))), p4specast.List(), [p4specast.Var(id=p4specast.Id('text', p4specast.Region(p4specast.Position('spec/0-aux.watsup', 32, 17), p4specast.Position('spec/0-aux.watsup', 32, 20))), typ=p4specast.TextT(), iter=[])])
-    value = objects.ListV([], 1540, p4specast.IterT(p4specast.TextT(), p4specast.List()))
-    ctx_returned = interp.assign_exp(ctx, exp, value)
-    print(ctx_returned)
-
 def test_concat_text():
     input_values = [objects.ListV([objects.TextV('CounterType', 254, p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('', 0, 0), p4specast.Position('', 0, 0))), [])), objects.TextV('.', 7650, p4specast.TextT()), objects.TextV('packets_and_bytes', 257, p4specast.VarT(p4specast.Id('member', p4specast.Region(p4specast.Position('', 0, 0), p4specast.Position('', 0, 0))), []))], 7651, p4specast.IterT(p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 21, 7), p4specast.Position('spec/1a-syntax-el.watsup', 21, 9))), []), p4specast.List()))]
     name = 'concat_text'
