@@ -246,8 +246,6 @@ def eval_if_cond_iter(ctx, exp_cond, iterexps):
     # eval_if_cond_iter' ctx exp_cond iterexps
     return eval_if_cond_iter_tick(ctx, exp_cond, iterexps)
 
-
-
 def eval_if_cond_list(ctx, exp_cond, vars, iterexps):
     #   let ctxs_sub = Ctx.sub_list ctx vars in
     #   List.fold_left
@@ -624,6 +622,12 @@ def assign_exp(ctx, exp, value):
     #       (fun value_inner -> Ctx.add_edge ctx value_inner value Dep.Edges.Assign)
     #       values_inner;
     #     ctx
+    elif isinstance(exp, p4specast.TupleE) and \
+         isinstance(value, objects.TupleV):
+        exps_inner = exp.elts
+        values_inner = value.elements
+        ctx = assign_exps(ctx, exps_inner, values_inner)
+        return ctx
     # | CaseE notexp, CaseV (_mixop_value, values_inner) ->
     #     let _mixop_exp, exps_inner = notexp in
     #     let ctx = assign_exps ctx exps_inner values_inner in
