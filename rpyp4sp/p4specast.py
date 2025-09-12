@@ -124,8 +124,15 @@ class Region(AstBase):
         # }
         return Region(Position.fromjson(value['left']), Position.fromjson(value['right']))
 
+    @staticmethod
+    def line_span(file, line, column_start, column_end):
+        return Region(Position(file, line, column_start), Position(file, line, column_end))
+
     def __repr__(self):
         if self.left.has_information() or self.right.has_information():
+            if self.left.file == self.right.file and self.left.line == self.right.line:
+                return "p4specast.Region.line_span(%r, %d, %d, %d)" % (
+                    self.left.file, self.left.line, self.left.column, self.right.column)
             return "p4specast.Region(%s, %s)" % (self.left, self.right)
         else:
             return "p4specast.NO_REGION"

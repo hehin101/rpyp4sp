@@ -1358,8 +1358,10 @@ class __extend__(p4specast.CatE):
         if isinstance(value_l, objects.TextV) and isinstance(value_r, objects.TextV):
             value_res = objects.TextV(value_l.value + value_r.value, typ=self.typ)
         #     | ListV values_l, ListV values_r -> Il.Ast.ListV (values_l @ values_r)
+        elif isinstance(value_l, objects.ListV) and isinstance(value_r, objects.ListV):
+            value_res = objects.ListV(value_l.elements + value_r.elements, typ=self.typ)
         else:
-            import pdb;pdb.Set_trace()
+            import pdb;pdb.set_trace()
             assert 0, "TODO CatE"
         #     | _ -> error at "concatenation expects either two texts or two lists"
         #   in
@@ -1409,6 +1411,71 @@ class __extend__(p4specast.LenE):
         # (ctx, value_res)
         return ctx, value_res
 
+
+def eval_access_path(value_b, path):
+    # match path.it with
+    if isinstance(path, p4specast.RootP):
+        # | RootP -> value_b
+        return value_b
+    elif isinstance(path, p4specast.DotP):
+        # | DotP (path, atom) ->
+        # let value = eval_access_path value_b path in
+        value = eval_access_path(value_b, path.path)
+        # let fields = value |> Value.get_struct in
+        fields = value.get_struct()
+        # fields
+        # |> List.map (fun (atom, value) -> (atom.it, value))
+        # |> List.assoc atom.it
+        for atom, val in fields:
+            if atom.value == path.atom.value:
+                return val
+        # | _ -> failwith "(TODO) access_path"
+        raise Exception("(TODO) access_path: field not found")
+    else:
+        raise Exception("(TODO) access_path")
+
+
+def eval_update_path(ctx, value_b, path, value_n):
+    # match path.it with
+    if isinstance(path, p4specast.RootP):
+        # | RootP -> value_n
+        return value_n
+    elif isinstance(path, p4specast.DotP):
+        # | DotP (path, atom) ->
+        # let value = eval_access_path value_b path in
+        value = eval_access_path(value_b, path.path)
+        # let fields = value |> Value.get_struct in
+        fields = value.get_struct()
+        # let fields =
+        #   List.map
+        #     (fun (atom_f, value_f) ->
+        #       if atom_f.it = atom.it then (atom_f, value_n) else (atom_f, value_f))
+        #     fields
+        new_fields = []
+        for atom_f, value_f in fields:
+            if atom_f.value == path.atom.value:
+                new_fields.append((atom_f, value_n))
+            else:
+                new_fields.append((atom_f, value_f))
+        # let value =
+        #   let vid = Value.fresh () in
+        #   let typ = path.note in
+        #   Il.Ast.(StructV fields $$$ { vid; typ })
+        value_struct = objects.StructV(new_fields, typ=path.path.typ)
+        # Ctx.add_node ctx value;
+        # eval_update_path ctx value_b path value
+        return eval_update_path(ctx, value_b, path.path, value_struct)
+    else:
+        raise NotImplementedError("(TODO eval_update_path)")
+
+class __extend__(p4specast.UpdE):
+    def eval_exp(self, ctx):
+        #   let ctx, value_b = eval_exp ctx exp_b in
+        ctx, value_b = eval_exp(ctx, self.exp)
+        #   let ctx, value_f = eval_exp ctx exp_f in
+        ctx, value_f = eval_exp(ctx, self.value)
+        #   let value_res = eval_update_path ctx value_b path value_f in
+        return ctx, eval_update_path(ctx, value_b, self.path, value_f)
 
 def eval_iter_exp_opt(note, ctx, exp, vars):
     #   let ctx_sub_opt = Ctx.sub_opt ctx vars in
