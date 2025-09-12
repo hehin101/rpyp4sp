@@ -1264,16 +1264,16 @@ def eval_binop_bool(binop, value_l, value_r, typ):
     # match binop with
     # | `AndOp -> Il.Ast.BoolV (bool_l && bool_r)
     if binop == 'AndOp':
-        res_bool = objects.BoolV(bool_l and bool_r)
+        res_bool = bool_l and bool_r
     # | `OrOp -> Il.Ast.BoolV (bool_l || bool_r)
     elif binop == 'OrOp':
-        res_bool = objects.BoolV(bool_l or bool_r)
+        res_bool = bool_l or bool_r
     # | `ImplOp -> Il.Ast.BoolV ((not bool_l) || bool_r)
     elif binop == 'ImplOp':
-        res_bool = objects.BoolV((not bool_l) or bool_r)
+        res_bool = (not bool_l) or bool_r
     # | `EquivOp -> Il.Ast.BoolV (bool_l = bool_r)
     elif binop == 'EquivOp':
-        res_bool = objects.BoolV(bool_l == bool_r)
+        res_bool = bool_l == bool_r
     else:
         assert 0, "should be unreachable"
     return objects.BoolV(res_bool, typ=typ)
@@ -1461,7 +1461,7 @@ class __extend__(p4specast.MatchE):
                 matches = (len_v > 0)
         #       | `Fixed len_p -> len_v = len_p
             elif isinstance(listpattern, p4specast.Fixed):
-                matches = (len_v == listpattern.length)
+                matches = (len_v == listpattern.value)
         #       | `Nil -> len_v = 0)
             elif isinstance(listpattern, p4specast.Nil):
                 matches = (len_v == 0)
