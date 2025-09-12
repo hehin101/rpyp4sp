@@ -309,7 +309,63 @@ def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
             typ = p4specast.IterT(p4specast.BoolT(), p4specast.List())
             value_cond = objects.ListV(values_cond, typ=typ)
             return ctx, cond, value_cond
-    assert 0, "TODO eval_if_cond_iter_tick"
+    # | iterexp_h :: iterexps_t -> (
+    #     let iter_h, vars_h = iterexp_h in
+    #     match iter_h with
+    #     | Opt -> error no_region "(TODO)"
+    #     | List ->
+    #         let ctx, cond, values_cond =
+    #           eval_if_cond_list ctx exp_cond vars_h iterexps_t
+    #         in
+    #         let value_cond =
+    #           let vid = Value.fresh () in
+    #           let typ = Il.Ast.IterT (Il.Ast.BoolT $ no_region, Il.Ast.List) in
+    #           Il.Ast.(ListV values_cond $$$ { vid; typ })
+    #         in
+    #         Ctx.add_node ctx value_cond;
+    #         List.iter
+    #           (fun (id, _typ, iters) ->
+    #             let value_sub =
+    #               Ctx.find_value Local ctx (id, iters @ [ Il.Ast.List ])
+    #             in
+    #             Ctx.add_edge ctx value_cond value_sub Dep.Edges.Iter)
+    #           vars_h;
+    #         (ctx, cond, value_cond))
+    # TODO: test it
+    iterexp_h, iterexps_t = iterexps[0], iterexps[1:]
+    iter_h, vars_h = iterexp_h.iter, iterexp_h.vars
+    if isinstance(iter_h, p4specast.Opt):
+        raise Exception("TODO")
+    elif isinstance(iter_h, p4specast.List):
+        # | iterexp_h :: iterexps_t -> (
+        #     let iter_h, vars_h = iterexp_h in
+        #     match iter_h with
+        #     | Opt -> error no_region "(TODO)"
+        #     | List ->
+        #         let ctx, cond, values_cond =
+        #           eval_if_cond_list ctx exp_cond vars_h iterexps_t
+        #         in
+        #         let value_cond =
+        #           let vid = Value.fresh () in
+        #           let typ = Il.Ast.IterT (Il.Ast.BoolT $ no_region, Il.Ast.List) in
+        #           Il.Ast.(ListV values_cond $$$ { vid; typ })
+        #         in
+        #         Ctx.add_node ctx value_cond;
+        #         List.iter
+        #           (fun (id, _typ, iters) ->
+        #             let value_sub =
+        #               Ctx.find_value Local ctx (id, iters @ [ Il.Ast.List ])
+        #             in
+        #             Ctx.add_edge ctx value_cond value_sub Dep.Edges.Iter)
+        #           vars_h;
+        #         (ctx, cond, value_cond))
+        ctx, cond, values_cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexp_h)
+        typ = p4specast.IterT(p4specast.BoolT, p4specast.List)
+        value_cond = objects.ListV(values_cond, typ=typ)
+        # for (id, _typ, iters) in vars_h:
+        #     value_sub = ctx.find_value_local(id, iters + [p4specast.List])
+        #     # TODO: add edge
+        return ctx, cond, value_cond
 
 def eval_if_cond(ctx, exp_cond):
     # let ctx, value_cond = eval_exp ctx exp_cond in
