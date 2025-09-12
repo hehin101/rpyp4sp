@@ -46,7 +46,13 @@ def texts_strip_suffix(ctx, name, targs, values_input):
 
 @register_builtin("rev_")
 def lists_rev_(ctx, name, targs, values_input):
-    raise NotImplementedError("lists_rev_ is not implemented yet")
+    value, = values_input
+    lst = value.get_list()
+    if len(lst) <= 1:
+        return value
+    lst = lst[::-1]
+    return objects.ListV(lst, typ=value.typ)
+
 
 @register_builtin("concat_")
 def lists_concat_(ctx, name, targs, values_input):
@@ -54,7 +60,16 @@ def lists_concat_(ctx, name, targs, values_input):
 
 @register_builtin("distinct_")
 def lists_distinct_(ctx, name, targs, values_input):
-    raise NotImplementedError("lists_distinct_ is not implemented yet")
+    value, = values_input
+    lst = value.get_list()
+    if len(lst) <= 1:
+        return objects.BoolV(True, typ=p4specast.BoolT())
+    # naive quadratic implementation using .eq
+    for i in range(len(lst)):
+        for j in range(i + 1, len(lst)):
+            if lst[i].eq(lst[j]):
+                return objects.BoolV(False, typ=p4specast.BoolT())
+    return objects.BoolV(True, typ=p4specast.BoolT())
 
 @register_builtin("partition_")
 def lists_partition_(ctx, name, targs, values_input):
