@@ -375,6 +375,38 @@ def eval_if_cond(ctx, exp_cond):
     # (ctx, cond, value_cond)
     return ctx, cond, value_cond
 
+
+def eval_if_cond_list(ctx, exp_cond, vars, iterexps):
+    # TODO: test it
+    # and eval_if_cond_list (ctx : Ctx.t) (exp_cond : exp) (vars : var list)
+    #     (iterexps : iterexp list) : Ctx.t * bool * value list =
+    #   let ctxs_sub = Ctx.sub_list ctx vars in
+    #   List.fold_left
+    #     (fun (ctx, cond, values_cond) ctx_sub ->
+    #       if not cond then (ctx, cond, values_cond)
+    #       else
+    #         let ctx_sub, cond, value_cond =
+    #           eval_if_cond_iter' ctx_sub exp_cond iterexps
+    #         in
+    #         let ctx = Ctx.commit ctx ctx_sub in
+    #         let values_cond = values_cond @ [ value_cond ] in
+    #         (ctx, cond, values_cond))
+    #     (ctx, true, []) ctxs_sub
+    ctxs_sub = ctx.sub_list(vars)
+    cond = True
+    values_cond = []
+    acc = (ctx, cond, values_cond)
+    for ctx_sub in ctxs_sub:
+        if not cond:
+            acc = (ctx, cond, values_cond)
+        else:
+            ctx_sub, cond, value_cond = \
+                eval_if_cond_iter_tick(ctx_sub, exp_cond, iterexps)
+            ctx = ctx.commit(ctx_sub)
+            values_cond = values_cond + [value_cond]
+            acc = (ctx, cond, values_cond)
+    return acc
+
 def eval_cases(ctx, exp, cases):
     # returns  Ctx.t * instr list option * value =
     # cases
