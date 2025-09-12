@@ -100,7 +100,7 @@ class BoolV(BaseV):
 
     def get_bool(self):
         return self.value
-    
+
     def __repr__(self):
         return "objects.BoolV(%r, %r, %r)" % (self.value, self.vid, self.typ)
 
@@ -163,7 +163,7 @@ class TextV(BaseV):
     @staticmethod
     def fromjson(content):
         return TextV(content[1].value_string())
-    
+
 class StructV(BaseV):
     def __init__(self, fields, vid=-1, typ=None):
         self.fields = fields
@@ -185,6 +185,17 @@ class StructV(BaseV):
             field = BaseV.fromjson(field_content)
             fields.append((atom, field))
         return StructV(fields)
+
+    def compare(self, other):
+        if not isinstance(other, StructV):
+            return self._base_compare(other)
+        other_fields = other.fields
+        if len(self.fields) != len(other.fields):
+            return False
+        for this_field, other_field in zip(self.fields, other_fields):
+            if not this_field.compare(other_field):
+                return False
+        return True
 
 class CaseV(BaseV):
     def __init__(self, mixop, values, vid=-1, typ=None):
@@ -323,4 +334,3 @@ def compares(values_l, values_r):
     #   | value_l :: values_l, value_r :: values_r ->
     #       let cmp = compare value_l value_r in
     #       if cmp <> 0 then cmp else compares values_l values_r
-
