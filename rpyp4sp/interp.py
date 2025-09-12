@@ -1102,6 +1102,11 @@ class __extend__(p4specast.MatchE):
                 assert 0, "should be unreachable"
         #   | OptP `Some, OptV (Some _) -> true
         #   | OptP `None, OptV None -> true
+        elif (isinstance(pattern, p4specast.OptP) and
+              pattern.kind == 'None' and
+              isinstance(value, objects.OptV) and
+              value.value is None):
+            matches = True
         #   | _ -> false
         else:
             import pdb;pdb.set_trace()

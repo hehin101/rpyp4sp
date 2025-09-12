@@ -181,6 +181,12 @@ def test_eval_num_expr():
     _, value = interp.eval_exp(None, exp)
     assert value.eq(objects.NumV.fromstr('0', 'Nat'))
 
+def test_rel_paramtypes_wf():
+    input_values = [objects.CaseV(p4specast.MixOp([[p4specast.AtomT('{', p4specast.Region(p4specast.Position('', 0, 0), p4specast.Position('', 0, 0)))], [p4specast.AtomT('}', p4specast.Region(p4specast.Position('', 0, 0), p4specast.Position('', 0, 0)))]]), [objects.ListV([], 34302, p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region(p4specast.Position('spec/4a1-typing-context.watsup', 139, 39), p4specast.Position('spec/4a1-typing-context.watsup', 139, 42))), []), p4specast.List()))], 34303, p4specast.VarT(p4specast.Id('set', p4specast.Region(p4specast.Position('', 0, 0), p4specast.Position('', 0, 0))), [p4specast.VarT(p4specast.Id('tid', p4specast.Region(p4specast.Position('spec/4a1-typing-context.watsup', 139, 39), p4specast.Position('spec/4a1-typing-context.watsup', 139, 42))), [])])), objects.CaseV(p4specast.MixOp([[], [], [], [], []]), [objects.TextV('rej', 338, p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('', 0, 0), p4specast.Position('', 0, 0))), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT('NO', p4specast.Region(p4specast.Position('', 0, 0), p4specast.Position('', 0, 0)))]]), [], 339, p4specast.VarT(p4specast.Id('dir', p4specast.Region(p4specast.Position('', 0, 0), p4specast.Position('', 0, 0))), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT('BoolT', p4specast.Region(p4specast.Position('spec/2c1-runtime-type.watsup', 33, 4), p4specast.Position('spec/2c1-runtime-type.watsup', 33, 9)))]]), [], 33247, p4specast.VarT(p4specast.Id('primtyp', p4specast.Region(p4specast.Position('spec/2c1-runtime-type.watsup', 28, 7), p4specast.Position('spec/2c1-runtime-type.watsup', 28, 14))), [])), objects.OptV(None, 33267, p4specast.IterT(p4specast.VarT(p4specast.Id('exprIL', p4specast.Region(p4specast.Position('spec/3-syntax-il.watsup', 81, 35), p4specast.Position('spec/3-syntax-il.watsup', 81, 41))), []), p4specast.Opt()))], 33268, p4specast.VarT(p4specast.Id('paramIL', p4specast.Region(p4specast.Position('spec/3-syntax-il.watsup', 81, 7), p4specast.Position('spec/3-syntax-il.watsup', 81, 14))), []))]
+    name = 'ParamType_wf'
+    ctx = make_context()
+    _, values = interp.invoke_rel(ctx, p4specast.AtomT(name, None), input_values)
+    assert values == []
 
 def iter_all(fn):
     with open(fn, 'r') as f:
