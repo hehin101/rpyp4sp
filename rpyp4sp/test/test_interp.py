@@ -154,19 +154,15 @@ def test_concat_text():
     ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
     assert value.eq(expected)
 
-def test_all():
-    # load test cases from line-based json file
-    func_cases = []
-    relation_cases = []
-    # check if file exists
-    if not os.path.exists(os.path.join(os.path.dirname(__file__), 'interp_tests_bak.json')):
-        assert False
-    with open(os.path.join(os.path.dirname(__file__), 'interp_tests_bak.json'), 'r') as f:
 def test_eval_num_expr():
     exp = p4specast.NumE.fromstr('0', 'Nat')
     exp.typ = p4specast.NumT(p4specast.NatT())
     _, value = interp.eval_exp(None, exp)
     assert value.eq(objects.NumV.fromstr('0', 'Nat'))
+
+
+def iter_all(fn):
+    with open(fn, 'r') as f:
         for line in f:
             if not line.startswith('{'):
                 continue
@@ -176,37 +172,48 @@ def test_eval_num_expr():
             input_values = [objects.BaseV.fromjson(arg) for arg in args]
             if what == 'function':
                 res_value = objects.BaseV.fromjson(callspec['result'])
-                func_cases.append((callspec['name'].value_string(), input_values, res_value))
+                yield "function", callspec['name'].value_string(), input_values, res_value
             elif what == 'relation':
                 res_values = [objects.BaseV.fromjson(rv) for rv in callspec['results']]
-                relation_cases.append((callspec['name'].value_string(), input_values, res_values))
+                yield "relation", callspec['name'].value_string(), input_values, res_values
             else:
                 assert 0
+
+def test_all():
+    # load test cases from line-based json file
+    # check if file exists
+    if not os.path.exists(os.path.join(os.path.dirname(__file__), 'interp_tests.json')):
+        assert False
     spec = load()
     ctx = Context('dummy')
     ctx.load_spec(spec)
-    for name, input_values, res_value in func_cases:
-        if name not in ctx.glbl.fenv:
-            continue
-        func = ctx.glbl.fenv[name]
-        try:
-            ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
-            if not value.eq(res_value):
-                print("Function test failed:", name, value, res_value)
-            else:
-                print("Function test passed:", name)
-        except Exception as e:
-            #import pdb; pdb.xpm()
-            print("Function test exception:", name, e)
-            continue
-    for name, input_values, res_values in relation_cases:
-        try:
-            ctx, values = interp.invoke_rel(ctx, p4specast.AtomT(name, None), input_values)
-            #if not value.eq(res_value):
-            #    print("Function test failed:", name, value, res_value)
-            #else:
-            #    print("Function test passed:", name)
-        except Exception as e:
-            #import pdb; pdb.xpm()
-            print("Function test exception:", name, e)
-            continue
+    for calltype, name, input_values, res in iter_all(os.path.join(os.path.dirname(__file__), 'interp_tests.json')):
+        if calltype == "function":
+            if name not in ctx.glbl.fenv:
+                continue
+            func = ctx.glbl.fenv[name]
+            try:
+                ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+                if not value.eq(res):
+                    print("Function test failed:", name, value, res)
+                else:
+                    print("Function test passed:", name)
+            except Exception as e:
+                #import pdb; pdb.xpm()
+                print("Function test exception:", name, e)
+                continue
+        if calltype == "relation":
+            try:
+                ctx, values = interp.invoke_rel(ctx, p4specast.AtomT(name, None), input_values)
+                if len(values) != len(res):
+                    print("Relation test wrong number of results", name, len(values), len(res))
+                else:
+                    for resval, resval_exp in zip(values, res):
+                        if not resval.eq(resval_exp):
+                            print("Relation test failed:", name, resval, resval_exp)
+                        else:
+                            print("Relation test passed:", name)
+            except Exception as e:
+                #import pdb; pdb.xpm()
+                print("Relation test exception:", name, e)
+                continue
