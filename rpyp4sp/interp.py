@@ -539,6 +539,10 @@ def assign_exp(ctx, exp, value):
     #     ctx
         return ctx
     # | IterE (_, (Opt, vars)), OptV None ->
+    elif (isinstance(exp, p4specast.IterE) and 
+          isinstance(exp.iter, p4specast.Opt) and
+          isinstance(value, objects.OptV)):
+        if value.value is None:
     #     (* Per iterated variable, make an option out of the value *)
     #     List.fold_left
     #       (fun ctx (id, typ, iters) ->
@@ -551,6 +555,10 @@ def assign_exp(ctx, exp, value):
     #         Ctx.add_edge ctx value_sub value Dep.Edges.Assign;
     #         Ctx.add_value Local ctx (id, iters @ [ Il.Ast.Opt ]) value_sub)
     #       ctx vars
+            for var in exp.varlist:
+                value_sub = objects.OptV(None, typ=var.typ)
+                ctx = ctx.add_value_local(var.id, var.iter + [p4specast.Opt()], value_sub)
+            return ctx
     # | IterE (exp, (Opt, vars)), OptV (Some value) ->
     #     (* Assign the value to the iterated expression *)
     #     let ctx = assign_exp ctx exp value in
@@ -568,8 +576,9 @@ def assign_exp(ctx, exp, value):
     #         Ctx.add_value Local ctx (id, iters @ [ Il.Ast.Opt ]) value_sub)
     #       ctx vars
     # | IterE (exp, (List, vars)), ListV values ->
-    elif isinstance(exp, p4specast.IterE) and \
-        isinstance(value, objects.ListV):
+    elif (isinstance(exp, p4specast.IterE) and 
+          isinstance(exp.iter, p4specast.List) and
+          isinstance(value, objects.ListV)):
     #     (* Map over the value list elements,
     #        and assign each value to the iterated expression *)
     #     let ctxs =
@@ -1256,8 +1265,45 @@ class __extend__(p4specast.LenE):
 
 
 def eval_iter_exp_opt(note, ctx, exp, vars):
-    import pdb;pdb.set_trace()
-    assert 0, "TODO eval_iter_exp_opt"
+    #   let ctx_sub_opt = Ctx.sub_opt ctx vars in
+    ctx_sub_opt = ctx.sub_opt(vars)
+    #   let ctx, value_res =
+    #     match ctx_sub_opt with
+    #     | Some ctx_sub ->
+    if ctx_sub_opt is not None:
+        import pdb;pdb.set_trace()
+        ctx_sub = ctx_sub_opt
+    #         let ctx_sub, value = eval_exp ctx_sub exp in
+        ctx_sub, value = eval_exp(ctx_sub, exp)
+    #         let ctx = Ctx.commit ctx ctx_sub in
+        ctx = ctx.commit(ctx_sub)
+    #         let value_res =
+    #           let vid = Value.fresh () in
+    #           let typ = note in
+    #           Il.Ast.(OptV (Some value) $$$ { vid; typ })
+    #         in
+    #         (ctx, value_res)
+        value_res = objects.OptV(value, typ=note)
+        return ctx, value_res
+    #     | None ->
+    else:
+    #         let value_res =
+    #           let vid = Value.fresh () in
+    #           let typ = note in
+    #           Il.Ast.(OptV None $$$ { vid; typ })
+        value_res = objects.OptV(None, typ=note)
+    #         in
+    #         (ctx, value_res)
+        return ctx, value_res
+    #   in
+    #   Ctx.add_node ctx value_res;
+    #   List.iter
+    #     (fun (id, _typ, iters) ->
+    #       let value_sub = Ctx.find_value Local ctx (id, iters @ [ Il.Ast.Opt ]) in
+    #       Ctx.add_edge ctx value_res value_sub Dep.Edges.Iter)
+    #     vars;
+    #   (ctx, value_res)
+
 
 def eval_iter_exp_list(note, ctx, exp, vars):
     # let ctxs_sub = Ctx.sub_list ctx vars in

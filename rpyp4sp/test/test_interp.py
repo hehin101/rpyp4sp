@@ -177,13 +177,18 @@ def test_check_arity():
     ctx = Context('dummy')
     ctx.load_spec(spec)
     func = ctx.glbl.fenv[name]
-    ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+    _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
     assert value.eq(res)
+
+    input_values = [objects.ListV([objects.OptV(None, 3943, p4specast.IterT(p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 21, 7), p4specast.Position('spec/1a-syntax-el.watsup', 21, 9))), []), p4specast.Opt()))], 3944, p4specast.IterT(p4specast.IterT(p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 21, 7), p4specast.Position('spec/1a-syntax-el.watsup', 21, 9))), []), p4specast.Opt()), p4specast.List())), objects.ListV([objects.TextV('p', 92, p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('', 0, 0), p4specast.Position('', 0, 0))), []))], 3945, p4specast.IterT(p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 21, 7), p4specast.Position('spec/1a-syntax-el.watsup', 21, 9))), []), p4specast.List()))]
+    _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+    assert value.eq(res)
+
 
     res = objects.BoolV(False, 4803, p4specast.BoolT())
     name = 'check_arity_more'
     func = ctx.glbl.fenv[name]
-    ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+    _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
     assert value.eq(res)
 
 def test_eval_num_expr():

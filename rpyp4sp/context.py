@@ -1,4 +1,4 @@
-from rpyp4sp import p4specast
+from rpyp4sp import p4specast, objects
 
 class GlobalContext(object):
     def __init__(self):
@@ -105,6 +105,47 @@ class Context(object):
     def commit(self, sub_ctx):
         # TODO: later add cover
         return self
+
+    def sub_opt(self, vars):
+        #   (* First collect the values that are to be iterated over *)
+        #   let values =
+        #     List.map
+        #       (fun (id, _typ, iters) ->
+        #         find_value Local ctx (id, iters @ [ Il.Ast.Opt ]) |> Value.get_opt)
+        #       vars
+        values = []
+        for var in vars:
+            value = self.find_value_local(var.id, var.iter + [p4specast.Opt()])
+            assert isinstance(value, objects.OptV)
+            values.append(value.value)
+        # check whether they are all None, all Some, or mixed
+        noneness = values[0] is None
+        for value in values:
+            if (value is None) != noneness:
+                raise ValueError("mismatch in optionality of iterated variables")
+        #   in
+        #   (* Iteration is valid when all variables agree on their optionality *)
+        #   if List.for_all Option.is_some values then
+        #     let values = List.map Option.get values in
+        #     let ctx_sub =
+        #       List.fold_left2
+        #         (fun ctx_sub (id, _typ, iters) value ->
+        #           add_value Local ctx_sub (id, iters) value)
+        #         ctx vars values
+        #     in
+        #     Some ctx_sub
+        #   else if List.for_all Option.is_none values then None
+        #   else error no_region "mismatch in optionality of iterated variables"
+        if noneness:
+            return None
+        else:
+            ctx_sub = self
+            for var, value in zip(vars, values):
+                assert value is not None
+                value_sub = objects.OptV(value, typ=var.typ)
+                ctx_sub = ctx_sub.add_value_local(var.id, var.iter + [p4specast.Opt()], value_sub)
+            return ctx_sub
+
 
     def sub_list(self, vars):
         # First break the values that are to be iterated over,
