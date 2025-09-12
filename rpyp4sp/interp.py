@@ -64,7 +64,7 @@ def invoke_func_def(ctx, calle):
                 theta[tid] = deftyp.typ
         #   in
         #   List.map (Typ.subst_typ theta) targs
-        targs = [subst_typ(theta, targ.typ) for targ in calle.targs]
+        targs = [subst_typ(theta, targ) for targ in calle.targs]
     # in
     # let ctx_local =
     #   List.fold_left2

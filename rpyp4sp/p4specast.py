@@ -195,23 +195,9 @@ class TParam(AstBase):
     def __repr__(self):
         return "p4specast.TParam(value=%s, region=%s)" % (self.value, self.region)
 
+# a targ is the same as a typ!
 # and targ = targ' phrase [@@deriving yojson]
 # and targ' = typ' [@@deriving yojson]
-
-class TArg(AstBase):
-    def __init__(self, typ, region):
-        self.typ = typ # type: Type
-        self.region = region # type: Region
-
-    @staticmethod
-    def fromjson(value):
-        return TArg(
-            Type.fromjson(value['it']),
-            Region.fromjson(value['at'])
-        )
-
-    def __repr__(self):
-        return "p4specast.TArg(typ=%s, region=%s)" % (self.typ, self.region)
 
 
 # type iter =
@@ -881,7 +867,7 @@ class CallE(Exp):
     def fromjson(content):
         return CallE(
             func=Id.fromjson(content[1]),
-            targs=[TArg.fromjson(targ) for targ in content[2].value_array()],
+            targs=[Type.fromjson(targ) for targ in content[2].value_array()],
             args=[Arg.fromjson(arg) for arg in content[3].value_array()]
         )
 
