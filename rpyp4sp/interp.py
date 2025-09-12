@@ -1672,8 +1672,7 @@ class __extend__(p4specast.CatE):
         elif isinstance(value_l, objects.ListV) and isinstance(value_r, objects.ListV):
             value_res = objects.ListV(value_l.elements + value_r.elements, typ=self.typ)
         else:
-            import pdb;pdb.set_trace()
-            assert 0, "TODO CatE"
+            assert 0, "concatenation expects either two texts or two lists"
         #     | _ -> error at "concatenation expects either two texts or two lists"
         #   in
         #   let value_res =
