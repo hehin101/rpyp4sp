@@ -1858,7 +1858,7 @@ def downcast(ctx, typ, value):
             return ctx, value
         elif value.what == "Int":
             assert value.value.ge(integers.Integer.fromint(0))
-            return objects.NumV(value.value, 'Nat', typ=typ)
+            return ctx, objects.NumV(value.value, 'Nat', typ=typ)
         else:
             assert 0
     # | VarT (tid, targs) -> (

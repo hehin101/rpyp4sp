@@ -43,7 +43,8 @@ def test_subtyp_nat():
 def test_downcast_nat():
     typ = p4specast.NumT(p4specast.NatT())
     value = objects.NumV.fromstr('32', 'Int', 3, p4specast.NumT(p4specast.IntT()))
-    res = interp.downcast(None, typ, value)
+    _, res = interp.downcast(None, typ, value)
+    assert value.what == 'Nat'
 
 def test_upcast_list():
     typ = p4specast.IterT(p4specast.VarT(p4specast.Id('paramIL', p4specast.Region.line_span('spec/4g-typing-decl.watsup', 787, 32, 39)), []), p4specast.List())
