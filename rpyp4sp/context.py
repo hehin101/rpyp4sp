@@ -70,6 +70,9 @@ class Context(object):
     def find_value_local(self, id, iterlist):
         return self.local.venv[id.value, iterlist_to_key(iterlist)]
 
+    def bound_value_local(self, id, iterlist):
+        return (id.value, iterlist_to_key(iterlist)) in self.local.venv
+
     def find_typdef_local(self, id):
         # TODO: actually use the local tdenv
         decl = self.glbl.tdenv[id.value]

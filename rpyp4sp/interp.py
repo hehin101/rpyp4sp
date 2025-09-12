@@ -374,6 +374,88 @@ def eval_let_instr(ctx, let_instr):
     ctx = eval_let_iter(ctx, let_instr)
     return ctx, Cont()
 
+def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
+    # (* Discriminate between bound and binding variables *)
+    # let vars_bound, vars_binding =
+    #   List.partition
+    #     (fun (id, _typ, iters) ->
+    #       Ctx.bound_value Local ctx (id, iters @ [ Il.Ast.List ]))
+    #     vars
+    # in
+    vars_bound = []
+    vars_binding = []
+    for var in vars_h:
+        if ctx.bound_value_local(var.id, var.iter + [p4specast.List()]):
+            vars_bound.append(var)
+        else:
+            vars_binding.append(var)
+    # (* Create a subcontext for each batch of bound values *)
+    # let ctxs_sub = Ctx.sub_list ctx vars_bound in
+    ctxs_sub = ctx.sub_list(vars_bound)
+    # let ctx, values_binding =
+    #   match ctxs_sub with
+    #   (* If the bound variable supposed to guide the iteration is already empty,
+    #      then the binding variables are also empty *)
+    #   | [] ->
+    if ctxs_sub == []:
+    #       let values_binding =
+    #         List.init (List.length vars_binding) (fun _ -> [])
+    #       in
+    #       (ctx, values_binding)
+        values_binding = [[] for _ in vars_binding]
+    #   (* Otherwise, evaluate the premise for each batch of bound values,
+    #      and collect the resulting binding batches *)
+    #   | _ ->
+    else:
+        import pdb;pdb.set_trace()
+    #       let ctx, values_binding_batch =
+    #         List.fold_left
+    #           (fun (ctx, values_binding_batch) ctx_sub ->
+    #             let ctx_sub = eval_let_iter' ctx_sub exp_l exp_r iterexps in
+    #             let ctx = Ctx.commit ctx ctx_sub in
+    #             let value_binding_batch =
+    #               List.map
+    #                 (fun (id_binding, _typ_binding, iters_binding) ->
+    #                   Ctx.find_value Local ctx_sub (id_binding, iters_binding))
+    #                 vars_binding
+    #             in
+    #             let values_binding_batch =
+    #               values_binding_batch @ [ value_binding_batch ]
+    #             in
+    #             (ctx, values_binding_batch))
+    #           (ctx, []) ctxs_sub
+    #       in
+    #       let values_binding = values_binding_batch |> Ctx.transpose in
+    #       (ctx, values_binding)
+    # in
+    # (* Finally, bind the resulting binding batches *)
+    # List.fold_left2
+    #   (fun ctx (id_binding, typ_binding, iters_binding) values_binding ->
+    #     let value_binding =
+    #       let vid = Value.fresh () in
+    #       let typ = Typ.iterate typ_binding (iters_binding @ [ Il.Ast.List ]) in
+    #       Il.Ast.(ListV values_binding $$$ { vid; typ = typ.it })
+    #     in
+    #     Ctx.add_node ctx value_binding;
+    #     List.iter
+    #       (fun (id, _typ, iters) ->
+    #         let value_sub =
+    #           Ctx.find_value Local ctx (id, iters @ [ Il.Ast.List ])
+    #         in
+    #         Ctx.add_edge ctx value_binding value_sub Dep.Edges.Iter)
+    #       vars_bound;
+    #     Ctx.add_value Local ctx
+    #       (id_binding, iters_binding @ [ Il.Ast.List ])
+    #       value_binding)
+    for (var_binding, values_binding) in zip(vars_binding, values_binding):
+        id_binding = var_binding.id
+        typ_binding = var_binding.typ
+        iters_binding = var_binding.iter
+        value_binding = objects.ListV(values_binding, typ=typ_binding)
+        ctx = ctx.add_value_local(id_binding, iters_binding + [p4specast.List()], value_binding)
+    return ctx
+
+
 def eval_let_iter_tick(ctx, exp_l, exp_r, iterexps):
     # INCOMPLETE
     # match iterexps with
@@ -381,10 +463,21 @@ def eval_let_iter_tick(ctx, exp_l, exp_r, iterexps):
     if iterexps == []:
         return eval_let(ctx, exp_l, exp_r)
     # | iterexp_h :: iterexps_t -> (
+    else:
+        iterexp = iterexps[0]
+        iterexps_t = iterexps[1:]
+        iter_h = iterexp.iter
+        vars_h = iterexp.vars
     #     let iter_h, vars_h = iterexp_h in
     #     match iter_h with
     #     | Opt -> eval_let_opt ctx exp_l exp_r vars_h iterexps_t
+        if isinstance(iter_h, p4specast.Opt):
+            return eval_let_opt(ctx, exp_l, exp_r, vars_h, iterexps_t)
     #     | List -> eval_let_list ctx exp_l exp_r vars_h iterexps_t)
+        elif isinstance(iter_h, p4specast.List):
+            return eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t)
+        else:
+            assert 0, 'should be unreachable'
     import pdb;pdb.set_trace()
     assert 0, "todo eval_let_iter_tick"
 
