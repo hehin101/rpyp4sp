@@ -56,7 +56,14 @@ def lists_rev_(ctx, name, targs, values_input):
 
 @register_builtin("concat_")
 def lists_concat_(ctx, name, targs, values_input):
-    raise NotImplementedError("lists_concat_ is not implemented yet")
+    value, = values_input
+    lists = value.get_list()
+    res = []
+    for list_value in lists:
+        res.extend(list_value.get_list())
+    typ = value.typ
+    assert isinstance(typ, p4specast.IterT)
+    return objects.ListV(res, typ=typ.typ)
 
 @register_builtin("distinct_")
 def lists_distinct_(ctx, name, targs, values_input):
@@ -79,21 +86,74 @@ def lists_partition_(ctx, name, targs, values_input):
 def lists_assoc_(ctx, name, targs, values_input):
     raise NotImplementedError("lists_assoc_ is not implemented yet")
 
+# ________________________________________________________________
+# sets
+
+def _extract_set_elems(set_value):
+    assert isinstance(set_value, objects.CaseV)
+    assert set_value.mixop.eq(map_mixop)
+    assert len(set_value.values) == 1
+    lst_value, = set_value.values
+    assert isinstance(lst_value, objects.ListV)
+    return lst_value.get_list()
+
+def _wrap_set_elems(elems, set_value_for_types):
+    lst_value = objects.ListV(elems, typ=set_value_for_types.values[0].typ)
+    return objects.CaseV(set_value_for_types.mixop, [lst_value], typ=set_value_for_types.typ)
+
 @register_builtin("intersect_set")
 def sets_intersect_set(ctx, name, targs, values_input):
     raise NotImplementedError("sets_intersect_set is not implemented yet")
 
+def _set_union_elems(elems_l, elems_r):
+    res = []
+    for el in elems_l + elems_r:
+        for el2 in res:
+            if el.eq(el2):
+                break
+        else:
+            res.append(el)
+    return res
+
 @register_builtin("union_set")
 def sets_union_set(ctx, name, targs, values_input):
-    raise NotImplementedError("sets_union_set is not implemented yet")
+    set_l, set_r = values_input
+    elems_l = _extract_set_elems(set_l)
+    elems_r = _extract_set_elems(set_r)
+    res = _set_union_elems(elems_l, elems_r)
+    # TODO: I am not sure the order of elements in the result is exactly like in P4-spectec
+    return _wrap_set_elems(res, set_l)
 
 @register_builtin("unions_set")
 def sets_unions_set(ctx, name, targs, values_input):
-    raise NotImplementedError("sets_unions_set is not implemented yet")
+    value_list, = values_input
+    sets_l = value_list.get_list()
+    if not sets_l:
+        assert 0, "TODO sets_unions_set empty case, needs complicated targs"
+    first = sets_l[0]
+    curr = _extract_set_elems(first)
+    for i in range(1, len(sets_l)):
+        curr = _set_union_elems(curr, _extract_set_elems(sets_l[i]))
+    return _wrap_set_elems(curr, first)
+
+def _set_diff_elemens(elems_l, elems_r):
+    res = []
+    for el in elems_l:
+        for el2 in elems_r:
+            if el.eq(el2):
+                break
+        else:
+            res.append(el)
+    return res
+
 
 @register_builtin("diff_set")
 def sets_diff_set(ctx, name, targs, values_input):
-    raise NotImplementedError("sets_diff_set is not implemented yet")
+    set_l, set_r = values_input
+    elems_l = _extract_set_elems(set_l)
+    elems_r = _extract_set_elems(set_r)
+    res = _set_diff_elemens(elems_l, elems_r)
+    return _wrap_set_elems(res, set_l)
 
 @register_builtin("sub_set")
 def sets_sub_set(ctx, name, targs, values_input):
@@ -139,6 +199,7 @@ def maps_find_maps(ctx, name, targs, values_input):
 
 @register_builtin("add_map")
 def maps_add_map(ctx, name, targs, values_input):
+    import pdb;pdb.set_trace()
     raise NotImplementedError("maps_add_map is not implemented yet")
 
 @register_builtin("adds_map")
