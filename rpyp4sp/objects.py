@@ -65,7 +65,9 @@ class BaseV(object):
         raise TypeError("not a struct")
 
     def eq(self, other):
-        return self.compare(other) == 0
+        res = self.compare(other)
+        assert res in (-1, 0, 1)
+        return res == 0
 
     def compare(self, other):
         import pdb;pdb.set_trace()
@@ -187,15 +189,18 @@ class StructV(BaseV):
         return StructV(fields)
 
     def compare(self, other):
-        if not isinstance(other, StructV):
-            return self._base_compare(other)
-        other_fields = other.fields
-        if len(self.fields) != len(other.fields):
-            return False
-        for this_field, other_field in zip(self.fields, other_fields):
-            if not this_field.compare(other_field):
-                return False
-        return True
+        def split_fields(fields):
+            atoms, values = [], []
+            for atom, value in fields:
+                atoms.append(atom)
+                values.append(value)
+            return atoms, values
+        atoms_l, values_l = split_fields(self.fields)
+        atoms_r, values_r = split_fields(other.fields)
+        res = atom_compares(atoms_l, atoms_r)
+        if res:
+            return res
+        return compares(values_l, values_r)
 
 class CaseV(BaseV):
     def __init__(self, mixop, values, vid=-1, typ=None):
@@ -310,6 +315,21 @@ class FuncV(BaseV):
     def fromjson(content):
         id = p4specast.Id.fromjson(content[1])
         return FuncV(id)
+
+def atom_compares(atoms_l, atoms_r):
+    len_l = len(atoms_l)
+    len_r = len(atoms_r)
+    min_len = min(len_l, len_r)
+    for i in range(min_len):
+        cmp = atoms_l[i].compare(atoms_r[i])
+        if cmp != 0:
+            return cmp
+    if len_l == len_r:
+        return 0
+    elif len_l < len_r:
+        return -1
+    else:
+        return 1
 
 def compares(values_l, values_r):
     # type: (list[BaseV], list[BaseV]) -> int
