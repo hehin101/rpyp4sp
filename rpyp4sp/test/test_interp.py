@@ -1,4 +1,8 @@
+from __future__ import print_function
+import pytest
+
 import os
+
 from rpyp4sp.rpyjson import loads
 from rpyp4sp.context import Context
 from rpyp4sp import p4specast, objects, interp, rpyjson
@@ -72,8 +76,7 @@ def test_reduce_senums_binary():
 
     assert value.eq(expected)
 
-
-
+@pytest.mark.xfail(msg="missing support for tparams")
 def test_empty_context():
     spec = load()
     ctx = Context('dummy')
@@ -153,6 +156,29 @@ def test_concat_text():
     func = ctx.glbl.fenv[name]
     ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
     assert value.eq(expected)
+
+@pytest.mark.xfail(msg='missing builtin fresh_tid')
+def test_conse_fresh_tids():
+    name = 'fresh_tids'
+    input_values = [objects.NumV.fromstr('1', 'Nat', 8286, p4specast.NumT(p4specast.NatT()))]
+    res = objects.ListV([objects.TextV('FRESH__0', 8289, p4specast.VarT(p4specast.Id('tid', p4specast.Region(p4specast.Position('', 0, 0), p4specast.Position('', 0, 0))), []))], 8295, p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region(p4specast.Position('spec/2a-runtime-domain.watsup', 13, 19), p4specast.Position('spec/2a-runtime-domain.watsup', 13, 22))), []), p4specast.List()))
+    spec = load()
+    ctx = Context('dummy')
+    ctx.load_spec(spec)
+    func = ctx.glbl.fenv[name]
+    ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+    assert value.eq(res)
+
+def test_check_arity():
+    name = 'check_arity'
+    input_values = [objects.ListV([], 4811, p4specast.IterT(p4specast.IterT(p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 21, 7), p4specast.Position('spec/1a-syntax-el.watsup', 21, 9))), []), p4specast.Opt()), p4specast.List())), objects.ListV([], 4812, p4specast.IterT(p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 21, 7), p4specast.Position('spec/1a-syntax-el.watsup', 21, 9))), []), p4specast.List()))]
+    res = objects.BoolV(True, 4819, p4specast.BoolT())
+    spec = load()
+    ctx = Context('dummy')
+    ctx.load_spec(spec)
+    func = ctx.glbl.fenv[name]
+    ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+    assert value.eq(res)
 
 def test_eval_num_expr():
     exp = p4specast.NumE.fromstr('0', 'Nat')

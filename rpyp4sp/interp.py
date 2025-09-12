@@ -1,5 +1,5 @@
 import pdb
-from rpyp4sp import p4specast, objects, builtin, context
+from rpyp4sp import p4specast, objects, builtin, context, integers
 
 class Sign(object):
     # abstract base
@@ -1205,6 +1205,41 @@ class __extend__(p4specast.CatE):
         #   Ctx.add_edge ctx value_res value_l (Dep.Edges.Op CatOp);
         #   Ctx.add_edge ctx value_res value_r (Dep.Edges.Op CatOp);
         #   (ctx, value_res)
+        return ctx, value_res
+
+class __extend__(p4specast.ConsE):
+    def eval_exp(self, ctx):
+        # let ctx, value_h = eval_exp ctx exp_h in
+        ctx, value_h = eval_exp(ctx, self.head)
+        # let ctx, value_t = eval_exp ctx exp_t in
+        ctx, value_t = eval_exp(ctx, self.tail)
+        # let values_t = Value.get_list value_t in
+        values_t = value_t.get_list()
+        # let value_res =
+        #   let vid = Value.fresh () in
+        #   let typ = note in
+        #   Il.Ast.(ListV (value_h :: values_t) $$$ { vid; typ })
+        value_res = objects.ListV([value_h] + values_t, typ=self.typ)
+        return ctx, value_res
+        # in
+        # Ctx.add_node ctx value_res;
+        # (ctx, value_res)
+
+class __extend__(p4specast.LenE):
+    def eval_exp(self, ctx):
+        # let ctx, value = eval_exp ctx exp in
+        ctx, value = eval_exp(ctx, self.lst)
+        # let len = value |> Value.get_list |> List.length |> Bigint.of_int in
+        value = integers.Integer.fromint(len(value.get_list()))
+        # let value_res =
+        #   let vid = Value.fresh () in
+        #   let typ = note in
+        #   Il.Ast.(NumV (`Nat len) $$$ { vid; typ })
+        value_res = objects.NumV(value, 'Nat', typ=self.typ)
+        # in
+        # Ctx.add_node ctx value_res;
+        # Ctx.add_edge ctx value_res value (Dep.Edges.Op LenOp);
+        # (ctx, value_res)
         return ctx, value_res
 
 
