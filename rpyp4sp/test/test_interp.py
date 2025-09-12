@@ -286,14 +286,13 @@ def test_targs_type_wf2():
     _, values = interp.invoke_rel(ctx, p4specast.AtomT(name, None), input_values)
     assert values == []
 
-@pytest.mark.skip(msg="Need to find input values for is_deft")
 def test_is_deft():
-    input_values = [None]
+    input_values = [objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('VarT', 'spec/2c1-runtime-type.watsup', 49, 4, 8)], []]), [objects.TextV('T', 13, p4specast.VarT(p4specast.Id('tparam', p4specast.NO_REGION), []))], 3024, p4specast.VarT(p4specast.Id('abstyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 48, 7, 13)), []))]
     name = 'is_deft'
     ctx = make_context()
     func = ctx.glbl.fenv[name]
     _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
-    assert False
+    assert value.value == False
 
 def iter_all(fn):
     with open(fn, 'r') as f:
