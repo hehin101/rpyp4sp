@@ -963,7 +963,7 @@ class __extend__(p4specast.UnE):
     def eval_exp(self, ctx):
         # let ctx, value = eval_exp ctx exp in
         ctx, value = eval_exp(ctx, self.exp)
-        unop = self.unop
+        unop = self.op
         if unop in ('NotOp',):
             value_res = eval_unop_bool(unop, value, self.typ)
         elif unop in ('PlusOp', 'MinusOp'):
