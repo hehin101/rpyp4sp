@@ -103,6 +103,9 @@ class Position(AstBase):
     def fromjson(value):
         return Position(value['file'].value_string(), value['line'].value_int(), value['column'].value_int())
 
+    def has_information(self):
+        return self.file != '' or self.line != 0 or self.column != 0
+
     def __repr__(self):
         return "p4specast.Position(%r, %d, %d)" % (self.file, self.line, self.column)
 
@@ -122,7 +125,10 @@ class Region(AstBase):
         return Region(Position.fromjson(value['left']), Position.fromjson(value['right']))
 
     def __repr__(self):
-        return "p4specast.Region(%s, %s)" % (self.left, self.right)
+        if self.left.has_information() or self.right.has_information():
+            return "p4specast.Region(%s, %s)" % (self.left, self.right)
+        else:
+            return "p4specast.NO_REGION"
 
 NO_REGION = Region(Position('', 0, 0), Position('', 0, 0))
 
