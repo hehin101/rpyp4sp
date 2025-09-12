@@ -1,3 +1,4 @@
+import pytest
 from rpyp4sp import p4specast, objects, interp, rpyjson
 
 
@@ -41,3 +42,10 @@ def test_mixop_compare_complex():
     b = p4specast.MixOp([[make_atom('A'), make_atom('B')], [make_atom('D')]])
     assert a.compare(b) == -1
     assert b.compare(a) == 1
+
+@pytest.mark.xfail(msg='compare of StructV')
+def test_compare_structv():
+    a = objects.StructV([(p4specast.AtomT('SIZE', p4specast.Region(p4specast.Position('spec/4a2-typing-tblctx.watsup', 18, 4), p4specast.Position('spec/4a2-typing-tblctx.watsup', 18, 8))), objects.NumV.fromstr('0', 'Int', -1, p4specast.NumT(p4specast.IntT()))), (p4specast.AtomT('CONST', p4specast.Region(p4specast.Position('spec/4a2-typing-tblctx.watsup', 19, 4), p4specast.Position('spec/4a2-typing-tblctx.watsup', 19, 9))), objects.BoolV(True, -1, p4specast.BoolT()))], -1, p4specast.VarT(p4specast.Id('entry', p4specast.Region(p4specast.Position('spec/4a2-typing-tblctx.watsup', 53, 17), p4specast.Position('spec/4a2-typing-tblctx.watsup', 53, 22))), []))
+    b = objects.StructV([(p4specast.AtomT('SIZE', p4specast.Region(p4specast.Position('spec/4a2-typing-tblctx.watsup', 18, 4), p4specast.Position('spec/4a2-typing-tblctx.watsup', 18, 8))), objects.NumV.fromstr('0', 'Int', 568, p4specast.NumT(p4specast.IntT()))), (p4specast.AtomT('CONST', p4specast.Region(p4specast.Position('spec/4a2-typing-tblctx.watsup', 19, 4), p4specast.Position('spec/4a2-typing-tblctx.watsup', 19, 9))), objects.BoolV(True, 569, p4specast.BoolT()))], 570, p4specast.VarT(p4specast.Id('entry', p4specast.Region(p4specast.Position('spec/4a2-typing-tblctx.watsup', 53, 17), p4specast.Position('spec/4a2-typing-tblctx.watsup', 53, 22))), []))
+    assert a.compare(b) == 0
+
