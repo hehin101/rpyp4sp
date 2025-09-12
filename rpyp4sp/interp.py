@@ -623,6 +623,84 @@ def eval_let(ctx, exp_l, exp_r):
     # assign_exp ctx exp_l value
     return assign_exp(ctx, exp_l, value)
 
+def eval_let_opt(ctx, exp_l, exp_r, vars, iterexps):
+    import pdb; pdb.set_trace()
+    assert 0, "TODO; implement eval_let_opt"
+    # and eval_let_opt (ctx : Ctx.t) (exp_l : exp) (exp_r : exp) (vars : var list)
+    #     (iterexps : iterexp list) : Ctx.t =
+    #   (* Discriminate between bound and binding variables *)
+    #   let vars_bound, vars_binding =
+    #     List.partition
+    #       (fun (id, _typ, iters) ->
+    #         Ctx.bound_value Local ctx (id, iters @ [ Il.Ast.Opt ]))
+    #       vars
+    #   in
+    #   let ctx_sub_opt = Ctx.sub_opt ctx vars_bound in
+    #   let ctx, values_binding =
+    #     match ctx_sub_opt with
+    #     (* If the bound variable supposed to guide the iteration is already empty,
+    #        then the binding variables are also empty *)
+    #     | None ->
+    #         let values_binding =
+    #           List.map
+    #             (fun (_id_binding, typ_binding, iters_binding) ->
+    #               let value_binding =
+    #                 let vid = Value.fresh () in
+    #                 let typ =
+    #                   Typ.iterate typ_binding (iters_binding @ [ Il.Ast.Opt ])
+    #                 in
+    #                 Il.Ast.(OptV None $$$ { vid; typ = typ.it })
+    #               in
+    #               Ctx.add_node ctx value_binding;
+    #               List.iter
+    #                 (fun (id, _typ, iters) ->
+    #                   let value_sub =
+    #                     Ctx.find_value Local ctx (id, iters @ [ Il.Ast.Opt ])
+    #                   in
+    #                   Ctx.add_edge ctx value_binding value_sub Dep.Edges.Iter)
+    #                 vars_bound;
+    #               value_binding)
+    #             vars_binding
+    #         in
+    #         (ctx, values_binding)
+    #     (* Otherwise, evaluate the premise for the subcontext *)
+    #     | Some ctx_sub ->
+    #         let ctx_sub = eval_let_iter' ctx_sub exp_l exp_r iterexps in
+    #         let ctx = Ctx.commit ctx ctx_sub in
+    #         let values_binding =
+    #           List.map
+    #             (fun (id_binding, typ_binding, iters_binding) ->
+    #               let value_binding =
+    #                 Ctx.find_value Local ctx_sub (id_binding, iters_binding)
+    #               in
+    #               let value_binding =
+    #                 let vid = Value.fresh () in
+    #                 let typ =
+    #                   Typ.iterate typ_binding (iters_binding @ [ Il.Ast.Opt ])
+    #                 in
+    #                 Il.Ast.(OptV (Some value_binding) $$$ { vid; typ = typ.it })
+    #               in
+    #               Ctx.add_node ctx value_binding;
+    #               List.iter
+    #                 (fun (id, _typ, iters) ->
+    #                   let value_sub =
+    #                     Ctx.find_value Local ctx (id, iters @ [ Il.Ast.Opt ])
+    #                   in
+    #                   Ctx.add_edge ctx value_binding value_sub Dep.Edges.Iter)
+    #                 vars_bound;
+    #               value_binding)
+    #             vars_binding
+    #         in
+    #         (ctx, values_binding)
+    #   in
+    #   (* Finally, bind the resulting values *)
+    #   List.fold_left2
+    #     (fun ctx (id_binding, _typ_binding, iters_binding) value_binding ->
+    #       Ctx.add_value Local ctx
+    #         (id_binding, iters_binding @ [ Il.Ast.Opt ])
+    #         value_binding)
+    #     ctx vars_binding values_binding
+
 def split_exps_without_idx(inputs, exps):
     assert sorted(inputs) == inputs # inputs is sorted
     exps_input = []
