@@ -285,6 +285,13 @@ def test_is_deft():
     _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
     assert value.value == False
 
+def test_ParamTypes_wf():
+    input_values = [objects.CaseV(p4specast.MixOp([[p4specast.AtomT('{')], [p4specast.AtomT('}')]]), [objects.ListV([objects.TextV('T', 13, p4specast.VarT(p4specast.Id('tparam', p4specast.NO_REGION), []))], 3254, p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c6-runtime-type-wellformed.watsup', 526, 29, 32)), []), p4specast.List()))], 3255, p4specast.VarT(p4specast.Id('set', p4specast.NO_REGION), [p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c6-runtime-type-wellformed.watsup', 526, 29, 32)), [])])), objects.ListV([objects.CaseV(p4specast.MixOp([[], [], [], [], []]), [objects.TextV('hdr', 15, p4specast.VarT(p4specast.Id('id', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT('OUT')]]), [], 16, p4specast.VarT(p4specast.Id('dir', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('VarT', 'spec/2c1-runtime-type.watsup', 49, 4, 8)], []]), [objects.TextV('T', 13, p4specast.VarT(p4specast.Id('tparam', p4specast.NO_REGION), []))], 3024, p4specast.VarT(p4specast.Id('abstyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 48, 7, 13)), [])), objects.OptV(None, 3151, p4specast.IterT(p4specast.VarT(p4specast.Id('exprIL', p4specast.Region.line_span('spec/3-syntax-il.watsup', 81, 35, 41)), []), p4specast.Opt()))], 3152, p4specast.VarT(p4specast.Id('paramIL', p4specast.Region.line_span('spec/3-syntax-il.watsup', 81, 7, 14)), []))], 3266, p4specast.IterT(p4specast.VarT(p4specast.Id('paramtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 18, 9, 17)), []), p4specast.List()))]
+    name = 'ParamTypes_wf'
+    ctx = make_context()
+    _, values = interp.invoke_rel(ctx, p4specast.AtomT(name, None), input_values)
+    assert values == []
+
 def iter_all(fn):
     with open(fn, 'r') as f:
         for line in f:
