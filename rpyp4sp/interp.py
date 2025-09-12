@@ -247,18 +247,48 @@ def eval_if_cond_iter(ctx, exp_cond, iterexps):
     return eval_if_cond_iter_tick(ctx, exp_cond, iterexps)
 
 
+
+def eval_if_cond_list(ctx, exp_cond, vars, iterexps):
+    #   let ctxs_sub = Ctx.sub_list ctx vars in
+    #   List.fold_left
+    #     (fun (ctx, cond, values_cond) ctx_sub ->
+    #       if not cond then (ctx, cond, values_cond)
+    #       else
+    #         let ctx_sub, cond, value_cond =
+    #           eval_if_cond_iter' ctx_sub exp_cond iterexps
+    #         in
+    #         let ctx = Ctx.commit ctx ctx_sub in
+    #         let values_cond = values_cond @ [ value_cond ] in
+    #         (ctx, cond, values_cond))
+    #     (ctx, true, []) ctxs_sub
+    ctxs_sub = ctx.sub_list(vars)
+    cond = True
+    values_cond = []
+    for ctx_sub in ctxs_sub:
+        if not cond:
+            break
+        ctx_sub, cond, value_cond = eval_if_cond_iter_tick(ctx_sub, exp_cond, iterexps)
+        ctx = ctx.commit(ctx_sub)
+        values_cond.append(value_cond)
+    return ctx, cond, values_cond
+
 def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
     # INCOMPLETE
     # match iterexps with
     # | [] -> eval_if_cond ctx exp_cond
     if iterexps == []:
         return eval_if_cond(ctx, exp_cond)
-    import pdb;pdb.set_trace()
-    assert 0, "TODO eval_if_cond_iter_tick"
+    else:
     # | iterexp_h :: iterexps_t -> (
     #     let iter_h, vars_h = iterexp_h in
+        iterexp = iterexps[0]
+        iterexps_t = iterexps[1:]
+        iter_h = iterexp.iter
+        vars_h = iterexp.vars
     #     match iter_h with
     #     | Opt -> error no_region "(TODO)"
+        if isinstance(iter_h, p4specast.Opt):
+            assert 0, "not implemented in p4-spectec yet"
     #     | List ->
     #         let ctx, cond, values_cond =
     #           eval_if_cond_list ctx exp_cond vars_h iterexps_t
@@ -277,7 +307,12 @@ def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
     #             Ctx.add_edge ctx value_cond value_sub Dep.Edges.Iter)
     #           vars_h;
     #         (ctx, cond, value_cond))
-
+        elif isinstance(iter_h, p4specast.List):
+            ctx, cond, values_cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexps_t)
+            typ = p4specast.IterT(p4specast.BoolT(), p4specast.List())
+            value_cond = objects.ListV(values_cond, typ=typ)
+            return ctx, cond, value_cond
+    assert 0, "TODO eval_if_cond_iter_tick"
 
 def eval_if_cond(ctx, exp_cond):
     # let ctx, value_cond = eval_exp ctx exp_cond in
@@ -407,7 +442,6 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     #      and collect the resulting binding batches *)
     #   | _ ->
     else:
-        import pdb;pdb.set_trace()
     #       let ctx, values_binding_batch =
     #         List.fold_left
     #           (fun (ctx, values_binding_batch) ctx_sub ->
@@ -425,7 +459,18 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     #             (ctx, values_binding_batch))
     #           (ctx, []) ctxs_sub
     #       in
+        values_binding_batch = []
+        for ctx_sub in ctxs_sub:
+            ctx_sub = eval_let_iter_tick(ctx_sub, exp_l, exp_r, iterexps_t)
+            ctx = ctx.commit(ctx_sub)
+            value_binding_batch = []
+            for var_binding in vars_binding:
+                value_binding = ctx_sub.find_value_local(var_binding.id, var_binding.iter)
+                value_binding_batch.append(value_binding)
+            values_binding_batch.append(value_binding_batch)
     #       let values_binding = values_binding_batch |> Ctx.transpose in
+        values_binding = context.transpose(values_binding_batch)
+        assert len(values_binding) == len(vars_binding)
     #       (ctx, values_binding)
     # in
     # (* Finally, bind the resulting binding batches *)
@@ -1171,10 +1216,10 @@ class __extend__(p4specast.MatchE):
         # let matches =
         #   match (pattern, value.it) with
         pattern = self.pattern
+        #   | CaseP mixop_p, CaseV (mixop_v, _) -> Mixop.eq mixop_p mixop_v
         if (isinstance(pattern, p4specast.CaseP) and
                 isinstance(value, objects.CaseV)):
             matches = mixop_eq(pattern.mixop, value.mixop)
-        #   | CaseP mixop_p, CaseV (mixop_v, _) -> Mixop.eq mixop_p mixop_v
         #   | ListP listpattern, ListV values -> (
         elif (isinstance(pattern, p4specast.ListP) and
                 isinstance(value, objects.ListV)):
@@ -1196,10 +1241,9 @@ class __extend__(p4specast.MatchE):
         #   | OptP `Some, OptV (Some _) -> true
         #   | OptP `None, OptV None -> true
         elif (isinstance(pattern, p4specast.OptP) and
-              pattern.kind == 'None' and
-              isinstance(value, objects.OptV) and
-              value.value is None):
-            matches = True
+              isinstance(value, objects.OptV)):
+            assert pattern.kind in ('Some', 'None')
+            matches = (value.value is None) == (pattern.kind == 'None')
         #   | _ -> false
         else:
             import pdb;pdb.set_trace()
