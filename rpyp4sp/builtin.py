@@ -20,12 +20,10 @@ def invoke(ctx, name, targs, values_input):
 
 @register_builtin("sum")
 def nats_sum(ctx, name, targs, values_input):
-    import pdb; pdb.set_trace()
     raise NotImplementedError("nats_sum is not implemented yet")
 
 @register_builtin("max")
 def nats_max(ctx, name, targs, values_input):
-    import pdb; pdb.set_trace()
     raise NotImplementedError("nats_max is not implemented yet")
 
 @register_builtin("min")
@@ -199,7 +197,6 @@ def maps_find_maps(ctx, name, targs, values_input):
 
 @register_builtin("add_map")
 def maps_add_map(ctx, name, targs, values_input):
-    import pdb;pdb.set_trace()
     raise NotImplementedError("maps_add_map is not implemented yet")
 
 @register_builtin("adds_map")
