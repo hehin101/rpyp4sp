@@ -162,6 +162,11 @@ def test_all():
     if not os.path.exists(os.path.join(os.path.dirname(__file__), 'interp_tests_bak.json')):
         assert False
     with open(os.path.join(os.path.dirname(__file__), 'interp_tests_bak.json'), 'r') as f:
+def test_eval_num_expr():
+    exp = p4specast.NumE.fromstr('0', 'Nat')
+    exp.typ = p4specast.NumT(p4specast.NatT())
+    _, value = interp.eval_exp(None, exp)
+    assert value.eq(objects.NumV.fromstr('0', 'Nat'))
         for line in f:
             if not line.startswith('{'):
                 continue

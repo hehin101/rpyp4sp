@@ -1,4 +1,5 @@
 from rpython.tool.pairtype import extendabletype
+from rpyp4sp import integers
 
 def ast_anywhere_in_list(l):
     for index, el in enumerate(l):
@@ -460,10 +461,11 @@ class Exp(AstBase):
         ast.region = region
         return ast
 
+
 class BoolE(Exp):
     def __init__(self, value):
         assert isinstance(value, bool)
-        self.value = value # typ: bool
+        self.value = value # type: bool
 
     @staticmethod
     def fromjson(content):
@@ -474,19 +476,26 @@ class BoolE(Exp):
     def __repr__(self):
         return "p4specast.BoolE(%r)" % (self.value,)
 
+
 class NumE(Exp):
-    def __init__(self, value):
-        self.value = value
+    def __init__(self, value, what, typ=None):
+        self.value = value # type: integers.Integer
+        self.what = what # type: str
+        self.typ = typ # type: Type
 
     @staticmethod
     def fromjson(content):
-        return NumE(
-            # TODO
-            value=content[1]
-        )
+        what = content[1][0].value_string()
+        return NumE.fromstr(content[1][1].value_string(), what)
+
+    @staticmethod
+    def fromstr(valuestr, what, typ=None):
+        return NumE(integers.Integer.fromstr(valuestr),
+                    what, typ)
 
     def __repr__(self):
-        return "p4specast.NumE(%r)" % (self.value,)
+        return "p4specast.NumE.fromstr(%r, %r)" % (self.value.str(), self.what)
+
 
 class TextE(Exp):
     def __init__(self, value):
