@@ -1,4 +1,4 @@
-from rpython.rlib.objectmodel import we_are_translated, compute_hash
+from rpython.rlib.objectmodel import we_are_translated, compute_hash, newlist_hint
 from rpython.tool.pairtype import extendabletype
 
 import sys
@@ -358,6 +358,7 @@ class Map(object):
         self.next_maps = None # type: dict[str, Map] | None
         # arbitrarily have a nextmap_first
         self.nextmap_first = None # type: Map
+        self.nextmap_first_key_reprish = None
 
     def get_next(self, key):
         if self.nextmap_first and key == self.nextmap_first.newkey:
@@ -374,6 +375,7 @@ class Map(object):
         self.next_maps[key] = newmap
         if self.nextmap_first is None:
             self.nextmap_first = newmap
+            self.nextmap_first_key_reprish = key + '"'
         return newmap
 
     def lookup(self, key):
@@ -606,7 +608,7 @@ class JSONDecoder(object):
         return i, ovf_maybe, sign * intval
 
     def decode_array(self, i):
-        lst = []
+        lst = newlist_hint(4)
         w_list = JsonArray(lst)
         start = i
         i = self.skip_whitespace(start)
@@ -641,11 +643,10 @@ class JSONDecoder(object):
             return JsonObject0(ROOT_MAP)
 
         curr_map = ROOT_MAP
-        values = []
+        values = newlist_hint(4)
         while True:
             # parse a key: value
-            name = self.decode_key(i)
-            curr_map = curr_map.get_next(name)
+            curr_map = self.decode_key(curr_map, i)
             i = self.skip_whitespace(self.pos)
             ch = self.ll_chars[i]
             if ch != ':':
@@ -760,16 +761,31 @@ class JSONDecoder(object):
         lowsurr = int(hexdigits, 16) # the possible ValueError is caugth by the caller
         return 0x10000 + (((highsurr - 0xd800) << 10) | (lowsurr - 0xdc00))
 
-    def decode_key(self, i):
-        """ returns an unwrapped byte str """
-        from rpython.rlib.rarithmetic import intmask
-
+    def decode_key(self, curr_map, i):
+        """ returns the next map"""
         i = self.skip_whitespace(i)
         ll_chars = self.ll_chars
         ch = ll_chars[i]
         if ch != '"':
             self._raise("Key name must be string at char %d", i)
         i += 1
+        nextmap = curr_map.nextmap_first
+        if nextmap:
+            start = i
+            for c in curr_map.nextmap_first_key_reprish:
+                if c != ll_chars[start]:
+                    break
+                start += 1
+            else:
+                self.pos = start
+                return nextmap
+        key = self._decode_key(i)
+        return curr_map.get_next(key)
+
+    def _decode_key(self, i):
+        """ returns an unwrapped key """
+        from rpython.rlib.rarithmetic import intmask
+        ll_chars = self.ll_chars
 
         start = i
         bits = 0
