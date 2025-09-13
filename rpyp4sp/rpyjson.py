@@ -63,7 +63,7 @@ class JsonBase(object):
             index = cache.get(self.map)
             if index < 0:
                 raise KeyError(key)
-            return self.values[index]
+            return self._get_value(index)
         raise TypeError("Invalid key access %s %s" % (self, key))
 
     def __iter__(self):
@@ -189,13 +189,32 @@ class JsonString(JsonPrimitive):
 class JsonObject(JsonBase):
     is_object = True
 
-    def __init__(self, map, values):
+    def __init__(self, map):
         self.map = map
-        self.values = values
-        assert len(values) == len(map.attrs)
+        assert self._num_values() == len(map.attrs)
+
+    @staticmethod
+    def make(map, values):
+        if not values:
+            return JsonObject0(map)
+        if len(values) == 1:
+            return JsonObject1(map, values[0])
+        if len(values) == 2:
+            return JsonObject2(map, values[0], values[1])
+        if len(values) == 3:
+            return JsonObject3(map, values[0], values[1], values[2])
+        if len(values) == 4:
+            return JsonObject4(map, values[0], values[1], values[2], values[3])
+        return JsonObjectGeneral(map, values)
+
+    def _num_values(self):
+        raise NotImplementedError('abstract')
+
+    def _get_value(self, i):
+        raise NotImplementedError('abstract')
 
     def tostring(self):
-        return "{%s}" % ", ".join(["\"%s\": %s" % (key, self.values[index].tostring()) for key, index in self.map.attrs.iteritems()])
+        return "{%s}" % ", ".join(["\"%s\": %s" % (key, self._get_value(index).tostring()) for key, index in self.map.attrs.iteritems()])
 
     def _unpack_deep(self):
         result = {}
@@ -204,7 +223,93 @@ class JsonObject(JsonBase):
         return result
 
     def __repr__(self):
-        return "rpyjson.JsonObject(%r, %r)" % (self.map, self.values)
+        return "rpyjson.JsonObject.make(%r, [%r])" % (
+                self.map, ", ".join([repr(self._get_value(i)) for i in range(self._num_values())]))
+
+class JsonObject0(JsonObject):
+    def _num_values(self):
+        return 0
+
+class JsonObject1(JsonObject):
+    def __init__(self, map, val0):
+        self.val0 = val0
+        JsonObject.__init__(self, map)
+
+    def _num_values(self):
+        return 1
+
+    def _get_value(self, i):
+        assert i == 0
+        return self.val0
+
+class JsonObject2(JsonObject):
+    def __init__(self, map, val0, val1):
+        self.val0 = val0
+        self.val1 = val1
+        JsonObject.__init__(self, map)
+
+    def _num_values(self):
+        return 2
+
+    def _get_value(self, i):
+        if i == 0:
+            return self.val0
+        else:
+            assert i == 1
+            return self.val1
+
+class JsonObject3(JsonObject):
+    def __init__(self, map, val0, val1, val2):
+        self.val0 = val0
+        self.val1 = val1
+        self.val2 = val2
+        JsonObject.__init__(self, map)
+
+    def _num_values(self):
+        return 3
+
+    def _get_value(self, i):
+        if i == 0:
+            return self.val0
+        elif i == 1:
+            return self.val1
+        else:
+            assert i == 2
+            return self.val2
+
+class JsonObject4(JsonObject):
+    def __init__(self, map, val0, val1, val2, val3):
+        self.val0 = val0
+        self.val1 = val1
+        self.val2 = val2
+        self.val3 = val3
+        JsonObject.__init__(self, map)
+
+    def _num_values(self):
+        return 4
+
+    def _get_value(self, i):
+        if i == 0:
+            return self.val0
+        elif i == 1:
+            return self.val1
+        elif i == 2:
+            return self.val2
+        else:
+            assert i == 3
+            return self.val3
+
+class JsonObjectGeneral(JsonObject):
+    def __init__(self, map, values):
+        self.values = values
+        JsonObject.__init__(self, map)
+
+    def _num_values(self):
+        return len(self.values)
+
+    def _get_value(self, i):
+        return self.values[i]
+
 
 class JsonArray(JsonBase):
     is_array = True
@@ -533,7 +638,7 @@ class JSONDecoder(object):
         i = self.skip_whitespace(i)
         if self.ll_chars[i] == '}':
             self.pos = i+1
-            return JsonObject(ROOT_MAP, [])
+            return JsonObject0(ROOT_MAP)
 
         curr_map = ROOT_MAP
         values = []
@@ -555,7 +660,7 @@ class JSONDecoder(object):
             i += 1
             if ch == '}':
                 self.pos = i
-                return JsonObject(curr_map, values)
+                return JsonObject.make(curr_map, values)
             elif ch == ',':
                 pass
             elif ch == '\0':
@@ -744,5 +849,5 @@ def _convert(data):
         for (key, value) in data.iteritems():
             curr_map = curr_map.get_next(key)
             values.append(_convert(value))
-        return JsonObject(curr_map, values)
+        return JsonObject.make(curr_map, values)
 
