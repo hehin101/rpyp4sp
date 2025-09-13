@@ -1,4 +1,5 @@
 from rpyp4sp import p4specast, objects
+from rpyp4sp.error import P4NotImplementedError, P4BuiltinError
 
 all_builtins = {}
 
@@ -14,33 +15,33 @@ def is_builtin(name):
 
 def invoke(ctx, name, targs, values_input):
     if not is_builtin(name.value):
-        raise ValueError("Unknown built-in function: %s" % name.value)
+        raise P4BuiltinError("Unknown built-in function: %s" % name.value)
     func = all_builtins[name.value]
     return func(ctx, name, targs, values_input)
 
 @register_builtin("sum")
 def nats_sum(ctx, name, targs, values_input):
-    raise NotImplementedError("nats_sum is not implemented yet")
+    raise P4NotImplementedError("nats_sum is not implemented yet")
 
 @register_builtin("max")
 def nats_max(ctx, name, targs, values_input):
-    raise NotImplementedError("nats_max is not implemented yet")
+    raise P4NotImplementedError("nats_max is not implemented yet")
 
 @register_builtin("min")
 def nats_min(ctx, name, targs, values_input):
-    raise NotImplementedError("nats_min is not implemented yet")
+    raise P4NotImplementedError("nats_min is not implemented yet")
 
 @register_builtin("int_to_text")
 def texts_int_to_text(ctx, name, targs, values_input):
-    raise NotImplementedError("texts_int_to_text is not implemented yet")
+    raise P4NotImplementedError("texts_int_to_text is not implemented yet")
 
 @register_builtin("strip_prefix")
 def texts_strip_prefix(ctx, name, targs, values_input):
-    raise NotImplementedError("texts_strip_prefix is not implemented yet")
+    raise P4NotImplementedError("texts_strip_prefix is not implemented yet")
 
 @register_builtin("strip_suffix")
 def texts_strip_suffix(ctx, name, targs, values_input):
-    raise NotImplementedError("texts_strip_suffix is not implemented yet")
+    raise P4NotImplementedError("texts_strip_suffix is not implemented yet")
 
 @register_builtin("rev_")
 def lists_rev_(ctx, name, targs, values_input):
@@ -79,11 +80,11 @@ def lists_distinct_(ctx, name, targs, values_input):
 
 @register_builtin("partition_")
 def lists_partition_(ctx, name, targs, values_input):
-    raise NotImplementedError("lists_partition_ is not implemented yet")
+    raise P4NotImplementedError("lists_partition_ is not implemented yet")
 
 @register_builtin("assoc_")
 def lists_assoc_(ctx, name, targs, values_input):
-    raise NotImplementedError("lists_assoc_ is not implemented yet")
+    raise P4NotImplementedError("lists_assoc_ is not implemented yet")
 
 # ________________________________________________________________
 # sets
@@ -103,7 +104,7 @@ def _wrap_set_elems(elems, set_value_for_types):
 
 @register_builtin("intersect_set")
 def sets_intersect_set(ctx, name, targs, values_input):
-    raise NotImplementedError("sets_intersect_set is not implemented yet")
+    raise P4NotImplementedError("sets_intersect_set is not implemented yet")
 
 def _set_union_elems(elems_l, elems_r):
     res = []
@@ -129,7 +130,7 @@ def sets_unions_set(ctx, name, targs, values_input):
     value_list, = values_input
     sets_l = value_list.get_list()
     if not sets_l:
-        assert 0, "TODO sets_unions_set empty case, needs complicated targs"
+        raise P4BuiltinError("TODO sets_unions_set empty case, needs complicated targs")
     first = sets_l[0]
     curr = _extract_set_elems(first)
     for i in range(1, len(sets_l)):
@@ -157,11 +158,11 @@ def sets_diff_set(ctx, name, targs, values_input):
 
 @register_builtin("sub_set")
 def sets_sub_set(ctx, name, targs, values_input):
-    raise NotImplementedError("sets_sub_set is not implemented yet")
+    raise P4NotImplementedError("sets_sub_set is not implemented yet")
 
 @register_builtin("eq_set")
 def sets_eq_set(ctx, name, targs, values_input):
-    raise NotImplementedError("sets_eq_set is not implemented yet")
+    raise P4NotImplementedError("sets_eq_set is not implemented yet")
 
 # _________________________________________________________________
 
@@ -196,68 +197,69 @@ def maps_find_map(ctx, name, targs, values_input):
 
 @register_builtin("find_maps")
 def maps_find_maps(ctx, name, targs, values_input):
-    raise NotImplementedError("maps_find_maps is not implemented yet")
+    raise P4NotImplementedError("maps_find_maps is not implemented yet")
 
 @register_builtin("add_map")
 def maps_add_map(ctx, name, targs, values_input):
-    raise NotImplementedError("maps_add_map is not implemented yet")
+    raise P4NotImplementedError("maps_add_map is not implemented yet")
 
 @register_builtin("adds_map")
 def maps_adds_map(ctx, name, targs, values_input):
-    raise NotImplementedError("maps_adds_map is not implemented yet")
+    raise P4NotImplementedError("maps_adds_map is not implemented yet")
 
 @register_builtin("update_map")
 def maps_update_map(ctx, name, targs, values_input):
-    raise NotImplementedError("maps_update_map is not implemented yet")
+    raise P4NotImplementedError("maps_update_map is not implemented yet")
 
 @register_builtin("fresh_tid")
 def fresh_fresh_tid(ctx, name, targs, values_input):
-    raise NotImplementedError("fresh_fresh_tid is not implemented yet")
+    raise P4NotImplementedError("fresh_fresh_tid is not implemented yet")
 
 @register_builtin("shl")
 def numerics_shl(ctx, name, targs, values_input):
-    raise NotImplementedError("numerics_shl is not implemented yet")
+    raise P4NotImplementedError("numerics_shl is not implemented yet")
 
 @register_builtin("shr")
 def numerics_shr(ctx, name, targs, values_input):
-    raise NotImplementedError("numerics_shr is not implemented yet")
+    raise P4NotImplementedError("numerics_shr is not implemented yet")
 
 @register_builtin("shr_arith")
 def numerics_shr_arith(ctx, name, targs, values_input):
-    raise NotImplementedError("numerics_shr_arith is not implemented yet")
+    raise P4NotImplementedError("numerics_shr_arith is not implemented yet")
 
 @register_builtin("pow2")
 def numerics_pow2(ctx, name, targs, values_input):
-    raise NotImplementedError("numerics_pow2 is not implemented yet")
+    raise P4NotImplementedError("numerics_pow2 is not implemented yet")
 
 @register_builtin("to_int")
 def numerics_to_int(ctx, name, targs, values_input):
-    raise NotImplementedError("numerics_to_int is not implemented yet")
+    raise P4NotImplementedError("numerics_to_int is not implemented yet")
 
 @register_builtin("to_bitstr")
 def numerics_to_bitstr(ctx, name, targs, values_input):
     width, num = values_input
     width_num = width.get_num()
     num_num = num.get_num()
-    assert 0 <= num_num.toint() < (1 << width_num.toint()) # TODO: handle otherwise
+    if not (0 <= num_num.toint() < (1 << width_num.toint())):
+        raise P4BuiltinError("TODO: handle numeric bounds check failure for width %s, num %s" % (width_num.toint(), num_num.toint()))
     return num
 
 @register_builtin("bneg")
 def numerics_bneg(ctx, name, targs, values_input):
-    raise NotImplementedError("numerics_bneg is not implemented yet")
+    raise P4NotImplementedError("numerics_bneg is not implemented yet")
 
 @register_builtin("band")
 def numerics_band(ctx, name, targs, values_input):
-    raise NotImplementedError("numerics_band is not implemented yet")
+    raise P4NotImplementedError("numerics_band is not implemented yet")
 
 @register_builtin("bxor")
 def numerics_bxor(ctx, name, targs, values_input):
-    raise NotImplementedError("numerics_bxor is not implemented yet")
+    raise P4NotImplementedError("numerics_bxor is not implemented yet")
 
 @register_builtin("bor")
 def numerics_bor(ctx, name, targs, values_input):
-    raise NotImplementedError("numerics_bor is not implemented yet")
+    raise P4NotImplementedError("numerics_bor is not implemented yet")
 
 @register_builtin("bitacc")
 def numerics_bitacc(ctx, name, targs, values_input):
-    raise NotImplementedError("numerics_bitacc is not implemented yet")
+    raise P4NotImplementedError("numerics_bitacc is not implemented yet")

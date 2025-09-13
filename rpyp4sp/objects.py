@@ -1,4 +1,5 @@
 from rpyp4sp import p4specast, integers
+from rpyp4sp.error import P4UnknownTypeError
 # and vid = int [@@deriving yojson]
 # and vnote = { vid : vid; typ : typ' } [@@deriving yojson]
 
@@ -48,7 +49,7 @@ class BaseV(object):
         elif what == 'FuncV':
             value = FuncV.fromjson(content)
         else:
-            raise ValueError("Unknown content type")
+            raise P4UnknownTypeError("Unknown content type")
         value.vid = vid
         value.typ = typ
         return value

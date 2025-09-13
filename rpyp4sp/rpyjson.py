@@ -3,6 +3,7 @@ from rpython.tool.pairtype import extendabletype
 
 import sys
 from rpython.rlib.rstring import StringBuilder
+from rpyp4sp.error import P4ParseError, P4NotImplementedError
 from rpython.rlib.objectmodel import specialize, always_inline, r_dict
 from rpython.rlib import rfloat, rutf8
 from rpython.rtyper.lltypesystem import lltype, rffi
@@ -18,10 +19,10 @@ class JsonBase(object):
     is_string = is_int = is_float = is_bool = is_object = is_array = is_null = False
 
     def __init__(self):
-        raise NotImplementedError("abstract base class")
+        raise P4NotImplementedError("abstract base class")
 
     def tostring(self):
-        raise NotImplementedError("abstract base class")
+        raise P4NotImplementedError("abstract base class")
 
     def is_primitive(self):
         return False
@@ -687,7 +688,7 @@ class OwnJSONDecoder(JSONDecoder):
 
     @specialize.arg(1)
     def _raise(self, msg, *args):
-        raise ValueError(msg % args)
+        raise P4ParseError(msg % args)
 
     def decode_float(self, i):
         start = i
@@ -719,7 +720,7 @@ def loads(s):
         if i < len(s):
             start = i
             end = len(s) - 1
-            raise ValueError("Extra data: char %d - %d" % (start, end))
+            raise P4ParseError("Extra data: char %d - %d" % (start, end))
         return w_res
     finally:
         decoder.close()

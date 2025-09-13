@@ -1,5 +1,7 @@
 from rpython.rlib import objectmodel
 from rpyp4sp import p4specast, objects, builtin, context, integers
+from rpyp4sp.error import (P4EvaluationError, P4CastError, P4NotImplementedError, 
+                           P4RelationError)
 
 class Sign(object):
     # abstract base
@@ -105,7 +107,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     #     (ctx, value_output)
         return ctx, sign.value
     # | _ -> error id.at "function was not matched"
-    assert 0, "TODO invoke_func_def_attempt_clauses"
+    raise P4EvaluationError("TODO invoke_func_def_attempt_clauses")
 
 def eval_arg(ctx, arg):
     # match arg.it with
@@ -230,7 +232,7 @@ def eval_instr(ctx, instr):
     if isinstance(instr, p4specast.ReturnI):
         return eval_return_instr(ctx, instr)
     #import pdb; pdb.set_trace()
-    assert 0, "TODO eval_instr"
+    raise P4EvaluationError("TODO eval_instr: unhandled instruction type %s" % instr.__class__.__name__)
 
 def eval_if_instr(ctx, instr):
     # INCOMPLETE
@@ -597,7 +599,7 @@ def eval_let_iter_tick(ctx, exp_l, exp_r, iterexps):
         else:
             assert 0, 'should be unreachable'
     #import pdb;pdb.set_trace()
-    assert 0, "todo eval_let_iter_tick"
+    raise P4EvaluationError("todo eval_let_iter_tick")
 
 def eval_let_iter(ctx, let_instr):
     # let iterexps = List.rev iterexps in
@@ -614,7 +616,7 @@ def eval_let(ctx, exp_l, exp_r):
 
 def eval_let_opt(ctx, exp_l, exp_r, vars, iterexps):
     #import pdb; pdb.set_trace()
-    assert 0, "TODO; implement eval_let_opt"
+    raise P4EvaluationError("TODO; implement eval_let_opt")
     # and eval_let_opt (ctx : Ctx.t) (exp_l : exp) (exp_r : exp) (vars : var list)
     #     (iterexps : iterexp list) : Ctx.t =
     #   (* Discriminate between bound and binding variables *)
@@ -721,7 +723,7 @@ def eval_rule(ctx, id, notexp):
     #     | None -> error id.at "relation was not matched"
     relctx, values_output = invoke_rel(ctx, id, values_input)
     if relctx is None:
-        raise ValueError("relation was not matched: %s" % id.value)
+        raise P4RelationError("relation was not matched: %s" % id.value)
     ctx = relctx
     #   assign_exps ctx exps_output values_output
     ctx = assign_exps(ctx, exps_output, values_output)
@@ -832,7 +834,7 @@ def eval_rule_iter_tick(ctx, id, notexp, iterexps):
     iter_h = iterexp.iter
     vars_h = iterexp.vars
     if isinstance(iter_h, p4specast.Opt):
-        assert 0, "TODO eval_rule_iter_tick"
+        raise P4EvaluationError("TODO eval_rule_iter_tick")
         return eval_rule_opt(ctx, id, notexp, vars_h, iterexps_t)
     if isinstance(iter_h, p4specast.List):
         return eval_rule_list(ctx, id, notexp, vars_h, iterexps_t)
@@ -1033,7 +1035,7 @@ def assign_exp(ctx, exp, value):
         return ctx
 
     #import pdb;pdb.set_trace()
-    assert 0, "todo assign_exp"
+    raise P4EvaluationError("todo assign_exp: unhandled expression type %s" % exp.__class__.__name__)
     # | _ ->
     #     error exp.at
     #       (F.asprintf "(TODO) match failed %s <- %s"
@@ -1147,7 +1149,7 @@ def eval_exps(ctx, exps):
 class __extend__(p4specast.Exp):
     def eval_exp(self, ctx):
         #import pdb;pdb.set_trace()
-        raise NotImplementedError("abstract base class %s" % self)
+        raise P4NotImplementedError("abstract base class %s" % self)
 
 class __extend__(p4specast.BoolE):
     def eval_exp(self, ctx):
@@ -1363,11 +1365,11 @@ def eval_binop_num(binop, value_l, value_r, typ):
     elif binop == 'MulOp':
         res_num = num_l.mul(num_r)
     elif binop == 'DivOp':
-        raise NotImplementedError("DivOp")
+        raise P4NotImplementedError("DivOp")
     elif binop == 'ModOp':
-        raise NotImplementedError("ModOp")
+        raise P4NotImplementedError("ModOp")
     elif binop == 'PowOp':
-        raise NotImplementedError("PowOp")
+        raise P4NotImplementedError("PowOp")
     else:
         assert 0, "should be unreachable"
     return objects.NumV(res_num, value_l.what, typ=typ)
@@ -1548,7 +1550,7 @@ class __extend__(p4specast.MatchE):
         #   | _ -> false
         else:
             #import pdb;pdb.set_trace()
-            assert 0, "TODO MatchE"
+            raise P4EvaluationError("TODO MatchE")
         # in
         # let value_res =
         #   let vid = Value.fresh () in
@@ -1762,7 +1764,7 @@ def eval_update_path(ctx, value_b, path, value_n):
         # eval_update_path ctx value_b path value
         return eval_update_path(ctx, value_b, path.path, value_struct)
     else:
-        raise NotImplementedError("(TODO eval_update_path)")
+        raise P4EvaluationError("(TODO eval_update_path)")
 
 class __extend__(p4specast.UpdE):
     def eval_exp(self, ctx):
@@ -1884,7 +1886,7 @@ def subtyp(ctx, typ, value):
         assert typ.targs == []
         if isinstance(deftyp, p4specast.PlainT):
             #import pdb;pdb.set_trace()
-            assert 0, "TODO subtyp"
+            raise P4EvaluationError("TODO subtyp")
     #     match (deftyp.it, value.it) with
     #     | PlainT typ, _ ->
     #         let typ = Typ.subst_typ theta typ in
@@ -1904,7 +1906,7 @@ def subtyp(ctx, typ, value):
     #           typcases
     #     | _ -> true)
     #import pdb;pdb.set_trace()
-    assert 0, "TODO subtyp"
+    raise P4EvaluationError("TODO subtyp")
 
     # | TupleT typs -> (
     #     match value.it with
@@ -1950,7 +1952,7 @@ def downcast(ctx, typ, value):
     #     | PlainT typ ->
         if isinstance(deftyp, p4specast.PlainT):
             #import pdb;pdb.set_trace()
-            assert 0, "TODO downcast"
+            raise P4CastError("TODO downcast")
     #         let typ = Typ.subst_typ theta typ in
     #         downcast ctx typ value
     #     | _ -> (ctx, value))
@@ -1959,7 +1961,7 @@ def downcast(ctx, typ, value):
     # | TupleT typs -> (
     if isinstance(typ, p4specast.TupleT):
         #import pdb;pdb.set_trace()
-        assert 0, "TODO downcast"
+        raise P4CastError("TODO downcast")
     #     match value.it with
     #     | TupleV values ->
     #         let ctx, values =
@@ -2010,7 +2012,7 @@ def upcast(ctx, typ, value):
     #       match deftyp.it with
         if isinstance(deftyp, p4specast.PlainT):
             #import pdb;pdb.set_trace()
-            assert 0, "TODO upcast"
+            raise P4CastError("TODO upcast")
         else:
             return ctx, value
     #       | PlainT typ ->
@@ -2020,7 +2022,7 @@ def upcast(ctx, typ, value):
     #   | TupleT typs -> (
     if isinstance(typ, p4specast.TupleT):
         #import pdb;pdb.set_trace()
-        assert 0, "TODO upcast"
+        raise P4CastError("TODO upcast")
     #       match value.it with
     #       | TupleV values ->
     #           let ctx, values =

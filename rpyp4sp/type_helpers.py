@@ -1,4 +1,5 @@
 from rpyp4sp import p4specast
+from rpyp4sp.error import P4TypeSubstitutionError
 # type theta = t TIdMap.t
 
 # let rec subst_typ (theta : theta) (typ : t) : t =
@@ -28,13 +29,13 @@ def subst_typ(theta, typ):
         res = theta.get(typ.id.value, None)
         if res is not None:
             if typ.targs:
-                raise ValueError("higher-order substitution is disallowed")
+                raise P4TypeSubstitutionError("higher-order substitution is disallowed")
             return res
         else:
             targs = [subst_typ(theta, targ) for targ in typ.targs]
             return p4specast.VarT(typ.id, targs)
     #import pdb;pdb.set_trace()
-    assert 0, "TODO subst_typ"
+    raise P4TypeSubstitutionError("TODO subst_typ: unhandled type %s" % typ.__class__.__name__)
 
 # and subst_typs (theta : theta) (typs : t list) : t list =
 #   List.map (subst_typ theta) typs

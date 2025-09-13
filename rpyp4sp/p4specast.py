@@ -1,5 +1,6 @@
 from rpython.tool.pairtype import extendabletype
 from rpyp4sp import integers
+from rpyp4sp.error import P4UnknownTypeError, P4NotImplementedError
 
 def ast_anywhere_in_list(l):
     for index, el in enumerate(l):
@@ -41,7 +42,7 @@ class AstBase(object):
 
     def _dot(self, dotgen):
         arcs = []
-        label = [type(self).__name__]
+        label = [self.__class__.__name__]
         for key, value in self.__dict__.items():
             if key == 'phantom':
                 continue
@@ -64,7 +65,7 @@ class AstBase(object):
         return self.compare(other) == 0
 
     def compare(self, other):
-        raise NotImplementedError('abstract base')
+        raise P4NotImplementedError('abstract base')
 
 
 def define_enum(basename, *names):
@@ -79,7 +80,7 @@ def define_enum(basename, *names):
             assert 0
 
         def __repr__(self):
-            return "p4specast." + type(self).__name__ + "()"
+            return "p4specast." + self.__class__.__name__ + "()"
     Base.__name__ = basename
     subs = []
     for name in names:
@@ -250,7 +251,7 @@ class Def(AstBase):
         elif what == 'RelD':
             ast = RelD.fromjson(content)
         else:
-            raise ValueError("Unknown Def type: %s" % what)
+            raise P4UnknownTypeError("Unknown Def type: %s" % what)
         ast.region = region
         return ast
 
@@ -342,7 +343,7 @@ class Arg(AstBase):
         elif what == 'DefA':
             return DefA.fromjson(content)
         else:
-            raise ValueError("Unknown Arg type: %s" % what)
+            raise P4UnknownTypeError("Unknown Arg type: %s" % what)
 
 class ExpA(Arg):
     def __init__(self, exp):
@@ -468,7 +469,7 @@ class Exp(AstBase):
         elif what == 'IterE':
             ast = IterE.fromjson(content)
         else:
-            raise ValueError("Unknown Exp type: %s" % what)
+            raise P4UnknownTypeError("Unknown Exp type: %s" % what)
         ast.typ = typ
         ast.region = region
         return ast
@@ -987,7 +988,7 @@ class Type(AstBase):
         elif what == 'FuncT':
             ast = FuncT.fromjson(content)
         else:
-            raise ValueError("Unknown Type: %s" % what)
+            raise P4UnknownTypeError("Unknown Type: %s" % what)
         ast.region = region
         return ast
 
@@ -1121,7 +1122,7 @@ class DefTyp(AstBase):
         elif what == 'VariantT':
             ast = VariantT.fromjson(content)
         else:
-            raise ValueError("Unknown DefTyp: %s" % what)
+            raise P4UnknownTypeError("Unknown DefTyp: %s" % what)
         ast.region = region
         return ast
 
@@ -1222,7 +1223,7 @@ class Instr(AstBase):
         elif what == 'ReturnI':
             ast = ReturnI.fromjson(content)
         else:
-            raise ValueError("Unknown Instr: %s" % what)
+            raise P4UnknownTypeError("Unknown Instr: %s" % what)
         ast.region = region
         return ast
 
@@ -1384,7 +1385,7 @@ class Guard(AstBase):
         elif kind == 'MemG':
             return MemG.fromjson(content)
         else:
-            raise ValueError("Unknown Guard: %s" % kind)
+            raise P4UnknownTypeError("Unknown Guard: %s" % kind)
 
 class BoolG(Guard):
     def __init__(self, value):
@@ -1471,7 +1472,7 @@ class Pattern(AstBase):
         elif kind == 'OptP':
             return OptP.fromjson(content)
         else:
-            raise ValueError("Unknown Pattern: %s" % kind)
+            raise P4UnknownTypeError("Unknown Pattern: %s" % kind)
 
 class CaseP(Pattern):
     def __init__(self, mixop):
@@ -1525,7 +1526,7 @@ class ListPElem(AstBase):
         elif kind == 'Nil':
             return Nil()
         else:
-            raise ValueError("Unknown ListPElem: %s" % kind)
+            raise P4UnknownTypeError("Unknown ListPElem: %s" % kind)
 
 class Cons(ListPElem):
     def __repr__(self):
@@ -1568,7 +1569,7 @@ class Path(AstBase):
         elif kind == 'DotP':
             ast = DotP.fromjson(content)
         else:
-            raise ValueError("Unknown Path: %s" % kind)
+            raise P4UnknownTypeError("Unknown Path: %s" % kind)
         ast.region = region
         ast.typ = typ
         return ast

@@ -1,4 +1,5 @@
 from rpyp4sp import p4specast, objects
+from rpyp4sp.error import P4ContextError
 
 class GlobalContext(object):
     def __init__(self):
@@ -131,7 +132,7 @@ class Context(object):
         noneness = values[0] is None
         for value in values:
             if (value is None) != noneness:
-                raise ValueError("mismatch in optionality of iterated variables")
+                raise P4ContextError("mismatch in optionality of iterated variables")
         #   in
         #   (* Iteration is valid when all variables agree on their optionality *)
         #   if List.for_all Option.is_some values then
@@ -202,7 +203,7 @@ def transpose(value_matrix):
     # check
     for value_row in value_matrix:
         if len(value_row) != width:
-            raise ValueError("cannot transpose a matrix of value batches")
+            raise P4ContextError("cannot transpose a matrix of value batches")
     # List.init width (fun j ->
     #     List.init (List.length value_matrix) (fun i ->
     #         List.nth (List.nth value_matrix i) j))
