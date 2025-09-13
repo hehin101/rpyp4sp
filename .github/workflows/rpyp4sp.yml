@@ -56,4 +56,4 @@ jobs:
 
       - name: translate binary
         run: |
-          _pypy_binary/bin/python pypy/rpython/bin/rpython rpyp4sp/targetrpyp4sp.py
+          PYTHONPATH=. _pypy_binary/bin/python pypy/rpython/bin/rpython rpyp4sp/targetrpyp4sp.py
