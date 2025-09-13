@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-import os
+import os, time
 
 from rpython.rlib.nonconst import NonConstant
 
@@ -8,17 +8,12 @@ from rpyp4sp import p4specast, objects, builtin, context, integers, rpyjson, int
 from rpyp4sp.error import P4Error
 from rpyp4sp.test.test_interp import make_context
 
-def main(argv):
-    if not len(argv) == 2:
-        print("usage: %s <fn.jsonl>" % argv[0])
-        return 1
-    # load test cases from line-based json file
-    # check if file exists
+def command_run_test_jsonl(argv):
     ctx = make_context()
     passed = 0
     failed = 0
     error = 0
-    with open(argv[1], 'r') as f:
+    with open(argv[2], 'r') as f:
         while 1:
             if NonConstant(False):
                 f.read(10021)
@@ -87,6 +82,65 @@ def main(argv):
     print("PASSED:", passed)
     print("FAILED", failed)
     print("ERROR ", error)
+    return 0
+
+def command_run_p4(argv):
+    ctx = make_context()
+    load_times = []
+    run_times = []
+    passed = 0
+    errors = 0
+    for fn in argv[2:]:
+        t1 = time.time()
+        with open(argv[2], 'r') as f:
+            content = f.read()
+        valuejson = rpyjson.loads(content)
+        value = objects.BaseV.fromjson(valuejson)
+        t2 = time.time()
+        print(fn, "program loaded in %ss" % (t2 - t1))
+        load_times.append(t2 - t1)
+        resctx = None
+        try:
+            resctx, values = interp.invoke_rel(ctx, p4specast.Id("Prog_ok", p4specast.NO_REGION), [value])
+        except P4Error as e:
+            print("Function test exception:", e, e.msg)
+        except KeyError as e:
+            print("KeyError")
+        t3 = time.time()
+        print("executed in %ss" % (t3 - t2))
+        run_times.append(t3 - t2)
+        if resctx is None:
+            errors += 1
+            print("relation was not matched, or error")
+        else:
+            passed += 1
+            print("well-typed")
+    print("PASSED:", passed)
+    print("ERRORS:", errors)
+    def fsum(l):
+        res = 0.0
+        for x in l:
+            res += x
+        return res
+    print("load time; total:", fsum(load_times), "avg:", fsum(load_times) / len(load_times))
+    print("run time; total:", fsum(run_times), "avg:", fsum(run_times) / len(run_times))
+    print("total time:", fsum(load_times) + fsum(run_times))
+    return 0
+
+def main(argv):
+    if len(argv) < 3:
+        print("usage: %s run-test-jsonl/run-p4-json <fn>" % argv[0])
+        return 1
+    # load test cases from line-based json file
+    # check if file exists
+    cmd = argv[1]
+    if cmd == 'run-test-jsonl':
+        return command_run_test_jsonl(argv)
+    if cmd == 'run-p4-json':
+        return command_run_p4(argv)
+    else:
+        print("unknown command", cmd)
+        return 2
     return 0
 
 def target(*args):
