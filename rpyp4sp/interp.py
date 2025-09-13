@@ -58,8 +58,7 @@ def invoke_func_def(ctx, calle):
     #            | _ -> None)
     #     |> TIdMap.of_list
         theta = {}
-        for tid, tdef in ctx.glbl.tdenv.items() + ctx.local.tdenv.items():
-            deftyp = tdef.deftyp
+        for tid, (_, deftyp) in ctx.glbl.tdenv.items() + ctx.local.tdenv.items():
             if isinstance(deftyp, p4specast.PlainT):
                 theta[tid] = deftyp.typ
         #   in
@@ -74,7 +73,7 @@ def invoke_func_def(ctx, calle):
     # in
     # let ctx, values_input = eval_args ctx args in
         for tparam, targ in zip(func.tparams, targs):
-            ctx_local = ctx_local.add_typdef_local(tparam, p4specast.PlainT(targ))
+            ctx_local = ctx_local.add_typdef_local(tparam, ([], p4specast.PlainT(targ)))
     ctx, values_input = eval_args(ctx, calle.args)
     return invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=ctx_local)
 

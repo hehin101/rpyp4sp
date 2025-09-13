@@ -42,7 +42,7 @@ class Context(object):
     def load_spec(self, spec):
         for definition in spec:
             if isinstance(definition, p4specast.TypD):
-                self.glbl.tdenv[definition.id.value] = definition
+                self.glbl.tdenv[definition.id.value] = (definition.tparams, definition.deftyp)
             elif isinstance(definition, p4specast.RelD):
                 self.glbl.renv[definition.id.value] = definition
             else:
@@ -75,8 +75,7 @@ class Context(object):
 
     def find_typdef_local(self, id):
         # TODO: actually use the local tdenv
-        decl = self.glbl.tdenv[id.value]
-        return decl.tparams, decl.deftyp
+        return self.glbl.tdenv[id.value]
 
     def find_rel_local(self, id):
         return self.glbl.renv[id.value]
