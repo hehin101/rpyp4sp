@@ -243,6 +243,7 @@ def neg_pow_10(x, exp):
         return 0.0
     return x * NEG_POW_10[exp]
 
+INTCACHE = [JsonInt(i) for i in range(256)]
 
 TYPE_UNKNOWN = 0
 TYPE_STRING = 1
@@ -260,6 +261,8 @@ class JSONDecoder(object):
         self.ll_chars = rffi.str2charp(s)
         self.end_ptr = lltype.malloc(rffi.CCHARPP.TO, 1, flavor='raw')
         self.pos = 0
+
+        self.cache_keys = {}
 
     def close(self):
         rffi.free_charp(self.ll_chars)
@@ -372,6 +375,8 @@ class JSONDecoder(object):
             return self.decode_int_slow(start)
 
         self.pos = i
+        if 0 <= intval < len(INTCACHE):
+            return INTCACHE[intval]
         return JsonInt(intval)
 
     def decode_float(self, i):
@@ -471,7 +476,7 @@ class JSONDecoder(object):
         d = self._create_empty_dict()
         while True:
             # parse a key: value
-            w_name = self.decode_key(i)
+            name = self.decode_key(i)
             i = self.skip_whitespace(self.pos)
             ch = self.ll_chars[i]
             if ch != ':':
@@ -480,7 +485,7 @@ class JSONDecoder(object):
             i = self.skip_whitespace(i)
             #
             w_value = self.decode_any(i)
-            d[w_name.value_string()] = w_value
+            d[name] = w_value
             i = self.skip_whitespace(self.pos)
             ch = self.ll_chars[i]
             i += 1
@@ -593,7 +598,7 @@ class JSONDecoder(object):
         return 0x10000 + (((highsurr - 0xd800) << 10) | (lowsurr - 0xdc00))
 
     def decode_key(self, i):
-        """ returns a wrapped unicode """
+        """ returns an unwrapped byte str """
         from rpython.rlib.rarithmetic import intmask
 
         i = self.skip_whitespace(i)
@@ -613,7 +618,7 @@ class JSONDecoder(object):
                 break
             elif ch == '\\' or ch < '\x20':
                 self.pos = i-1
-                return self.decode_string_escaped(start)
+                return self.decode_string_escaped(start).value_string()
             strhash = intmask((1000003 * strhash) ^ ord(ll_chars[i]))
             bits |= ord(ch)
         length = i - start - 1
@@ -623,8 +628,24 @@ class JSONDecoder(object):
             strhash ^= length
             strhash = intmask(strhash)
         self.pos = i
-        res = self._create_string(start, i - 1, bits)
-        return res
+
+        # check cache first:
+        try:
+            cache_str = self.cache_keys[strhash]
+        except KeyError:
+            res = self.getslice(start, start + length)
+            self.cache_keys[strhash] = res
+            return res
+        if length == len(cache_str):
+            index = start
+            for c in cache_str:
+                if not ll_chars[index] == c:
+                    break
+                index += 1
+            else:
+                return cache_str
+        # collision, hopefully rare
+        return self.getslice(start, start + length)
 
 
 def loads(s):
