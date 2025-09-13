@@ -72,7 +72,8 @@ def invoke_func_def(ctx, calle):
     #     ctx_local tparams targs
     # in
     # let ctx, values_input = eval_args ctx args in
-        for tparam, targ in zip(func.tparams, targs):
+        for i, tparam in enumerate(func.tparams):
+            targ = targs[i]
             ctx_local = ctx_local.add_typdef_local(tparam, ([], p4specast.PlainT(targ)))
     ctx, values_input = eval_args(ctx, calle.args)
     return invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=ctx_local)
@@ -198,7 +199,8 @@ def eval_instrs(ctx, sign, instrs):
         if isinstance(sign, Cont):
             ctx, sign = eval_instr(ctx, instr)
         else:
-            assert sign is not Cont
+            if not objectmodel.we_are_translated():
+                assert sign is not Cont
     return ctx, sign
 
 def eval_instr(ctx, instr):
@@ -561,11 +563,12 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     #     Ctx.add_value Local ctx
     #       (id_binding, iters_binding @ [ Il.Ast.List ])
     #       value_binding)
-    for (var_binding, values_binding) in zip(vars_binding, values_binding):
+    for i, var_binding in enumerate(vars_binding):
+        values_binding_item = values_binding[i]
         id_binding = var_binding.id
         typ_binding = var_binding.typ
         iters_binding = var_binding.iter
-        value_binding = objects.ListV(values_binding, typ=typ_binding)
+        value_binding = objects.ListV(values_binding_item, typ=typ_binding)
         ctx = ctx.add_value_local(id_binding, iters_binding + [p4specast.List()], value_binding)
     return ctx
 
@@ -1082,7 +1085,8 @@ def assign_arg(ctx_caller, ctx_callee, arg, value):
 def assign_args(ctx_caller, ctx_callee, args, values):
     assert len(args) == len(values), \
         "mismatch in number of arguments while assigning, expected %d value(s) but got %d" % (len(args), len(values))
-    for arg, value in zip(args, values):
+    for i, arg in enumerate(args):
+        value = values[i]
         ctx_callee = assign_arg(ctx_caller, ctx_callee, arg, value)
     return ctx_callee
 
@@ -1601,7 +1605,7 @@ class __extend__(p4specast.StrE):
         # let ctx, values = eval_exps ctx exps in
         ctx, values = eval_exps(ctx, exps)
         # let fields = List.combine atoms values in
-        fields = [(atom, value) for ((atom, exp), value) in zip(self.fields, values)]
+        fields = [(atom, values[i]) for i, (atom, exp) in enumerate(self.fields)]
         # let value_res =
         #   let vid = Value.fresh () in
         #   let typ = note in
@@ -2044,10 +2048,12 @@ def mixop_eq(a, b):
     phrasesb = b.phrases
     if len(phrasesa) != len(phrasesb):
         return False
-    for suba, subb in zip(phrasesa, phrasesb):
+    for i, suba in enumerate(phrasesa):
+        subb = phrasesb[i]
         if len(suba) != len(subb):
             return False
-        for atoma, atomb in zip(suba, subb):
+        for j, atoma in enumerate(suba):
+            atomb = subb[j]
             if atoma.value != atomb.value:
                 return False
     return True

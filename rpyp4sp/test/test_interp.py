@@ -358,7 +358,8 @@ def test_all():
                     failed += 1
                     print("Relation test wrong number of results", name, len(values), len(res))
                 else:
-                    for resval, resval_exp in zip(values, res):
+                    for i, resval in enumerate(values):
+                        resval_exp = res[i]
                         if not resval.eq(resval_exp):
                             failed += 1
                             print("Relation test failed:", name, resval, resval_exp)

@@ -149,7 +149,8 @@ class Context(object):
             return None
         else:
             ctx_sub = self
-            for var, value in zip(vars, values):
+            for i, var in enumerate(vars):
+                value = values[i]
                 assert value is not None
                 value_sub = objects.OptV(value, typ=var.typ)
                 ctx_sub = ctx_sub.add_value_local(var.id, var.iter + [p4specast.Opt()], value_sub)
@@ -185,7 +186,8 @@ class Context(object):
         ctxs_sub = []
         for value_batch in value_matrix:
             ctx_sub = self
-            for var, value in zip(vars, value_batch):
+            for i, var in enumerate(vars):
+                value = value_batch[i]
                 ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value)
             ctxs_sub.append(ctx_sub)
         return ctxs_sub

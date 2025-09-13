@@ -87,7 +87,7 @@ def define_enum(basename, *names):
             pass
         Sub.__name__ = name
         subs.append(Sub)
-    unrolling_tups = [(name, cls) for name, cls in zip(names, subs)]
+    unrolling_tups = [(names[i], cls) for i, cls in enumerate(subs)]
     return [Base] + subs
 
 
@@ -1709,7 +1709,12 @@ class AtomT(AstBase):
     def compare(self, other):
         # type: (AtomT, AtomT) -> int
         # TODO: is this right?
-        return cmp(self.value, other.value)
+        if self.value == other.value:
+            return 0
+        if self.value < other.value:
+            return -1
+        return 1
+
 
     @staticmethod
     def line_span(value, file, line, col_start, col_end):
