@@ -1,4 +1,5 @@
 from rpyp4sp import p4specast, objects
+from rpyp4sp.error import P4ContextError
 
 class GlobalContext(object):
     def __init__(self):
@@ -42,7 +43,7 @@ class Context(object):
     def load_spec(self, spec):
         for definition in spec:
             if isinstance(definition, p4specast.TypD):
-                self.glbl.tdenv[definition.id.value] = definition
+                self.glbl.tdenv[definition.id.value] = (definition.tparams, definition.deftyp)
             elif isinstance(definition, p4specast.RelD):
                 self.glbl.renv[definition.id.value] = definition
             else:
@@ -75,8 +76,7 @@ class Context(object):
 
     def find_typdef_local(self, id):
         # TODO: actually use the local tdenv
-        decl = self.glbl.tdenv[id.value]
-        return decl.tparams, decl.deftyp
+        return self.glbl.tdenv[id.value]
 
     def find_rel_local(self, id):
         return self.glbl.renv[id.value]
@@ -132,7 +132,7 @@ class Context(object):
         noneness = values[0] is None
         for value in values:
             if (value is None) != noneness:
-                raise ValueError("mismatch in optionality of iterated variables")
+                raise P4ContextError("mismatch in optionality of iterated variables")
         #   in
         #   (* Iteration is valid when all variables agree on their optionality *)
         #   if List.for_all Option.is_some values then
@@ -150,7 +150,8 @@ class Context(object):
             return None
         else:
             ctx_sub = self
-            for var, value in zip(vars, values):
+            for i, var in enumerate(vars):
+                value = values[i]
                 assert value is not None
                 value_sub = objects.OptV(value, typ=var.typ)
                 ctx_sub = ctx_sub.add_value_local(var.id, var.iter + [p4specast.Opt()], value_sub)
@@ -186,7 +187,8 @@ class Context(object):
         ctxs_sub = []
         for value_batch in value_matrix:
             ctx_sub = self
-            for var, value in zip(vars, value_batch):
+            for i, var in enumerate(vars):
+                value = value_batch[i]
                 ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value)
             ctxs_sub.append(ctx_sub)
         return ctxs_sub
@@ -201,7 +203,7 @@ def transpose(value_matrix):
     # check
     for value_row in value_matrix:
         if len(value_row) != width:
-            raise ValueError("cannot transpose a matrix of value batches")
+            raise P4ContextError("cannot transpose a matrix of value batches")
     # List.init width (fun j ->
     #     List.init (List.length value_matrix) (fun i ->
     #         List.nth (List.nth value_matrix i) j))

@@ -7,11 +7,12 @@ from rpyp4sp.rpyjson import loads
 from rpyp4sp.context import Context
 from rpyp4sp import p4specast, objects, interp, rpyjson
 
+currfile = os.path.abspath(__file__)
+basedir = os.path.dirname(os.path.dirname(os.path.dirname(currfile)))
+ASTFN = os.path.join(basedir, "ast.json")
+
 def load():
-    currfile = os.path.abspath(__file__)
-    basedir = os.path.dirname(os.path.dirname(os.path.dirname(currfile)))
-    fn = os.path.join(basedir, "ast.json")
-    with open(fn) as f:
+    with open(ASTFN) as f:
         value = loads(f.read())
     defs = []
     for i, d in enumerate(value.value_array()):
@@ -357,7 +358,8 @@ def test_all():
                     failed += 1
                     print("Relation test wrong number of results", name, len(values), len(res))
                 else:
-                    for resval, resval_exp in zip(values, res):
+                    for i, resval in enumerate(values):
+                        resval_exp = res[i]
                         if not resval.eq(resval_exp):
                             failed += 1
                             print("Relation test failed:", name, resval, resval_exp)

@@ -1,8 +1,9 @@
-from rpython.rlib.objectmodel import specialize, we_are_translated, compute_hash
+from rpython.rlib.objectmodel import we_are_translated, compute_hash
 from rpython.tool.pairtype import extendabletype
 
 import sys
 from rpython.rlib.rstring import StringBuilder
+from rpyp4sp.error import P4ParseError, P4NotImplementedError
 from rpython.rlib.objectmodel import specialize, always_inline, r_dict
 from rpython.rlib import rfloat, rutf8
 from rpython.rtyper.lltypesystem import lltype, rffi
@@ -18,10 +19,10 @@ class JsonBase(object):
     is_string = is_int = is_float = is_bool = is_object = is_array = is_null = False
 
     def __init__(self):
-        raise NotImplementedError("abstract base class")
+        raise P4NotImplementedError("abstract base class")
 
     def tostring(self):
-        raise NotImplementedError("abstract base class")
+        raise P4NotImplementedError("abstract base class")
 
     def is_primitive(self):
         return False
@@ -51,14 +52,26 @@ class JsonBase(object):
     def value_int(self):
         raise TypeError
 
-    def __getitem__(self, index):
-        if self.is_array:
+    def get_list_item(self, index):
+        if self.is_array and isinstance(index, int):
             assert isinstance(self, JsonArray)
             return self.value[index]
-        elif self.is_object:
-            assert isinstance(self, JsonObject)
-            return self.value[index]
         raise TypeError("Invalid index access %s %s" % (self, index))
+
+    def get_dict_value(self, key):
+        if self.is_object:
+            assert isinstance(self, JsonObject)
+            return self.value[key]
+        raise TypeError("Invalid key access %s %s" % (self, key))
+
+    def __iter__(self):
+        assert isinstance(self, JsonArray)
+        return iter(self.value)
+
+    def unpack(self, n):
+        assert isinstance(self, JsonArray)
+        assert len(self.value) == n
+        return self.value
 
     def __repr__(self):
         import pdb;pdb.set_trace()
@@ -283,21 +296,6 @@ def neg_pow_10(x, exp):
         return 0.0
     return x * NEG_POW_10[exp]
 
-def slice_eq(a, b):
-    (ll_chars1, start1, length1, _) = a
-    (ll_chars2, start2, length2, _) = b
-    if length1 != length2:
-        return False
-    j = start2
-    for i in range(start1, start1 + length1):
-        if ll_chars1[i] != ll_chars2[j]:
-            return False
-        j += 1
-    return True
-
-def slice_hash(a):
-    (ll_chars, start, length, h) = a
-    return h
 
 TYPE_UNKNOWN = 0
 TYPE_STRING = 1
@@ -312,7 +310,6 @@ class JSONDecoder(object):
         self.ll_chars = rffi.str2charp(s)
         self.end_ptr = lltype.malloc(rffi.CCHARPP.TO, 1, flavor='raw')
         self.pos = 0
-        self.cache = r_dict(slice_eq, slice_hash, simple_hash_eq=True)
 
     def close(self):
         rffi.free_charp(self.ll_chars)
@@ -569,12 +566,10 @@ class JSONDecoder(object):
                                       end - start)
 
     def _create_dict(self, d):
-        from pypy.objspace.std.dictmultiobject import from_unicode_key_dict
-        return from_unicode_key_dict(self.space, d)
+        assert 0, "abstract base"
 
     def _create_empty_dict(self):
-        from pypy.objspace.std.dictmultiobject import create_empty_unicode_key_dict
-        return create_empty_unicode_key_dict(self.space)
+        assert 0, "abstract base"
 
 
     def decode_string_escaped(self, start):
@@ -682,14 +677,7 @@ class JSONDecoder(object):
             strhash ^= length
             strhash = intmask(strhash)
         self.pos = i
-        # check cache first:
-        key = (ll_chars, start, length, strhash)
-        try:
-            return self.cache[key]
-        except KeyError:
-            pass
         res = self._create_string(start, i - 1, bits)
-        self.cache[key] = res
         return res
 
 
@@ -700,7 +688,7 @@ class OwnJSONDecoder(JSONDecoder):
 
     @specialize.arg(1)
     def _raise(self, msg, *args):
-        raise ValueError(msg % args)
+        raise P4ParseError(msg % args)
 
     def decode_float(self, i):
         start = i
@@ -708,6 +696,9 @@ class OwnJSONDecoder(JSONDecoder):
             i += 1
         self.pos = i
         return self.space.newfloat(float(self.getslice(start, i)))
+
+    def _create_empty_dict(self):
+        return {}
 
     def _create_dict(self, dct):
         d = {}
@@ -729,7 +720,7 @@ def loads(s):
         if i < len(s):
             start = i
             end = len(s) - 1
-            raise ValueError("Extra data: char %d - %d" % (start, end))
+            raise P4ParseError("Extra data: char %d - %d" % (start, end))
         return w_res
     finally:
         decoder.close()

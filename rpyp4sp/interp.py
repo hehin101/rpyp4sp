@@ -1,5 +1,7 @@
-import pdb
+from rpython.rlib import objectmodel
 from rpyp4sp import p4specast, objects, builtin, context, integers
+from rpyp4sp.error import (P4EvaluationError, P4CastError, P4NotImplementedError, 
+                           P4RelationError)
 
 class Sign(object):
     # abstract base
@@ -58,8 +60,7 @@ def invoke_func_def(ctx, calle):
     #            | _ -> None)
     #     |> TIdMap.of_list
         theta = {}
-        for tid, tdef in ctx.glbl.tdenv.items() + ctx.local.tdenv.items():
-            deftyp = tdef.deftyp
+        for tid, (_, deftyp) in ctx.glbl.tdenv.items() + ctx.local.tdenv.items():
             if isinstance(deftyp, p4specast.PlainT):
                 theta[tid] = deftyp.typ
         #   in
@@ -73,8 +74,9 @@ def invoke_func_def(ctx, calle):
     #     ctx_local tparams targs
     # in
     # let ctx, values_input = eval_args ctx args in
-        for tparam, targ in zip(func.tparams, targs):
-            ctx_local = ctx_local.add_typdef_local(tparam, p4specast.PlainT(targ))
+        for i, tparam in enumerate(func.tparams):
+            targ = targs[i]
+            ctx_local = ctx_local.add_typdef_local(tparam, ([], p4specast.PlainT(targ)))
     ctx, values_input = eval_args(ctx, calle.args)
     return invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=ctx_local)
 
@@ -105,7 +107,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     #     (ctx, value_output)
         return ctx, sign.value
     # | _ -> error id.at "function was not matched"
-    assert 0, "TODO invoke_func_def_attempt_clauses"
+    raise P4EvaluationError("TODO invoke_func_def_attempt_clauses")
 
 def eval_arg(ctx, arg):
     # match arg.it with
@@ -199,7 +201,8 @@ def eval_instrs(ctx, sign, instrs):
         if isinstance(sign, Cont):
             ctx, sign = eval_instr(ctx, instr)
         else:
-            assert sign is not Cont
+            if not objectmodel.we_are_translated():
+                assert sign is not Cont
     return ctx, sign
 
 def eval_instr(ctx, instr):
@@ -228,8 +231,8 @@ def eval_instr(ctx, instr):
     #   | ReturnI exp -> eval_return_instr ctx exp
     if isinstance(instr, p4specast.ReturnI):
         return eval_return_instr(ctx, instr)
-    import pdb; pdb.set_trace()
-    assert 0, "TODO eval_instr"
+    #import pdb; pdb.set_trace()
+    raise P4EvaluationError("TODO eval_instr: unhandled instruction type %s" % instr.__class__.__name__)
 
 def eval_if_instr(ctx, instr):
     # INCOMPLETE
@@ -250,7 +253,8 @@ def eval_if_instr(ctx, instr):
 
 def eval_if_cond_iter(ctx, exp_cond, iterexps):
     # let iterexps = List.rev iterexps in
-    iterexps = iterexps[::-1]
+    iterexps = iterexps[:]
+    iterexps.reverse()
     # eval_if_cond_iter' ctx exp_cond iterexps
     return eval_if_cond_iter_tick(ctx, exp_cond, iterexps)
 
@@ -368,13 +372,15 @@ def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
         #             Ctx.add_edge ctx value_cond value_sub Dep.Edges.Iter)
         #           vars_h;
         #         (ctx, cond, value_cond))
-        ctx, cond, values_cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexp_h)
-        typ = p4specast.IterT(p4specast.BoolT, p4specast.List)
+        ctx, cond, values_cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexps_t)
+        typ = p4specast.IterT(p4specast.BoolT(), p4specast.List())
         value_cond = objects.ListV(values_cond, typ=typ)
         # for (id, _typ, iters) in vars_h:
         #     value_sub = ctx.find_value_local(id, iters + [p4specast.List])
         #     # TODO: add edge
         return ctx, cond, value_cond
+    else:
+        assert 0, "should be unreachable"
 
 def eval_if_cond(ctx, exp_cond):
     # let ctx, value_cond = eval_exp ctx exp_cond in
@@ -384,37 +390,6 @@ def eval_if_cond(ctx, exp_cond):
     # (ctx, cond, value_cond)
     return ctx, cond, value_cond
 
-
-def eval_if_cond_list(ctx, exp_cond, vars, iterexps):
-    # TODO: test it
-    # and eval_if_cond_list (ctx : Ctx.t) (exp_cond : exp) (vars : var list)
-    #     (iterexps : iterexp list) : Ctx.t * bool * value list =
-    #   let ctxs_sub = Ctx.sub_list ctx vars in
-    #   List.fold_left
-    #     (fun (ctx, cond, values_cond) ctx_sub ->
-    #       if not cond then (ctx, cond, values_cond)
-    #       else
-    #         let ctx_sub, cond, value_cond =
-    #           eval_if_cond_iter' ctx_sub exp_cond iterexps
-    #         in
-    #         let ctx = Ctx.commit ctx ctx_sub in
-    #         let values_cond = values_cond @ [ value_cond ] in
-    #         (ctx, cond, values_cond))
-    #     (ctx, true, []) ctxs_sub
-    ctxs_sub = ctx.sub_list(vars)
-    cond = True
-    values_cond = []
-    acc = (ctx, cond, values_cond)
-    for ctx_sub in ctxs_sub:
-        if not cond:
-            acc = (ctx, cond, values_cond)
-        else:
-            ctx_sub, cond, value_cond = \
-                eval_if_cond_iter_tick(ctx_sub, exp_cond, iterexps)
-            ctx = ctx.commit(ctx_sub)
-            values_cond = values_cond + [value_cond]
-            acc = (ctx, cond, values_cond)
-    return acc
 
 def eval_cases(ctx, exp, cases):
     # returns  Ctx.t * instr list option * value =
@@ -450,7 +425,7 @@ def eval_cases(ctx, exp, cases):
         elif isinstance(guard, p4specast.MemG):
             exp_cond = p4specast.MemE(exp, guard.exp)
         else:
-            import pdb;pdb.set_trace()
+            #import pdb;pdb.set_trace()
             assert 0, 'missing case'
         exp_cond.typ = p4specast.BoolT()
 
@@ -503,7 +478,7 @@ def eval_let_instr(ctx, let_instr):
     ctx = eval_let_iter(ctx, let_instr)
     return ctx, Cont()
 
-def _discriminate_bound_binding_variables(ctx, id, vars):
+def _discriminate_bound_binding_variables(ctx, vars):
     vars_bound = []
     vars_binding = []
     for var in vars:
@@ -521,7 +496,7 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     #       Ctx.bound_value Local ctx (id, iters @ [ Il.Ast.List ]))
     #     vars
     # in
-    vars_bound, vars_binding = _discriminate_bound_binding_variables(ctx, id, vars_h)
+    vars_bound, vars_binding = _discriminate_bound_binding_variables(ctx, vars_h)
     # (* Create a subcontext for each batch of bound values *)
     # let ctxs_sub = Ctx.sub_list ctx vars_bound in
     ctxs_sub = ctx.sub_list(vars_bound)
@@ -590,11 +565,12 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     #     Ctx.add_value Local ctx
     #       (id_binding, iters_binding @ [ Il.Ast.List ])
     #       value_binding)
-    for (var_binding, values_binding) in zip(vars_binding, values_binding):
+    for i, var_binding in enumerate(vars_binding):
+        values_binding_item = values_binding[i]
         id_binding = var_binding.id
         typ_binding = var_binding.typ
         iters_binding = var_binding.iter
-        value_binding = objects.ListV(values_binding, typ=typ_binding)
+        value_binding = objects.ListV(values_binding_item, typ=typ_binding)
         ctx = ctx.add_value_local(id_binding, iters_binding + [p4specast.List()], value_binding)
     return ctx
 
@@ -622,12 +598,13 @@ def eval_let_iter_tick(ctx, exp_l, exp_r, iterexps):
             return eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t)
         else:
             assert 0, 'should be unreachable'
-    import pdb;pdb.set_trace()
-    assert 0, "todo eval_let_iter_tick"
+    #import pdb;pdb.set_trace()
+    raise P4EvaluationError("todo eval_let_iter_tick")
 
 def eval_let_iter(ctx, let_instr):
     # let iterexps = List.rev iterexps in
-    iterexps = let_instr.iters[::-1]
+    iterexps = let_instr.iters[:]
+    iterexps.reverse()
     # eval_let_iter' ctx exp_l exp_r iterexps
     return eval_let_iter_tick(ctx, let_instr.var, let_instr.value, iterexps)
 
@@ -638,8 +615,8 @@ def eval_let(ctx, exp_l, exp_r):
     return assign_exp(ctx, exp_l, value)
 
 def eval_let_opt(ctx, exp_l, exp_r, vars, iterexps):
-    import pdb; pdb.set_trace()
-    assert 0, "TODO; implement eval_let_opt"
+    #import pdb; pdb.set_trace()
+    raise P4EvaluationError("TODO; implement eval_let_opt")
     # and eval_let_opt (ctx : Ctx.t) (exp_l : exp) (exp_r : exp) (vars : var list)
     #     (iterexps : iterexp list) : Ctx.t =
     #   (* Discriminate between bound and binding variables *)
@@ -716,7 +693,8 @@ def eval_let_opt(ctx, exp_l, exp_r, vars, iterexps):
     #     ctx vars_binding values_binding
 
 def split_exps_without_idx(inputs, exps):
-    assert sorted(inputs) == inputs # inputs is sorted
+    if not objectmodel.we_are_translated():
+        assert sorted(inputs) == inputs # inputs is sorted
     exps_input = []
     exps_output = []
     for index, exp in enumerate(exps):
@@ -745,7 +723,7 @@ def eval_rule(ctx, id, notexp):
     #     | None -> error id.at "relation was not matched"
     relctx, values_output = invoke_rel(ctx, id, values_input)
     if relctx is None:
-        raise ValueError("relation was not matched: %s" % id.value)
+        raise P4RelationError("relation was not matched: %s" % id.value)
     ctx = relctx
     #   assign_exps ctx exps_output values_output
     ctx = assign_exps(ctx, exps_output, values_output)
@@ -760,7 +738,7 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
     #       Ctx.bound_value Local ctx (id, iters @ [ Il.Ast.List ]))
     #     vars
     # in
-    vars_bound, vars_binding = _discriminate_bound_binding_variables(ctx, id, vars)
+    vars_bound, vars_binding = _discriminate_bound_binding_variables(ctx, vars)
     # (* Create a subcontext for each batch of bound values *)
     # let ctxs_sub = Ctx.sub_list ctx vars_bound in
     ctxs_sub = ctx.sub_list(vars_bound)
@@ -830,7 +808,8 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
     #       (id_binding, iters_binding @ [ Il.Ast.List ])
     #       value_binding)
     #   ctx vars_binding values_binding
-    for (var_binding, values_binding) in zip(vars_binding, values_binding):
+    for index, values_binding in enumerate(values_binding):
+        var_binding = vars_binding[index]
         id_binding = var_binding.id
         typ_binding = var_binding.typ
         iters_binding = var_binding.iter
@@ -855,6 +834,7 @@ def eval_rule_iter_tick(ctx, id, notexp, iterexps):
     iter_h = iterexp.iter
     vars_h = iterexp.vars
     if isinstance(iter_h, p4specast.Opt):
+        raise P4EvaluationError("TODO eval_rule_iter_tick")
         return eval_rule_opt(ctx, id, notexp, vars_h, iterexps_t)
     if isinstance(iter_h, p4specast.List):
         return eval_rule_list(ctx, id, notexp, vars_h, iterexps_t)
@@ -864,7 +844,8 @@ def eval_rule_iter_tick(ctx, id, notexp, iterexps):
 def eval_rule_iter(ctx, instr):
     # let iterexps = List.rev iterexps in
     # eval_rule_iter' ctx id notexp iterexps
-    iterexps = instr.iters[::-1]
+    iterexps = instr.iters[:]
+    iterexps.reverse()
     return eval_rule_iter_tick(ctx, instr.id, instr.notexp, iterexps)
 
 def eval_rule_instr(ctx, instr):
@@ -1053,8 +1034,8 @@ def assign_exp(ctx, exp, value):
             ctx = ctx.add_value_local(var.id, var.iter + [p4specast.List()], value_sub)
         return ctx
 
-    import pdb;pdb.set_trace()
-    assert 0, "todo assign_exp"
+    #import pdb;pdb.set_trace()
+    raise P4EvaluationError("todo assign_exp: unhandled expression type %s" % exp.__class__.__name__)
     # | _ ->
     #     error exp.at
     #       (F.asprintf "(TODO) match failed %s <- %s"
@@ -1073,7 +1054,8 @@ def assign_exps(ctx, exps, values):
     #   List.fold_left2 assign_exp ctx exps values
     assert len(exps) == len(values), \
         "mismatch in number of expressions and values while assigning, expected %d value(s) but got %d" % (len(exps), len(values))
-    for (exp, value) in zip(exps, values):
+    for index, exp in enumerate(exps):
+        value = values[index]
         ctx = assign_exp(ctx, exp, value)
     return ctx
 
@@ -1105,7 +1087,8 @@ def assign_arg(ctx_caller, ctx_callee, arg, value):
 def assign_args(ctx_caller, ctx_callee, args, values):
     assert len(args) == len(values), \
         "mismatch in number of arguments while assigning, expected %d value(s) but got %d" % (len(args), len(values))
-    for arg, value in zip(args, values):
+    for i, arg in enumerate(args):
+        value = values[i]
         ctx_callee = assign_arg(ctx_caller, ctx_callee, arg, value)
     return ctx_callee
 
@@ -1166,7 +1149,7 @@ def eval_exps(ctx, exps):
 class __extend__(p4specast.Exp):
     def eval_exp(self, ctx):
         #import pdb;pdb.set_trace()
-        raise NotImplementedError("abstract base class %s" % self)
+        raise P4NotImplementedError("abstract base class %s" % self)
 
 class __extend__(p4specast.BoolE):
     def eval_exp(self, ctx):
@@ -1296,6 +1279,8 @@ class __extend__(p4specast.ConsE):
 
 def eval_cmp_num(cmpop, value_l, value_r, typ):
     # let num_l = Value.get_num value_l in
+    assert isinstance(value_l, objects.NumV)
+    assert isinstance(value_r, objects.NumV)
     assert value_l.what == value_r.what
     num_l = value_l.get_num()
     # let num_r = Value.get_num value_r in
@@ -1368,6 +1353,8 @@ def eval_binop_num(binop, value_l, value_r, typ):
     # let num_l = Value.get_num value_l in
     # let num_r = Value.get_num value_r in
     # Il.Ast.NumV (Num.bin binop num_l num_r)
+    assert isinstance(value_l, objects.NumV)
+    assert isinstance(value_r, objects.NumV)
     assert value_l.what == value_r.what
     num_l = value_l.get_num()
     num_r = value_r.get_num()
@@ -1378,11 +1365,11 @@ def eval_binop_num(binop, value_l, value_r, typ):
     elif binop == 'MulOp':
         res_num = num_l.mul(num_r)
     elif binop == 'DivOp':
-        raise NotImplementedError("DivOp")
+        raise P4NotImplementedError("DivOp")
     elif binop == 'ModOp':
-        raise NotImplementedError("ModOp")
+        raise P4NotImplementedError("ModOp")
     elif binop == 'PowOp':
-        raise NotImplementedError("PowOp")
+        raise P4NotImplementedError("PowOp")
     else:
         assert 0, "should be unreachable"
     return objects.NumV(res_num, value_l.what, typ=typ)
@@ -1424,6 +1411,7 @@ def eval_unop_bool(unop, value, typ):
 
 def eval_unop_num(unop, value, typ):
     # let num = Value.get_num value in
+    assert isinstance(value, objects.NumV)
     num = value.get_num()
     # match unop with
     if unop == 'PlusOp':
@@ -1561,8 +1549,8 @@ class __extend__(p4specast.MatchE):
             matches = (value.value is None) == (pattern.kind == 'None')
         #   | _ -> false
         else:
-            import pdb;pdb.set_trace()
-            assert 0, "TODO MatchE"
+            #import pdb;pdb.set_trace()
+            raise P4EvaluationError("TODO MatchE")
         # in
         # let value_res =
         #   let vid = Value.fresh () in
@@ -1619,7 +1607,7 @@ class __extend__(p4specast.StrE):
         # let ctx, values = eval_exps ctx exps in
         ctx, values = eval_exps(ctx, exps)
         # let fields = List.combine atoms values in
-        fields = [(atom, value) for ((atom, exp), value) in zip(self.fields, values)]
+        fields = [(atom, values[i]) for i, (atom, exp) in enumerate(self.fields)]
         # let value_res =
         #   let vid = Value.fresh () in
         #   let typ = note in
@@ -1776,7 +1764,7 @@ def eval_update_path(ctx, value_b, path, value_n):
         # eval_update_path ctx value_b path value
         return eval_update_path(ctx, value_b, path.path, value_struct)
     else:
-        raise NotImplementedError("(TODO eval_update_path)")
+        raise P4EvaluationError("(TODO eval_update_path)")
 
 class __extend__(p4specast.UpdE):
     def eval_exp(self, ctx):
@@ -1882,6 +1870,7 @@ def subtyp(ctx, typ, value):
     #     | NumV (`Int i) -> Bigint.(i >= zero)
     #     | _ -> assert false)
     if isinstance(typ, p4specast.NumT) and isinstance(typ.typ, p4specast.NatT):
+        assert isinstance(value, objects.NumV)
         if value.what == "Nat":
             return True
         elif value.what == "Int":
@@ -1896,8 +1885,8 @@ def subtyp(ctx, typ, value):
         assert tparams == []
         assert typ.targs == []
         if isinstance(deftyp, p4specast.PlainT):
-            import pdb;pdb.set_trace()
-            assert 0, "TODO subtyp"
+            #import pdb;pdb.set_trace()
+            raise P4EvaluationError("TODO subtyp")
     #     match (deftyp.it, value.it) with
     #     | PlainT typ, _ ->
     #         let typ = Typ.subst_typ theta typ in
@@ -1916,8 +1905,8 @@ def subtyp(ctx, typ, value):
     #             Mixop.eq mixop_t mixop_v)
     #           typcases
     #     | _ -> true)
-    import pdb;pdb.set_trace()
-    assert 0, "TODO subtyp"
+    #import pdb;pdb.set_trace()
+    raise P4EvaluationError("TODO subtyp")
 
     # | TupleT typs -> (
     #     match value.it with
@@ -1945,6 +1934,7 @@ def downcast(ctx, typ, value):
     #         Ctx.add_edge ctx value_res value (Dep.Edges.Op (CastOp typ));
     #         (ctx, value_res)
     #     | _ -> assert false)
+        assert isinstance(value, objects.NumV)
         if value.what == "Nat":
             return ctx, value
         elif value.what == "Int":
@@ -1961,8 +1951,8 @@ def downcast(ctx, typ, value):
     #     match deftyp.it with
     #     | PlainT typ ->
         if isinstance(deftyp, p4specast.PlainT):
-            import pdb;pdb.set_trace()
-            assert 0, "TODO downcast"
+            #import pdb;pdb.set_trace()
+            raise P4CastError("TODO downcast")
     #         let typ = Typ.subst_typ theta typ in
     #         downcast ctx typ value
     #     | _ -> (ctx, value))
@@ -1970,8 +1960,8 @@ def downcast(ctx, typ, value):
             return ctx, value
     # | TupleT typs -> (
     if isinstance(typ, p4specast.TupleT):
-        import pdb;pdb.set_trace()
-        assert 0, "TODO downcast"
+        #import pdb;pdb.set_trace()
+        raise P4CastError("TODO downcast")
     #     match value.it with
     #     | TupleV values ->
     #         let ctx, values =
@@ -1999,14 +1989,14 @@ def upcast(ctx, typ, value):
     #   | NumT `IntT -> (
     if isinstance(typ, p4specast.NumT) and isinstance(typ.typ, p4specast.IntT):
     #       match value.it with
-        assert value.what == 'Nat'
+        if isinstance(value, objects.NumV) and value.what == 'Nat':
     #       | NumV (`Nat n) ->
     #           let value_res =
     #             let vid = Value.fresh () in
     #             let typ = typ.it in
     #             Il.Ast.(NumV (`Int n) $$$ { vid; typ })
-        value_res = objects.NumV(value.get_num(), 'Int', typ=typ)
-        return ctx, value_res
+            value_res = objects.NumV(value.get_num(), 'Int', typ=typ)
+            return ctx, value_res
     #           in
     #           Ctx.add_node ctx value_res;
     #           Ctx.add_edge ctx value_res value (Dep.Edges.Op (CastOp typ));
@@ -2021,8 +2011,8 @@ def upcast(ctx, typ, value):
     #       let theta = List.combine tparams targs |> TIdMap.of_list in
     #       match deftyp.it with
         if isinstance(deftyp, p4specast.PlainT):
-            import pdb;pdb.set_trace()
-            assert 0, "TODO upcast"
+            #import pdb;pdb.set_trace()
+            raise P4CastError("TODO upcast")
         else:
             return ctx, value
     #       | PlainT typ ->
@@ -2031,8 +2021,8 @@ def upcast(ctx, typ, value):
     #       | _ -> (ctx, value))
     #   | TupleT typs -> (
     if isinstance(typ, p4specast.TupleT):
-        import pdb;pdb.set_trace()
-        assert 0, "TODO upcast"
+        #import pdb;pdb.set_trace()
+        raise P4CastError("TODO upcast")
     #       match value.it with
     #       | TupleV values ->
     #           let ctx, values =
@@ -2060,10 +2050,12 @@ def mixop_eq(a, b):
     phrasesb = b.phrases
     if len(phrasesa) != len(phrasesb):
         return False
-    for suba, subb in zip(phrasesa, phrasesb):
+    for i, suba in enumerate(phrasesa):
+        subb = phrasesb[i]
         if len(suba) != len(subb):
             return False
-        for atoma, atomb in zip(suba, subb):
+        for j, atoma in enumerate(suba):
+            atomb = subb[j]
             if atoma.value != atomb.value:
                 return False
     return True

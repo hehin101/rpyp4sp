@@ -32,3 +32,28 @@ jobs:
           cd p4-spectec
           make build-spec
           cd ..
+
+      - name: make ast.json
+        run: |
+          cd p4-spectec
+          ./p4spectec json-ast spec/*.watsup  > ../ast.json
+          cd ..
+          ls -l ast.json
+          pwd
+          echo realpath ast.json
+
+      - name: get pypy binary
+        run: |
+          make _pypy_binary/bin/python
+
+      - name: checkout pypy
+        run: |
+          make setup-pypy
+
+      - name: run tests
+        run: |
+          _pypy_binary/bin/python pypy/pytest.py rpyp4sp -v -k-all
+
+      - name: translate binary
+        run: |
+          PYTHONPATH=. _pypy_binary/bin/python pypy/rpython/bin/rpython rpyp4sp/targetrpyp4sp.py
