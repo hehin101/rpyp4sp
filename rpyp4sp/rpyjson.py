@@ -37,9 +37,6 @@ class JsonBase(object):
     def value_array(self):
         raise TypeError
 
-    def value_object(self):
-        raise TypeError
-
     def value_string(self):
         raise TypeError
 
@@ -58,10 +55,15 @@ class JsonBase(object):
             return self.value[index]
         raise TypeError("Invalid index access %s %s" % (self, index))
 
+    @specialize.arg(1)
     def get_dict_value(self, key):
         if self.is_object:
             assert isinstance(self, JsonObject)
-            return self.value[key]
+            cache = MapLookupCache.get_cache(key)
+            index = cache.get(self.map)
+            if index < 0:
+                raise KeyError(key)
+            return self.values[index]
         raise TypeError("Invalid key access %s %s" % (self, key))
 
     def __iter__(self):
@@ -187,23 +189,22 @@ class JsonString(JsonPrimitive):
 class JsonObject(JsonBase):
     is_object = True
 
-    def __init__(self, dct):
-        self.value = dct
+    def __init__(self, map, values):
+        self.map = map
+        self.values = values
+        assert len(values) == len(map.attrs)
 
     def tostring(self):
-        return "{%s}" % ", ".join(["\"%s\": %s" % (key, self.value[key].tostring()) for key in self.value])
+        return "{%s}" % ", ".join(["\"%s\": %s" % (key, self.values[index].tostring()) for key, index in self.map.attrs.iteritems()])
 
     def _unpack_deep(self):
         result = {}
-        for key, value in self.value.iteritems():
-            result[key] = value._unpack_deep()
+        for key, index in self.map.attrs.iteritems():
+            result[key] = self.values[index]._unpack_deep()
         return result
 
-    def value_object(self):
-        return self.value
-
     def __repr__(self):
-        return "rpyjson.JsonObject(%r)" % (self.value,)
+        return "rpyjson.JsonObject(%r, %r)" % (self.map, self.values)
 
 class JsonArray(JsonBase):
     is_array = True
@@ -245,6 +246,68 @@ def neg_pow_10(x, exp):
 
 INTCACHE = [JsonInt(i) for i in range(256)]
 
+class Map(object):
+    def __init__(self, newkey, attrs):
+        self.newkey = newkey # type: str | None
+        self.attrs = attrs # type: dict[str, int]
+        self.next_maps = None # type: dict[str, Map] | None
+        # arbitrarily have a nextmap_first
+        self.nextmap_first = None # type: Map
+
+    def get_next(self, key):
+        if self.nextmap_first and key == self.nextmap_first.newkey:
+            return self.nextmap_first
+        if self.next_maps is not None:
+            res = self.next_maps.get(key, None)
+            if res is not None:
+                return res
+        else:
+            self.next_maps = {}
+        attrs = self.attrs.copy()
+        attrs[key] = len(attrs)
+        newmap = Map(key, attrs)
+        self.next_maps[key] = newmap
+        if self.nextmap_first is None:
+            self.nextmap_first = newmap
+        return newmap
+
+    def lookup(self, key):
+        return self.attrs.get(key, -1)
+
+class MapLookupCache(object):
+    caches = {}
+
+    @staticmethod
+    @specialize.memo()
+    def get_cache(key):
+        if key in MapLookupCache.caches:
+            return MapLookupCache.caches[key]
+        cache = MapLookupCache(key)
+        MapLookupCache.caches[key] = cache
+        return cache
+
+    def __init__(self, key):
+        self.key = key
+        self.cached_map = None
+        self.cached_index = -2
+
+    def get(self, map):
+        if map is self.cached_map:
+            return self.cached_index
+        res = map.lookup(self.key)
+        self.cached_map = map
+        self.cached_index = res
+        return res
+
+ROOT_MAP = Map(None, {})
+
+# prime the root map with some common transitions
+ROOT_MAP.get_next("file").get_next("line").get_next("column")
+ROOT_MAP.get_next("it").get_next("node").get_next("at")
+ROOT_MAP.get_next("left").get_next("right")
+ROOT_MAP.get_next("vid").get_next("typ").get_next("at")
+
+
 TYPE_UNKNOWN = 0
 TYPE_STRING = 1
 class JSONDecoder(object):
@@ -261,7 +324,6 @@ class JSONDecoder(object):
         self.ll_chars = rffi.str2charp(s)
         self.end_ptr = lltype.malloc(rffi.CCHARPP.TO, 1, flavor='raw')
         self.pos = 0
-
         self.cache_keys = {}
 
     def close(self):
@@ -471,12 +533,14 @@ class JSONDecoder(object):
         i = self.skip_whitespace(i)
         if self.ll_chars[i] == '}':
             self.pos = i+1
-            return JsonObject({})
+            return JsonObject(ROOT_MAP, [])
 
-        d = self._create_empty_dict()
+        curr_map = ROOT_MAP
+        values = []
         while True:
             # parse a key: value
             name = self.decode_key(i)
+            curr_map = curr_map.get_next(name)
             i = self.skip_whitespace(self.pos)
             ch = self.ll_chars[i]
             if ch != ':':
@@ -485,13 +549,13 @@ class JSONDecoder(object):
             i = self.skip_whitespace(i)
             #
             w_value = self.decode_any(i)
-            d[name] = w_value
+            values.append(w_value)
             i = self.skip_whitespace(self.pos)
             ch = self.ll_chars[i]
             i += 1
             if ch == '}':
                 self.pos = i
-                return self._create_dict(d)
+                return JsonObject(curr_map, values)
             elif ch == ',':
                 pass
             elif ch == '\0':
@@ -518,12 +582,6 @@ class JSONDecoder(object):
 
     def _create_string(self, start, end, bits):
         return JsonString(self.getslice(start, end))
-
-    def _create_empty_dict(self):
-        return {}
-
-    def _create_dict(self, d):
-        return JsonObject(d)
 
     def decode_string_escaped(self, start):
         i = self.pos
@@ -681,6 +739,10 @@ def _convert(data):
     if isinstance(data, list):
         return JsonArray([_convert(x) for x in data])
     if isinstance(data, dict):
-        return JsonObject({key.encode("utf-8"): _convert(value)
-            for (key, value) in data.iteritems()})
+        curr_map = ROOT_MAP
+        values = []
+        for (key, value) in data.iteritems():
+            curr_map = curr_map.get_next(key)
+            values.append(_convert(value))
+        return JsonObject(curr_map, values)
 
