@@ -36,9 +36,11 @@ jobs:
       - name: make ast.json
         run: |
           cd p4-spectec
-          ./p4spectec json-ast spec/*.watsup  > ../json.ast
+          ./p4spectec json-ast spec/*.watsup  > ../ast.json
           cd ..
-          ls -l json.ast
+          ls -l ast.json
+          pwd
+          echo realpath ast.json
 
       - name: get pypy binary
         run: |
