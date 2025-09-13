@@ -33,7 +33,7 @@ def subst_typ(theta, typ):
         else:
             targs = [subst_typ(theta, targ) for targ in typ.targs]
             return p4specast.VarT(typ.id, targs)
-    import pdb;pdb.set_trace()
+    #import pdb;pdb.set_trace()
     assert 0, "TODO subst_typ"
 
 # and subst_typs (theta : theta) (typs : t list) : t list =

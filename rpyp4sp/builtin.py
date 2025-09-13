@@ -48,7 +48,8 @@ def lists_rev_(ctx, name, targs, values_input):
     lst = value.get_list()
     if len(lst) <= 1:
         return value
-    lst = lst[::-1]
+    lst = lst[:]
+    lst.reverse()
     return objects.ListV(lst, typ=value.typ)
 
 
@@ -96,6 +97,7 @@ def _extract_set_elems(set_value):
     return lst_value.get_list()
 
 def _wrap_set_elems(elems, set_value_for_types):
+    assert isinstance(set_value_for_types, objects.CaseV)
     lst_value = objects.ListV(elems, typ=set_value_for_types.values[0].typ)
     return objects.CaseV(set_value_for_types.mixop, [lst_value], typ=set_value_for_types.typ)
 
@@ -175,6 +177,7 @@ arrow_mixop = p4specast.MixOp(
 def maps_find_map(ctx, name, targs, values_input):
     key_typ, value_typ = targs
     map_value, key_value = values_input
+    assert isinstance(map_value, objects.CaseV)
     assert map_value.mixop.eq(map_mixop)
     content, = map_value.values
     assert isinstance(content, objects.ListV)

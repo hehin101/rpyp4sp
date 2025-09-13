@@ -20,14 +20,15 @@ from rpyp4sp import p4specast, integers
 # and valuecase = mixop * value list
 
 class BaseV(object):
+    _attrs_ = ['typ', 'vid']
     # vid: int
     # typ: p4specast.Type
     @staticmethod
     def fromjson(value):
-        typ = p4specast.Type.fromjson(value['note']['typ'])
-        vid = value['note']['vid'].value_int()
-        content = value['it']
-        what = content[0].value_string()
+        typ = p4specast.Type.fromjson(value.get_dict_value('note').get_dict_value('typ'))
+        vid = value.get_dict_value('note').get_dict_value('vid').value_int()
+        content = value.get_dict_value('it')
+        what = content.get_list_item(0).value_string()
         if what == 'BoolV':
             value = BoolV.fromjson(content)
         elif what == 'NumV':
@@ -70,7 +71,7 @@ class BaseV(object):
         return res == 0
 
     def compare(self, other):
-        import pdb;pdb.set_trace()
+        #import pdb;pdb.set_trace()
         assert 0
 
     def _base_compare(self, other):
@@ -108,7 +109,7 @@ class BoolV(BaseV):
 
     @staticmethod
     def fromjson(content):
-        return BoolV(content[1].value_bool())
+        return BoolV(content.get_list_item(1).value_bool())
 
 class NumV(BaseV):
     def __init__(self, value, what, vid=-1, typ=None):
@@ -138,9 +139,9 @@ class NumV(BaseV):
 
     @staticmethod
     def fromjson(content):
-        inner = content[1]
-        what = inner[0].value_string() # 'Int' or 'Nat'
-        value = inner[1].value_string()
+        inner = content.get_list_item(1)
+        what = inner.get_list_item(0).value_string() # 'Int' or 'Nat'
+        value = inner.get_list_item(1).value_string()
         return NumV.fromstr(value, what)
 
 class TextV(BaseV):
@@ -164,7 +165,7 @@ class TextV(BaseV):
 
     @staticmethod
     def fromjson(content):
-        return TextV(content[1].value_string())
+        return TextV(content.get_list_item(1).value_string())
 
 class StructV(BaseV):
     def __init__(self, fields, vid=-1, typ=None):
@@ -181,7 +182,7 @@ class StructV(BaseV):
     @staticmethod
     def fromjson(content):
         fields = []
-        for f in content[1].value_array():
+        for f in content.get_list_item(1).value_array():
             atom_content, field_content = f.value_array()
             atom = p4specast.AtomT.fromjson(atom_content)
             field = BaseV.fromjson(field_content)
@@ -189,6 +190,8 @@ class StructV(BaseV):
         return StructV(fields)
 
     def compare(self, other):
+        if not isinstance(other, StructV):
+            return self._base_compare(other)
         def split_fields(fields):
             atoms, values = [], []
             for atom, value in fields:
@@ -214,7 +217,7 @@ class CaseV(BaseV):
 
     @staticmethod
     def fromjson(content):
-        mixop_content, valuelist_content = content[1].value_array()
+        mixop_content, valuelist_content = content.get_list_item(1).value_array()
         mixop = p4specast.MixOp.fromjson(mixop_content)
         values = [BaseV.fromjson(v) for v in valuelist_content.value_array()]
         return CaseV(mixop, values)
@@ -247,7 +250,7 @@ class TupleV(BaseV):
 
     @staticmethod
     def fromjson(content):
-        elements = [BaseV.fromjson(e) for e in content[1].value_array()]
+        elements = [BaseV.fromjson(e) for e in content.get_list_item(1).value_array()]
         return TupleV(elements)
 
 class OptV(BaseV):
@@ -275,8 +278,8 @@ class OptV(BaseV):
     @staticmethod
     def fromjson(content):
         value = None
-        if not content[1].is_null:
-            value = BaseV.fromjson(content[1])
+        if not content.get_list_item(1).is_null:
+            value = BaseV.fromjson(content.get_list_item(1))
         return OptV(value)
 
 class ListV(BaseV):
@@ -298,7 +301,7 @@ class ListV(BaseV):
 
     @staticmethod
     def fromjson(content):
-        elements = [BaseV.fromjson(e) for e in content[1].value_array()]
+        elements = [BaseV.fromjson(e) for e in content.get_list_item(1).value_array()]
         return ListV(elements)
 
 
@@ -313,7 +316,7 @@ class FuncV(BaseV):
 
     @staticmethod
     def fromjson(content):
-        id = p4specast.Id.fromjson(content[1])
+        id = p4specast.Id.fromjson(content.get_list_item(1))
         return FuncV(id)
 
 def atom_compares(atoms_l, atoms_r):
