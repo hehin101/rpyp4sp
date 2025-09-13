@@ -50,7 +50,7 @@ jobs:
 
       - name: run tests
         run: |
-          _pypy_binary/bin/python pypy/pytest.py -v -k-all
+          _pypy_binary/bin/python pypy/pytest.py rpyp4sp -v -k-all
 
       - name: translate binary
         run: |
