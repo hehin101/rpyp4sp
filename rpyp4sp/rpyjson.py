@@ -1,4 +1,5 @@
 from rpython.rlib.objectmodel import we_are_translated, compute_hash, newlist_hint
+from rpython.rlib.rarithmetic import intmask
 from rpython.tool.pairtype import extendabletype
 
 import sys
@@ -336,6 +337,7 @@ json_true = JsonTrue()
 
 json_false = JsonFalse()
 
+json_empty_string = JsonString('')
 
 OVF_DIGITS = len(str(sys.maxint))
 
@@ -434,6 +436,11 @@ class JSONDecoder(object):
         self.pos = 0
         self.cache_keys = {}
         self.scratch_lists = []
+
+        self.LRU_SIZE = 16
+        self.str_lru_hashes = [-1] * self.LRU_SIZE
+        self.str_lru_jsonstrings = [None] * self.LRU_SIZE
+        self.str_lru_index = 0
 
     def close(self):
         rffi.free_charp(self.ll_chars)
@@ -684,21 +691,56 @@ class JSONDecoder(object):
     def decode_string(self, i):
         start = i
         bits = 0
+        ll_chars = self.ll_chars
+        strhash = ord(ll_chars[i]) << 7
         while True:
             # this loop is a fast path for strings which do not contain escape
             # characters
-            ch = self.ll_chars[i]
+            ch = ll_chars[i]
             i += 1
             bits |= ord(ch)
             if ch == '"':
                 self.pos = i
-                return self._create_string(start, i - 1, bits)
+                break
             elif ch == '\\' or ch < '\x20':
                 self.pos = i-1
                 return self.decode_string_escaped(start)
+            strhash = intmask((1000003 * strhash) ^ ord(ll_chars[i]))
+        length = i - start - 1
+        if length == 0:
+            strhash = -1
+            return json_empty_string
+        else:
+            strhash ^= length
+            strhash = intmask(strhash)
+        index = 0
+        for index in range(self.LRU_SIZE):
+            if self.str_lru_hashes[index] == strhash:
+                break
+        else:
+            # not found
+            return self._create_string_wrapped(start, i - 1, strhash)
+        cache_str = self.str_lru_jsonstrings[index]
+        cache_str_unwrapped = cache_str.value_string()
+        if length == len(cache_str_unwrapped):
+            index = start
+            for c in cache_str_unwrapped:
+                if not ll_chars[index] == c:
+                    break
+                index += 1
+            else:
+                return cache_str
+        # rare: same hash, different string
+        return self._create_string_wrapped(start, i - 1, strhash)
 
-    def _create_string(self, start, end, bits):
-        return JsonString(self.getslice(start, end))
+
+    def _create_string_wrapped(self, start, end, strhash):
+        res = JsonString(self.getslice(start, end))
+        self.str_lru_hashes[self.str_lru_index] = strhash
+        self.str_lru_jsonstrings[self.str_lru_index] = res
+        self.str_lru_index = (self.str_lru_index + 1) % self.LRU_SIZE
+        return res
+
 
     def decode_string_escaped(self, start):
         i = self.pos
@@ -795,7 +837,6 @@ class JSONDecoder(object):
 
     def _decode_key(self, i):
         """ returns an unwrapped key """
-        from rpython.rlib.rarithmetic import intmask
         ll_chars = self.ll_chars
 
         start = i
