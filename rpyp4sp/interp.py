@@ -803,7 +803,8 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
     #       (id_binding, iters_binding @ [ Il.Ast.List ])
     #       value_binding)
     #   ctx vars_binding values_binding
-    for (var_binding, values_binding) in zip(vars_binding, values_binding):
+    for index, values_binding in enumerate(values_binding):
+        var_binding = vars_binding[index]
         id_binding = var_binding.id
         typ_binding = var_binding.typ
         iters_binding = var_binding.iter
@@ -1048,7 +1049,8 @@ def assign_exps(ctx, exps, values):
     #   List.fold_left2 assign_exp ctx exps values
     assert len(exps) == len(values), \
         "mismatch in number of expressions and values while assigning, expected %d value(s) but got %d" % (len(exps), len(values))
-    for (exp, value) in zip(exps, values):
+    for index, exp in enumerate(exps):
+        value = values[index]
         ctx = assign_exp(ctx, exp, value)
     return ctx
 

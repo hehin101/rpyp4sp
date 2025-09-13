@@ -158,6 +158,7 @@ NO_REGION = Region(Position('', 0, 0), Position('', 0, 0))
 # and id' = string [@@deriving yojson]
 
 class Id(AstBase):
+    _attrs_ = ['value', 'region']
     def __init__(self, value, region):
         self.value = value # type: str
         self.region = region # type: Region
@@ -403,6 +404,7 @@ class DefA(Arg):
 
 
 class Exp(AstBase):
+    _attrs_ = ['typ', 'region']
     # has .typ (with is in 'note' field of json) and a region
 
     @staticmethod
@@ -473,6 +475,7 @@ class Exp(AstBase):
 
 
 class BoolE(Exp):
+    _attrs_ = ['value']
     def __init__(self, value):
         assert isinstance(value, bool)
         self.value = value # type: bool

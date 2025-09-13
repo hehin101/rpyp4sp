@@ -42,6 +42,9 @@ class Integer(object):
         else:
             return 1
 
+    def neg(self):
+        return Integer.fromint(0).sub(self)
+
 
 class SmallInteger(Integer):
     _immutable_fields_ = ['val']
