@@ -195,17 +195,18 @@ class JsonObject(JsonBase):
 
     @staticmethod
     def make(map, values):
-        if not values:
+        size = len(map.attrs)
+        if not size:
             return JsonObject0(map)
-        if len(values) == 1:
+        if size == 1:
             return JsonObject1(map, values[0])
-        if len(values) == 2:
+        if size == 2:
             return JsonObject2(map, values[0], values[1])
-        if len(values) == 3:
+        if size == 3:
             return JsonObject3(map, values[0], values[1], values[2])
-        if len(values) == 4:
+        if size == 4:
             return JsonObject4(map, values[0], values[1], values[2], values[3])
-        return JsonObjectGeneral(map, values)
+        return JsonObjectGeneral(map, values[:size])
 
     def _num_values(self):
         raise NotImplementedError('abstract')
@@ -432,6 +433,7 @@ class JSONDecoder(object):
         self.end_ptr = lltype.malloc(rffi.CCHARPP.TO, 1, flavor='raw')
         self.pos = 0
         self.cache_keys = {}
+        self.scratch_lists = []
 
     def close(self):
         rffi.free_charp(self.ll_chars)
@@ -643,7 +645,11 @@ class JSONDecoder(object):
             return JsonObject0(ROOT_MAP)
 
         curr_map = ROOT_MAP
-        values = newlist_hint(4)
+        if self.scratch_lists:
+            values = self.scratch_lists.pop()
+        else:
+            values = [None] * 4
+        values_index = 0
         while True:
             # parse a key: value
             curr_map = self.decode_key(curr_map, i)
@@ -655,13 +661,18 @@ class JSONDecoder(object):
             i = self.skip_whitespace(i)
             #
             w_value = self.decode_any(i)
-            values.append(w_value)
+            if values_index == len(values):
+                values = values + [None] * len(values)
+            values[values_index] = w_value
+            values_index += 1
             i = self.skip_whitespace(self.pos)
             ch = self.ll_chars[i]
             i += 1
             if ch == '}':
                 self.pos = i
-                return JsonObject.make(curr_map, values)
+                res = JsonObject.make(curr_map, values)
+                self.scratch_lists.append(values)
+                return res
             elif ch == ',':
                 pass
             elif ch == '\0':
