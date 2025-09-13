@@ -312,15 +312,15 @@ def iter_all(fn):
             if not line.startswith('{'):
                 continue
             callspec = rpyjson.loads(line)
-            what = callspec['calltype'].value_string()
-            args = callspec['inputs']
+            what = callspec.get_dict_value('calltype').value_string()
+            args = callspec.get_dict_value('inputs')
             input_values = [objects.BaseV.fromjson(arg) for arg in args]
             if what == 'function':
-                res_value = objects.BaseV.fromjson(callspec['result'])
-                yield "function", callspec['name'].value_string(), input_values, res_value
+                res_value = objects.BaseV.fromjson(callspec.get_dict_value('result'))
+                yield "function", callspec.get_dict_value('name').value_string(), input_values, res_value
             elif what == 'relation':
-                res_values = [objects.BaseV.fromjson(rv) for rv in callspec['results']]
-                yield "relation", callspec['name'].value_string(), input_values, res_values
+                res_values = [objects.BaseV.fromjson(rv) for rv in callspec.get_dict_value('results').value_array()]
+                yield "relation", callspec.get_dict_value('name').value_string(), input_values, res_values
             else:
                 assert 0
 

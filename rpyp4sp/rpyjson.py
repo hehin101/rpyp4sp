@@ -229,59 +229,6 @@ json_true = JsonTrue()
 
 json_false = JsonFalse()
 
-class FakeSpace(object):
-
-    w_None = json_null
-    w_True = json_true
-    w_False = json_false
-    w_ValueError = ValueError
-    w_UnicodeDecodeError = UnicodeDecodeError
-    w_UnicodeEncodeError = UnicodeEncodeError
-    w_int = JsonInt
-    w_float = JsonFloat
-
-    def newtuple(self, items):
-        return None
-
-    def newdict(self):
-        return JsonObject({})
-
-    def newlist(self, items):
-        return JsonArray([])
-
-    def call_method(self, obj, name, arg):
-        assert name == 'append'
-        assert isinstance(obj, JsonArray)
-        obj.value.append(arg)
-    call_method._dont_inline_ = True
-
-    def call_function(self, w_func, *args_w):
-        assert 0
-
-    def setitem(self, d, key, value):
-        assert isinstance(d, JsonObject)
-        assert isinstance(key, JsonString)
-        d.value[key.value_string()] = value
-
-    def newutf8(self, x, ln):
-        return JsonString(x)
-
-    def newtext(self, x):
-        return JsonString(x)
-    newbytes = newtext
-
-    def unicode_w(self, s):
-        assert isinstance(s, JsonString)
-        string = s.value_string()
-        return string.decode('utf-8')
-
-    def newint(self, x):
-        return JsonInt(x)
-
-    def newfloat(self, x):
-        return JsonFloat(x)
-
-fakespace = FakeSpace()
 
 OVF_DIGITS = len(str(sys.maxint))
 
@@ -300,8 +247,11 @@ def neg_pow_10(x, exp):
 TYPE_UNKNOWN = 0
 TYPE_STRING = 1
 class JSONDecoder(object):
-    def __init__(self, space, s):
-        self.space = space
+    w_None = json_null
+    w_True = json_true
+    w_False = json_false
+
+    def __init__(self, s):
         self.s = s
         # we put our string in a raw buffer so:
         # 1) we automatically get the '\0' sentinel at the end of the string,
@@ -331,7 +281,7 @@ class JSONDecoder(object):
 
     @specialize.arg(1)
     def _raise(self, msg, *args):
-        raise oefmt(self.space.w_ValueError, msg, *args)
+        raise P4ParseError(msg % args)
 
     def decode_any(self, i):
         i = self.skip_whitespace(i)
@@ -367,7 +317,7 @@ class JSONDecoder(object):
             self.ll_chars[i+1] == 'l' and
             self.ll_chars[i+2] == 'l'):
             self.pos = i+3
-            return self.space.w_None
+            return self.w_None
         self._raise("Error when decoding null at char %d", i)
 
     def decode_true(self, i):
@@ -375,7 +325,7 @@ class JSONDecoder(object):
             self.ll_chars[i+1] == 'u' and
             self.ll_chars[i+2] == 'e'):
             self.pos = i+3
-            return self.space.w_True
+            return self.w_True
         self._raise("Error when decoding true at char %d", i)
 
     def decode_false(self, i):
@@ -384,7 +334,7 @@ class JSONDecoder(object):
             self.ll_chars[i+2] == 's' and
             self.ll_chars[i+3] == 'e'):
             self.pos = i+4
-            return self.space.w_False
+            return self.w_False
         self._raise("Error when decoding false at char %d", i)
 
     def decode_infinity(self, i, sign=1):
@@ -396,14 +346,14 @@ class JSONDecoder(object):
             self.ll_chars[i+5] == 't' and
             self.ll_chars[i+6] == 'y'):
             self.pos = i+7
-            return self.space.newfloat(rfloat.INFINITY * sign)
+            return JsonFloat(rfloat.INFINITY * sign)
         self._raise("Error when decoding Infinity at char %d", i)
 
     def decode_nan(self, i):
         if (self.ll_chars[i]   == 'a' and
             self.ll_chars[i+1] == 'N'):
             self.pos = i+2
-            return self.space.newfloat(rfloat.NAN)
+            return JsonFloat(rfloat.NAN)
         self._raise("Error when decoding NaN at char %d", i)
 
     def decode_numeric(self, i):
@@ -422,7 +372,7 @@ class JSONDecoder(object):
             return self.decode_int_slow(start)
 
         self.pos = i
-        return self.space.newint(intval)
+        return JsonInt(intval)
 
     def decode_float(self, i):
         from rpython.rlib import rdtoa
@@ -430,9 +380,18 @@ class JSONDecoder(object):
         floatval = rdtoa.dg_strtod(start, self.end_ptr)
         diff = rffi.cast(rffi.LONG, self.end_ptr[0]) - rffi.cast(rffi.LONG, start)
         self.pos = i + diff
-        return self.space.newfloat(floatval)
+        return JsonFloat(floatval)
+
+    def decode_float(self, i): # TODO: investigate why dg_strtod is not working
+        start = i
+        while self.ll_chars[i] in "+-0123456789.eE":
+            i += 1
+        self.pos = i
+        return JsonFloat(float(self.getslice(start, i)))
+
 
     def decode_int_slow(self, i):
+        raise P4ParseError('int too long at position %s' % i)
         start = i
         if self.ll_chars[i] == '-':
             i += 1
@@ -440,7 +399,7 @@ class JSONDecoder(object):
             i += 1
         s = self.getslice(start, i)
         self.pos = i
-        return self.space.call_function(self.space.w_int, self.space.newtext(s))
+        return self.space.call_function(self.space.w_int, JsonString(s))
 
     @always_inline
     def parse_integer(self, i):
@@ -475,7 +434,8 @@ class JSONDecoder(object):
         return i, ovf_maybe, sign * intval
 
     def decode_array(self, i):
-        w_list = self.space.newlist([])
+        lst = []
+        w_list = JsonArray(lst)
         start = i
         i = self.skip_whitespace(start)
         if self.ll_chars[i] == ']':
@@ -485,7 +445,7 @@ class JSONDecoder(object):
         while True:
             w_item = self.decode_any(i)
             i = self.pos
-            self.space.call_method(w_list, 'append', w_item)
+            lst.append(w_item)
             i = self.skip_whitespace(i)
             ch = self.ll_chars[i]
             i += 1
@@ -506,7 +466,7 @@ class JSONDecoder(object):
         i = self.skip_whitespace(i)
         if self.ll_chars[i] == '}':
             self.pos = i+1
-            return self.space.newdict()
+            return JsonObject({})
 
         d = self._create_empty_dict()
         while True:
@@ -520,7 +480,7 @@ class JSONDecoder(object):
             i = self.skip_whitespace(i)
             #
             w_value = self.decode_any(i)
-            d[w_name] = w_value
+            d[w_name.value_string()] = w_value
             i = self.skip_whitespace(self.pos)
             ch = self.ll_chars[i]
             i += 1
@@ -552,25 +512,13 @@ class JSONDecoder(object):
                 return self.decode_string_escaped(start)
 
     def _create_string(self, start, end, bits):
-        if bits & 0x80:
-            # the 8th bit is set, it's an utf8 string
-            content_utf8 = self.getslice(start, end)
-            lgt = unicodehelper.check_utf8_or_raise(self.space,
-                                                          content_utf8)
-            return self.space.newutf8(content_utf8, lgt)
-        else:
-            # ascii only, fast path (ascii is a strict subset of
-            # latin1, and we already checked that all the chars are <
-            # 128)
-            return self.space.newutf8(self.getslice(start, end),
-                                      end - start)
-
-    def _create_dict(self, d):
-        assert 0, "abstract base"
+        return JsonString(self.getslice(start, end))
 
     def _create_empty_dict(self):
-        assert 0, "abstract base"
+        return {}
 
+    def _create_dict(self, d):
+        return JsonObject(d)
 
     def decode_string_escaped(self, start):
         i = self.pos
@@ -583,10 +531,8 @@ class JSONDecoder(object):
             i += 1
             if ch == '"':
                 content_utf8 = builder.build()
-                lgt = unicodehelper.check_utf8_or_raise(self.space,
-                                                           content_utf8)
                 self.pos = i
-                return self.space.newutf8(content_utf8, lgt)
+                return JsonString(content_utf8)
             elif ch == '\\':
                 i = self.decode_escape_sequence(i, builder)
             elif ch < '\x20':
@@ -681,39 +627,12 @@ class JSONDecoder(object):
         return res
 
 
-class OwnJSONDecoder(JSONDecoder):
-    def __init__(self, s):
-        self.space = fakespace
-        JSONDecoder.__init__(self, fakespace, s)
-
-    @specialize.arg(1)
-    def _raise(self, msg, *args):
-        raise P4ParseError(msg % args)
-
-    def decode_float(self, i):
-        start = i
-        while self.ll_chars[i] in "+-0123456789.eE":
-            i += 1
-        self.pos = i
-        return self.space.newfloat(float(self.getslice(start, i)))
-
-    def _create_empty_dict(self):
-        return {}
-
-    def _create_dict(self, dct):
-        d = {}
-        for key, value in dct.iteritems():
-            d[key.value_string()] = value
-        return JsonObject(d)
-
-
-
 def loads(s):
     if not we_are_translated():
         import json
         data = json.loads(s)
         return _convert(data)
-    decoder = OwnJSONDecoder(s)
+    decoder = JSONDecoder(s)
     try:
         w_res = decoder.decode_any(0)
         i = decoder.skip_whitespace(decoder.pos)
