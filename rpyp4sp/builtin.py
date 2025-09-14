@@ -173,20 +173,35 @@ arrow_mixop = p4specast.MixOp(
     [[],
      [p4specast.AtomT('->', p4specast.NO_REGION)],
      []])
+map_id = p4specast.Id('map', p4specast.NO_REGION)
+pair_id = p4specast.Id('pair', p4specast.NO_REGION)
+
+def _extract_map_content(map_value):
+    assert isinstance(map_value, objects.CaseV)
+    assert map_value.mixop.eq(map_mixop)
+    content, = map_value.values
+    assert isinstance(content, objects.ListV)
+    return content.elements
+
+def _extract_map_item(el):
+    assert isinstance(el, objects.CaseV)
+    assert el.mixop.eq(arrow_mixop)
+    key, value = el.values
+    return key, value
+
+def _build_map_item(key_value, value_value, key_typ, value_typ):
+    pairtyp = p4specast.VarT(pair_id, [key_typ, value_typ])
+    return objects.CaseV(arrow_mixop, [key_value, value_value], typ=pairtyp)
+
 
 @register_builtin("find_map")
 def maps_find_map(ctx, name, targs, values_input):
     key_typ, value_typ = targs
     map_value, key_value = values_input
-    assert isinstance(map_value, objects.CaseV)
-    assert map_value.mixop.eq(map_mixop)
-    content, = map_value.values
-    assert isinstance(content, objects.ListV)
+    content = _extract_map_content(map_value)
     found_value = None
-    for el in content.elements:
-        assert isinstance(el, objects.CaseV)
-        assert el.mixop.eq(arrow_mixop)
-        key, value = el.values
+    for el in content:
+        key, value = _extract_map_item(el)
         if key.eq(key_value):
             found_value = value
             break
@@ -201,7 +216,34 @@ def maps_find_maps(ctx, name, targs, values_input):
 
 @register_builtin("add_map")
 def maps_add_map(ctx, name, targs, values_input):
-    raise P4NotImplementedError("maps_add_map is not implemented yet")
+    map_value, key_value, value_value = values_input
+    key_typ, value_typ = targs
+    content = _extract_map_content(map_value)
+    res = []
+    index = 0
+    new_pair = _build_map_item(key_value, value_value, key_typ, value_typ)
+    for index, el in enumerate(content):
+        curr_key_value, value = _extract_map_item(el)
+        cmp = curr_key_value.compare(key_value)
+        if cmp == -1:
+            res.append(el)
+        elif cmp == 0:
+            res.append(new_pair)
+            res.extend(content[index + 1:])
+            break
+
+        elif cmp == 1:
+            res.append(new_pair)
+            res.extend(content[index:])
+            break
+        else:
+            assert 0, 'unreachable'
+    else:
+        res.append(new_pair)
+    list_value = objects.ListV(res, typ=p4specast.IterT(new_pair.typ, p4specast.List()))
+    return objects.CaseV(map_mixop, [list_value], typ=p4specast.VarT(map_id, targs))
+
+
 
 @register_builtin("adds_map")
 def maps_adds_map(ctx, name, targs, values_input):

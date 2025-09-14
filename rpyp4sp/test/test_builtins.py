@@ -64,3 +64,43 @@ def test_diff_set():
     res = builtin.sets_diff_set(None, 'diff_set', None, args)
     exp = objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), [objects.ListV([], -1, p4specast.IterT(p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 116, 13, 14)), []), p4specast.List()))], -1, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 113, 36, 37)), [])]))
     assert res.eq(exp)
+
+def make_map(*args):
+    lst = []
+    pairtyp = p4specast.VarT(p4specast.Id('pair', p4specast.NO_REGION), [p4specast.TextT(), p4specast.TextT()])
+    for key, value in args:
+        key_value = objects.TextV(key, typ=p4specast.TextT())
+        value_value = objects.TextV(value, typ=p4specast.TextT())
+        arrow = objects.CaseV(builtin.arrow_mixop, [key_value, value_value], typ=pairtyp)
+        lst.append(arrow)
+    list_value = objects.ListV(lst, typ=p4specast.IterT(pairtyp, p4specast.List()))
+    maptyp = p4specast.VarT(builtin.map_id, [p4specast.TextT(), p4specast.TextT()])
+    return objects.CaseV(builtin.map_mixop, [list_value], typ=maptyp)
+
+
+def test_add_map():
+    map_value = make_map()
+    res = builtin.maps_add_map(None, "add_map", [p4specast.TextT(), p4specast.TextT()],
+                               [map_value, objects.TextV("C", typ=p4specast.TextT()),
+                                objects.TextV("d1", typ=p4specast.TextT())])
+    assert res.eq(make_map(("C", "d1")))
+
+    map_value = make_map(("A", "b1"), ("B", "c1"))
+    res = builtin.maps_add_map(None, "add_map", [p4specast.TextT(), p4specast.TextT()],
+                               [map_value, objects.TextV("C", typ=p4specast.TextT()),
+                                objects.TextV("d1", typ=p4specast.TextT())])
+    assert res.eq(make_map(("A", "b1"), ("B", "c1"), ("C", "d1")))
+
+
+    map_value = make_map(("A", "b1"), ("C", "c1"))
+    res = builtin.maps_add_map(None, "add_map", [p4specast.TextT(), p4specast.TextT()],
+                               [map_value, objects.TextV("C", typ=p4specast.TextT()),
+                                objects.TextV("d1", typ=p4specast.TextT())])
+    assert res.eq(make_map(("A", "b1"), ("C", "d1")))
+
+    map_value = make_map(("A", "b1"), ("D", "c1"))
+    res = builtin.maps_add_map(None, "add_map", [p4specast.TextT(), p4specast.TextT()],
+                               [map_value, objects.TextV("C", typ=p4specast.TextT()),
+                                objects.TextV("d1", typ=p4specast.TextT())])
+    assert res.eq(make_map(("A", "b1"), ("C", "d1"), ("D", "c1")))
+
