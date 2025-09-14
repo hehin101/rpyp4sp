@@ -1,5 +1,9 @@
 from rpyp4sp import p4specast, objects, builtin, context, integers
 
+def test_int_to_text():
+    res = builtin.texts_int_to_text(None, 'int_to_text', [], [objects.NumV.fromstr('1234', 'Nat', typ=p4specast.NumT(p4specast.NatT()))])
+    assert res.eq(objects.TextV('1234'))
+
 def textlist(*args):
     l = [objects.TextV(arg, typ=p4specast.TextT()) for arg in args]
     return objects.ListV(l, typ=p4specast.IterT(p4specast.TextT(), p4specast.List()))

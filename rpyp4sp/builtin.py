@@ -33,7 +33,8 @@ def nats_min(ctx, name, targs, values_input):
 
 @register_builtin("int_to_text")
 def texts_int_to_text(ctx, name, targs, values_input):
-    raise P4NotImplementedError("texts_int_to_text is not implemented yet")
+    int_value, = values_input
+    return objects.TextV(int_value.get_num().str(), typ=p4specast.TextT())
 
 @register_builtin("strip_prefix")
 def texts_strip_prefix(ctx, name, targs, values_input):
