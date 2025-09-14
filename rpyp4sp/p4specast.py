@@ -827,21 +827,21 @@ class IdxE(Exp):
 
 class SliceE(Exp):
 #   | SliceE of exp * exp * exp             (* exp `[` exp `:` exp `]` *)
-    def __init__(self, lst, start, stop):
+    def __init__(self, lst, start, length):
         self.lst = lst # typ: exp
         self.start = start # typ: exp
-        self.stop = stop # typ: exp
+        self.length = length # typ: exp
 
     @staticmethod
     def fromjson(content):
         return SliceE(
             lst=Exp.fromjson(content.get_list_item(1)),
             start=Exp.fromjson(content.get_list_item(2)),
-            stop=Exp.fromjson(content.get_list_item(3))
+            length=Exp.fromjson(content.get_list_item(3))
         )
 
     def __repr__(self):
-        return "p4specast.SliceE(%r, %r, %r)" % (self.lst, self.start, self.stop)
+        return "p4specast.SliceE(%r, %r, %r)" % (self.lst, self.start, self.length)
 
 class UpdE(Exp):
 #   | UpdE of exp * path * exp              (* exp `[` path `=` exp `]` *)

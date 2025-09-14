@@ -1709,6 +1709,39 @@ class __extend__(p4specast.LenE):
         # (ctx, value_res)
         return ctx, value_res
 
+class __extend__(p4specast.SliceE):
+    def eval_exp(self, ctx):
+        # let ctx, value_b = eval_exp ctx exp_b in
+        ctx, value_b = eval_exp(ctx, self.lst)
+        # let values = Value.get_list value_b in
+        values = value_b.get_list()
+        # let ctx, value_i = eval_exp ctx exp_i in
+        ctx, value_i = eval_exp(ctx, self.start)
+        # let idx_l = value_i |> Value.get_num |> Num.to_int |> Bigint.to_int_exn in
+        idx_l = value_i.get_num().toint()
+        # let ctx, value_n = eval_exp ctx exp_n in
+        ctx, value_n = eval_exp(ctx, self.length)
+        # let idx_n = value_n |> Value.get_num |> Num.to_int |> Bigint.to_int_exn in
+        idx_n = value_n.get_num().toint()
+        # let idx_h = idx_l + idx_n in
+        idx_h = idx_l + idx_n
+        # let values_slice =
+        #   List.mapi
+        #     (fun idx value ->
+        #       if idx_l <= idx && idx < idx_h then Some value else None)
+        #     values
+        #   |> List.filter_map Fun.id
+        values_slice = values[idx_l:idx_h]
+        # in
+        # let value_res =
+        #   let vid = Value.fresh () in
+        #   let typ = note in
+        #   Il.Ast.(ListV values_slice $$$ { vid; typ })
+        value_res = objects.ListV(values_slice, typ=self.typ)
+        return ctx, value_res
+        # in
+        # Ctx.add_node ctx value_res;
+        # (ctx, value_res)
 
 def eval_access_path(value_b, path):
     # match path.it with
