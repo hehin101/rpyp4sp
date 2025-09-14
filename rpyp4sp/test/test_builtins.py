@@ -11,6 +11,16 @@ def test_shl():
     res = builtin.numerics_shl(None, 'shl', [], [mkint(1234), mkint(4)])
     assert res.eq(mkint(1234 << 4))
 
+def test_fresh():
+    oldval = builtin.HOLDER.counter
+    try:
+        builtin.HOLDER.counter = 0 # scary global state
+        res = builtin.fresh_fresh_tid(None, 'fresh_tid', [], [])
+        assert res.value == 'FRESH__0'
+    finally:
+        builtin.HOLDER.counter = oldval
+
+
 def textlist(*args):
     l = [objects.TextV(arg, typ=p4specast.TextT()) for arg in args]
     return objects.ListV(l, typ=p4specast.IterT(p4specast.TextT(), p4specast.List()))

@@ -295,9 +295,29 @@ def maps_adds_map(ctx, name, targs, values_input):
 def maps_update_map(ctx, name, targs, values_input):
     raise P4NotImplementedError("maps_update_map is not implemented yet")
 
+class CounterHolder(object):
+    def __init__(self):
+        self.counter = 0
+
+HOLDER = CounterHolder()
+
 @register_builtin("fresh_tid")
 def fresh_fresh_tid(ctx, name, targs, values_input):
-    raise P4NotImplementedError("fresh_fresh_tid is not implemented yet")
+    assert targs == []
+    assert values_input == []
+    # let tid = "FRESH__" ^ string_of_int !ctr in
+    tid = "FRESH__%s" % HOLDER.counter
+    # ctr := !ctr + 1;
+    HOLDER.counter += 1
+    # let value =
+    #   let vid = Value.fresh () in
+    #   let typ = Il.Ast.VarT ("tid" $ no_region, []) in
+    #   TextV tid $$$ { vid; typ }
+    return objects.TextV(tid,
+                         typ=p4specast.VarT(p4specast.Id('tid', p4specast.NO_REGION), []))
+    # in
+    # Ctx.add_node ctx value;
+    # value
 
 def _integer_to_value(integer):
     # type (integers.Integer) -> objects.NumV
