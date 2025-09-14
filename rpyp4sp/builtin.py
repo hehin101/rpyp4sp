@@ -280,13 +280,20 @@ def maps_update_map(ctx, name, targs, values_input):
 def fresh_fresh_tid(ctx, name, targs, values_input):
     raise P4NotImplementedError("fresh_fresh_tid is not implemented yet")
 
+def _integer_to_value(integer):
+    # type (integers.Integer) -> objects.NumV
+    return objects.NumV(integer, 'Int', typ=p4specast.NumT(p4specast.IntT()))
+
+
 @register_builtin("shl")
 def numerics_shl(ctx, name, targs, values_input):
-    raise P4NotImplementedError("numerics_shl is not implemented yet")
+    left, right = values_input
+    return _integer_to_value(left.get_num().lshift(right.get_num().toint()))
 
 @register_builtin("shr")
 def numerics_shr(ctx, name, targs, values_input):
-    raise P4NotImplementedError("numerics_shr is not implemented yet")
+    left, right = values_input
+    return _integer_to_value(left.get_num().rshift(right.get_num().toint()))
 
 @register_builtin("shr_arith")
 def numerics_shr_arith(ctx, name, targs, values_input):

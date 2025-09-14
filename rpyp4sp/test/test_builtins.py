@@ -1,8 +1,15 @@
 from rpyp4sp import p4specast, objects, builtin, context, integers
 
 def test_int_to_text():
-    res = builtin.texts_int_to_text(None, 'int_to_text', [], [objects.NumV.fromstr('1234', 'Nat', typ=p4specast.NumT(p4specast.NatT()))])
+    res = builtin.texts_int_to_text(None, 'int_to_text', [], [objects.NumV.fromstr('1234', 'Int', typ=p4specast.NumT(p4specast.IntT()))])
     assert res.eq(objects.TextV('1234'))
+
+def mkint(val):
+    return objects.NumV.fromstr(str(val), 'Int', typ=p4specast.NumT(p4specast.IntT()))
+
+def test_shl():
+    res = builtin.numerics_shl(None, 'shl', [], [mkint(1234), mkint(4)])
+    assert res.eq(mkint(1234 << 4))
 
 def textlist(*args):
     l = [objects.TextV(arg, typ=p4specast.TextT()) for arg in args]
