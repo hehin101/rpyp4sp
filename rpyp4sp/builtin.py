@@ -201,11 +201,7 @@ def _build_map_item(key_value, value_value, key_typ, value_typ):
     pairtyp = p4specast.VarT(pair_id, [key_typ, value_typ])
     return objects.CaseV(arrow_mixop, [key_value, value_value], typ=pairtyp)
 
-
-@register_builtin("find_map")
-def maps_find_map(ctx, name, targs, values_input):
-    key_typ, value_typ = targs
-    map_value, key_value = values_input
+def _find_map(map_value, key_value):
     content = _extract_map_content(map_value)
     found_value = None
     for el in content:
@@ -213,6 +209,13 @@ def maps_find_map(ctx, name, targs, values_input):
         if key.eq(key_value):
             found_value = value
             break
+    return found_value
+
+@register_builtin("find_map")
+def maps_find_map(ctx, name, targs, values_input):
+    key_typ, value_typ = targs
+    map_value, key_value = values_input
+    found_value = _find_map(map_value, key_value)
     typ = p4specast.IterT(key_typ, p4specast.Opt())
     typ.region = p4specast.NO_REGION
     return objects.OptV(found_value, typ=typ)
@@ -220,7 +223,19 @@ def maps_find_map(ctx, name, targs, values_input):
 
 @register_builtin("find_maps")
 def maps_find_maps(ctx, name, targs, values_input):
-    raise P4NotImplementedError("maps_find_maps is not implemented yet")
+    # look through many maps, return first result
+    key_typ, value_typ = targs
+    list_maps_value, key_value = values_input
+    assert isinstance(list_maps_value, objects.ListV)
+    value = None
+    for map_value in list_maps_value.elements:
+        res_value = _find_map(map_value, key_value)
+        if res_value is not None:
+            value = res_value
+            break
+    typ = p4specast.IterT(key_typ, p4specast.Opt())
+    typ.region = p4specast.NO_REGION
+    return objects.OptV(res_value, typ=typ)
 
 @register_builtin("add_map")
 def maps_add_map(ctx, name, targs, values_input):

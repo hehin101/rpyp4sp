@@ -104,3 +104,18 @@ def test_add_map():
                                 objects.TextV("d1", typ=p4specast.TextT())])
     assert res.eq(make_map(("A", "b1"), ("C", "d1"), ("D", "c1")))
 
+
+def test_find_maps():
+    map_value1 = make_map(("A", "a1"), ("B", "b"))
+    map_value2 = make_map(("A", "a2"), ("C", "x"))
+    lst_value = objects.ListV([map_value1, map_value2], typ=p4specast.IterT(map_value1.typ, p4specast.List()))
+
+    res = builtin.maps_find_maps(None, "find_maps", [p4specast.TextT(), p4specast.TextT()],
+                                 [lst_value, objects.TextV("C", typ=p4specast.TextT())])
+    assert res.value.eq(objects.TextV("x", typ=p4specast.TextT()))
+    res = builtin.maps_find_maps(None, "find_maps", [p4specast.TextT(), p4specast.TextT()],
+                                 [lst_value, objects.TextV("A", typ=p4specast.TextT())])
+    assert res.value.eq(objects.TextV("a1", typ=p4specast.TextT()))
+    res = builtin.maps_find_maps(None, "find_maps", [p4specast.TextT(), p4specast.TextT()],
+                                 [lst_value, objects.TextV("D", typ=p4specast.TextT())])
+    assert res.value is None
