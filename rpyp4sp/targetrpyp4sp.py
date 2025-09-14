@@ -77,6 +77,29 @@ def command_run_test_jsonl(argv):
                     error += 1
                     print("Relation test exception:", name, e)
                     continue
+            elif what == 'builtin':
+                name = callspec.get_dict_value('name').value_string()
+                try:
+                    res_value = objects.BaseV.fromjson(callspec.get_dict_value('result'))
+                    targs = callspec.get_dict_value('targs').value_array()
+                    targs = [p4specast.Type.fromjson(t) for t in targs]
+                    value = builtin.invoke(ctx, p4specast.Id(name, p4specast.NO_REGION), targs, input_values)
+                    if not value.eq(res_value):
+                        failed += 1
+                        print("Builtin test failed:", name, value, res_value)
+                    else:
+                        passed += 1
+                        print("Builtin test passed:", name)
+                except P4Error as e:
+                    #import pdb; pdb.xpm()
+                    error += 1
+                    print("Builtin test exception:", name, e)
+                    continue
+                except KeyError as e:
+                    #import pdb; pdb.xpm()
+                    error += 1
+                    print("Builtin test exception:", name, e)
+                    continue
             else:
                 assert 0
     print("PASSED:", passed)
