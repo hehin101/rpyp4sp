@@ -85,7 +85,15 @@ def lists_partition_(ctx, name, targs, values_input):
 
 @register_builtin("assoc_")
 def lists_assoc_(ctx, name, targs, values_input):
-    raise P4NotImplementedError("lists_assoc_ is not implemented yet")
+    typ_key, typ_value = targs
+    value, value_list = values_input
+    res_value = None
+    for tup in value_list.get_list():
+        assert isinstance(tup, objects.TupleV)
+        if tup.elements[0].eq(value):
+            res_value = tup.elements[1]
+            break
+    return objects.OptV(res_value, typ=p4specast.IterT(typ_value, p4specast.Opt()))
 
 # ________________________________________________________________
 # sets
