@@ -227,11 +227,10 @@ def maps_find_maps(ctx, name, targs, values_input):
     key_typ, value_typ = targs
     list_maps_value, key_value = values_input
     assert isinstance(list_maps_value, objects.ListV)
-    value = None
+    res_value = None
     for map_value in list_maps_value.elements:
         res_value = _find_map(map_value, key_value)
         if res_value is not None:
-            value = res_value
             break
     typ = p4specast.IterT(key_typ, p4specast.Opt())
     typ.region = p4specast.NO_REGION

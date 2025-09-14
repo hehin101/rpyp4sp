@@ -115,12 +115,16 @@ def command_run_p4(argv):
     errors = 0
     for fn in argv[2:]:
         t1 = time.time()
-        with open(argv[2], 'r') as f:
-            content = f.read()
+        print(fn)
+        with open(fn, 'r') as f:
+            content = f.readline()
+        assert content is not None
+        if not content.startswith("{"):
+            continue
         valuejson = rpyjson.loads(content)
         value = objects.BaseV.fromjson(valuejson)
         t2 = time.time()
-        print(fn, "program loaded in %ss" % (t2 - t1))
+        print("program loaded in %ss" % (t2 - t1))
         load_times.append(t2 - t1)
         resctx = None
         try:
