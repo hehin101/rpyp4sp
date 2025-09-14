@@ -89,6 +89,8 @@ def lists_assoc_(ctx, name, targs, values_input):
 # ________________________________________________________________
 # sets
 
+set_id = p4specast.Id('set', p4specast.NO_REGION)
+
 def _extract_set_elems(set_value):
     assert isinstance(set_value, objects.CaseV)
     assert set_value.mixop.eq(map_mixop)
@@ -129,8 +131,14 @@ def sets_union_set(ctx, name, targs, values_input):
 def sets_unions_set(ctx, name, targs, values_input):
     value_list, = values_input
     sets_l = value_list.get_list()
+    element_typ, = targs
     if not sets_l:
-        raise P4BuiltinError("TODO sets_unions_set empty case, needs complicated targs")
+        return objects.CaseV(
+            map_mixop,
+            [objects.ListV(
+                [],
+                typ=p4specast.IterT(element_typ, p4specast.List()))],
+            typ=p4specast.VarT(set_id, targs))
     first = sets_l[0]
     curr = _extract_set_elems(first)
     for i in range(1, len(sets_l)):
