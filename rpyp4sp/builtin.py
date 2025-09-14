@@ -171,7 +171,18 @@ def sets_sub_set(ctx, name, targs, values_input):
 
 @register_builtin("eq_set")
 def sets_eq_set(ctx, name, targs, values_input):
-    raise P4NotImplementedError("sets_eq_set is not implemented yet")
+    set_l, set_r = values_input
+    elems_l = _extract_set_elems(set_l)
+    elems_r = _extract_set_elems(set_r)
+    if len(elems_l) != len(elems_r):
+        return objects.BoolV(False, typ=p4specast.BoolT())
+    for el in elems_l:
+        for el2 in elems_r:
+            if el.eq(el2):
+                break
+        else:
+            return objects.BoolV(False, typ=p4specast.BoolT())
+    return objects.BoolV(True, typ=p4specast.BoolT())
 
 # _________________________________________________________________
 
@@ -267,10 +278,18 @@ def maps_add_map(ctx, name, targs, values_input):
     return objects.CaseV(map_mixop, [list_value], typ=p4specast.VarT(map_id, targs))
 
 
-
 @register_builtin("adds_map")
 def maps_adds_map(ctx, name, targs, values_input):
-    raise P4NotImplementedError("maps_adds_map is not implemented yet")
+    value_map, value_key_list, value_value_list = values_input
+    keys = value_key_list.get_list()
+    values = value_value_list.get_list()
+    if len(keys) != len(values):
+        raise P4BuiltinError("adds_map: list of keys and list of values must have the same length")
+    for index, key_value in enumerate(keys):
+        value_value = values[index]
+        value_map = maps_add_map(ctx, 'add_map', targs, [value_map, key_value, value_value])
+    return value_map
+
 
 @register_builtin("update_map")
 def maps_update_map(ctx, name, targs, values_input):

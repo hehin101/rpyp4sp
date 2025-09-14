@@ -53,6 +53,15 @@ def test_lists_concat():
     assert res.eq(empty)
     assert repr(res.typ) == "p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2a-runtime-domain.watsup', 10, 7, 10)), []), p4specast.List())"
 
+def make_set(*args):
+    lst = []
+    for el in args:
+        value = objects.TextV(el, typ=p4specast.TextT())
+        lst.append(value)
+    list_value = objects.ListV(lst, typ=p4specast.IterT(p4specast.TextT(), p4specast.List()))
+    settyp = p4specast.VarT(builtin.set_id, [p4specast.TextT()])
+    return objects.CaseV(builtin.map_mixop, [list_value], typ=settyp)
+
 
 def test_union_set():
     args = [objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), [objects.ListV([], 6524, p4specast.IterT(p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 73, 24, 25)), []), p4specast.List()))], 6525, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 73, 24, 25)), [])])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), [objects.ListV([], -1, p4specast.IterT(p4specast.VarT(p4specast.Id('tparam', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 123, 7, 13)), []), p4specast.List()))], -1, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c6-runtime-type-wellformed.watsup', 526, 29, 32)), [])]))]
@@ -75,6 +84,17 @@ def test_diff_set():
     res = builtin.sets_diff_set(None, 'diff_set', None, args)
     exp = objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), [objects.ListV([], -1, p4specast.IterT(p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 116, 13, 14)), []), p4specast.List()))], -1, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 113, 36, 37)), [])]))
     assert res.eq(exp)
+
+def test_set_eq():
+    res = builtin.sets_eq_set(None, 'diff_set', None, [make_set(), make_set()])
+    assert res.get_bool()
+    res = builtin.sets_eq_set(None, 'diff_set', None, [make_set("a"), make_set("a")])
+    assert res.get_bool()
+    res = builtin.sets_eq_set(None, 'diff_set', None, [make_set("a"), make_set()])
+    assert res.get_bool() == False
+    res = builtin.sets_eq_set(None, 'diff_set', None, [make_set("a"), make_set("b")])
+    assert res.get_bool() == False
+    
 
 def make_map(*args):
     lst = []
