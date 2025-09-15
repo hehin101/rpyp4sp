@@ -154,7 +154,7 @@ class Context(object):
                 value = values[i]
                 assert value is not None
                 value_sub = objects.OptV(value, typ=var.typ)
-                ctx_sub = ctx_sub.add_value_local(var.id, var.iter + [p4specast.Opt()], value_sub)
+                ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value_sub.value)
             return ctx_sub
 
 
