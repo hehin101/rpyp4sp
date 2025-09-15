@@ -97,9 +97,9 @@ class BoolV(BaseV):
 
     def __init__(self, value, vid=-1, typ=None):
         # TODO: assign a vid if the argument is -1
-        self.value = value
-        self.vid = vid
-        self.typ = typ
+        self.value = value # type: bool
+        self.vid = vid # type: int
+        self.typ = typ # type: p4specast.Type | None
 
     def compare(self, other):
         if not isinstance(other, BoolV):
@@ -127,11 +127,11 @@ class BoolV(BaseV):
 
 class NumV(BaseV):
     def __init__(self, value, what, vid=-1, typ=None):
-        self.value = value # type: integer.Integer
+        self.value = value # type: integers.Integer
         assert what in ('Int', 'Nat')
         self.what = what # type: str
         self.vid = vid # type: int
-        self.typ = typ # type: Type | None
+        self.typ = typ # type: p4specast.Type | None
 
     def compare(self, other):
         if not isinstance(other, NumV):
@@ -164,9 +164,9 @@ class NumV(BaseV):
 
 class TextV(BaseV):
     def __init__(self, value, vid=-1, typ=None):
-        self.value = value
-        self.vid = vid
-        self.typ = typ
+        self.value = value #type: str
+        self.vid = vid # type: int
+        self.typ = typ # type: p4specast.Type | None
 
     def compare(self, other):
         if not isinstance(other, TextV):
@@ -191,9 +191,9 @@ class TextV(BaseV):
 
 class StructV(BaseV):
     def __init__(self, fields, vid=-1, typ=None):
-        self.fields = fields
-        self.vid = vid
-        self.typ = typ
+        self.fields = fields # type: list[BaseV]
+        self.vid = vid # type: int
+        self.typ = typ # type: p4specast.Type | None
 
     def get_struct(self):
         return self.fields
@@ -258,10 +258,10 @@ class StructV(BaseV):
 
 class CaseV(BaseV):
     def __init__(self, mixop, values, vid=-1, typ=None):
-        self.mixop = mixop
-        self.values = values
-        self.vid = vid
-        self.typ = typ
+        self.mixop = mixop # type: p4specast.MixOp
+        self.values = values # type: list[BaseV]
+        self.vid = vid # type: int
+        self.typ = typ # type: p4specast.Type | None
 
     def __repr__(self):
         return "objects.CaseV(%r, %r, %r, %r)" % (self.mixop, self.values, self.vid, self.typ)
@@ -311,9 +311,9 @@ class CaseV(BaseV):
 
 class TupleV(BaseV):
     def __init__(self, elements, vid=-1, typ=None):
-        self.elements = elements
-        self.vid = vid
-        self.typ = typ
+        self.elements = elements # type: list[BaseV]
+        self.vid = vid # type: int
+        self.typ = typ # type: p4specast.Type | None
 
     def compare(self, other):
         if not isinstance(other, TupleV):
@@ -339,8 +339,8 @@ class TupleV(BaseV):
 class OptV(BaseV):
     def __init__(self, value, vid=-1, typ=None):
         self.value = value # type: BaseV | None
-        self.vid = vid
-        self.typ = typ
+        self.vid = vid # type: int
+        self.typ = typ # type: p4specast.Type | None
 
     def compare(self, other):
         if not isinstance(other, OptV):
@@ -377,9 +377,9 @@ class OptV(BaseV):
 
 class ListV(BaseV):
     def __init__(self, elements, vid=-1, typ=None):
-        self.elements = elements
-        self.vid = vid
-        self.typ = typ
+        self.elements = elements # type: list[BaseV]
+        self.vid = vid # type: int
+        self.typ = typ # type: p4specast.Type | None
 
     def get_list(self):
         return self.elements
@@ -427,9 +427,9 @@ class ListV(BaseV):
 
 class FuncV(BaseV):
     def __init__(self, id, vid=-1, typ=None):
-        self.id = id
-        self.vid = vid
-        self.typ = typ
+        self.id = id # type: p4specast.Id
+        self.vid = vid # type: int
+        self.typ = typ # type: p4specast.Type | None
 
     def __repr__(self):
         return "objects.FuncV(%r, %r, %r)" % (self.id, self.vid, self.typ)
