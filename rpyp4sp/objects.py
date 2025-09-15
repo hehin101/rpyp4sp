@@ -20,6 +20,9 @@ from rpyp4sp.error import P4UnknownTypeError
 # and valuefield = atom * value
 # and valuecase = mixop * value list
 
+def indent(level):
+    return "  " * level
+
 class BaseV(object):
     _attrs_ = ['typ', 'vid']
     # vid: int
@@ -82,6 +85,12 @@ class BaseV(object):
             return -1
         return 1
 
+    def tostring(self, short=False, level=0):
+        assert 0
+
+    def __str__(self):
+        return self.tostring()
+
 
 class BoolV(BaseV):
     _compare_tag = 0
@@ -108,6 +117,10 @@ class BoolV(BaseV):
     def __repr__(self):
         return "objects.BoolV(%r, %r, %r)" % (self.value, self.vid, self.typ)
 
+    def tostring(self, short=False, level=0):
+        # | BoolV b -> string_of_bool b
+        return "true" if self.value else "false"
+
     @staticmethod
     def fromjson(content):
         return BoolV(content.get_list_item(1).value_bool())
@@ -133,6 +146,10 @@ class NumV(BaseV):
 
     def get_num(self):
         return self.value
+
+    def tostring(self, short=False, level=0):
+        # | NumV n -> Num.string_of_num n
+        return self.value.str()
 
     @staticmethod
     def fromstr(value, what, vid=-1, typ=None):
@@ -164,6 +181,10 @@ class TextV(BaseV):
     def __repr__(self):
         return "objects.TextV(%r, %r, %r)" % (self.value, self.vid, self.typ)
 
+    def tostring(self, short=False, level=0):
+        # | TextV s -> "\"" ^ s ^ "\""
+        return repr(self.value)
+
     @staticmethod
     def fromjson(content):
         return TextV(content.get_list_item(1).value_string())
@@ -179,6 +200,35 @@ class StructV(BaseV):
 
     def __repr__(self):
         return "objects.StructV(%r, %r, %r)" % (self.fields, self.vid, self.typ)
+
+    def tostring(self, short=False, level=0):
+        # | StructV [] -> "{}"
+        # | StructV valuefields when short ->
+        #     Format.asprintf "{ .../%d }" (List.length valuefields)
+        # | StructV valuefields ->
+        #     Format.asprintf "{ %s }"
+        #       (String.concat ";\n"
+        #          (List.mapi
+        #             (fun idx (atom, value) ->
+        #               let indent = if idx = 0 then "" else indent (level + 1) in
+        #               Format.asprintf "%s%s %s" indent (string_of_atom atom)
+        #                 (string_of_value ~short ~level:(level + 2) value))
+        #             valuefields))
+        if not self.fields:
+            return "{}"
+        if short:
+            return "{ .../%d }" % len(self.fields)
+
+        parts = []
+        for idx, (atom, value) in enumerate(self.fields):
+            if idx == 0:
+                indent_str = ""
+            else:
+                indent_str = indent(level + 1)
+            part = "%s%s %s" % (indent_str, atom.value, value.tostring(short, level + 2))
+            parts.append(part)
+
+        return "{ %s }" % ";\n".join(parts)
 
     @staticmethod
     def fromjson(content):
@@ -216,6 +266,30 @@ class CaseV(BaseV):
     def __repr__(self):
         return "objects.CaseV(%r, %r, %r, %r)" % (self.mixop, self.values, self.vid, self.typ)
 
+    def tostring(self, short=False, level=0):
+        # | CaseV (mixop, _) when short -> string_of_mixop mixop
+        # | CaseV (mixop, values) -> "(" ^ string_of_notval (mixop, values) ^ ")"
+        if short:
+            return str(self.mixop)
+
+        # Construct notation: mixop with values interspersed
+        mixop_phrases = self.mixop.phrases
+        result_parts = []
+        value_idx = 0
+
+        for phrase in mixop_phrases:
+            # Add atoms from this phrase
+            phrase_str = "".join([atom.value for atom in phrase])
+            if phrase_str:
+                result_parts.append(phrase_str)
+
+            # Add corresponding value if available
+            if value_idx < len(self.values):
+                result_parts.append(self.values[value_idx].tostring(short, level + 1))
+                value_idx += 1
+
+        return "(" + " ".join(result_parts) + ")"
+
     @staticmethod
     def fromjson(content):
         mixop_content, valuelist_content = content.get_list_item(1).value_array()
@@ -249,6 +323,14 @@ class TupleV(BaseV):
     def __repr__(self):
         return "objects.TupleV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
 
+    def tostring(self, short=False, level=0):
+        # | TupleV values ->
+        #     Format.asprintf "(%s)"
+        #       (String.concat ", "
+        #          (List.map (string_of_value ~short ~level:(level + 1)) values))
+        element_strs = [element.tostring(short, level + 1) for element in self.elements]
+        return "(%s)" % ", ".join(element_strs)
+
     @staticmethod
     def fromjson(content):
         elements = [BaseV.fromjson(e) for e in content.get_list_item(1).value_array()]
@@ -276,6 +358,16 @@ class OptV(BaseV):
     def __repr__(self):
         return "objects.OptV(%r, %r, %r)" % (self.value, self.vid, self.typ)
 
+    def tostring(self, short=False, level=0):
+        # | OptV (Some value) ->
+        #     Format.asprintf "Some(%s)"
+        #       (string_of_value ~short ~level:(level + 1) value)
+        # | OptV None -> "None"
+        if self.value is None:
+            return "None"
+        else:
+            return "Some(%s)" % self.value.tostring(short, level + 1)
+
     @staticmethod
     def fromjson(content):
         value = None
@@ -300,6 +392,33 @@ class ListV(BaseV):
     def __repr__(self):
         return "objects.ListV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
 
+    def tostring(self, short=False, level=0):
+        # | ListV [] -> "[]"
+        # | ListV values when short -> Format.asprintf "[ .../%d ]" (List.length values)
+        # | ListV values ->
+        #     Format.asprintf "[ %s ]"
+        #       (String.concat ",\n"
+        #          (List.mapi
+        #             (fun idx value ->
+        #               let indent = if idx = 0 then "" else indent (level + 1) in
+        #               indent ^ string_of_value ~short ~level:(level + 2) value)
+        #             values))
+        if not self.elements:
+            return "[]"
+        if short:
+            return "[ .../%d ]" % len(self.elements)
+
+        parts = []
+        for idx, element in enumerate(self.elements):
+            if idx == 0:
+                indent_str = ""
+            else:
+                indent_str = indent(level + 1)
+            part = indent_str + element.tostring(short, level + 2)
+            parts.append(part)
+
+        return "[ %s ]" % ",\n".join(parts)
+
     @staticmethod
     def fromjson(content):
         elements = [BaseV.fromjson(e) for e in content.get_list_item(1).value_array()]
@@ -314,6 +433,10 @@ class FuncV(BaseV):
 
     def __repr__(self):
         return "objects.FuncV(%r, %r, %r)" % (self.id, self.vid, self.typ)
+
+    def tostring(self, short=False, level=0):
+        # | FuncV id -> string_of_defid id
+        return self.id.value
 
     @staticmethod
     def fromjson(content):
@@ -358,3 +481,4 @@ def compares(values_l, values_r):
     #   | value_l :: values_l, value_r :: values_r ->
     #       let cmp = compare value_l value_r in
     #       if cmp <> 0 then cmp else compares values_l values_r
+

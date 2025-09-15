@@ -36,7 +36,7 @@ def command_run_test_jsonl(argv):
                     _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
                     if not value.eq(res_value):
                         failed += 1
-                        print("Function test failed:", name, value, res_value)
+                        print("Function test failed:", name, value.tostring(), res_value.tostring())
                     else:
                         passed += 1
                         print("Function test passed:", name)
@@ -63,7 +63,7 @@ def command_run_test_jsonl(argv):
                             resval_exp = res_values[i]
                             if not resval.eq(resval_exp):
                                 failed += 1
-                                print("Relation test failed:", name, resval, resval_exp)
+                                print("Relation test failed:", name, resval.tostring(), resval_exp.tostring())
                             else:
                                 passed += 1
                                 print("Relation test passed:", name)
