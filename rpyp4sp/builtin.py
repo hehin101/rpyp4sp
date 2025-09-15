@@ -219,7 +219,23 @@ def _wrap_set_elems(elems, set_value_for_types):
 
 @register_builtin("intersect_set")
 def sets_intersect_set(ctx, targs, values_input):
-    raise P4NotImplementedError("sets_intersect_set is not implemented yet")
+    #let intersect_set (ctx : Ctx.t) (at : region) (targs : targ list)
+    #    (values_input : value list) : value =
+    #  let typ_key = Extract.one at targs in
+    #  let value_set_a, value_set_b = Extract.two at values_input in
+    #  let set_a = set_of_value value_set_a in
+    #  let set_b = set_of_value value_set_b in
+    #  VSet.inter set_a set_b |> value_of_set ctx typ_key
+    set_l, set_r = values_input
+    elems_l = _extract_set_elems(set_l)
+    elems_r = _extract_set_elems(set_r)
+    res = []
+    for el in elems_l:
+        for el2 in elems_r:
+            if el.eq(el2):
+                res.append(el)
+                break
+    return _wrap_set_elems(res, set_l)
 
 def _set_union_elems(elems_l, elems_r):
     res = []
@@ -279,7 +295,30 @@ def sets_diff_set(ctx, targs, values_input):
 
 @register_builtin("sub_set")
 def sets_sub_set(ctx, targs, values_input):
-    raise P4NotImplementedError("sets_sub_set is not implemented yet")
+    #let sub_set (ctx : Ctx.t) (at : region) (targs : targ list)
+    #    (values_input : value list) : value =
+    #  let _typ_key = Extract.one at targs in
+    #  let value_set_a, value_set_b = Extract.two at values_input in
+    #  let set_a = set_of_value value_set_a in
+    #  let set_b = set_of_value value_set_b in
+    #  let value =
+    #    let vid = Value.fresh () in
+    #    let typ = Il.Ast.BoolT in
+    #    BoolV (VSet.subset set_a set_b) $$$ { vid; typ }
+    #  in
+    #  Ctx.add_node ctx value;
+    #  value
+    set_l, set_r = values_input
+    elems_l = _extract_set_elems(set_l)
+    elems_r = _extract_set_elems(set_r)
+    # Check if set_l is a subset of set_r (every element in set_l is also in set_r)
+    for el in elems_l:
+        for el2 in elems_r:
+            if el.eq(el2):
+                break
+        else:
+            return objects.BoolV(False, typ=p4specast.BoolT())
+    return objects.BoolV(True, typ=p4specast.BoolT())
 
 @register_builtin("eq_set")
 def sets_eq_set(ctx, targs, values_input):

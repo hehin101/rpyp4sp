@@ -192,6 +192,41 @@ def test_set_eq():
     res = builtin.sets_eq_set(None, None, [make_set("a"), make_set("b")])
     assert res.get_bool() == False
 
+def test_intersect_set():
+    # Intersection of empty sets
+    res = builtin.sets_intersect_set(None, None, [make_set(), make_set()])
+    assert res.eq(make_set())
+
+    res = builtin.sets_intersect_set(None, None, [make_set("a"), make_set()])
+    assert res.eq(make_set())
+
+    res = builtin.sets_intersect_set(None, None, [make_set("a", "b"), make_set("a", "b")])
+    assert res.eq(make_set("a", "b"))
+
+    res = builtin.sets_intersect_set(None, None, [make_set("a", "b", "c"), make_set("b", "c", "d")])
+    assert res.eq(make_set("b", "c"))
+
+    res = builtin.sets_intersect_set(None, None, [make_set("a", "b"), make_set("c", "d")])
+    assert res.eq(make_set())
+
+def test_sub_set():
+    res = builtin.sets_sub_set(None, None, [make_set(), make_set()])
+    assert res.get_bool()
+    res = builtin.sets_sub_set(None, None, [make_set(), make_set("a")])
+    assert res.get_bool()
+
+    res = builtin.sets_sub_set(None, None, [make_set("a", "b"), make_set("a", "b")])
+    assert res.get_bool()
+
+    res = builtin.sets_sub_set(None, None, [make_set("a"), make_set("a", "b")])
+    assert res.get_bool()
+
+    res = builtin.sets_sub_set(None, None, [make_set("a", "b"), make_set("a")])
+    assert res.get_bool() == False
+    res = builtin.sets_sub_set(None, None, [make_set("a", "b"), make_set("c", "d")])
+    assert res.get_bool() == False
+
+
 def make_map(*args):
     lst = []
     pairtyp = p4specast.VarT(p4specast.Id('pair', p4specast.NO_REGION), [p4specast.TextT(), p4specast.TextT()])
