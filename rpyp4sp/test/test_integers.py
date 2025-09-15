@@ -80,6 +80,24 @@ def test_mod_hypothesis(a, b):
     expected = v1 % v2
     assert result == expected
 
+@given(wrapped_ints, wrapped_ints)
+@example(SmallInteger(7), SmallInteger(-3))
+@example(SmallInteger(-7), SmallInteger(3))
+@example(BigInteger(rbigint.fromlong(123456789012345)), SmallInteger(1000))
+@example(SmallInteger(MININT), SmallInteger(-1))
+@example(SmallInteger(-sys.maxint-1), SmallInteger(-1))
+@example(SmallInteger(sys.maxint), SmallInteger(-1))
+@example(SmallInteger(MININT), SmallInteger(1))
+@example(SmallInteger(MININT), SmallInteger(sys.maxint))
+def test_div_hypothesis(a, b):
+    v1 = a.tobigint().tolong()
+    v2 = b.tobigint().tolong()
+    # Skip division by zero
+    assume(v2 != 0)
+    result = a.div(b).tolong()
+    expected = v1 // v2
+    assert result == expected
+
 def test_bitwise_basic():
     assert SmallInteger(12).and_(SmallInteger(10)).tolong() == 12 & 10  # 8
     assert SmallInteger(15).and_(SmallInteger(7)).tolong() == 15 & 7    # 7

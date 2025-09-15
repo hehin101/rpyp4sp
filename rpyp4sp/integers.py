@@ -48,6 +48,9 @@ class Integer(object):
     def mod(self, other):
         raise NotImplementedError("abstract method")
 
+    def div(self, other):
+        raise NotImplementedError("abstract method")
+
     def and_(self, other):
         raise NotImplementedError("abstract method")
 
@@ -164,6 +167,15 @@ class SmallInteger(Integer):
             assert isinstance(other, BigInteger)
             return BigInteger(self.tobigint().mod(other.rval))
 
+    def div(self, other):
+        if isinstance(other, SmallInteger):
+            if self.val == MININT and other.val == -1:
+                return self.abs()
+            return SmallInteger.div_i_i(self.val, other.val)
+        else:
+            assert isinstance(other, BigInteger)
+            return BigInteger(self.tobigint().div(other.rval))
+
     def and_(self, other):
         if isinstance(other, SmallInteger):
             return SmallInteger(self.val & other.val)
@@ -225,6 +237,16 @@ class SmallInteger(Integer):
         if b == 0:
             raise ZeroDivisionError("integer division or modulo by zero")
         result = a % b
+        return SmallInteger(result)
+
+    @staticmethod
+    def div_i_i(a, b):
+        if b == 0:
+            raise ZeroDivisionError("integer division by zero")
+        try:
+            result = ovfcheck(a // b)
+        except OverflowError:
+            assert 0, 'unreachable'
         return SmallInteger(result)
 
     def pack(self):
@@ -350,6 +372,16 @@ class BigInteger(Integer):
         if other.eq(SmallInteger(0)):
             raise ZeroDivisionError("integer division or modulo by zero")
         return BigInteger(self.rval.mod(other.rval))
+
+    def div(self, other):
+        if isinstance(other, SmallInteger):
+            if other.val == 0:
+                raise ZeroDivisionError("integer division by zero")
+            return BigInteger(self.rval.int_div(other.val))
+        assert isinstance(other, BigInteger)
+        if other.eq(SmallInteger(0)):
+            raise ZeroDivisionError("integer division by zero")
+        return BigInteger(self.rval.div(other.rval))
 
     def and_(self, other):
         if isinstance(other, SmallInteger):
