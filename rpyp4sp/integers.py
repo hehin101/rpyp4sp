@@ -45,6 +45,9 @@ class Integer(object):
     def neg(self):
         return Integer.fromint(0).sub(self)
 
+    def mod(self, other):
+        raise NotImplementedError("abstract method")
+
 
 class SmallInteger(Integer):
     _immutable_fields_ = ['val']
@@ -142,6 +145,13 @@ class SmallInteger(Integer):
         assert i >= 0
         return self.lshift_i_i(self.val, i)
 
+    def mod(self, other):
+        if isinstance(other, SmallInteger):
+            return SmallInteger.mod_i_i(self.val, other.val)
+        else:
+            assert isinstance(other, BigInteger)
+            return BigInteger(self.tobigint().mod(other.rval))
+
     @staticmethod
     def lshift_i_i(a, i):
         if not a:
@@ -173,6 +183,13 @@ class SmallInteger(Integer):
             return SmallInteger(ovfcheck(a * b))
         except OverflowError:
             return BigInteger(rbigint.fromint(a).int_mul(b))
+
+    @staticmethod
+    def mod_i_i(a, b):
+        if b == 0:
+            raise ZeroDivisionError("integer division or modulo by zero")
+        result = a % b
+        return SmallInteger(result)
 
     def pack(self):
         return (self.val, None)
@@ -287,3 +304,13 @@ class BigInteger(Integer):
 
     def lshift(self, i):
         return BigInteger(self.rval.lshift(i))
+
+    def mod(self, other):
+        if isinstance(other, SmallInteger):
+            if other.val == 0:
+                raise ZeroDivisionError("integer division or modulo by zero")
+            return SmallInteger(self.rval.int_mod_int_result(other.val))
+        assert isinstance(other, BigInteger)
+        if other.eq(SmallInteger(0)):
+            raise ZeroDivisionError("integer division or modulo by zero")
+        return BigInteger(self.rval.mod(other.rval))

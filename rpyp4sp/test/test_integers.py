@@ -44,3 +44,39 @@ def test_int_add_sub_hypothesis(a, b):
     assert a.int_add(b).tolong() == v1 + v2
     assert a.int_sub(b).tolong() == v1 - v2
 
+def test_mod_basic():
+    assert SmallInteger(7).mod(SmallInteger(3)).tolong() == 1
+    assert SmallInteger(8).mod(SmallInteger(3)).tolong() == 2
+    assert SmallInteger(9).mod(SmallInteger(3)).tolong() == 0
+
+    assert SmallInteger(-7).mod(SmallInteger(3)).tolong() == 2
+    assert SmallInteger(7).mod(SmallInteger(-3)).tolong() == -2
+    assert SmallInteger(-7).mod(SmallInteger(-3)).tolong() == -1
+
+    big_num = BigInteger(rbigint.fromlong(123456789012345))
+    small_num = SmallInteger(1000)
+    assert big_num.mod(small_num).tolong() == 123456789012345 % 1000
+
+    with pytest.raises(ZeroDivisionError):
+        SmallInteger(5).mod(SmallInteger(0))
+    with pytest.raises(ZeroDivisionError):
+        BigInteger(rbigint.fromlong(5)).mod(SmallInteger(0))
+
+@given(wrapped_ints, wrapped_ints)
+@example(SmallInteger(7), SmallInteger(-3))
+@example(SmallInteger(-7), SmallInteger(3))
+@example(BigInteger(rbigint.fromlong(123456789012345)), SmallInteger(1000))
+@example(SmallInteger(MININT), SmallInteger(-1))
+@example(SmallInteger(-sys.maxint-1), SmallInteger(-1))
+@example(SmallInteger(sys.maxint), SmallInteger(-1))
+@example(SmallInteger(MININT), SmallInteger(1))
+@example(SmallInteger(MININT), SmallInteger(sys.maxint))
+def test_mod_hypothesis(a, b):
+    v1 = a.tobigint().tolong()
+    v2 = b.tobigint().tolong()
+    # Skip division by zero
+    assume(v2 != 0)
+    result = a.mod(b).tolong()
+    expected = v1 % v2
+    assert result == expected
+

@@ -11,6 +11,14 @@ def test_shl():
     res = builtin.numerics_shl(None, [], [mkint(1234), mkint(4)])
     assert res.eq(mkint(1234 << 4))
 
+def test_numerics_to_bitstr():
+    inputs = [mkint(4), mkint(-1)]
+    res = builtin.numerics_to_bitstr(None, [], inputs)
+    assert res.eq(mkint(15))
+    inputs = [mkint(4), mkint(20)]
+    res = builtin.numerics_to_bitstr(None, [], inputs)
+    assert res.eq(mkint(4))
+
 def test_fresh():
     oldval = builtin.HOLDER.counter
     try:

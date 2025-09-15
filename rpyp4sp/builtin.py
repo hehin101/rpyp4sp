@@ -343,7 +343,7 @@ def fresh_fresh_tid(ctx, targs, values_input):
     # value
 
 def _integer_to_value(integer):
-    # type (integers.Integer) -> objects.NumV
+    # type: (integers.Integer) -> objects.NumV
     return objects.NumV(integer, 'Int', typ=p4specast.NumT(p4specast.IntT()))
 
 
@@ -375,9 +375,7 @@ def numerics_to_bitstr(ctx, targs, values_input):
     width_num = width.get_num()
     num_num = num.get_num()
     toobig = integers.Integer.fromint(1).lshift(width_num.toint())
-    if not (integers.Integer.fromint(0).le(num_num) and num_num.lt(toobig)):
-        raise P4BuiltinError("TODO: handle numeric bounds check failure for width %s, num %s" % (width_num.toint(), num_num.toint()))
-    return num
+    return _integer_to_value(num_num.mod(toobig))
 
 @register_builtin("bneg")
 def numerics_bneg(ctx, targs, values_input):
