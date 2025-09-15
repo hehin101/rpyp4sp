@@ -359,7 +359,8 @@ def numerics_to_bitstr(ctx, targs, values_input):
     width, num = values_input
     width_num = width.get_num()
     num_num = num.get_num()
-    if not (0 <= num_num.toint() < (1 << width_num.toint())):
+    toobig = integers.Integer.fromint(1).lshift(width_num.toint())
+    if not (integers.Integer.fromint(0).le(num_num) and num_num.lt(toobig)):
         raise P4BuiltinError("TODO: handle numeric bounds check failure for width %s, num %s" % (width_num.toint(), num_num.toint()))
     return num
 
