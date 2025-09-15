@@ -190,6 +190,9 @@ def invoke_rel(ctx, id, values_input):
 # ____________________________________________________________
 # instructions
 
+def eval_instr(ctx, instr):
+    return instr.eval_instr(ctx)
+
 def eval_instrs(ctx, sign, instrs):
     #     eval_instrs (ctx : Ctx.t) (sign : Sign.t) (instrs : instr list) :
     #     Ctx.t * Sign.t =
@@ -205,51 +208,23 @@ def eval_instrs(ctx, sign, instrs):
                 assert sign is not Cont
     return ctx, sign
 
-def eval_instr(ctx, instr):
-    # INCOMPLETE
-    #     eval_instr (ctx : Ctx.t) (instr : instr) : Ctx.t * Sign.t =
-    #   match instr.it with
-    #   | IfI (exp_cond, iterexps, instrs_then, phantom_opt) ->
-    #       eval_if_instr ctx exp_cond iterexps instrs_then phantom_opt
-    if isinstance(instr, p4specast.IfI):
-        return eval_if_instr(ctx, instr)
-    #   | CaseI (exp, cases, phantom_opt) -> eval_case_instr ctx exp cases phantom_opt
-    if isinstance(instr, p4specast.CaseI):
-        return eval_case_instr(ctx, instr)
-    #   | OtherwiseI instr -> eval_instr ctx instr
-    if isinstance(instr, p4specast.OtherwiseI):
-        return eval_instr(ctx, instr.instr)
-    #   | LetI (exp_l, exp_r, iterexps) -> eval_let_instr ctx exp_l exp_r iterexps
-    if isinstance(instr, p4specast.LetI):
-        return eval_let_instr(ctx, instr)
-    #   | RuleI (id, notexp, iterexps) -> eval_rule_instr ctx id notexp iterexps
-    if isinstance(instr, p4specast.RuleI):
-        return eval_rule_instr(ctx, instr)
-    #   | ResultI exps -> eval_result_instr ctx exps
-    if isinstance(instr, p4specast.ResultI):
-        return eval_result_instr(ctx, instr)
-    #   | ReturnI exp -> eval_return_instr ctx exp
-    if isinstance(instr, p4specast.ReturnI):
-        return eval_return_instr(ctx, instr)
-    #import pdb; pdb.set_trace()
-    raise P4EvaluationError("TODO eval_instr: unhandled instruction type %s" % instr.__class__.__name__)
-
-def eval_if_instr(ctx, instr):
-    # INCOMPLETE
-    #     eval_if_instr (ctx : Ctx.t) (exp_cond : exp) (iterexps : iterexp list)
-    #     (instrs_then : instr list) (phantom_opt : phantom option) : Ctx.t * Sign.t =
-    #   let ctx, cond, value_cond = eval_if_cond_iter ctx exp_cond iterexps in
-    ctx, cond, value_cond = eval_if_cond_iter(ctx, instr.exp, instr.iters)
-    #   let vid = value_cond.note.vid in
-    #   let ctx =
-    #     match phantom_opt with
-    #     | Some (pid, _) -> Ctx.cover ctx (not cond) pid vid
-    #     | None -> ctx
-    #   in
-    #   if cond then eval_instrs ctx Cont instrs_then else (ctx, Cont)
-    if cond:
-        return eval_instrs(ctx, Cont(), instr.instrs)
-    return (ctx, Cont())
+class __extend__(p4specast.IfI):
+    def eval_instr(self, ctx):
+        # INCOMPLETE
+        #     eval_if_instr (ctx : Ctx.t) (exp_cond : exp) (iterexps : iterexp list)
+        #     (instrs_then : instr list) (phantom_opt : phantom option) : Ctx.t * Sign.t =
+        #   let ctx, cond, value_cond = eval_if_cond_iter ctx exp_cond iterexps in
+        ctx, cond, value_cond = eval_if_cond_iter(ctx, self.exp, self.iters)
+        #   let vid = value_cond.note.vid in
+        #   let ctx =
+        #     match phantom_opt with
+        #     | Some (pid, _) -> Ctx.cover ctx (not cond) pid vid
+        #     | None -> ctx
+        #   in
+        #   if cond then eval_instrs ctx Cont instrs_then else (ctx, Cont)
+        if cond:
+            return eval_instrs(ctx, Cont(), self.instrs)
+        return (ctx, Cont())
 
 def eval_if_cond_iter(ctx, exp_cond, iterexps):
     # let iterexps = List.rev iterexps in
@@ -455,28 +430,34 @@ def eval_cases(ctx, exp, cases):
     # (ctx, block_match, value_cond)
     return ctx, block_match, value_cond
 
-def eval_case_instr(ctx, case_instr):
-    # let ctx, instrs_opt, value_cond = eval_cases ctx exp cases in
-    ctx, instrs_opt, value_cond = eval_cases(ctx, case_instr.exp, case_instr.cases)
-    assert value_cond is None
-    # let vid = value_cond.note.vid in
-    # let ctx =
-    #   match phantom_opt with
-    #   | Some (pid, _) -> Ctx.cover ctx (Option.is_none instrs_opt) pid vid
-    #   | None -> ctx
-    # in
-    # match instrs_opt with
-    # | Some instrs -> eval_instrs ctx Cont instrs
-    if instrs_opt is not None:
-        return eval_instrs(ctx, Cont(), instrs_opt)
-    # | None -> (ctx, Cont)
-    return ctx, Cont()
+class __extend__(p4specast.CaseI):
+    def eval_instr(self, ctx):
+        # let ctx, instrs_opt, value_cond = eval_cases ctx exp cases in
+        ctx, instrs_opt, value_cond = eval_cases(ctx, self.exp, self.cases)
+        assert value_cond is None
+        # let vid = value_cond.note.vid in
+        # let ctx =
+        #   match phantom_opt with
+        #   | Some (pid, _) -> Ctx.cover ctx (Option.is_none instrs_opt) pid vid
+        #   | None -> ctx
+        # in
+        # match instrs_opt with
+        # | Some instrs -> eval_instrs ctx Cont instrs
+        if instrs_opt is not None:
+            return eval_instrs(ctx, Cont(), instrs_opt)
+        # | None -> (ctx, Cont)
+        return ctx, Cont()
 
-def eval_let_instr(ctx, let_instr):
-    # let ctx = eval_let_iter ctx exp_l exp_r iterexps in
-    # (ctx, Cont)
-    ctx = eval_let_iter(ctx, let_instr)
-    return ctx, Cont()
+class __extend__(p4specast.OtherwiseI):
+    def eval_instr(self, ctx):
+        return self.instr.eval_instr(ctx)
+
+class __extend__(p4specast.LetI):
+    def eval_instr(self, ctx):
+        # let ctx = eval_let_iter ctx exp_l exp_r iterexps in
+        # (ctx, Cont)
+        ctx = eval_let_iter(ctx, self)
+        return ctx, Cont()
 
 def _discriminate_bound_binding_variables(ctx, vars):
     vars_bound = []
@@ -848,10 +829,11 @@ def eval_rule_iter(ctx, instr):
     iterexps.reverse()
     return eval_rule_iter_tick(ctx, instr.id, instr.notexp, iterexps)
 
-def eval_rule_instr(ctx, instr):
-    # let ctx = eval_rule_iter ctx id notexp iterexps in
-    ctx = eval_rule_iter(ctx, instr)
-    return ctx, Cont()
+class __extend__(p4specast.RuleI):
+    def eval_instr(self, ctx):
+        # let ctx = eval_rule_iter ctx id notexp iterexps in
+        ctx = eval_rule_iter(ctx, self)
+        return ctx, Cont()
 
 
 def assign_exp(ctx, exp, value):
@@ -1115,18 +1097,20 @@ def assign_arg_def(ctx_caller, ctx_callee, id, value):
         assert False, "cannot assign a value %s to a definition %s" % (
             str(value), str(id))
 
-def eval_result_instr(ctx, instr):
-    # type: (context.Context, p4specast.ResultI) -> tuple[context.Context, Res]
-    #  let ctx, values = eval_exps ctx exps in
-    #  (ctx, Res values)
-    ctx, values = eval_exps(ctx, instr.exps)
-    return ctx, Res(values)
+class __extend__(p4specast.ResultI):
+    def eval_instr(self, ctx):
+        # type: (p4specast.ResultI, context.Context) -> tuple[context.Context, Res]
+        #  let ctx, values = eval_exps ctx exps in
+        #  (ctx, Res values)
+        ctx, values = eval_exps(ctx, self.exps)
+        return ctx, Res(values)
 
-def eval_return_instr(ctx, instr):
-    # let ctx, value = eval_exp ctx exp in
-    # (ctx, Ret value)
-    ctx, value = eval_exp(ctx, instr.exp)
-    return (ctx, Ret(value))
+class __extend__(p4specast.ReturnI):
+    def eval_instr(self, ctx):
+        # let ctx, value = eval_exp ctx exp in
+        # (ctx, Ret value)
+        ctx, value = eval_exp(ctx, self.exp)
+        return (ctx, Ret(value))
 
 # ____________________________________________________________
 # expressions
