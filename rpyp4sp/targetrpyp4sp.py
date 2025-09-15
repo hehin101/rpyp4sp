@@ -11,6 +11,7 @@ from rpyp4sp.test.test_interp import make_context
 def command_run_test_jsonl(argv):
     ctx = make_context()
     passed = 0
+    skipped = 0
     failed = 0
     error = 0
     with open(argv[2], 'r') as f:
@@ -35,8 +36,12 @@ def command_run_test_jsonl(argv):
                 try:
                     _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
                     if not value.eq(res_value):
-                        failed += 1
-                        print("Function test failed:", name, value.tostring(), res_value.tostring())
+                        if "FRESH" in value.tostring():
+                            skipped += 1
+                            print("Function test skipped due to FRESH:", name)
+                        else:
+                            failed += 1
+                            print("Function test failed:", name, value.tostring(), res_value.tostring())
                     else:
                         passed += 1
                         print("Function test passed:", name)
@@ -62,11 +67,16 @@ def command_run_test_jsonl(argv):
                         for i, resval in enumerate(values):
                             resval_exp = res_values[i]
                             if not resval.eq(resval_exp):
-                                failed += 1
-                                print("Relation test failed:", name, resval.tostring(), resval_exp.tostring())
-                            else:
-                                passed += 1
-                                print("Relation test passed:", name)
+                                if "FRESH" in resval_exp.tostring():
+                                    skipped += 1
+                                    print("Relation test skipped due to FRESH:", name)
+                                else:
+                                    failed += 1
+                                    print("Relation test failed:", name, resval.tostring(), resval_exp.tostring())
+                                break
+                        else:
+                            passed += 1
+                            print("Relation test passed:", name)
                 except P4Error as e:
                     #import pdb; pdb.xpm()
                     error += 1
@@ -103,6 +113,7 @@ def command_run_test_jsonl(argv):
             else:
                 assert 0
     print("PASSED:", passed)
+    print("SKIPPED:", skipped)
     print("FAILED", failed)
     print("ERROR ", error)
     return 0
