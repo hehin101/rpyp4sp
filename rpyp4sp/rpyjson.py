@@ -225,7 +225,7 @@ class JsonObject(JsonBase):
         return result
 
     def __repr__(self):
-        return "rpyjson.JsonObject.make(%r, [%r])" % (
+        return "rpyjson.JsonObject.make(%r, [%s])" % (
                 self.map, ", ".join([repr(self._get_value(i)) for i in range(self._num_values())]))
 
 class JsonObject0(JsonObject):
@@ -383,6 +383,14 @@ class Map(object):
 
     def lookup(self, key):
         return self.attrs.get(key, -1)
+
+    def __repr__(self):
+        res = ["rpyjson.ROOT_MAP"]
+        items = self.attrs.items()
+        items.sort(key=lambda el: el[1])
+        for key, _ in items:
+            res.append(".get_next(%r)" % key)
+        return "".join(res)
 
 class MapLookupCache(object):
     caches = {}
@@ -915,7 +923,7 @@ def _convert(data):
         curr_map = ROOT_MAP
         values = []
         for (key, value) in data.iteritems():
-            curr_map = curr_map.get_next(key)
+            curr_map = curr_map.get_next(key.encode("utf-8"))
             values.append(_convert(value))
         return JsonObject.make(curr_map, values)
 
