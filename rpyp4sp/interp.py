@@ -1362,7 +1362,9 @@ def eval_binop_num(binop, value_l, value_r, typ):
             raise P4EvaluationError("division remainder isn't zero")
         res_num = num_l.div(num_r)
     elif binop == 'ModOp':
-        raise P4NotImplementedError("ModOp")
+        if num_r.eq(integers.Integer.fromint(0)):
+            raise P4EvaluationError("Modulo with 0")
+        res_num = num_l.mod(num_r)
     elif binop == 'PowOp':
         raise P4NotImplementedError("PowOp")
     else:
