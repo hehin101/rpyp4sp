@@ -467,8 +467,6 @@ def numerics_to_int(ctx, targs, values_input):
         return _integer_to_value(num_num)
     return _integer_to_value(num_num.sub(maxvalue))
 
-    raise P4NotImplementedError("numerics_to_int is not implemented yet")
-
 @register_builtin("to_bitstr")
 def numerics_to_bitstr(ctx, targs, values_input):
     width, num = values_input
@@ -479,7 +477,13 @@ def numerics_to_bitstr(ctx, targs, values_input):
 
 @register_builtin("bneg")
 def numerics_bneg(ctx, targs, values_input):
-    raise P4NotImplementedError("numerics_bneg is not implemented yet")
+    # Extract.zero at targs;
+    # let value = Extract.one at values_input in
+    # let rawint = bigint_of_value value in
+    # Bigint.bit_not rawint |> value_of_bigint
+    value, = values_input
+    result = value.get_num().invert()
+    return _integer_to_value(result)
 
 @register_builtin("band")
 def numerics_band(ctx, targs, values_input):

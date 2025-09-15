@@ -68,6 +68,20 @@ def test_numerics_bxor():
     res = builtin.numerics_bxor(None, [], inputs)
     assert res.eq(mkint(0))
 
+def test_numerics_bneg():
+    inputs = [mkint(0)]
+    res = builtin.numerics_bneg(None, [], inputs)
+    assert res.eq(mkint(-1))
+
+    inputs = [mkint(-1)]
+    res = builtin.numerics_bneg(None, [], inputs)
+    assert res.eq(mkint(0))
+
+    inputs = [mkint(42)]
+    res = builtin.numerics_bneg(None, [], inputs)
+    assert res.eq(mkint(-43))
+
+
 def test_numerics_bor():
     inputs = [mkint(12), mkint(10)]
     res = builtin.numerics_bor(None, [], inputs)
