@@ -19,6 +19,14 @@ def test_numerics_to_bitstr():
     res = builtin.numerics_to_bitstr(None, [], inputs)
     assert res.eq(mkint(4))
 
+def test_numerics_to_int():
+    inputs = [mkint(4), mkint(3)]
+    res = builtin.numerics_to_int(None, [], inputs)
+    assert res.eq(mkint(3))
+    inputs = [mkint(4), mkint(15)]
+    res = builtin.numerics_to_int(None, [], inputs)
+    assert res.eq(mkint(-1))
+
 def test_fresh():
     oldval = builtin.HOLDER.counter
     try:

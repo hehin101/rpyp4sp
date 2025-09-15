@@ -367,6 +367,17 @@ def numerics_pow2(ctx, targs, values_input):
 
 @register_builtin("to_int")
 def numerics_to_int(ctx, targs, values_input):
+    width, num = values_input
+    width = width.get_num().toint()
+    num_num = num.get_num()
+    # sign extend num_num
+    maxvalue = integers.Integer.fromint(1).lshift(width)
+    num_num = num_num.mod(maxvalue) # normalize in range 0..2**width-1
+    rightmost_bit = num_num.rshift(width - 1)
+    if rightmost_bit.eq(integers.Integer.fromint(0)):
+        return _integer_to_value(num_num)
+    return _integer_to_value(num_num.sub(maxvalue))
+
     raise P4NotImplementedError("numerics_to_int is not implemented yet")
 
 @register_builtin("to_bitstr")
@@ -374,8 +385,8 @@ def numerics_to_bitstr(ctx, targs, values_input):
     width, num = values_input
     width_num = width.get_num()
     num_num = num.get_num()
-    toobig = integers.Integer.fromint(1).lshift(width_num.toint())
-    return _integer_to_value(num_num.mod(toobig))
+    maxvalue = integers.Integer.fromint(1).lshift(width_num.toint())
+    return _integer_to_value(num_num.mod(maxvalue))
 
 @register_builtin("bneg")
 def numerics_bneg(ctx, targs, values_input):
