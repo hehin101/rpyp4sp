@@ -928,7 +928,7 @@ class NotExp(AstBase):
             exps=[Exp.fromjson(exp) for exp in content.get_list_item(1).value_array()]
         )
     def __repr__(self):
-        return "p4specast.NotExp(%s, %s)" % (self.mixop, self.exps)
+        return "p4specast.NotExp(%r, %r)" % (self.mixop, self.exps)
 
 # and iterexp = iter * var list
 

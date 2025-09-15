@@ -383,26 +383,32 @@ def eval_cases(ctx, exp, cases):
     #              match guard with
         guard = case.guard
         #          | BoolG true -> exp.it
-        if isinstance(guard, p4specast.BoolG):
+        if isinstance(guard, p4specast.BoolG) and guard.value:
             exp_cond = exp
         #          | BoolG false -> Il.Ast.UnE (`NotOp, `BoolT, exp)
+        elif isinstance(guard, p4specast.BoolG) and not guard.value:
+            exp_cond = p4specast.UnE("NotOp", "BoolT", exp)
+            exp_cond.typ = p4specast.BoolT()
         #          | CmpG (cmpop, optyp, exp_r) ->
         #              Il.Ast.CmpE (cmpop, optyp, exp, exp_r)
         elif isinstance(guard, p4specast.CmpG):
             exp_cond = p4specast.CmpE(guard.op, guard.typ, exp, guard.exp)
+            exp_cond.typ = p4specast.BoolT()
         #          | SubG typ -> Il.Ast.SubE (exp, typ)
         elif isinstance(guard, p4specast.SubG):
             exp_cond = p4specast.SubE(exp, guard.typ)
+            exp_cond.typ = p4specast.BoolT()
         #          | MatchG pattern -> Il.Ast.MatchE (exp, pattern)
         elif isinstance(guard, p4specast.MatchG):
             exp_cond = p4specast.MatchE(exp, guard.pattern)
+            exp_cond.typ = p4specast.BoolT()
         #          | MemG exp_s -> Il.Ast.MemE (exp, exp_s)
         elif isinstance(guard, p4specast.MemG):
             exp_cond = p4specast.MemE(exp, guard.exp)
+            exp_cond.typ = p4specast.BoolT()
         else:
             #import pdb;pdb.set_trace()
             assert 0, 'missing case'
-        exp_cond.typ = p4specast.BoolT()
 
         #        in
         #        let exp_cond = exp_cond $$ (exp.at, Il.Ast.BoolT) in
