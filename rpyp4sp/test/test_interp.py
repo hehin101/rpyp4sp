@@ -318,7 +318,6 @@ def test_coerce_assign_bug():
     name = 'coerce_assign'
     ctx = make_context()
     func = ctx.glbl.fenv[name]
-    import pdb;pdb.set_trace()
     _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
     assert value.eq(expected)
 
