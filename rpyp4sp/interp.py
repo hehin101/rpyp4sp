@@ -1,5 +1,5 @@
 from __future__ import print_function
-from rpython.rlib import objectmodel
+from rpython.rlib import objectmodel, jit
 from rpyp4sp import p4specast, objects, builtin, context, integers
 from rpyp4sp.error import (P4EvaluationError, P4CastError, P4NotImplementedError, 
                            P4RelationError)
@@ -138,6 +138,8 @@ def eval_args(ctx, args):
 # ____________________________________________________________
 # relations
 
+invoke_rel_jit_driver = jit.JitDriver(
+    reds='auto', greens=['name', 'reld'])
 
 def invoke_rel(ctx, id, values_input):
     # returns (Ctx.t * value list) option =
@@ -153,6 +155,7 @@ def invoke_rel(ctx, id, values_input):
     #   let ctx_local = assign_exps ctx_local exps_input values_input in
     ctx_local = assign_exps(ctx_local, reld.exps, values_input)
     #   let ctx_local, sign = eval_instrs ctx_local Cont instrs in
+    invoke_rel_jit_driver.jit_merge_point(name=id.value, reld=reld)
     ctx_local, sign = eval_instrs(ctx_local, Cont(), reld.instrs)
     ctx = ctx.commit(ctx_local)
     #   let ctx = Ctx.commit ctx ctx_local in
@@ -189,6 +192,7 @@ def invoke_rel(ctx, id, values_input):
 def eval_instr(ctx, instr):
     return instr.eval_instr(ctx)
 
+@jit.unroll_safe
 def eval_instrs(ctx, sign, instrs):
     #     eval_instrs (ctx : Ctx.t) (sign : Sign.t) (instrs : instr list) :
     #     Ctx.t * Sign.t =
@@ -361,6 +365,7 @@ def eval_if_cond(ctx, exp_cond):
     return ctx, cond, value_cond
 
 
+@jit.unroll_safe
 def eval_cases(ctx, exp, cases, cases_exps):
     # returns  Ctx.t * instr list option * value =
     # cases
@@ -1119,6 +1124,7 @@ def assign_exp(ctx, exp, value):
     #           ctxs @ [ ctx ])
     #         [] values
     #     in
+        # TODO: move rest into its own function
         ctxs = []
         values = value.elements
         for value_elem in values:
@@ -1249,6 +1255,8 @@ class __extend__(p4specast.ReturnI):
 # ____________________________________________________________
 # expressions
 
+
+@jit.unroll_safe
 def eval_exps(ctx, exps):
     # List.fold_left
     #   (fun (ctx, values) exp ->

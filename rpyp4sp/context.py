@@ -11,6 +11,9 @@ class GlobalContext(object):
 def iterlist_to_key(l):
     if not l:
         return ''
+    return _iterlist_to_key(l)
+
+def _iterlist_to_key(l):
     key = []
     for iter in l:
         if isinstance(iter, p4specast.Opt):
