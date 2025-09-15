@@ -188,6 +188,10 @@ class TParam(AstBase):
         self.value = value # type: str
         self.region = region # type: Region
 
+    def tostring(self):
+        # and string_of_tparam tparam = tparam.it
+        return self.value
+
     @staticmethod
     def fromjson(value):
         return TParam(
@@ -209,6 +213,25 @@ class TParam(AstBase):
 
 Iter, Opt, List = define_enum('Iter', 'Opt', 'List')
 
+def string_of_iter(iter):
+    # let string_of_iter iter = match iter with Opt -> "?" | List -> "*"
+    if isinstance(iter, Opt):
+        return "?"
+    elif isinstance(iter, List):
+        return "*"
+    else:
+        assert 0, "Unknown iter type: %s" % iter
+
+def string_of_tparams(tparams):
+    # and string_of_tparams tparams =
+    #   match tparams with
+    #   | [] -> ""
+    #   | tparams ->
+    #       "<" ^ String.concat ", " (List.map string_of_tparam tparams) ^ ">"
+    if not tparams:
+        return ""
+    return "<%s>" % ", ".join([tp.tostring() for tp in tparams])
+
 # type var = id * typ * iter list
 
 class Var(AstBase):
@@ -216,6 +239,12 @@ class Var(AstBase):
         self.id = id
         self.typ = typ
         self.iter = iter
+
+    def tostring(self):
+        # let string_of_var (id, _typ, iters) =
+        #   string_of_varid id ^ String.concat "" (List.map string_of_iter iters)
+        iters_str = "".join([string_of_iter(i) for i in self.iter])
+        return "%s%s" % (self.id.value, iters_str)
 
     def __repr__(self):
         return "p4specast.Var(id=%s, typ=%s, iter=%s)" % (self.id, self.typ, self.iter)
@@ -332,6 +361,9 @@ class DecD(Def):
 #   | DefA of id    (* `$`id *)
 
 class Arg(AstBase):
+    def tostring(self):
+        assert 0  # abstract method
+
     @staticmethod
     def fromjson(value):
         assert value.get_dict_value('note').is_null
@@ -349,6 +381,10 @@ class ExpA(Arg):
     def __init__(self, exp):
         self.exp = exp # typ: Exp
 
+    def tostring(self):
+        # | ExpP typ -> string_of_typ typ (but this is ExpA with exp, so return exp)
+        return self.exp.tostring()
+
     def __repr__(self):
         return "p4specast.ExpA(%r)" % (self.exp,)
 
@@ -362,6 +398,10 @@ class ExpA(Arg):
 class DefA(Arg):
     def __init__(self, id):
         self.id = id # typ: Id
+
+    def tostring(self):
+        # | DefP (defid, tparams, params, typ) -> ... (but this is DefA with just id)
+        return "$%s" % self.id.value
 
     def __repr__(self):
         return "p4specast.DefA(%r)" % (self.id,)
@@ -474,6 +514,9 @@ class Exp(AstBase):
         ast.region = region
         return ast
 
+    def tostring(self):
+        assert 0
+
 
 class BoolE(Exp):
     _attrs_ = ['value']
@@ -489,6 +532,10 @@ class BoolE(Exp):
 
     def __repr__(self):
         return "p4specast.BoolE(%r)" % (self.value,)
+
+    def tostring(self):
+        # | Il.Ast.BoolE b -> string_of_bool b
+        return "true" if self.value else "false"
 
 
 class NumE(Exp):
@@ -510,6 +557,10 @@ class NumE(Exp):
     def __repr__(self):
         return "p4specast.NumE.fromstr(%r, %r)" % (self.value.str(), self.what)
 
+    def tostring(self):
+        # | Il.Ast.NumE n -> string_of_num n
+        return self.value.str()
+
 
 class TextE(Exp):
     def __init__(self, value):
@@ -524,6 +575,11 @@ class TextE(Exp):
     def __repr__(self):
         return "p4specast.TextE(%r)" % (self.value,)
 
+    def tostring(self):
+        # | Il.Ast.TextE text -> "\"" ^ String.escaped text ^ "\""
+        from rpyp4sp.objects import string_escape_encode
+        return string_escape_encode(self.value)
+
 class VarE(Exp):
     def __init__(self, id):
         self.id = id # typ: id
@@ -537,6 +593,10 @@ class VarE(Exp):
     def __repr__(self):
         return "p4specast.VarE(%r)" % (self.id,)
 
+    def tostring(self):
+        # | Il.Ast.VarE varid -> string_of_varid varid
+        return self.id.value
+
 class UnE(Exp):
     #   | UnE of unop * optyp * exp             (* unop exp *)
     def __init__(self, op, optyp, exp):
@@ -546,6 +606,19 @@ class UnE(Exp):
 
     def __repr__(self):
         return "p4specast.UnE(%r, %r, %r)" % (self.op, self.optyp, self.exp)
+
+    def tostring(self):
+        # | Il.Ast.UnE (unop, _, exp) -> string_of_unop unop ^ string_of_exp exp
+        # let string_of_unop = function `NotOp -> "~" | `PlusOp -> "+" | `MinusOp -> "-"
+        if self.op == "NotOp":
+            unop_str = "~"
+        elif self.op == "PlusOp":
+            unop_str = "+"
+        elif self.op == "MinusOp":
+            unop_str = "-"
+        else:
+            unop_str = "?%s?" % self.op  # fallback for unknown ops
+        return "%s%s" % (unop_str, self.exp.tostring())
 
     @staticmethod
     def fromjson(content):
@@ -565,6 +638,28 @@ class BinE(Exp):
 
     def __repr__(self):
         return "p4specast.BinE(%r, %r, %r, %r)" % (self.binop, self.optyp, self.left, self.right)
+
+    def tostring(self):
+        # | Il.Ast.BinE (binop, _, exp_l, exp_r) ->
+        #     "(" ^ string_of_exp exp_l ^ " " ^ string_of_binop binop ^ " "
+        #     ^ string_of_exp exp_r ^ ")"
+        # let string_of_binop = function
+        #   | `AndOp -> "/\\" | `OrOp -> "\\/" | `ImplOp -> "=>" | `EquivOp -> "<=>"
+        #   | `AddOp -> "+" | `SubOp -> "-" | `MulOp -> "*" | `DivOp -> "/" | `ModOp -> "\\" | `PowOp -> "^"
+        binop_map = {
+            "AndOp": "/\\",
+            "OrOp": "\\/",
+            "ImplOp": "=>",
+            "EquivOp": "<=>",
+            "AddOp": "+",
+            "SubOp": "-",
+            "MulOp": "*",
+            "DivOp": "/",
+            "ModOp": "\\",
+            "PowOp": "^"
+        }
+        binop_str = binop_map.get(self.binop, "?%s?" % self.binop)
+        return "(%s %s %s)" % (self.left.tostring(), binop_str, self.right.tostring())
 
     @staticmethod
     def fromjson(content):
@@ -586,6 +681,23 @@ class CmpE(Exp):
     def __repr__(self):
         return "p4specast.CmpE(%r, %r, %r, %r)" % (self.cmpop, self.optyp, self.left, self.right)
 
+    def tostring(self):
+        # | Il.Ast.CmpE (cmpop, _, exp_l, exp_r) ->
+        #     "(" ^ string_of_exp exp_l ^ " " ^ string_of_cmpop cmpop ^ " "
+        #     ^ string_of_exp exp_r ^ ")"
+        # let string_of_cmpop = function
+        #   | `EqOp -> "=" | `NeOp -> "=/=" | `LtOp -> "<" | `GtOp -> ">" | `LeOp -> "<=" | `GeOp -> ">="
+        cmpop_map = {
+            "EqOp": "=",
+            "NeOp": "=/=",
+            "LtOp": "<",
+            "GtOp": ">",
+            "LeOp": "<=",
+            "GeOp": ">="
+        }
+        cmpop_str = cmpop_map.get(self.cmpop, "?%s?" % self.cmpop)
+        return "(%s %s %s)" % (self.left.tostring(), cmpop_str, self.right.tostring())
+
     @staticmethod
     def fromjson(content):
         return CmpE(
@@ -600,6 +712,10 @@ class UpCastE(Exp):
     def __init__(self, check_typ, exp):
         self.check_typ = check_typ # typ: Typ
         self.exp = exp # typ: Exp
+
+    def tostring(self):
+        # | Il.Ast.UpCastE (e, t) -> string_of_exp e ^ " : " ^ string_of_typ t
+        return "%s : %s" % (self.exp.tostring(), self.check_typ.tostring())
 
     def __repr__(self):
         return "p4specast.UpCastE(%r, %r)" % (self.check_typ, self.exp)
@@ -617,6 +733,10 @@ class DownCastE(Exp):
         self.check_typ = check_typ # typ: typ
         self.exp = exp # typ: exp
 
+    def tostring(self):
+        # | Il.Ast.DownCastE (e, t) -> string_of_exp e ^ " as " ^ string_of_typ t
+        return "%s as %s" % (self.exp.tostring(), self.check_typ.tostring())
+
     def __repr__(self):
         return "p4specast.DownCastE(%r, %r)" % (self.check_typ, self.exp)
 
@@ -632,6 +752,10 @@ class SubE(Exp):
     def __init__(self, exp, check_typ):
         self.exp = exp
         self.check_typ = check_typ
+
+    def tostring(self):
+        # | Il.Ast.SubE (e, _, ds) -> string_of_exp e ^ " with " ^ concat_map_nl "\n  " string_of_defn ds
+        return "%s <: %s" % (self.exp.tostring(), self.check_typ.tostring())
 
     @staticmethod
     def fromjson(content):
@@ -649,6 +773,10 @@ class MatchE(Exp):
         self.exp = exp
         self.pattern = pattern
 
+    def tostring(self):
+        # | Il.Ast.MatchE (e, cs) -> "match " ^ string_of_exp e ^ " with" ^ concat_map_nl "\n  | " string_of_clause cs
+        return "%s matches %s" % (self.exp.tostring(), self.pattern.tostring())
+
     @staticmethod
     def fromjson(content):
         return MatchE(
@@ -664,6 +792,11 @@ class TupleE(Exp):
     def __init__(self, elts):
         self.elts = elts # typ: exp list
 
+    def tostring(self):
+        # | Il.Ast.TupleE es -> "(" ^ concat_map ", " string_of_exp es ^ ")"
+        elts_str = ", ".join([e.tostring() for e in self.elts])
+        return "(%s)" % elts_str
+
     @staticmethod
     def fromjson(content):
         return TupleE(
@@ -677,6 +810,10 @@ class CaseE(Exp):
 #   | CaseE of notexp                       (* notexp *)
     def __init__(self, notexp):
         self.notexp = notexp
+
+    def tostring(self):
+        # | Il.Ast.CaseE (op, es) -> string_of_mixop_with_exp op es
+        return self.notexp.tostring()
 
     @staticmethod
     def fromjson(content):
@@ -692,6 +829,11 @@ class StrE(Exp):
     def __init__(self, fields):
         self.fields = fields
 
+    def tostring(self):
+        # | Il.Ast.StrE efs -> "{" ^ concat_map "; " string_of_expfield efs ^ "}"
+        fields_str = "; ".join(["%s %s" % (field[0].tostring(), field[1].tostring()) for field in self.fields])
+        return "{%s}" % fields_str
+
     @staticmethod
     def fromjson(content):
         return StrE(
@@ -705,6 +847,12 @@ class OptE(Exp):
 #   | OptE of exp option                    (* exp? *)
     def __init__(self, exp):
         self.exp = exp # typ: Exp | None
+
+    def tostring(self):
+        # | Il.Ast.OptE eo -> (match eo with None -> "" | Some e -> string_of_exp e ^ "?")
+        if self.exp is None:
+            return ""
+        return "%s?" % self.exp.tostring()
 
     @staticmethod
     def fromjson(content):
@@ -722,6 +870,11 @@ class ListE(Exp):
     def __init__(self, elts):
         self.elts = elts # typ: exp list
 
+    def tostring(self):
+        # | Il.Ast.ListE es -> "[" ^ concat_map "; " string_of_exp es ^ "]"
+        elts_str = "; ".join([e.tostring() for e in self.elts])
+        return "[%s]" % elts_str
+
     @staticmethod
     def fromjson(content):
         return ListE(
@@ -736,6 +889,10 @@ class ConsE(Exp):
     def __init__(self, head, tail):
         self.head = head # typ: exp
         self.tail = tail # typ: exp
+
+    def tostring(self):
+        # | Il.Ast.ConsE (e1, e2) -> string_of_exp e1 ^ " :: " ^ string_of_exp e2
+        return "%s :: %s" % (self.head.tostring(), self.tail.tostring())
 
     @staticmethod
     def fromjson(content):
@@ -753,6 +910,10 @@ class CatE(Exp):
         self.left = left # typ: exp
         self.right = right # typ: exp
 
+    def tostring(self):
+        # | Il.Ast.CatE (e1, e2) -> string_of_exp e1 ^ " ++ " ^ string_of_exp e2
+        return "%s ++ %s" % (self.left.tostring(), self.right.tostring())
+
     @staticmethod
     def fromjson(content):
         return CatE(
@@ -769,6 +930,10 @@ class MemE(Exp):
         self.elem = elem # typ: exp
         self.lst = lst # typ: exp
 
+    def tostring(self):
+        # | Il.Ast.MemE (e1, e2) -> string_of_exp e1 ^ " <- " ^ string_of_exp e2
+        return "%s <- %s" % (self.elem.tostring(), self.lst.tostring())
+
     @staticmethod
     def fromjson(content):
         return MemE(
@@ -784,6 +949,10 @@ class LenE(Exp):
     def __init__(self, lst):
         self.lst = lst # typ: exp
 
+    def tostring(self):
+        # | Il.Ast.LenE e -> "|" ^ string_of_exp e ^ "|"
+        return "|%s|" % self.lst.tostring()
+
     @staticmethod
     def fromjson(content):
         return LenE(
@@ -798,6 +967,10 @@ class DotE(Exp):
     def __init__(self, obj, field):
         self.obj = obj # typ: exp
         self.field = field # typ: string
+
+    def tostring(self):
+        # | Il.Ast.DotE (e, atom) -> string_of_exp e ^ "." ^ string_of_atom atom
+        return "%s.%s" % (self.obj.tostring(), self.field.tostring())
 
     @staticmethod
     def fromjson(content):
@@ -815,6 +988,10 @@ class IdxE(Exp):
         self.lst = lst # typ: exp
         self.idx = idx # typ: exp
 
+    def tostring(self):
+        # | Il.Ast.IdxE (e1, e2) -> string_of_exp e1 ^ "[" ^ string_of_exp e2 ^ "]"
+        return "%s[%s]" % (self.lst.tostring(), self.idx.tostring())
+
     @staticmethod
     def fromjson(content):
         return IdxE(
@@ -831,6 +1008,10 @@ class SliceE(Exp):
         self.lst = lst # typ: exp
         self.start = start # typ: exp
         self.length = length # typ: exp
+
+    def tostring(self):
+        # | Il.Ast.SliceE (e1, e2, e3) -> string_of_exp e1 ^ "[" ^ string_of_exp e2 ^ " : " ^ string_of_exp e3 ^ "]"
+        return "%s[%s : %s]" % (self.lst.tostring(), self.start.tostring(), self.length.tostring())
 
     @staticmethod
     def fromjson(content):
@@ -850,6 +1031,10 @@ class UpdE(Exp):
         self.path = path
         self.value = value
 
+    def tostring(self):
+        # | Il.Ast.UpdE (e1, p, e2) -> string_of_exp e1 ^ "[" ^ string_of_path p ^ " = " ^ string_of_exp e2 ^ "]"
+        return "%s[%s = %s]" % (self.exp.tostring(), self.path.tostring(), self.value.tostring())  # TODO: implement Path.tostring
+
     @staticmethod
     def fromjson(content):
         return UpdE(
@@ -868,6 +1053,14 @@ class CallE(Exp):
         self.targs = targs
         self.args = args # typ: exp list
 
+    def tostring(self):
+        # | Il.Ast.CallE (f, ts, as_) -> "$" ^ string_of_varid f ^ string_of_list_nl string_of_targ_inl ts ^ "(" ^ concat_map ", " string_of_arg as_ ^ ")"
+        targs_str = ""
+        if self.targs:
+            targs_str = "<%s>" % ", ".join([t.tostring() for t in self.targs])
+        args_str = ", ".join([a.tostring() for a in self.args])
+        return "$%s%s(%s)" % (self.func.value, targs_str, args_str)
+
     @staticmethod
     def fromjson(content):
         return CallE(
@@ -884,6 +1077,10 @@ class HoldE(Exp):
     def __init__(self, id, notexp):
         self.id = id
         self.notexp = notexp
+
+    def tostring(self):
+        # | Il.Ast.HoldE (x, n) -> string_of_varid x ^ " : " ^ string_of_notexp n ^ " holds"
+        return "%s : %s holds" % (self.id.value, self.notexp.tostring())
 
     def __repr__(self):
         return "p4specast.HoldE(%r, %r)" % (self.id, self.notexp)
@@ -903,6 +1100,11 @@ class IterE(Exp):
         self.iter = iter
         self.varlist = varlist
 
+    def tostring(self):
+        # | Il.Ast.IterE (e, (iter, xs)) -> "(" ^ string_of_exp e ^ " " ^ string_of_iter iter ^ concat_map " " string_of_varid xs ^ ")"
+        vars_str = " ".join([v.tostring() for v in self.varlist])  # TODO: implement Var.tostring
+        return "(%s %s %s)" % (self.exp.tostring(), string_of_iter(self.iter), vars_str)
+
     def __repr__(self):
         return "p4specast.IterE(%r, %r, %r)" % (self.exp, self.iter, self.varlist)
 
@@ -920,6 +1122,21 @@ class NotExp(AstBase):
     def __init__(self, mixop, exps):
         self.mixop = mixop
         self.exps = exps
+
+    def tostring(self, typ=None):
+        # and string_of_notexp ?(typ = None) notexp =
+        #   let mixop, exps = notexp in
+        #   match typ with
+        #   | Some typ ->
+        #       string_of_mixop mixop ^ "_"
+        #       ^ string_of_typ (typ $ no_region)
+        #       ^ "(" ^ string_of_exps ", " exps ^ ")"
+        #   | None -> string_of_mixop mixop ^ "(" ^ string_of_exps ", " exps ^ ")"
+        exps_str = ", ".join([e.tostring() for e in self.exps])
+        if typ is not None:
+            return "%s_%s(%s)" % (self.mixop.tostring(), typ.tostring(), exps_str)
+        else:
+            return "%s(%s)" % (self.mixop.tostring(), exps_str)
 
     @staticmethod
     def fromjson(content):
@@ -964,6 +1181,10 @@ NumTyp, NatT, IntT = define_enum('NumTyp', 'NatT', 'IntT')
 
 class Type(AstBase):
     # has a .region, but only sometimes (eg exp uses typ')
+
+    def tostring(self):
+        assert 0  # abstract method
+
     @staticmethod
     def fromjson(value):
         if value.is_object:
@@ -995,6 +1216,11 @@ class Type(AstBase):
 class BoolT(Type):
     def __init__(self):
         pass
+
+    def tostring(self):
+        # | BoolT -> "bool"
+        return "bool"
+
     def __repr__(self):
         return "p4specast.BoolT()"
 
@@ -1006,6 +1232,10 @@ class BoolT(Type):
 class NumT(Type):
     def __init__(self, typ):
         self.typ = typ
+
+    def tostring(self):
+        # | NumT numtyp -> Num.string_of_typ numtyp
+        return self.typ.__class__.__name__.lower().replace('t', '')  # TODO: implement proper Num.string_of_typ
 
     def __repr__(self):
         return "p4specast.NumT(%r)" % (self.typ,)
@@ -1019,6 +1249,10 @@ class TextT(Type):
     def __init__(self):
         pass
 
+    def tostring(self):
+        # | TextT -> "text"
+        return "text"
+
     def __repr__(self):
         return "p4specast.TextT()"
 
@@ -1030,6 +1264,13 @@ class VarT(Type):
     def __init__(self, id, targs):
         self.id = id
         self.targs = targs
+
+    def tostring(self):
+        # | VarT (typid, targs) -> string_of_typid typid ^ string_of_targs targs
+        targs_str = ""
+        if self.targs:
+            targs_str = "<%s>" % ", ".join([t.tostring() for t in self.targs])
+        return "%s%s" % (self.id.value, targs_str)
 
     def __repr__(self):
         return "p4specast.VarT(%r, %r)" % (self.id, self.targs)
@@ -1045,6 +1286,11 @@ class TupleT(Type):
     def __init__(self, elts):
         self.elts = elts
 
+    def tostring(self):
+        # | TupleT typs -> "(" ^ string_of_typs ", " typs ^ ")"
+        elts_str = ", ".join([e.tostring() for e in self.elts])
+        return "(%s)" % elts_str
+
     def __repr__(self):
         return "p4specast.TupleT(%r)" % (self.elts,)
 
@@ -1059,6 +1305,10 @@ class IterT(Type):
         self.typ = typ
         self.iter = iter
 
+    def tostring(self):
+        # | IterT (typ, iter) -> string_of_typ typ ^ string_of_iter iter
+        return "%s%s" % (self.typ.tostring(), string_of_iter(self.iter))
+
     def __repr__(self):
         return "p4specast.IterT(%r, %r)" % (self.typ, self.iter)
 
@@ -1072,6 +1322,10 @@ class IterT(Type):
 class FuncT(Type):
     def __init__(self):
         pass
+
+    def tostring(self):
+        # | FuncT -> "func"
+        return "func"
 
     def __repr__(self):
         return "p4specast.FuncT()"
@@ -1089,6 +1343,13 @@ class NotTyp(AstBase):
     def __init__(self, mixop, typs):
         self.mixop = mixop
         self.typs = typs
+
+    def tostring(self):
+        # and string_of_nottyp nottyp =
+        #   let mixop, typs = nottyp.it in
+        #   string_of_mixop mixop ^ "(" ^ string_of_typs ", " typs ^ ")"
+        typs_str = ", ".join([t.tostring() for t in self.typs])
+        return "%s(%s)" % (self.mixop.tostring(), typs_str)
 
     def __repr__(self):
         return "p4specast.NotTyp(%r, %r)" % (self.mixop, self.typs)
@@ -1462,6 +1723,9 @@ class MemG(Guard):
 #   | optp of [ `some | `none ]
 
 class Pattern(AstBase):
+    def tostring(self):
+        assert 0  # abstract method
+
     @staticmethod
     def fromjson(content):
         kind = content.get_list_item(0).value_string()
@@ -1478,6 +1742,10 @@ class CaseP(Pattern):
     def __init__(self, mixop):
         self.mixop = mixop # typ: mixop
 
+    def tostring(self):
+        # | CaseP mixop -> string_of_mixop mixop
+        return self.mixop.tostring()
+
     @staticmethod
     def fromjson(content):
         return CaseP(
@@ -1491,6 +1759,19 @@ class ListP(Pattern):
     def __init__(self, element):
         self.element = element # typ: ListPElem
 
+    def tostring(self):
+        # | ListP `Cons -> "_ :: _"
+        # | ListP (`Fixed len) -> Format.asprintf "[ _/%d ]" len
+        # | ListP `Nil -> "[]"
+        if isinstance(self.element, Cons):
+            return "_ :: _"
+        elif isinstance(self.element, Fixed):
+            return "[ _/%d ]" % self.element.value
+        elif isinstance(self.element, Nil):
+            return "[]"
+        else:
+            assert 0, "Unknown ListP element: %s" % self.element
+
     @staticmethod
     def fromjson(content):
         return ListP(
@@ -1503,6 +1784,16 @@ class ListP(Pattern):
 class OptP(Pattern):
     def __init__(self, kind):
         self.kind = kind # "Some" | "None"
+
+    def tostring(self):
+        # | OptP `Some -> "(_)"
+        # | OptP `None -> "()"
+        if self.kind == "Some":
+            return "(_)"
+        elif self.kind == "None":
+            return "()"
+        else:
+            assert 0, "Unknown OptP kind: %s" % self.kind
 
     @staticmethod
     def fromjson(content):
@@ -1554,6 +1845,10 @@ class Nil(ListPElem):
 
 class Path(AstBase):
     # has a region and a type (in the 'note' json field)
+
+    def tostring(self):
+        assert 0  # abstract method
+
     @staticmethod
     def fromjson(value):
         region = Region.fromjson(value.get_dict_value('at'))
@@ -1575,6 +1870,10 @@ class Path(AstBase):
         return ast
 
 class RootP(Path):
+    def tostring(self):
+        # | RootP -> ""
+        return ""
+
     @staticmethod
     def fromjson(content):
         return RootP()
@@ -1586,6 +1885,10 @@ class IdxP(Path):
     def __init__(self, path, exp):
         self.path = path
         self.exp = exp
+
+    def tostring(self):
+        # | IdxP (path, exp) -> string_of_path path ^ "[" ^ string_of_exp exp ^ "]"
+        return "%s[%s]" % (self.path.tostring(), self.exp.tostring())
 
     @staticmethod
     def fromjson(content):
@@ -1603,6 +1906,12 @@ class SliceP(Path):
         self.start = start
         self.end = end
 
+    def tostring(self):
+        # | SliceP (path, exp_l, exp_h) ->
+        #     string_of_path path ^ "[" ^ string_of_exp exp_l ^ " : "
+        #     ^ string_of_exp exp_h ^ "]"
+        return "%s[%s : %s]" % (self.path.tostring(), self.start.tostring(), self.end.tostring())
+
     @staticmethod
     def fromjson(content):
         return SliceP(
@@ -1618,6 +1927,14 @@ class DotP(Path):
     def __init__(self, path, atom):
         self.path = path
         self.atom = atom
+
+    def tostring(self):
+        # | DotP ({ it = RootP; _ }, atom) -> string_of_atom atom
+        # | DotP (path, atom) -> string_of_path path ^ "." ^ string_of_atom atom
+        if isinstance(self.path, RootP):
+            return self.atom.value
+        else:
+            return "%s.%s" % (self.path.tostring(), self.atom.value)
 
     @staticmethod
     def fromjson(content):
@@ -1680,18 +1997,24 @@ class MixOp(AstBase):
     def __repr__(self):
         return "p4specast.MixOp(%r)" % (self.phrases,)
 
-    def __str__(self):
+    def tostring(self):
         mixop = self.phrases
         smixop = "%".join(
             ["".join([atom.value for atom in atoms]) for atoms in mixop]
         )
         return "`" + smixop + "`"
 
+    def __str__(self):
+        return self.tostring()
+
 
 class AtomT(AstBase):
     def __init__(self, value, region=NO_REGION):
         self.value = value # type: str
         self.region = region # type: Region
+
+    def tostring(self):
+        return self.value
 
     def __repr__(self):
         repr_region = repr(self.region)
