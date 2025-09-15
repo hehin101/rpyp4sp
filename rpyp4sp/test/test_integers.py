@@ -80,3 +80,59 @@ def test_mod_hypothesis(a, b):
     expected = v1 % v2
     assert result == expected
 
+def test_bitwise_basic():
+    assert SmallInteger(12).and_(SmallInteger(10)).tolong() == 12 & 10  # 8
+    assert SmallInteger(15).and_(SmallInteger(7)).tolong() == 15 & 7    # 7
+    assert SmallInteger(-1).and_(SmallInteger(255)).tolong() == -1 & 255 # 255
+
+    assert SmallInteger(12).or_(SmallInteger(10)).tolong() == 12 | 10   # 14
+    assert SmallInteger(8).or_(SmallInteger(4)).tolong() == 8 | 4       # 12
+    assert SmallInteger(-1).or_(SmallInteger(0)).tolong() == -1 | 0     # -1
+
+    assert SmallInteger(12).xor(SmallInteger(10)).tolong() == 12 ^ 10   # 6
+    assert SmallInteger(15).xor(SmallInteger(15)).tolong() == 15 ^ 15   # 0
+    assert SmallInteger(-1).xor(SmallInteger(-1)).tolong() == -1 ^ -1   # 0
+
+    assert SmallInteger(0).invert().tolong() == ~0                     # -1
+    assert SmallInteger(-1).invert().tolong() == ~(-1)                 # 0
+    assert SmallInteger(42).invert().tolong() == ~42                   # -43
+
+    big_num = BigInteger(rbigint.fromlong(0xFFFFFFFF))
+    small_num = SmallInteger(0xFF)
+    assert big_num.and_(small_num).tolong() == 0xFFFFFFFF & 0xFF       # 255
+    assert big_num.or_(small_num).tolong() == 0xFFFFFFFF | 0xFF        # 4294967295
+    assert big_num.xor(small_num).tolong() == 0xFFFFFFFF ^ 0xFF        # 4294967040
+
+@given(wrapped_ints, wrapped_ints)
+@example(SmallInteger(-1), SmallInteger(255))
+@example(SmallInteger(MININT), SmallInteger(-1))
+@example(SmallInteger(0), SmallInteger(-1))
+@example(BigInteger(rbigint.fromlong(0xFFFFFFFF)), SmallInteger(0xFF))
+def test_bitwise_hypothesis(a, b):
+    v1 = a.tobigint().tolong()
+    v2 = b.tobigint().tolong()
+
+    result_and = a.and_(b).tolong()
+    expected_and = v1 & v2
+    assert result_and == expected_and
+
+    result_or = a.or_(b).tolong()
+    expected_or = v1 | v2
+    assert result_or == expected_or
+
+    result_xor = a.xor(b).tolong()
+    expected_xor = v1 ^ v2
+    assert result_xor == expected_xor
+
+@given(wrapped_ints)
+@example(SmallInteger(0))
+@example(SmallInteger(-1))
+@example(SmallInteger(42))
+@example(SmallInteger(MININT))
+@example(BigInteger(rbigint.fromlong(0xFFFFFFFF)))
+def test_invert_hypothesis(a):
+    v1 = a.tobigint().tolong()
+    result_invert = a.invert().tolong()
+    expected_invert = ~v1
+    assert result_invert == expected_invert
+

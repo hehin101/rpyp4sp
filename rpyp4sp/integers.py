@@ -48,6 +48,18 @@ class Integer(object):
     def mod(self, other):
         raise NotImplementedError("abstract method")
 
+    def and_(self, other):
+        raise NotImplementedError("abstract method")
+
+    def or_(self, other):
+        raise NotImplementedError("abstract method")
+
+    def xor(self, other):
+        raise NotImplementedError("abstract method")
+
+    def invert(self):
+        raise NotImplementedError("abstract method")
+
 
 class SmallInteger(Integer):
     _immutable_fields_ = ['val']
@@ -151,6 +163,30 @@ class SmallInteger(Integer):
         else:
             assert isinstance(other, BigInteger)
             return BigInteger(self.tobigint().mod(other.rval))
+
+    def and_(self, other):
+        if isinstance(other, SmallInteger):
+            return SmallInteger(self.val & other.val)
+        else:
+            assert isinstance(other, BigInteger)
+            return BigInteger(self.tobigint().and_(other.rval))
+
+    def or_(self, other):
+        if isinstance(other, SmallInteger):
+            return SmallInteger(self.val | other.val)
+        else:
+            assert isinstance(other, BigInteger)
+            return BigInteger(self.tobigint().or_(other.rval))
+
+    def xor(self, other):
+        if isinstance(other, SmallInteger):
+            return SmallInteger(self.val ^ other.val)
+        else:
+            assert isinstance(other, BigInteger)
+            return BigInteger(self.tobigint().xor(other.rval))
+
+    def invert(self):
+        return SmallInteger(~self.val)
 
     @staticmethod
     def lshift_i_i(a, i):
@@ -314,3 +350,27 @@ class BigInteger(Integer):
         if other.eq(SmallInteger(0)):
             raise ZeroDivisionError("integer division or modulo by zero")
         return BigInteger(self.rval.mod(other.rval))
+
+    def and_(self, other):
+        if isinstance(other, SmallInteger):
+            return BigInteger(self.rval.int_and_(other.val))
+        else:
+            assert isinstance(other, BigInteger)
+            return BigInteger(self.rval.and_(other.rval))
+
+    def or_(self, other):
+        if isinstance(other, SmallInteger):
+            return BigInteger(self.rval.int_or_(other.val))
+        else:
+            assert isinstance(other, BigInteger)
+            return BigInteger(self.rval.or_(other.rval))
+
+    def xor(self, other):
+        if isinstance(other, SmallInteger):
+            return BigInteger(self.rval.int_xor(other.val))
+        else:
+            assert isinstance(other, BigInteger)
+            return BigInteger(self.rval.xor(other.rval))
+
+    def invert(self):
+        return BigInteger(self.rval.invert())

@@ -394,16 +394,60 @@ def numerics_bneg(ctx, targs, values_input):
 
 @register_builtin("band")
 def numerics_band(ctx, targs, values_input):
-    raise P4NotImplementedError("numerics_band is not implemented yet")
+    left, right = values_input
+    return _integer_to_value(left.get_num().and_(right.get_num()))
 
 @register_builtin("bxor")
 def numerics_bxor(ctx, targs, values_input):
-    raise P4NotImplementedError("numerics_bxor is not implemented yet")
+    left, right = values_input
+    return _integer_to_value(left.get_num().xor(right.get_num()))
 
 @register_builtin("bor")
 def numerics_bor(ctx, targs, values_input):
-    raise P4NotImplementedError("numerics_bor is not implemented yet")
+    left, right = values_input
+    return _integer_to_value(left.get_num().or_(right.get_num()))
 
 @register_builtin("bitacc")
 def numerics_bitacc(ctx, targs, values_input):
-    raise P4NotImplementedError("numerics_bitacc is not implemented yet")
+    #(* dec $bitacc(int, int, int) : int *)
+    #
+    #let bitacc' (n : Bigint.t) (m : Bigint.t) (l : Bigint.t) : Bigint.t =
+    #  let slice_width = Bigint.(m + one - l) in
+    #  if Bigint.(l < zero) then
+    #    raise (Invalid_argument "bitslice x[y:z] must have y > z > 0");
+    #  let shifted = Bigint.(n asr to_int_exn l) in
+    #  let mask = Bigint.(pow2' slice_width - one) in
+    #  Bigint.bit_and shifted mask
+    #
+    #let bitacc (ctx : Ctx.t) (at : region) (targs : targ list)
+    #    (values_input : value list) : value =
+    #  Extract.zero at targs;
+    #  let value_b, value_h, value_l = Extract.three at values_input in
+    #  let rawint_b = bigint_of_value value_b in
+    #  let rawint_h = bigint_of_value value_h in
+    #  let rawint_l = bigint_of_value value_l in
+    #  bitacc' rawint_b rawint_h rawint_l |> value_of_bigint ctx
+
+    value_b, value_h, value_l = values_input
+
+    rawint_b = value_b.get_num()  # n
+    rawint_h = value_h.get_num()  # m (high bit)
+    rawint_l = value_l.get_num()  # l (low bit)
+
+    # let slice_width = Bigint.(m + one - l) in
+    slice_width = rawint_h.add(integers.Integer.fromint(1)).sub(rawint_l)
+
+    # if Bigint.(l < zero) then raise (Invalid_argument "bitslice x[y:z] must have y > z > 0");
+    if rawint_l.lt(integers.Integer.fromint(0)):
+        raise P4BuiltinError("bitslice x[y:z] must have y > z > 0")
+
+    # let shifted = Bigint.(n asr to_int_exn l) in
+    shifted = rawint_b.rshift(rawint_l.toint())
+
+    # let mask = Bigint.(pow2' slice_width - one) in
+    mask = integers.Integer.fromint(1).lshift(slice_width.toint()).sub(integers.Integer.fromint(1))
+
+    # Bigint.bit_and shifted mask
+    result = shifted.and_(mask)
+
+    return _integer_to_value(result)

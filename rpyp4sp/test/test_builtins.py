@@ -27,6 +27,55 @@ def test_numerics_to_int():
     res = builtin.numerics_to_int(None, [], inputs)
     assert res.eq(mkint(-1))
 
+def test_numerics_bitacc():
+    inputs = [mkint(699050), mkint(3), mkint(2)]
+    res = builtin.numerics_bitacc(None, [], inputs)
+    # 699050 in binary: 10101010101010101010
+    # Extract bits 3:2 (slice_width = 3+1-2 = 2 bits)
+    # Right shift by 2: 10101010101010101010 >> 2 = 0101010101010101010
+    # Mask with 2^2-1 = 3 (binary 11): 0101010101010101010 & 11 = 10 = 2
+    assert res.eq(mkint(2))
+
+    # Test with 0xABCD (43981): extract bits 7:4
+    inputs = [mkint(0xABCD), mkint(7), mkint(4)]
+    res = builtin.numerics_bitacc(None, [], inputs)
+    # 0xABCD >> 4 & ((1 << 4) - 1) = 0xABC >> 0 & 0xF = 0xC = 12
+    assert res.eq(mkint(12))
+
+    # Test extracting lower 4 bits
+    inputs = [mkint(0xABCD), mkint(3), mkint(0)]
+    res = builtin.numerics_bitacc(None, [], inputs)
+    # 0xABCD >> 0 & ((1 << 4) - 1) = 0xABCD & 0xF = 0xD = 13
+    assert res.eq(mkint(13))
+
+def test_numerics_band():
+    # Test AND operation: 12 & 10 = 8
+    inputs = [mkint(12), mkint(10)]
+    res = builtin.numerics_band(None, [], inputs)
+    assert res.eq(mkint(8))
+
+    inputs = [mkint(-1), mkint(255)]
+    res = builtin.numerics_band(None, [], inputs)
+    assert res.eq(mkint(255))
+
+def test_numerics_bxor():
+    inputs = [mkint(12), mkint(10)]
+    res = builtin.numerics_bxor(None, [], inputs)
+    assert res.eq(mkint(6))
+
+    inputs = [mkint(15), mkint(15)]
+    res = builtin.numerics_bxor(None, [], inputs)
+    assert res.eq(mkint(0))
+
+def test_numerics_bor():
+    inputs = [mkint(12), mkint(10)]
+    res = builtin.numerics_bor(None, [], inputs)
+    assert res.eq(mkint(14))
+
+    inputs = [mkint(42), mkint(0)]
+    res = builtin.numerics_bor(None, [], inputs)
+    assert res.eq(mkint(42))
+
 def test_fresh():
     oldval = builtin.HOLDER.counter
     try:
