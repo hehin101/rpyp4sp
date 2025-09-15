@@ -21,6 +21,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: kaist-plrg/p4-spectec
+          ref: 45dc71b52ce45667e0c661e41ae8cab430cac146
           path: p4-spectec
 
       - name: install opam and dependencies
