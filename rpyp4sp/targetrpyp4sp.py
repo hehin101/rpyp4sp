@@ -43,7 +43,7 @@ def command_run_test_jsonl(argv):
                 except P4Error as e:
                     #import pdb; pdb.xpm()
                     error += 1
-                    print("Function test exception:", name, e)
+                    print("Function test exception:", name, e.__class__.__name__, e.msg)
                     continue
                 except KeyError as e:
                     #import pdb; pdb.xpm()
@@ -70,7 +70,7 @@ def command_run_test_jsonl(argv):
                 except P4Error as e:
                     #import pdb; pdb.xpm()
                     error += 1
-                    print("Relation test exception:", name, e)
+                    print("Relation test exception:", name, e.__class__.__name__, e.msg)
                     continue
                 except KeyError as e:
                     #import pdb; pdb.xpm()
@@ -93,7 +93,7 @@ def command_run_test_jsonl(argv):
                 except P4Error as e:
                     #import pdb; pdb.xpm()
                     error += 1
-                    print("Builtin test exception:", name, e)
+                    print("Builtin test exception:", name, e.__class__.__name__, e.msg)
                     continue
                 except KeyError as e:
                     #import pdb; pdb.xpm()

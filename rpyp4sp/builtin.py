@@ -301,7 +301,7 @@ def maps_adds_map(ctx, name, targs, values_input):
 
 @register_builtin("update_map")
 def maps_update_map(ctx, name, targs, values_input):
-    raise P4NotImplementedError("maps_update_map is not implemented yet")
+    return maps_add_map(ctx, name, targs, values_input)
 
 class CounterHolder(object):
     def __init__(self):
