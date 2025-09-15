@@ -53,6 +53,13 @@ def test_upcast_list():
     _, res = interp.upcast(None, typ, value)
     assert res is value
 
+def test_upcast_vartyp():
+    typ = p4specast.VarT(p4specast.Id('typeIL', p4specast.Region.line_span('spec/3-syntax-il.watsup', 139, 10, 16)), [])
+    value = objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('SetT', 'spec/2c1-runtime-type.watsup', 91, 4, 8)], []]), [objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('FBitT', 'spec/2c1-runtime-type.watsup', 38, 4, 9)], []]), [objects.NumV.fromstr('16', 'Nat', -1, p4specast.NumT(p4specast.NatT()))], -1, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 35, 7, 13)), []))], -1, p4specast.VarT(p4specast.Id('synthtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 84, 7, 15)), []))
+    ctx = make_context()
+    _, res = interp.upcast(ctx, typ, value)
+    assert res is value
+
 def test_eval_arg():
     arg = p4specast.DefA(p4specast.Id('compatible_plusminusmult', p4specast.Region.line_span('spec/4e-typing-expr.watsup', 173, 84, 108)))
     ctx = make_context()

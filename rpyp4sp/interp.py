@@ -2009,6 +2009,7 @@ def downcast(ctx, typ, value):
     return ctx, value
 
 def upcast(ctx, typ, value):
+    from rpyp4sp.type_helpers import subst_typ
     # INCOMPLETE
     #   match typ.it with
     #   | NumT `IntT -> (
@@ -2030,14 +2031,17 @@ def upcast(ctx, typ, value):
     #       | _ -> assert false)
     #   | VarT (tid, targs) -> (
     if isinstance(typ, p4specast.VarT):
-        tparams, deftyp = ctx.find_typdef_local(typ.id)
-        assert tparams == [] # TODO
     #       let tparams, deftyp = Ctx.find_typdef Local ctx tid in
+        tparams, deftyp = ctx.find_typdef_local(typ.id)
     #       let theta = List.combine tparams targs |> TIdMap.of_list in
     #       match deftyp.it with
         if isinstance(deftyp, p4specast.PlainT):
-            #import pdb;pdb.set_trace()
-            raise P4CastError("TODO upcast")
+            theta = {}
+            if tparams:
+                raise P4CastError("TODO upcast")
+            # let typ = Typ.subst_typ theta typ in
+            # upcast ctx typ value
+            return upcast(ctx, subst_typ(theta, deftyp.typ), value)
         else:
             return ctx, value
     #       | PlainT typ ->
