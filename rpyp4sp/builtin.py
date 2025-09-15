@@ -295,7 +295,7 @@ def maps_adds_map(ctx, name, targs, values_input):
         raise P4BuiltinError("adds_map: list of keys and list of values must have the same length")
     for index, key_value in enumerate(keys):
         value_value = values[index]
-        value_map = maps_add_map(ctx, 'add_map', targs, [value_map, key_value, value_value])
+        value_map = maps_add_map(ctx, None, targs, [value_map, key_value, value_value])
     return value_map
 
 

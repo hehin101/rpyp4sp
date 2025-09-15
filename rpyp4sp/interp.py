@@ -1731,6 +1731,8 @@ class __extend__(p4specast.SliceE):
         #       if idx_l <= idx && idx < idx_h then Some value else None)
         #     values
         #   |> List.filter_map Fun.id
+        assert idx_l >= 0
+        assert idx_h >= 0
         values_slice = values[idx_l:idx_h]
         # in
         # let value_res =
