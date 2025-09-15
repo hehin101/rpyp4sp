@@ -1515,7 +1515,6 @@ class Instr(AstBase):
         else:
             raise P4UnknownTypeError("Unknown Instr: %s" % what)
         ast.region = region
-        print(ast.tostring())
         return ast
 
 class IfI(Instr):

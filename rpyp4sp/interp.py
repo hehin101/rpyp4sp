@@ -1884,6 +1884,22 @@ class __extend__(p4specast.IterE):
         else:
             assert False, "Unknown iter kind: %s" % iter
 
+class __extend__(p4specast.IdxE):
+    def eval_exp(self, ctx):
+        #   Ctx.t * value =
+        # let ctx, value_b = eval_exp ctx exp_b in
+        ctx, value_b = eval_exp(ctx, self.lst)
+        # let ctx, value_i = eval_exp ctx exp_i in
+        ctx, value_i = eval_exp(ctx, self.idx)
+        # let values = Value.get_list value_b in
+        values = value_b.get_list()
+        # let idx = value_i |> Value.get_num |> Num.to_int |> Bigint.to_int_exn in
+        idx = value_i.get_num().toint()
+        # let value_res = List.nth values idx in
+        value_res = values[idx]
+        # (ctx, value_res)
+        return ctx, value_res
+
 # ____________________________________________________________
 
 def subtyp(ctx, typ, value):
