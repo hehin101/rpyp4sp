@@ -17,35 +17,35 @@ def invoke(ctx, name, targs, values_input):
     if not is_builtin(name.value):
         raise P4BuiltinError("Unknown built-in function: %s" % name.value)
     func = all_builtins[name.value]
-    return func(ctx, name, targs, values_input)
+    return func(ctx, targs, values_input)
 
 @register_builtin("sum")
-def nats_sum(ctx, name, targs, values_input):
+def nats_sum(ctx, targs, values_input):
     raise P4NotImplementedError("nats_sum is not implemented yet")
 
 @register_builtin("max")
-def nats_max(ctx, name, targs, values_input):
+def nats_max(ctx, targs, values_input):
     raise P4NotImplementedError("nats_max is not implemented yet")
 
 @register_builtin("min")
-def nats_min(ctx, name, targs, values_input):
+def nats_min(ctx, targs, values_input):
     raise P4NotImplementedError("nats_min is not implemented yet")
 
 @register_builtin("int_to_text")
-def texts_int_to_text(ctx, name, targs, values_input):
+def texts_int_to_text(ctx, targs, values_input):
     int_value, = values_input
     return objects.TextV(int_value.get_num().str(), typ=p4specast.TextT())
 
 @register_builtin("strip_prefix")
-def texts_strip_prefix(ctx, name, targs, values_input):
+def texts_strip_prefix(ctx, targs, values_input):
     raise P4NotImplementedError("texts_strip_prefix is not implemented yet")
 
 @register_builtin("strip_suffix")
-def texts_strip_suffix(ctx, name, targs, values_input):
+def texts_strip_suffix(ctx, targs, values_input):
     raise P4NotImplementedError("texts_strip_suffix is not implemented yet")
 
 @register_builtin("rev_")
-def lists_rev_(ctx, name, targs, values_input):
+def lists_rev_(ctx, targs, values_input):
     value, = values_input
     lst = value.get_list()
     if len(lst) <= 1:
@@ -56,7 +56,7 @@ def lists_rev_(ctx, name, targs, values_input):
 
 
 @register_builtin("concat_")
-def lists_concat_(ctx, name, targs, values_input):
+def lists_concat_(ctx, targs, values_input):
     value, = values_input
     lists = value.get_list()
     res = []
@@ -67,7 +67,7 @@ def lists_concat_(ctx, name, targs, values_input):
     return objects.ListV(res, typ=typ.typ)
 
 @register_builtin("distinct_")
-def lists_distinct_(ctx, name, targs, values_input):
+def lists_distinct_(ctx, targs, values_input):
     value, = values_input
     lst = value.get_list()
     if len(lst) <= 1:
@@ -80,11 +80,11 @@ def lists_distinct_(ctx, name, targs, values_input):
     return objects.BoolV(True, typ=p4specast.BoolT())
 
 @register_builtin("partition_")
-def lists_partition_(ctx, name, targs, values_input):
+def lists_partition_(ctx, targs, values_input):
     raise P4NotImplementedError("lists_partition_ is not implemented yet")
 
 @register_builtin("assoc_")
-def lists_assoc_(ctx, name, targs, values_input):
+def lists_assoc_(ctx, targs, values_input):
     typ_key, typ_value = targs
     value, value_list = values_input
     res_value = None
@@ -114,7 +114,7 @@ def _wrap_set_elems(elems, set_value_for_types):
     return objects.CaseV(set_value_for_types.mixop, [lst_value], typ=set_value_for_types.typ)
 
 @register_builtin("intersect_set")
-def sets_intersect_set(ctx, name, targs, values_input):
+def sets_intersect_set(ctx, targs, values_input):
     raise P4NotImplementedError("sets_intersect_set is not implemented yet")
 
 def _set_union_elems(elems_l, elems_r):
@@ -128,7 +128,7 @@ def _set_union_elems(elems_l, elems_r):
     return res
 
 @register_builtin("union_set")
-def sets_union_set(ctx, name, targs, values_input):
+def sets_union_set(ctx, targs, values_input):
     set_l, set_r = values_input
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
@@ -137,7 +137,7 @@ def sets_union_set(ctx, name, targs, values_input):
     return _wrap_set_elems(res, set_l)
 
 @register_builtin("unions_set")
-def sets_unions_set(ctx, name, targs, values_input):
+def sets_unions_set(ctx, targs, values_input):
     value_list, = values_input
     sets_l = value_list.get_list()
     element_typ, = targs
@@ -166,7 +166,7 @@ def _set_diff_elemens(elems_l, elems_r):
 
 
 @register_builtin("diff_set")
-def sets_diff_set(ctx, name, targs, values_input):
+def sets_diff_set(ctx, targs, values_input):
     set_l, set_r = values_input
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
@@ -174,11 +174,11 @@ def sets_diff_set(ctx, name, targs, values_input):
     return _wrap_set_elems(res, set_l)
 
 @register_builtin("sub_set")
-def sets_sub_set(ctx, name, targs, values_input):
+def sets_sub_set(ctx, targs, values_input):
     raise P4NotImplementedError("sets_sub_set is not implemented yet")
 
 @register_builtin("eq_set")
-def sets_eq_set(ctx, name, targs, values_input):
+def sets_eq_set(ctx, targs, values_input):
     set_l, set_r = values_input
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
@@ -232,7 +232,7 @@ def _find_map(map_value, key_value):
     return found_value
 
 @register_builtin("find_map")
-def maps_find_map(ctx, name, targs, values_input):
+def maps_find_map(ctx, targs, values_input):
     key_typ, value_typ = targs
     map_value, key_value = values_input
     found_value = _find_map(map_value, key_value)
@@ -242,7 +242,7 @@ def maps_find_map(ctx, name, targs, values_input):
 
 
 @register_builtin("find_maps")
-def maps_find_maps(ctx, name, targs, values_input):
+def maps_find_maps(ctx, targs, values_input):
     # look through many maps, return first result
     key_typ, value_typ = targs
     list_maps_value, key_value = values_input
@@ -257,7 +257,7 @@ def maps_find_maps(ctx, name, targs, values_input):
     return objects.OptV(res_value, typ=typ)
 
 @register_builtin("add_map")
-def maps_add_map(ctx, name, targs, values_input):
+def maps_add_map(ctx, targs, values_input):
     map_value, key_value, value_value = values_input
     key_typ, value_typ = targs
     content = _extract_map_content(map_value)
@@ -287,7 +287,7 @@ def maps_add_map(ctx, name, targs, values_input):
 
 
 @register_builtin("adds_map")
-def maps_adds_map(ctx, name, targs, values_input):
+def maps_adds_map(ctx, targs, values_input):
     value_map, value_key_list, value_value_list = values_input
     keys = value_key_list.get_list()
     values = value_value_list.get_list()
@@ -295,13 +295,13 @@ def maps_adds_map(ctx, name, targs, values_input):
         raise P4BuiltinError("adds_map: list of keys and list of values must have the same length")
     for index, key_value in enumerate(keys):
         value_value = values[index]
-        value_map = maps_add_map(ctx, None, targs, [value_map, key_value, value_value])
+        value_map = maps_add_map(ctx, targs, [value_map, key_value, value_value])
     return value_map
 
 
 @register_builtin("update_map")
-def maps_update_map(ctx, name, targs, values_input):
-    return maps_add_map(ctx, name, targs, values_input)
+def maps_update_map(ctx, targs, values_input):
+    return maps_add_map(ctx, targs, values_input)
 
 class CounterHolder(object):
     def __init__(self):
@@ -310,7 +310,7 @@ class CounterHolder(object):
 HOLDER = CounterHolder()
 
 @register_builtin("fresh_tid")
-def fresh_fresh_tid(ctx, name, targs, values_input):
+def fresh_fresh_tid(ctx, targs, values_input):
     assert targs == []
     assert values_input == []
     # let tid = "FRESH__" ^ string_of_int !ctr in
@@ -333,29 +333,29 @@ def _integer_to_value(integer):
 
 
 @register_builtin("shl")
-def numerics_shl(ctx, name, targs, values_input):
+def numerics_shl(ctx, targs, values_input):
     left, right = values_input
     return _integer_to_value(left.get_num().lshift(right.get_num().toint()))
 
 @register_builtin("shr")
-def numerics_shr(ctx, name, targs, values_input):
+def numerics_shr(ctx, targs, values_input):
     left, right = values_input
     return _integer_to_value(left.get_num().rshift(right.get_num().toint()))
 
 @register_builtin("shr_arith")
-def numerics_shr_arith(ctx, name, targs, values_input):
+def numerics_shr_arith(ctx, targs, values_input):
     raise P4NotImplementedError("numerics_shr_arith is not implemented yet")
 
 @register_builtin("pow2")
-def numerics_pow2(ctx, name, targs, values_input):
+def numerics_pow2(ctx, targs, values_input):
     raise P4NotImplementedError("numerics_pow2 is not implemented yet")
 
 @register_builtin("to_int")
-def numerics_to_int(ctx, name, targs, values_input):
+def numerics_to_int(ctx, targs, values_input):
     raise P4NotImplementedError("numerics_to_int is not implemented yet")
 
 @register_builtin("to_bitstr")
-def numerics_to_bitstr(ctx, name, targs, values_input):
+def numerics_to_bitstr(ctx, targs, values_input):
     width, num = values_input
     width_num = width.get_num()
     num_num = num.get_num()
@@ -364,21 +364,21 @@ def numerics_to_bitstr(ctx, name, targs, values_input):
     return num
 
 @register_builtin("bneg")
-def numerics_bneg(ctx, name, targs, values_input):
+def numerics_bneg(ctx, targs, values_input):
     raise P4NotImplementedError("numerics_bneg is not implemented yet")
 
 @register_builtin("band")
-def numerics_band(ctx, name, targs, values_input):
+def numerics_band(ctx, targs, values_input):
     raise P4NotImplementedError("numerics_band is not implemented yet")
 
 @register_builtin("bxor")
-def numerics_bxor(ctx, name, targs, values_input):
+def numerics_bxor(ctx, targs, values_input):
     raise P4NotImplementedError("numerics_bxor is not implemented yet")
 
 @register_builtin("bor")
-def numerics_bor(ctx, name, targs, values_input):
+def numerics_bor(ctx, targs, values_input):
     raise P4NotImplementedError("numerics_bor is not implemented yet")
 
 @register_builtin("bitacc")
-def numerics_bitacc(ctx, name, targs, values_input):
+def numerics_bitacc(ctx, targs, values_input):
     raise P4NotImplementedError("numerics_bitacc is not implemented yet")

@@ -1,21 +1,21 @@
 from rpyp4sp import p4specast, objects, builtin, context, integers
 
 def test_int_to_text():
-    res = builtin.texts_int_to_text(None, 'int_to_text', [], [objects.NumV.fromstr('1234', 'Int', typ=p4specast.NumT(p4specast.IntT()))])
+    res = builtin.texts_int_to_text(None, [], [objects.NumV.fromstr('1234', 'Int', typ=p4specast.NumT(p4specast.IntT()))])
     assert res.eq(objects.TextV('1234'))
 
 def mkint(val):
     return objects.NumV.fromstr(str(val), 'Int', typ=p4specast.NumT(p4specast.IntT()))
 
 def test_shl():
-    res = builtin.numerics_shl(None, 'shl', [], [mkint(1234), mkint(4)])
+    res = builtin.numerics_shl(None, [], [mkint(1234), mkint(4)])
     assert res.eq(mkint(1234 << 4))
 
 def test_fresh():
     oldval = builtin.HOLDER.counter
     try:
         builtin.HOLDER.counter = 0 # scary global state
-        res = builtin.fresh_fresh_tid(None, 'fresh_tid', [], [])
+        res = builtin.fresh_fresh_tid(None, [], [])
         assert res.value == 'FRESH__0'
     finally:
         builtin.HOLDER.counter = oldval
@@ -27,39 +27,39 @@ def textlist(*args):
 
 def test_list_rev():
     arg = textlist()
-    res = builtin.lists_rev_(None, 'rev_', None, [arg])
+    res = builtin.lists_rev_(None, None, [arg])
     assert res is arg
 
     arg = textlist('a')
-    res = builtin.lists_rev_(None, 'rev_', None, [arg])
+    res = builtin.lists_rev_(None, None, [arg])
     assert res is arg
 
     arg = textlist('a', 'b')
-    res = builtin.lists_rev_(None, 'rev_', None, [arg])
+    res = builtin.lists_rev_(None, None, [arg])
     exp = textlist('b', 'a')
     assert res.eq(exp)
 
 def test_list_distinct():
     args = [textlist()]
-    res = builtin.lists_distinct_(None, 'distinct_', None, args)
+    res = builtin.lists_distinct_(None, None, args)
     assert res.eq(objects.BoolV(True))
 
     args = [textlist('a')]
-    res = builtin.lists_distinct_(None, 'distinct_', None, args)
+    res = builtin.lists_distinct_(None, None, args)
     assert res.eq(objects.BoolV(True))
 
     args = [textlist('a', 'a')]
-    res = builtin.lists_distinct_(None, 'distinct_', None, args)
+    res = builtin.lists_distinct_(None, None, args)
     assert res.eq(objects.BoolV(False))
 
     args = [textlist('a', 'b', 'a')]
-    res = builtin.lists_distinct_(None, 'distinct_', None, args)
+    res = builtin.lists_distinct_(None, None, args)
     assert res.eq(objects.BoolV(False))
 
 def test_lists_concat():
     empty = objects.ListV([], -1, p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2a-runtime-domain.watsup', 10, 7, 10)), []), p4specast.List()))
     args = [objects.ListV([empty, empty], -1, p4specast.IterT(p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2a-runtime-domain.watsup', 10, 7, 10)), []), p4specast.List()), p4specast.List()))]
-    res = builtin.lists_concat_(None, 'distinct_', None, args)
+    res = builtin.lists_concat_(None, None, args)
     assert res.eq(empty)
     assert repr(res.typ) == "p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2a-runtime-domain.watsup', 10, 7, 10)), []), p4specast.List())"
 
@@ -67,7 +67,7 @@ def test_list_assoc():
     input_values = [objects.TextV('input_port', 576, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.ListV([objects.TupleV([objects.TextV('input_port', 161, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('FBitT', 'spec/2c1-runtime-type.watsup', 38, 4, 9)], []]), [objects.NumV.fromstr('32', 'Nat', 5990, p4specast.NumT(p4specast.NatT()))], 5991, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 35, 7, 13)), []))], 47582, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])])), objects.TupleV([objects.TextV('packet_length', 167, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('FBitT', 'spec/2c1-runtime-type.watsup', 38, 4, 9)], []]), [objects.NumV.fromstr('32', 'Nat', 6035, p4specast.NumT(p4specast.NatT()))], 6036, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 35, 7, 13)), []))], 47583, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])])), objects.TupleV([objects.TextV('output_action', 173, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('EnumT', 'spec/2c1-runtime-type.watsup', 61, 4, 9)], [], []]), [objects.TextV('ubpf_action', 152, p4specast.VarT(p4specast.Id('id', p4specast.NO_REGION), [])), objects.ListV([objects.TextV('ABORT', 153, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.TextV('DROP', 154, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.TextV('PASS', 155, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.TextV('REDIRECT', 156, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), []))], 5641, p4specast.IterT(p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.List()))], 5642, p4specast.VarT(p4specast.Id('datatyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 59, 7, 14)), []))], 47584, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])])), objects.TupleV([objects.TextV('output_port', 178, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('FBitT', 'spec/2c1-runtime-type.watsup', 38, 4, 9)], []]), [objects.NumV.fromstr('32', 'Nat', 6122, p4specast.NumT(p4specast.NatT()))], 6123, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 35, 7, 13)), []))], 47585, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])])), objects.TupleV([objects.TextV('clone', 184, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('BoolT', 'spec/2c1-runtime-type.watsup', 33, 4, 9)]]), [], 6133, p4specast.VarT(p4specast.Id('primtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 28, 7, 14)), []))], 47586, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])])), objects.TupleV([objects.TextV('clone_port', 187, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('FBitT', 'spec/2c1-runtime-type.watsup', 38, 4, 9)], []]), [objects.NumV.fromstr('32', 'Nat', 6177, p4specast.NumT(p4specast.NatT()))], 6178, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 35, 7, 13)), []))], 47587, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])]))], 47588, p4specast.IterT(p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])]), p4specast.List()))]
     expected = objects.OptV(objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('FBitT', 'spec/2c1-runtime-type.watsup', 38, 4, 9)], []]), [objects.NumV.fromstr('32', 'Nat', 5990, p4specast.NumT(p4specast.NatT()))], 5991, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 35, 7, 13)), [])), 47589, p4specast.IterT(p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/4e-typing-expr.watsup', 787, 30, 33)), []), p4specast.Opt()))
     targs = [p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/4e-typing-expr.watsup', 787, 22, 28)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/4e-typing-expr.watsup', 787, 30, 33)), [])]
-    res = builtin.lists_assoc_(None, 'assoc_', targs, input_values)
+    res = builtin.lists_assoc_(None, targs, input_values)
     assert res.eq(expected)
 
 def make_set(*args):
@@ -82,34 +82,34 @@ def make_set(*args):
 
 def test_union_set():
     args = [objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), [objects.ListV([], 6524, p4specast.IterT(p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 73, 24, 25)), []), p4specast.List()))], 6525, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 73, 24, 25)), [])])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), [objects.ListV([], -1, p4specast.IterT(p4specast.VarT(p4specast.Id('tparam', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 123, 7, 13)), []), p4specast.List()))], -1, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c6-runtime-type-wellformed.watsup', 526, 29, 32)), [])]))]
-    res = builtin.sets_union_set(None, 'union_set', None, args)
+    res = builtin.sets_union_set(None, None, args)
     assert res.eq(args[0])
     
     args = [objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), [objects.ListV([objects.TextV('H', 264, p4specast.VarT(p4specast.Id('tparam', p4specast.NO_REGION), []))], 11709, p4specast.IterT(p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 116, 13, 14)), []), p4specast.List()))], 11710, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 113, 36, 37)), [])])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), [objects.ListV([objects.TextV('H', 264, p4specast.VarT(p4specast.Id('tparam', p4specast.NO_REGION), []))], -1, p4specast.IterT(p4specast.VarT(p4specast.Id('tparam', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 123, 7, 13)), []), p4specast.List()))], -1, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c6-runtime-type-wellformed.watsup', 373, 29, 32)), [])]))]
-    res = builtin.sets_union_set(None, 'union_set', None, args)
+    res = builtin.sets_union_set(None, None, args)
     exp = objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), [objects.ListV([objects.TextV('H', 264, p4specast.VarT(p4specast.Id('tparam', p4specast.NO_REGION), []))], -1, p4specast.IterT(p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 116, 13, 14)), []), p4specast.List()))], -1, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 113, 36, 37)), [])]))
     assert res.eq(exp)
     
 def test_unions_set():
     args = [objects.ListV([objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), [objects.ListV([], -1, p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c3-runtime-type-subst.watsup', 7, 25, 28)), []), p4specast.List()))], -1, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c3-runtime-type-subst.watsup', 7, 25, 28)), [])])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), [objects.ListV([], -1, p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c3-runtime-type-subst.watsup', 7, 25, 28)), []), p4specast.List()))], -1, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c3-runtime-type-subst.watsup', 7, 25, 28)), [])]))], -1, p4specast.IterT(p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/2c3-runtime-type-subst.watsup', 7, 21, 25)), [p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c3-runtime-type-subst.watsup', 7, 25, 28)), [])]), p4specast.List()))]
-    res = builtin.sets_unions_set(None, 'unions_set', [p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c3-runtime-type-subst.watsup', 7, 25, 28)), [])], args)
+    res = builtin.sets_unions_set(None, [p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c3-runtime-type-subst.watsup', 7, 25, 28)), [])], args)
     exp = objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), [objects.ListV([], -1, p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c3-runtime-type-subst.watsup', 7, 25, 28)), []), p4specast.List()))], -1, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c3-runtime-type-subst.watsup', 7, 25, 28)), [])]))
     assert res.eq(exp)
 
 def test_diff_set():
     args = [objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), [objects.ListV([objects.TextV('H', 264, p4specast.TextT())], 11709, p4specast.IterT(p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 116, 13, 14)), []), p4specast.List()))], 11710, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 113, 36, 37)), [])])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), [objects.ListV([objects.TextV('H', 264, p4specast.TextT())], -1, p4specast.IterT(p4specast.TextT(), p4specast.List()))], -1, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c6-runtime-type-wellformed.watsup', 373, 29, 32)), [])]))]
-    res = builtin.sets_diff_set(None, 'diff_set', None, args)
+    res = builtin.sets_diff_set(None, None, args)
     exp = objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), [objects.ListV([], -1, p4specast.IterT(p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 116, 13, 14)), []), p4specast.List()))], -1, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 113, 36, 37)), [])]))
     assert res.eq(exp)
 
 def test_set_eq():
-    res = builtin.sets_eq_set(None, 'diff_set', None, [make_set(), make_set()])
+    res = builtin.sets_eq_set(None, None, [make_set(), make_set()])
     assert res.get_bool()
-    res = builtin.sets_eq_set(None, 'diff_set', None, [make_set("a"), make_set("a")])
+    res = builtin.sets_eq_set(None, None, [make_set("a"), make_set("a")])
     assert res.get_bool()
-    res = builtin.sets_eq_set(None, 'diff_set', None, [make_set("a"), make_set()])
+    res = builtin.sets_eq_set(None, None, [make_set("a"), make_set()])
     assert res.get_bool() == False
-    res = builtin.sets_eq_set(None, 'diff_set', None, [make_set("a"), make_set("b")])
+    res = builtin.sets_eq_set(None, None, [make_set("a"), make_set("b")])
     assert res.get_bool() == False
     
 
@@ -128,26 +128,26 @@ def make_map(*args):
 
 def test_add_map():
     map_value = make_map()
-    res = builtin.maps_add_map(None, "add_map", [p4specast.TextT(), p4specast.TextT()],
+    res = builtin.maps_add_map(None, [p4specast.TextT(), p4specast.TextT()],
                                [map_value, objects.TextV("C", typ=p4specast.TextT()),
                                 objects.TextV("d1", typ=p4specast.TextT())])
     assert res.eq(make_map(("C", "d1")))
 
     map_value = make_map(("A", "b1"), ("B", "c1"))
-    res = builtin.maps_add_map(None, "add_map", [p4specast.TextT(), p4specast.TextT()],
+    res = builtin.maps_add_map(None, [p4specast.TextT(), p4specast.TextT()],
                                [map_value, objects.TextV("C", typ=p4specast.TextT()),
                                 objects.TextV("d1", typ=p4specast.TextT())])
     assert res.eq(make_map(("A", "b1"), ("B", "c1"), ("C", "d1")))
 
 
     map_value = make_map(("A", "b1"), ("C", "c1"))
-    res = builtin.maps_add_map(None, "add_map", [p4specast.TextT(), p4specast.TextT()],
+    res = builtin.maps_add_map(None, [p4specast.TextT(), p4specast.TextT()],
                                [map_value, objects.TextV("C", typ=p4specast.TextT()),
                                 objects.TextV("d1", typ=p4specast.TextT())])
     assert res.eq(make_map(("A", "b1"), ("C", "d1")))
 
     map_value = make_map(("A", "b1"), ("D", "c1"))
-    res = builtin.maps_add_map(None, "add_map", [p4specast.TextT(), p4specast.TextT()],
+    res = builtin.maps_add_map(None, [p4specast.TextT(), p4specast.TextT()],
                                [map_value, objects.TextV("C", typ=p4specast.TextT()),
                                 objects.TextV("d1", typ=p4specast.TextT())])
     assert res.eq(make_map(("A", "b1"), ("C", "d1"), ("D", "c1")))
@@ -158,12 +158,12 @@ def test_find_maps():
     map_value2 = make_map(("A", "a2"), ("C", "x"))
     lst_value = objects.ListV([map_value1, map_value2], typ=p4specast.IterT(map_value1.typ, p4specast.List()))
 
-    res = builtin.maps_find_maps(None, "find_maps", [p4specast.TextT(), p4specast.TextT()],
+    res = builtin.maps_find_maps(None, [p4specast.TextT(), p4specast.TextT()],
                                  [lst_value, objects.TextV("C", typ=p4specast.TextT())])
     assert res.value.eq(objects.TextV("x", typ=p4specast.TextT()))
-    res = builtin.maps_find_maps(None, "find_maps", [p4specast.TextT(), p4specast.TextT()],
+    res = builtin.maps_find_maps(None, [p4specast.TextT(), p4specast.TextT()],
                                  [lst_value, objects.TextV("A", typ=p4specast.TextT())])
     assert res.value.eq(objects.TextV("a1", typ=p4specast.TextT()))
-    res = builtin.maps_find_maps(None, "find_maps", [p4specast.TextT(), p4specast.TextT()],
+    res = builtin.maps_find_maps(None, [p4specast.TextT(), p4specast.TextT()],
                                  [lst_value, objects.TextV("D", typ=p4specast.TextT())])
     assert res.value is None
