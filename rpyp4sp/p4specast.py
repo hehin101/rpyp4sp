@@ -232,6 +232,27 @@ def string_of_tparams(tparams):
         return ""
     return "<%s>" % ", ".join([tp.tostring() for tp in tparams])
 
+def string_of_cases(cases, level=0):
+    # and string_of_cases ?(level = 0) cases =
+    #   cases
+    #   |> List.mapi (fun idx case -> string_of_case ~level ~index:(idx + 1) case)
+    #   |> String.concat "\n\n"
+    return "\n\n".join([case.tostring(level=level, index=idx+1) for idx, case in enumerate(cases)])
+
+def string_of_instrs(instrs, level=0):
+    # and string_of_instrs ?(level = 0) instrs =
+    #   instrs
+    #   |> List.mapi (fun idx instr -> string_of_instr ~level ~index:(idx + 1) instr)
+    #   |> String.concat "\n\n"
+    return "\n\n".join([instr.tostring(level=level, index=idx+1) for idx, instr in enumerate(instrs)])
+
+def string_of_iterexps(iterexps):
+    # and string_of_iterexps iterexps =
+    #   iterexps |> List.map string_of_iterexp |> String.concat ""
+    if not iterexps:
+        return ""
+    return "".join([iterexp.tostring() for iterexp in iterexps])
+
 # type var = id * typ * iter list
 
 class Var(AstBase):
@@ -1154,6 +1175,10 @@ class IterExp(AstBase):
         self.iter = iter
         self.vars = vars
 
+    def tostring(self):
+        # and string_of_iterexp (iter, _) = Il.Print.string_of_iter iter
+        return string_of_iter(self.iter)
+
     @staticmethod
     def fromjson(content):
         return IterExp(
@@ -1463,6 +1488,10 @@ TypeCase = NotTyp
 
 class Instr(AstBase):
     # has a .region
+
+    def tostring(self, level=0, index=0):
+        assert 0  # abstract method
+
     @staticmethod
     def fromjson(value):
         assert value.get_dict_value('note').is_null
@@ -1486,6 +1515,7 @@ class Instr(AstBase):
         else:
             raise P4UnknownTypeError("Unknown Instr: %s" % what)
         ast.region = region
+        print(ast.tostring())
         return ast
 
 class IfI(Instr):
@@ -1495,6 +1525,26 @@ class IfI(Instr):
         self.instrs = instrs
         self.phantom = phantom
         self.region = region
+
+    def tostring(self, level=0, index=0):
+        # | IfI (exp_cond, iterexps, instrs_then, None) ->
+        #     Format.asprintf "%sIf (%s)%s, then\n\n%s" order (string_of_exp exp_cond)
+        #       (string_of_iterexps iterexps)
+        #       (string_of_instrs ~level:(level + 1) instrs_then)
+        # | IfI (exp_cond, iterexps, instrs_then, Some phantom) ->
+        #     Format.asprintf "%sIf (%s)%s, then\n\n%s\n\n%sElse %s" order
+        #       (string_of_exp exp_cond) (string_of_iterexps iterexps)
+        #       (string_of_instrs ~level:(level + 1) instrs_then) order (string_of_phantom phantom)
+        indent = "  " * level
+        order = "%s%d. " % (indent, index)
+        iterexps_str = string_of_iterexps(self.iters)
+        instrs_str = string_of_instrs(self.instrs, level + 1)
+
+        if self.phantom.is_null:  # None case
+            return "%sIf (%s)%s, then\n\n%s" % (order, self.exp.tostring(), iterexps_str, instrs_str)
+        else:  # Some phantom case
+            phantom_str = "TODO_phantom"  # TODO: implement string_of_phantom
+            return "%sIf (%s)%s, then\n\n%s\n\n%sElse %s" % (order, self.exp.tostring(), iterexps_str, instrs_str, order, phantom_str)
 
     @staticmethod
     def fromjson(content):
@@ -1515,6 +1565,24 @@ class CaseI(Instr):
         self.phantom = phantom
         self.region = region
 
+    def tostring(self, level=0, index=0):
+        # | CaseI (exp, cases, None) ->
+        #     Format.asprintf "%sCase analysis on %s\n\n%s" order (string_of_exp exp)
+        #       (string_of_cases ~level:(level + 1) cases)
+        # | CaseI (exp, cases, Some phantom) ->
+        #     Format.asprintf "%sCase analysis on %s\n\n%s\n\n%sElse %s" order
+        #       (string_of_exp exp) (string_of_cases ~level:(level + 1) cases)
+        #       order (string_of_phantom phantom)
+        indent = "  " * level
+        order = "%s%d. " % (indent, index)
+        cases_str = string_of_cases(self.cases, level + 1)
+
+        if self.phantom.is_null:  # None case
+            return "%sCase analysis on %s\n\n%s" % (order, self.exp.tostring(), cases_str)
+        else:  # Some phantom case
+            phantom_str = "TODO_phantom"  # TODO: implement string_of_phantom
+            return "%sCase analysis on %s\n\n%s\n\n%sElse %s" % (order, self.exp.tostring(), cases_str, order, phantom_str)
+
     @staticmethod
     def fromjson(content):
         return CaseI(
@@ -1531,6 +1599,15 @@ class OtherwiseI(Instr):
         self.instr = instr
         self.region = region
 
+    def tostring(self, level=0, index=0):
+        # | OtherwiseI instr ->
+        #     Format.asprintf "%sOtherwise\n\n%s" order
+        #       (string_of_instr ~level:(level + 1) ~index:1 instr)
+        indent = "  " * level
+        order = "%s%d. " % (indent, index)
+        instr_str = self.instr.tostring(level + 1, 1)
+        return "%sOtherwise\n\n%s" % (order, instr_str)
+
     @staticmethod
     def fromjson(content):
         return OtherwiseI(
@@ -1546,6 +1623,15 @@ class LetI(Instr):
         self.value = value
         self.iters = iters
         self.region = region
+
+    def tostring(self, level=0, index=0):
+        # | LetI (exp_l, exp_r, iterexps) ->
+        #     Format.asprintf "%s(Let %s be %s)%s" order (string_of_exp exp_l)
+        #       (string_of_exp exp_r) (string_of_iterexps iterexps)
+        indent = "  " * level
+        order = "%s%d. " % (indent, index)
+        iterexps_str = string_of_iterexps(self.iters)
+        return "%s(Let %s be %s)%s" % (order, self.var.tostring(), self.value.tostring(), iterexps_str)
 
     @staticmethod
     def fromjson(content):
@@ -1565,6 +1651,15 @@ class RuleI(Instr):
         self.iters = iters
         self.region = region
 
+    def tostring(self, level=0, index=0):
+        # | RuleI (id_rel, notexp, iterexps) ->
+        #     Format.asprintf "%s(%s: %s)%s" order (string_of_relid id_rel)
+        #       (string_of_notexp notexp) (string_of_iterexps iterexps)
+        indent = "  " * level
+        order = "%s%d. " % (indent, index)
+        iterexps_str = string_of_iterexps(self.iters)
+        return "%s(%s: %s)%s" % (order, self.id.value, self.notexp.tostring(), iterexps_str)
+
     @staticmethod
     def fromjson(content):
         return RuleI(
@@ -1581,6 +1676,17 @@ class ResultI(Instr):
         self.exps = exps
         self.region = region
 
+    def tostring(self, level=0, index=0):
+        # | ResultI [] -> Format.asprintf "%sThe relation holds" order
+        # | ResultI exps -> Format.asprintf "%sResult in %s" order (string_of_exps ", " exps)
+        indent = "  " * level
+        order = "%s%d. " % (indent, index)
+        if not self.exps:
+            return "%sThe relation holds" % order
+        else:
+            exps_str = ", ".join([e.tostring() for e in self.exps])
+            return "%sResult in %s" % (order, exps_str)
+
     @staticmethod
     def fromjson(content):
         return ResultI(
@@ -1594,6 +1700,12 @@ class ReturnI(Instr):
     def __init__(self, exp, region=None):
         self.exp = exp
         self.region = region
+
+    def tostring(self, level=0, index=0):
+        # | ReturnI exp -> Format.asprintf "%sReturn %s" order (string_of_exp exp)
+        indent = "  " * level
+        order = "%s%d. " % (indent, index)
+        return "%sReturn %s" % (order, self.exp.tostring())
 
     @staticmethod
     def fromjson(content):
@@ -1620,6 +1732,18 @@ class Case(AstBase):
         self.guard = guard
         self.instrs = instrs
 
+    def tostring(self, level=0, index=0):
+        # and string_of_case ?(level = 0) ?(index = 0) case =
+        #   let indent = String.make (level * 2) ' ' in
+        #   let order = Format.asprintf "%s%d. " indent index in
+        #   let guard, instrs = case in
+        #   Format.asprintf "%sCase %s\n\n%s" order (string_of_guard guard)
+        #     (string_of_instrs ~level:(level + 1) instrs)
+        indent = "  " * level
+        order = "%s%d. " % (indent, index)
+        instrs_str = string_of_instrs(self.instrs, level + 1)
+        return "%sCase %s\n\n%s" % (order, self.guard.tostring(), instrs_str)
+
     @staticmethod
     def fromjson(content):
         return Case(
@@ -1632,6 +1756,9 @@ class Case(AstBase):
 
 
 class Guard(AstBase):
+    def tostring(self):
+        assert 0  # abstract method
+
     @staticmethod
     def fromjson(content):
         kind = content.get_list_item(0).value_string()
@@ -1652,6 +1779,10 @@ class BoolG(Guard):
     def __init__(self, value):
         self.value = value # typ: bool
 
+    def tostring(self):
+        # | BoolG b -> string_of_bool b
+        return "true" if self.value else "false"
+
     @staticmethod
     def fromjson(content):
         return BoolG(
@@ -1666,6 +1797,19 @@ class CmpG(Guard):
         self.op = op # typ: cmpop
         self.typ = typ # typ: optyp
         self.exp = exp # typ: exp
+
+    def tostring(self):
+        # | CmpG (cmpop, _, exp) -> "(% " ^ string_of_cmpop cmpop ^ " " ^ string_of_exp exp ^ ")"
+        cmpop_map = {
+            "EqOp": "=",
+            "NeOp": "=/=",
+            "LtOp": "<",
+            "GtOp": ">",
+            "LeOp": "<=",
+            "GeOp": ">="
+        }
+        cmpop_str = cmpop_map.get(self.op, "?%s?" % self.op)
+        return "(%% %s %s)" % (cmpop_str, self.exp.tostring())
 
     @staticmethod
     def fromjson(content):
@@ -1682,6 +1826,10 @@ class SubG(Guard):
     def __init__(self, typ):
         self.typ = typ # typ: Type
 
+    def tostring(self):
+        # | SubG typ -> "(% has type " ^ string_of_typ typ ^ ")"
+        return "(%% has type %s)" % self.typ.tostring()
+
     @staticmethod
     def fromjson(content):
         return SubG(
@@ -1695,6 +1843,10 @@ class MatchG(Guard):
     def __init__(self, pattern):
         self.pattern = pattern # typ: Pattern
 
+    def tostring(self):
+        # | MatchG patten -> "(% matches pattern " ^ string_of_pattern patten ^ ")"
+        return "(%% matches pattern %s)" % self.pattern.tostring()
+
     @staticmethod
     def fromjson(content):
         return MatchG(
@@ -1707,6 +1859,10 @@ class MatchG(Guard):
 class MemG(Guard):
     def __init__(self, exp):
         self.exp = exp # typ: Exp
+
+    def tostring(self):
+        # | MemG exp -> "(% is in " ^ string_of_exp exp ^ ")"
+        return "(%% is in %s)" % self.exp.tostring()
 
     @staticmethod
     def fromjson(content):
