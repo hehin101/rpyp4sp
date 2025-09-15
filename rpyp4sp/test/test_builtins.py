@@ -167,3 +167,43 @@ def test_find_maps():
     res = builtin.maps_find_maps(None, [p4specast.TextT(), p4specast.TextT()],
                                  [lst_value, objects.TextV("D", typ=p4specast.TextT())])
     assert res.value is None
+
+def test_lists_partition():
+    # Test partitioning an empty list
+    empty_list = objects.ListV([], typ=p4specast.IterT(p4specast.TextT(), p4specast.List()))
+    len_val = objects.NumV.fromstr('0', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    res = builtin.lists_partition_(None, [p4specast.TextT()], [empty_list, len_val])
+    assert isinstance(res, objects.TupleV)
+    assert len(res.elements) == 2
+    assert res.elements[0].eq(empty_list)
+    assert res.elements[1].eq(empty_list)
+
+    # Test partitioning at index 0 (all elements go to right)
+    test_list = textlist("a", "b", "c")
+    len_val = objects.NumV.fromstr('0', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    res = builtin.lists_partition_(None, [p4specast.TextT()], [test_list, len_val])
+    assert isinstance(res, objects.TupleV)
+    assert len(res.elements) == 2
+    left_list, right_list = res.elements
+    assert left_list.eq(textlist())  # empty
+    assert right_list.eq(test_list)  # all elements
+
+    # Test partitioning at index 2 (first 2 elements go to left, rest to right)
+    test_list = textlist("a", "b", "c", "d")
+    len_val = objects.NumV.fromstr('2', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    res = builtin.lists_partition_(None, [p4specast.TextT()], [test_list, len_val])
+    assert isinstance(res, objects.TupleV)
+    assert len(res.elements) == 2
+    left_list, right_list = res.elements
+    assert left_list.eq(textlist("a", "b"))
+    assert right_list.eq(textlist("c", "d"))
+
+    # Test partitioning with length >= list length (all elements go to left)
+    test_list = textlist("x", "y")
+    len_val = objects.NumV.fromstr('5', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    res = builtin.lists_partition_(None, [p4specast.TextT()], [test_list, len_val])
+    assert isinstance(res, objects.TupleV)
+    assert len(res.elements) == 2
+    left_list, right_list = res.elements
+    assert left_list.eq(test_list)  # all elements
+    assert right_list.eq(textlist())  # empty

@@ -1,4 +1,4 @@
-from rpyp4sp import p4specast, objects
+from rpyp4sp import p4specast, objects, integers
 from rpyp4sp.error import P4NotImplementedError, P4BuiltinError
 
 all_builtins = {}
@@ -81,7 +81,22 @@ def lists_distinct_(ctx, targs, values_input):
 
 @register_builtin("partition_")
 def lists_partition_(ctx, targs, values_input):
-    raise P4NotImplementedError("lists_partition_ is not implemented yet")
+    # dec $partition_<X>(X*, nat) : (X*, X* )
+    typ, = targs
+    value_list, value_len = values_input
+    values = value_list.get_list()
+    len_num = value_len.get_num().toint()
+
+    assert len_num >= 0
+    values_left = values[:len_num]
+    values_right = values[len_num:]
+
+    list_typ = p4specast.IterT(typ, p4specast.List())
+    value_left = objects.ListV(values_left, typ=list_typ)
+    value_right = objects.ListV(values_right, typ=list_typ)
+    tuple_typ = p4specast.TupleT([list_typ, list_typ])
+    return objects.TupleV([value_left, value_right], typ=tuple_typ)
+
 
 @register_builtin("assoc_")
 def lists_assoc_(ctx, targs, values_input):
