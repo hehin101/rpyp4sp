@@ -38,11 +38,55 @@ def texts_int_to_text(ctx, targs, values_input):
 
 @register_builtin("strip_prefix")
 def texts_strip_prefix(ctx, targs, values_input):
-    raise P4NotImplementedError("texts_strip_prefix is not implemented yet")
+    # Extract.zero at targs;
+    # let value_text, value_prefix = Extract.two at values_input in
+    # let text = Value.get_text value_text in
+    # let prefix = Value.get_text value_prefix in
+    # assert (String.starts_with ~prefix text);
+    # let text =
+    #   String.sub text (String.length prefix)
+    #     (String.length text - String.length prefix)
+    # in
+    # let value =
+    #   let vid = Value.fresh () in
+    #   let typ = Il.Ast.TextT in
+    #   TextV text $$$ { vid; typ }
+    # in
+    # Ctx.add_node ctx value;
+    # value
+
+    value_text, value_prefix = values_input
+    text = value_text.get_text()
+    prefix = value_prefix.get_text()
+    if not text.startswith(prefix):
+        raise P4BuiltinError("Text '%s' does not start with prefix '%s'" % (text, prefix))
+    stripped_text = text[len(prefix):] if prefix else text
+    return objects.TextV(stripped_text, typ=p4specast.TextT())
 
 @register_builtin("strip_suffix")
 def texts_strip_suffix(ctx, targs, values_input):
-    raise P4NotImplementedError("texts_strip_suffix is not implemented yet")
+    # Extract.zero at targs;
+    # let value_text, value_suffix = Extract.two at values_input in
+    # let text = Value.get_text value_text in
+    # let suffix = Value.get_text value_suffix in
+    # assert (String.ends_with ~suffix text);
+    # let text = String.sub text 0 (String.length text - String.length suffix) in
+    # let value =
+    #   let vid = Value.fresh () in
+    #   let typ = Il.Ast.TextT in
+    #   TextV text $$$ { vid; typ }
+    # in
+    # Ctx.add_node ctx value;
+    # value
+    value_text, value_suffix = values_input
+    text = value_text.get_text()
+    suffix = value_suffix.get_text()
+    if not text.endswith(suffix):
+        raise P4BuiltinError("Text '%s' does not end with suffix '%s'" % (text, suffix))
+    end = len(text) - len(suffix)
+    assert end >= 0
+    stripped_text = text[:end]
+    return objects.TextV(stripped_text, typ=p4specast.TextT())
 
 @register_builtin("rev_")
 def lists_rev_(ctx, targs, values_input):

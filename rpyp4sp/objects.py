@@ -60,6 +60,9 @@ class BaseV(object):
     def get_bool(self):
         raise TypeError("not a bool")
 
+    def get_text(self):
+        raise TypeError("not a text")
+
     def get_num(self):
         raise TypeError("not a num")
 
@@ -167,6 +170,9 @@ class TextV(BaseV):
         self.value = value #type: str
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
+
+    def get_text(self):
+        return self.value
 
     def compare(self, other):
         if not isinstance(other, TextV):
