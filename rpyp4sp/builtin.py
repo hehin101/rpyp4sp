@@ -21,15 +21,60 @@ def invoke(ctx, name, targs, values_input):
 
 @register_builtin("sum")
 def nats_sum(ctx, targs, values_input):
-    raise P4NotImplementedError("nats_sum is not implemented yet")
+    # (* dec $sum(nat* ) : nat *)
+
+    # let sum (ctx : Ctx.t) (at : region) (targs : targ list)
+    #     (values_input : value list) : value =
+    #   Extract.zero at targs;
+    #   let values =
+    #     Extract.one at values_input |> Value.get_list |> List.map bigint_of_value
+    #   in
+    #   let sum = List.fold_left Bigint.( + ) Bigint.zero values in
+    #   value_of_bigint ctx sum
+
+    # Extract.one at values_input
+    list_value, = values_input
+
+    # Value.get_list |> List.map bigint_of_value
+    values = list_value.get_list()
+
+    # let sum = List.fold_left Bigint.( + ) Bigint.zero values
+    sum_result = integers.Integer.fromint(0)
+    for value in values:
+        sum_result = sum_result.add(value.get_num())
+
+    # value_of_bigint ctx sum
+    return objects.NumV(sum_result, 'Nat', typ=p4specast.NumT(p4specast.NatT()))
 
 @register_builtin("max")
 def nats_max(ctx, targs, values_input):
-    raise P4NotImplementedError("nats_max is not implemented yet")
+    # (* dec $max(nat* ) : nat *)
+    list_value, = values_input
+    values = list_value.get_list()
+    if not values:
+        raise P4BuiltinError("max: empty list")
+    max_result = values[0].get_num()
+    for index in range(1, len(values)):
+        value = values[index]
+        current = value.get_num()
+        if current.gt(max_result):
+            max_result = current
+    return objects.NumV(max_result, 'Nat', typ=p4specast.NumT(p4specast.NatT()))
 
 @register_builtin("min")
 def nats_min(ctx, targs, values_input):
-    raise P4NotImplementedError("nats_min is not implemented yet")
+    # (* dec $min(nat* ) : nat *)
+    list_value, = values_input
+    values = list_value.get_list()
+    if not values:
+        raise P4BuiltinError("min: empty list")
+    min_result = values[0].get_num()
+    for index in range(1, len(values)):
+        value = values[index]
+        current = value.get_num()
+        if current.lt(min_result):
+            min_result = current
+    return objects.NumV(min_result, 'Nat', typ=p4specast.NumT(p4specast.NatT()))
 
 @register_builtin("int_to_text")
 def texts_int_to_text(ctx, targs, values_input):

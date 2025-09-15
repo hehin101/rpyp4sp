@@ -1,3 +1,4 @@
+import pytest
 from rpyp4sp import p4specast, objects, builtin, context, integers
 
 def test_int_to_text():
@@ -275,6 +276,12 @@ def test_lists_partition():
 def make_text(s):
     return objects.TextV(s, -1, p4specast.TextT())
 
+def make_nat_list(*values):
+    nat_values = []
+    for val in values:
+        nat_values.append(objects.NumV.fromstr(str(val), 'Nat', typ=p4specast.NumT(p4specast.NatT())))
+    return objects.ListV(nat_values, typ=p4specast.IterT(p4specast.NumT(p4specast.NatT()), p4specast.List()))
+
 def test_texts_strip_suffix():
     res = builtin.texts_strip_suffix(None, [], [make_text('action_list(t)'), make_text(')')])
     assert res.eq(make_text('action_list(t'))
@@ -297,3 +304,60 @@ def test_texts_strip_prefix():
 
     res = builtin.texts_strip_prefix(None, [], [make_text('abc'), make_text('abc')])
     assert res.eq(make_text(''))
+
+def test_nats_sum():
+    res = builtin.nats_sum(None, [], [make_nat_list()])
+    expected = objects.NumV.fromstr('0', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    assert res.eq(expected)
+
+    res = builtin.nats_sum(None, [], [make_nat_list(42)])
+    expected = objects.NumV.fromstr('42', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    assert res.eq(expected)
+
+    res = builtin.nats_sum(None, [], [make_nat_list(1, 2, 3, 4, 5)])
+    expected = objects.NumV.fromstr('15', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    assert res.eq(expected)
+
+    res = builtin.nats_sum(None, [], [make_nat_list(1000000, 2000000, 3000000)])
+    expected = objects.NumV.fromstr('6000000', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    assert res.eq(expected)
+
+def test_nats_max():
+    res = builtin.nats_max(None, [], [make_nat_list(42)])
+    expected = objects.NumV.fromstr('42', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    assert res.eq(expected)
+
+    res = builtin.nats_max(None, [], [make_nat_list(1, 5, 3, 2, 4)])
+    expected = objects.NumV.fromstr('5', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    assert res.eq(expected)
+
+    res = builtin.nats_max(None, [], [make_nat_list(7, 3, 7, 1, 7)])
+    expected = objects.NumV.fromstr('7', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    assert res.eq(expected)
+
+    res = builtin.nats_max(None, [], [make_nat_list(1000000, 5000000, 2000000)])
+    expected = objects.NumV.fromstr('5000000', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    assert res.eq(expected)
+
+    with pytest.raises(builtin.P4BuiltinError):
+        builtin.nats_max(None, [], [make_nat_list()])
+
+def test_nats_min():
+    res = builtin.nats_min(None, [], [make_nat_list(42)])
+    expected = objects.NumV.fromstr('42', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    assert res.eq(expected)
+
+    res = builtin.nats_min(None, [], [make_nat_list(5, 1, 3, 2, 4)])
+    expected = objects.NumV.fromstr('1', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    assert res.eq(expected)
+
+    res = builtin.nats_min(None, [], [make_nat_list(7, 2, 5, 2, 9)])
+    expected = objects.NumV.fromstr('2', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    assert res.eq(expected)
+
+    res = builtin.nats_min(None, [], [make_nat_list(5000000, 1000000, 2000000)])
+    expected = objects.NumV.fromstr('1000000', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    assert res.eq(expected)
+
+    with pytest.raises(builtin.P4BuiltinError):
+        builtin.nats_min(None, [], [make_nat_list()])
