@@ -31,7 +31,7 @@ def make_context(loaded=[]):
 
 def test_load_spec():
     ctx = make_context()
-    assert 'Prog_ok' in ctx.glbl.renv
+    assert 'Program_ok' in ctx.glbl.renv
     assert 'is_fbitt' in ctx.glbl.fenv
     print(ctx.glbl.fenv["is_fbitt"])
 

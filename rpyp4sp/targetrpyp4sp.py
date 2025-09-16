@@ -139,7 +139,7 @@ def command_run_p4(argv):
         load_times.append(t2 - t1)
         resctx = None
         try:
-            resctx, values = interp.invoke_rel(ctx, p4specast.Id("Prog_ok", p4specast.NO_REGION), [value])
+            resctx, values = interp.invoke_rel(ctx, p4specast.Id("Program_ok", p4specast.NO_REGION), [value])
         except P4Error as e:
             print("Function test exception:", e, e.msg)
         except KeyError as e:
