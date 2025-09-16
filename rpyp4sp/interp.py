@@ -996,7 +996,7 @@ class __extend__(p4specast.HoldI):
         else:
             assert False, "unknown holdcase type: %s" % self.holdcase.__class__.__name__
 
-
+@jit.unroll_safe
 def assign_exp(ctx, exp, value):
     # INCOMPLETE
     # let note = value.note.typ in
@@ -1084,12 +1084,8 @@ def assign_exp(ctx, exp, value):
     #     Ctx.add_edge ctx value_t value Dep.Edges.Assign;
     #     ctx
         return ctx
-    return _assign_exp_iter_cases(ctx, exp, value)
-
-def _assign_exp_iter_cases(ctx, exp, value):
-    # split for the benefit of the jit, the rest of the code contains loops
     # | IterE (_, (Opt, vars)), OptV None ->
-    if (isinstance(exp, p4specast.IterE) and
+    elif (isinstance(exp, p4specast.IterE) and
           isinstance(exp.iter, p4specast.Opt) and
           isinstance(value, objects.OptV)):
         if value.value is None:
@@ -1134,8 +1130,16 @@ def _assign_exp_iter_cases(ctx, exp, value):
                 value_sub = objects.OptV(value_sub_inner, typ)
                 ctx = ctx.add_value_local(var.id, var.iter + [p4specast.Opt()], value_sub)
             return ctx
-    # | IterE (exp, (List, vars)), ListV values ->
     elif (isinstance(exp, p4specast.IterE) and
+          exp.is_simple_list_expr() and
+          isinstance(value, objects.ListV)):
+        return ctx.add_value_local(exp.varlist[0].id, exp.varlist[0].iter + [p4specast.List()], value)
+    return _assign_exp_iter_cases(ctx, exp, value)
+
+def _assign_exp_iter_cases(ctx, exp, value):
+    # split for the benefit of the jit, the rest of the code contains loops
+    # | IterE (exp, (List, vars)), ListV values ->
+    if (isinstance(exp, p4specast.IterE) and
           isinstance(exp.iter, p4specast.List) and
           isinstance(value, objects.ListV)):
     #     (* Map over the value list elements,
@@ -1980,8 +1984,6 @@ def eval_iter_exp_opt(note, ctx, exp, vars):
 
 
 def eval_iter_exp_list(note, ctx, exp, vars):
-    if len(vars) == 1 and vars[0].iter == [] and isinstance(exp, p4specast.VarE) and exp.id.value == vars[0].id.value:
-        return ctx, ctx.find_value_local(exp.id, [p4specast.List()])
     return _eval_iter_exp_list(note, ctx, exp, vars)
 
 def _eval_iter_exp_list(note, ctx, exp, vars):
@@ -2025,6 +2027,10 @@ class __extend__(p4specast.IterE):
             return eval_iter_exp_opt(self.typ, ctx, self.exp, self.varlist)
         if isinstance(self.iter, p4specast.List):
             # | List -> eval_iter_exp_list note ctx exp vars
+            if self.is_simple_list_expr():
+                exp = self.exp
+                assert isinstance(exp, p4specast.VarE)
+                return ctx, ctx.find_value_local(exp.id, [p4specast.List()])
             return eval_iter_exp_list(self.typ, ctx, self.exp, self.varlist)
         else:
             assert False, "Unknown iter kind: %s" % iter

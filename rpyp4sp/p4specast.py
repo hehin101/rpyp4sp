@@ -1174,6 +1174,18 @@ class IterE(Exp):
         self.iter = iter
         self.varlist = varlist
 
+    def is_simple_list_expr(self):
+        # tostring of the form var * var
+        if not isinstance(self.iter, List):
+            return False
+        if len(self.varlist) != 1:
+            return False
+        exp = self.exp
+        if not isinstance(exp, VarE):
+            return False
+        var, = self.varlist
+        return len(var.iter) == 0 and exp.id.value == var.id.value
+
     def tostring(self):
         # | Il.Ast.IterE (e, (iter, xs)) -> "(" ^ string_of_exp e ^ " " ^ string_of_iter iter ^ concat_map " " string_of_varid xs ^ ")"
         vars_str = " ".join([v.tostring() for v in self.varlist])  # TODO: implement Var.tostring
