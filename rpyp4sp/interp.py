@@ -39,6 +39,15 @@ def invoke_func_builtin(ctx, calle):
     # (ctx, value_output)
     return ctx, value_output
 
+def get_printable_location(name, func):
+    return name
+
+invoke_func_def_jit_driver = jit.JitDriver(
+    reds='auto', greens=['name', 'func'],
+    name='invoke_func', get_printable_location=get_printable_location,
+    is_recursive=True)
+
+@jit.unroll_safe
 def invoke_func_def(ctx, calle):
     from rpyp4sp.type_helpers import subst_typ_ctx
     # let tparams, args_input, instrs = Ctx.find_func Local ctx id in
@@ -81,6 +90,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     # INCOMPLETE
     # and invoke_func_def (ctx : Ctx.t) (id : id) (targs : targ list) (args : arg list) : Ctx.t * value =
     # let tparams, args_input, instrs = Ctx.find_func Local ctx id in
+    invoke_func_def_jit_driver.jit_merge_point(name=func.id.value, func=func)
     tparams, args_input, instrs = func.tparams, func.args, func.instrs
     # let ctx_local = Ctx.localize ctx in
     if ctx_local is None:
@@ -139,8 +149,13 @@ def eval_args(ctx, args):
 # ____________________________________________________________
 # relations
 
+def get_printable_location(name, reld):
+    return name
+
 invoke_rel_jit_driver = jit.JitDriver(
-    reds='auto', greens=['name', 'reld'])
+    reds='auto', greens=['name', 'reld'],
+    name='invoke_rel', get_printable_location=get_printable_location,
+    is_recursive=True)
 
 def invoke_rel(ctx, id, values_input):
     # returns (Ctx.t * value list) option =
@@ -941,17 +956,18 @@ class __extend__(p4specast.HoldI):
         vid = value_cond.vid
         #  match holdcase with
         #  | BothH (instrs_hold, instrs_not_hold) ->
-        if isinstance(self.holdcase, p4specast.BothH):
+        holdcase = self.holdcase
+        if isinstance(holdcase, p4specast.BothH):
         #      if cond then eval_instrs ctx Cont instrs_hold
             if cond:
-                return eval_instrs(ctx, Cont(), self.holdcase.hold_instrs)
+                return eval_instrs(ctx, Cont(), holdcase.hold_instrs)
         #      else (
         #        ctx.cover := cover_backup;
         #        eval_instrs ctx Cont instrs_not_hold)
             else:
-                return eval_instrs(ctx, Cont(), self.holdcase.nothold_instrs)
+                return eval_instrs(ctx, Cont(), holdcase.nothold_instrs)
         #  | HoldH (instrs_hold, phantom_opt) ->
-        elif isinstance(self.holdcase, p4specast.HoldH):
+        elif isinstance(holdcase, p4specast.HoldH):
         #      let ctx =
         #        match phantom_opt with
         #        | Some (pid, _) -> Ctx.cover ctx (not cond) pid vid
@@ -959,11 +975,11 @@ class __extend__(p4specast.HoldI):
         #      in
         #      if cond then eval_instrs ctx Cont instrs_hold else (ctx, Cont)
             if cond:
-                return eval_instrs(ctx, Cont(), self.holdcase.hold_instrs)
+                return eval_instrs(ctx, Cont(), holdcase.hold_instrs)
             else:
                 return ctx, Cont()
         #  | NotHoldH (instrs_not_hold, phantom_opt) ->
-        elif isinstance(self.holdcase, p4specast.NotHoldH):
+        elif isinstance(holdcase, p4specast.NotHoldH):
         #      ctx.cover := cover_backup;
         #      let ctx =
         #        match phantom_opt with
@@ -972,7 +988,7 @@ class __extend__(p4specast.HoldI):
         #      in
         #      if not cond then eval_instrs ctx Cont instrs_not_hold else (ctx, Cont)
             if not cond:
-                return eval_instrs(ctx, Cont(), self.holdcase.nothold_instrs)
+                return eval_instrs(ctx, Cont(), holdcase.nothold_instrs)
             else:
                 return ctx, Cont()
         else:
@@ -1066,8 +1082,12 @@ def assign_exp(ctx, exp, value):
     #     Ctx.add_edge ctx value_t value Dep.Edges.Assign;
     #     ctx
         return ctx
+    return _assign_exp_iter_cases(ctx, exp, value)
+
+def _assign_exp_iter_cases(ctx, exp, value):
+    # split for the benefit of the jit, the rest of the code contains loops
     # | IterE (_, (Opt, vars)), OptV None ->
-    elif (isinstance(exp, p4specast.IterE) and
+    if (isinstance(exp, p4specast.IterE) and
           isinstance(exp.iter, p4specast.Opt) and
           isinstance(value, objects.OptV)):
         if value.value is None:
@@ -1211,6 +1231,7 @@ def assign_arg(ctx_caller, ctx_callee, arg, value):
 #       (List.length args) (List.length values));
 #  List.fold_left2 (assign_arg ctx_caller) ctx_callee args values
 
+@jit.unroll_safe
 def assign_args(ctx_caller, ctx_callee, args, values):
     assert len(args) == len(values), \
         "mismatch in number of arguments while assigning, expected %d value(s) but got %d" % (len(args), len(values))
@@ -1957,6 +1978,11 @@ def eval_iter_exp_opt(note, ctx, exp, vars):
 
 
 def eval_iter_exp_list(note, ctx, exp, vars):
+    if len(vars) == 1 and vars[0].iter == [] and isinstance(exp, p4specast.VarE) and exp.id.value == vars[0].id.value:
+        return ctx, ctx.find_value_local(exp.id, [p4specast.List()])
+    return _eval_iter_exp_list(note, ctx, exp, vars)
+
+def _eval_iter_exp_list(note, ctx, exp, vars):
     # let ctxs_sub = Ctx.sub_list ctx vars in
     ctxs_sub = ctx.sub_list(vars)
     # let ctx, values =
@@ -1978,6 +2004,7 @@ def eval_iter_exp_list(note, ctx, exp, vars):
     #   Il.Ast.(ListV values $$$ { vid; typ })
     # in
     value_res = objects.ListV(values, note)
+
     # Ctx.add_node ctx value_res;
     # List.iter
     #   (fun (id, _typ, iters) ->
@@ -2055,6 +2082,7 @@ del cls
 
 # ____________________________________________________________
 
+@jit.unroll_safe
 def subtyp(ctx, typ, value):
     # INCOMPLETE
     # match typ.it with

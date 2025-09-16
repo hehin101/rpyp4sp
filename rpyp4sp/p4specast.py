@@ -1881,6 +1881,7 @@ class LetI(InstrWithIters):
 
 class RuleI(InstrWithIters):
     _immutable_fields_ = ['id', 'notexp']
+
     def __init__(self, id, notexp, iters, region=None):
         self.id = id
         self.notexp = notexp
@@ -1967,6 +1968,7 @@ class ReturnI(Instr):
 #  match holdcase with
 
 class HoldCase(AstBase):
+    _attrs_ = []
     # abstract base
     @staticmethod
     def fromjson(value):
@@ -1985,6 +1987,7 @@ class HoldCase(AstBase):
 
 
 class BothH(HoldCase):
+    _immutable_fields_ = ['hold_instrs', 'nothold_instrs']
     def __init__(self, hold_instrs, nothold_instrs):
         self.hold_instrs = hold_instrs
         self.nothold_instrs = nothold_instrs
@@ -2013,6 +2016,7 @@ class BothH(HoldCase):
 
 
 class HoldH(HoldCase):
+    _immutable_fields_ = ['hold_instrs']
     def __init__(self, hold_instrs, phantom):
         self.hold_instrs = hold_instrs
         self.phantom = phantom
@@ -2046,6 +2050,7 @@ class HoldH(HoldCase):
         return "p4specast.HoldH(%r, %r)" % (self.hold_instrs, self.phantom)
 
 class NotHoldH(HoldCase):
+    _immutable_fields_ = ['nothold_instrs']
     def __init__(self, nothold_instrs, phantom):
         self.nothold_instrs = nothold_instrs
         self.phantom = phantom

@@ -1,3 +1,4 @@
+from rpython.rlib import jit
 from rpyp4sp import p4specast, objects
 from rpyp4sp.error import P4ContextError
 
@@ -13,6 +14,7 @@ def iterlist_to_key(l):
         return ''
     return _iterlist_to_key(l)
 
+@jit.unroll_safe
 def _iterlist_to_key(l):
     key = []
     for iter in l:
@@ -99,6 +101,7 @@ class Context(object):
         # TODO: later add cover
         return self
 
+    @jit.unroll_safe
     def sub_opt(self, vars):
         #   (* First collect the values that are to be iterated over *)
         #   let values =
