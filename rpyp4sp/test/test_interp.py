@@ -60,6 +60,11 @@ def test_upcast_vartyp():
     _, res = interp.upcast(ctx, typ, value)
     assert res is value
 
+def test_binop_num_sub_is_int():
+    def mknat(val): return objects.NumV.fromstr(str(val), 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    res = interp.eval_binop_num('SubOp', mknat(5), mknat(9), p4specast.NumT(p4specast.IntT()))
+    assert res.what == 'Int'
+
 def test_eval_arg():
     arg = p4specast.DefA(p4specast.Id('compatible_plusminusmult', p4specast.Region.line_span('spec/4e-typing-expr.watsup', 173, 84, 108)))
     ctx = make_context()

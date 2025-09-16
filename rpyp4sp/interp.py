@@ -1512,10 +1512,12 @@ def eval_binop_num(binop, value_l, value_r, typ):
     assert value_l.what == value_r.what
     num_l = value_l.get_num()
     num_r = value_r.get_num()
+    what = value_l.what
     if binop == 'AddOp':
         res_num = num_l.add(num_r)
     elif binop == 'SubOp':
         res_num = num_l.sub(num_r)
+        what = 'Int'
     elif binop == 'MulOp':
         res_num = num_l.mul(num_r)
     elif binop == 'DivOp':
@@ -1533,7 +1535,7 @@ def eval_binop_num(binop, value_l, value_r, typ):
         raise P4NotImplementedError("PowOp")
     else:
         assert 0, "should be unreachable"
-    return objects.NumV(res_num, value_l.what, typ=typ)
+    return objects.NumV(res_num, what, typ=typ)
 
 class __extend__(p4specast.BinE):
     def eval_exp(self, ctx):
