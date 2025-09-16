@@ -7,19 +7,6 @@ class GlobalContext(object):
         self.renv = {}
         self.fenv = {}
 
-class LocalContext(object):
-    def __init__(self, values_input=None, tdenv=None, fenv=None, venv=None):
-        self.values_input = values_input if values_input is not None else []
-        self.tdenv = tdenv if tdenv is not None else {}
-        self.fenv = fenv if fenv is not None else {}
-        self.venv = venv if venv is not None else {}
-
-    def copy_and_change(self, values_input=None, tdenv=None, fenv=None, venv=None):
-        values_input = values_input if values_input is not None else self.values_input
-        tdenv = tdenv if tdenv is not None else self.tdenv
-        fenv = fenv if fenv is not None else self.fenv
-        venv = venv if venv is not None else self.venv
-        return LocalContext(values_input, tdenv, fenv, venv)
 
 def iterlist_to_key(l):
     if not l:
@@ -34,14 +21,22 @@ def iterlist_to_key(l):
     return ''.join(key)
 
 class Context(object):
-    def __init__(self, filename, derive=False, glbl=None, local=None):
+    def __init__(self, filename, derive=False, glbl=None, values_input=None, tdenv=None, fenv=None, venv=None):
         self.filename = filename
         self.glbl = GlobalContext() if glbl is None else glbl
-        self.local = LocalContext() if local is None else local
+        # the local context is inlined
         self.derive = derive
+        self.values_input = values_input if values_input is not None else []
+        self.tdenv = tdenv if tdenv is not None else {}
+        self.fenv = fenv if fenv is not None else {}
+        self.venv = venv if venv is not None else {}
 
-    def copy_and_change_local(self, local):
-        return Context(self.filename, self.derive, self.glbl, local)
+    def copy_and_change(self, values_input=None, tdenv=None, fenv=None, venv=None):
+        values_input = values_input if values_input is not None else self.values_input
+        tdenv = tdenv if tdenv is not None else self.tdenv
+        fenv = fenv if fenv is not None else self.fenv
+        venv = venv if venv is not None else self.venv
+        return Context(self.filename, self.derive, self.glbl, values_input, tdenv, fenv, venv)
 
     def load_spec(self, spec):
         for definition in spec:
@@ -54,19 +49,19 @@ class Context(object):
                 self.glbl.fenv[definition.id.value] = definition
 
     def localize(self):
-        return self.copy_and_change_local(LocalContext())
+        return self.copy_and_change(tdenv={}, fenv={}, venv={})
 
     def localize_inputs(self, values_input):
-        return self.copy_and_change_local(self.local.copy_and_change(values_input=values_input))
+        return self.copy_and_change(values_input=values_input)
     
     def localize_venv(self, venv):
-        return self.copy_and_change_local(self.local.copy_and_change(venv=venv))
+        return self.copy_and_change(venv=venv)
 
     def find_value_local(self, id, iterlist):
-        return self.local.venv[id.value, iterlist_to_key(iterlist)]
+        return self.venv[id.value, iterlist_to_key(iterlist)]
 
     def bound_value_local(self, id, iterlist):
-        return (id.value, iterlist_to_key(iterlist)) in self.local.venv
+        return (id.value, iterlist_to_key(iterlist)) in self.venv
 
     def find_typdef_local(self, id):
         # TODO: actually use the local tdenv
@@ -76,25 +71,23 @@ class Context(object):
         return self.glbl.renv[id.value]
 
     def add_value_local(self, id, iterlist, value):
-        result = self.copy_and_change_local(self.local.copy_and_change(venv=self.local.venv.copy()))
-        result.local.venv[id.value, iterlist_to_key(iterlist)] = value
+        result = self.copy_and_change(venv=self.venv.copy())
+        result.venv[id.value, iterlist_to_key(iterlist)] = value
         return result
 
     def add_func_local(self, id, func):
-        result = self.copy_and_change_local(
-            self.local.copy_and_change(fenv=self.local.fenv.copy()))
-        result.local.fenv[id.value] = func
+        result = self.copy_and_change(fenv=self.fenv.copy())
+        result.fenv[id.value] = func
         return result
 
     def add_typdef_local(self, id, typdef):
-        result = self.copy_and_change_local(
-            self.local.copy_and_change(tdenv=self.local.tdenv.copy()))
-        result.local.tdenv[id.value] = typdef
+        result = self.copy_and_change(tdenv=self.tdenv.copy())
+        result.tdenv[id.value] = typdef
         return result
 
     def find_func_local(self, id):
-        if id.value in self.local.fenv:
-            func = self.local.fenv[id.value]
+        if id.value in self.fenv:
+            func = self.fenv[id.value]
         else:
             func = self.glbl.fenv[id.value]
         return func
