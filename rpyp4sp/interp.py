@@ -123,6 +123,7 @@ def eval_arg(ctx, arg):
     else:
         assert 0, "unreachable"
 
+@jit.unroll_safe
 def eval_args(ctx, args):
     # List.fold_left
     #   (fun (ctx, values) arg ->
@@ -650,14 +651,17 @@ def eval_let_opt(ctx, exp_l, exp_r, vars, iterexps):
     #         value_binding)
     #     ctx vars_binding values_binding
 
+@jit.unroll_safe
 def split_exps_without_idx(inputs, exps):
     if not objectmodel.we_are_translated():
         assert sorted(inputs) == inputs # inputs is sorted
     exps_input = []
     exps_output = []
     for index, exp in enumerate(exps):
-        if index in inputs:
-            exps_input.append(exp)
+        for input in inputs:
+            if index == input:
+                exps_input.append(exp)
+                break
         else:
             exps_output.append(exp)
     return exps_input, exps_output
@@ -1164,6 +1168,7 @@ def assign_exp(ctx, exp, value):
     #          (Sl.Print.string_of_exp exp)
     #          (Sl.Print.string_of_value ~short:true value))
 
+@jit.unroll_safe
 def assign_exps(ctx, exps, values):
     #assign_exps (ctx : Ctx.t) (exps : exp list) (values : value list) : Ctx.t =
     #   check
@@ -2238,6 +2243,7 @@ def upcast(ctx, typ, value):
     return ctx, value
 
 
+@jit.elidable_promote('0,1')
 def mixop_eq(a, b):
     phrasesa = a.phrases
     phrasesb = b.phrases

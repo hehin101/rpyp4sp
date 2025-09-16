@@ -1501,6 +1501,7 @@ class NotTyp(AstBase):
 #   | VariantT of typcase list
 
 class DefTyp(AstBase):
+    _immutable_fields_ = ['region']
     # base class
     @staticmethod
     def fromjson(value):
@@ -1603,6 +1604,8 @@ TypeCase = NotTyp
 
 class Instr(AstBase):
     _attrs_ = ['region']
+    _immutable_fields_ = ['region']
+
     # has a .region
 
     def tostring(self, level=0, index=0):
