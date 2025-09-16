@@ -252,7 +252,12 @@ def sets_union_set(ctx, targs, values_input):
     set_l, set_r = values_input
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
-    res = _set_union_elems(elems_l, elems_r)
+    if len(elems_l) == 0:
+        res = elems_r
+    elif len(elems_r) == 0:
+        res = elems_l
+    else:
+        res = _set_union_elems(elems_l, elems_r)
     # TODO: I am not sure the order of elements in the result is exactly like in P4-spectec
     return _wrap_set_elems(res, set_l)
 
@@ -290,7 +295,10 @@ def sets_diff_set(ctx, targs, values_input):
     set_l, set_r = values_input
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
-    res = _set_diff_elemens(elems_l, elems_r)
+    if len(elems_l) == 0 or len(elems_r) == 0:
+        res = elems_l
+    else:
+        res = _set_diff_elemens(elems_l, elems_r)
     return _wrap_set_elems(res, set_l)
 
 @register_builtin("sub_set")
