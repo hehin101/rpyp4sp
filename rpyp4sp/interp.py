@@ -842,6 +842,170 @@ class __extend__(p4specast.RuleI):
         return ctx, Cont()
 
 
+def eval_hold_cond(ctx, id, notexp):
+    #and eval_hold_cond (ctx : Ctx.t) (id : id) (notexp : notexp) :
+    #    Ctx.t * bool * value =
+    #  let _, exps_input = notexp in
+    _, exps_input = notexp.mixop, notexp.exps
+    #  let ctx, values_input = eval_exps ctx exps_input in
+    ctx, values_input = eval_exps(ctx, exps_input)
+    #  let ctx, hold =
+    #    match invoke_rel ctx id values_input with
+    #    | Some (ctx, _) -> (ctx, true)
+    #    | None -> (ctx, false)
+    result_ctx, values = invoke_rel(ctx, id, values_input)
+    if result_ctx is not None:
+        ctx = result_ctx
+        hold = True
+    else:
+        hold = False
+    #  in
+    #  let value_res =
+    #    let vid = Value.fresh () in
+    #    let typ = Il.Ast.BoolT in
+    #    Il.Ast.(BoolV hold $$$ { vid; typ })
+    value_res = objects.BoolV(hold, typ=p4specast.BoolT())
+    #  in
+    #  Ctx.add_node ctx value_res;
+    #  List.iteri
+    #    (fun idx value_input ->
+    #      Ctx.add_edge ctx value_res value_input (Dep.Edges.Rel (id, idx)))
+    #    values_input;
+    #  (ctx, hold, value_res)
+    return ctx, hold, value_res
+
+def eval_hold_cond_list(ctx, id, notexp, vars, iterexps):
+    #and eval_hold_cond_list (ctx : Ctx.t) (id : id) (notexp : notexp)
+    #    (vars : var list) (iterexps : iterexp list) : Ctx.t * bool * value list =
+    #  let ctxs_sub = Ctx.sub_list ctx vars in
+    ctxs_sub = ctx.sub_list(vars)
+    #  List.fold_left
+    #    (fun (ctx, cond, values_cond) ctx_sub ->
+    #      if not cond then (ctx, cond, values_cond)
+    #      else
+    #        let ctx_sub, cond, value_cond =
+    #          eval_hold_cond_iter' ctx_sub id notexp iterexps
+    #        in
+    #        let ctx = Ctx.commit ctx ctx_sub in
+    #        let values_cond = values_cond @ [ value_cond ] in
+    #        (ctx, cond, values_cond))
+    #    (ctx, true, []) ctxs_sub
+    cond = True
+    values_cond = []
+    for ctx_sub in ctxs_sub:
+        if not cond:
+            break
+        ctx_sub, cond_sub, value_cond = eval_hold_cond_iter_tick(ctx_sub, id, notexp, iterexps)
+        ctx = ctx.commit(ctx_sub)
+        values_cond.append(value_cond)
+        cond = cond_sub
+    return ctx, cond, values_cond
+
+def eval_hold_cond_iter_tick(ctx, id, notexp, iterexps):
+    #and eval_hold_cond_iter' (ctx : Ctx.t) (id : id) (notexp : notexp)
+    #    (iterexps : iterexp list) : Ctx.t * bool * value =
+    #  match iterexps with
+    #  | [] -> eval_hold_cond ctx id notexp
+    if not iterexps:
+        return eval_hold_cond(ctx, id, notexp)
+    #  | iterexp_h :: iterexps_t -> (
+    iterexp_h = iterexps[0]
+    iterexps_t = iterexps[1:]
+    #      let iter_h, vars_h = iterexp_h in
+    iter_h = iterexp_h.iter
+    vars_h = iterexp_h.vars
+    #      match iter_h with
+    #      | Opt -> error no_region "(TODO)"
+    if isinstance(iter_h, p4specast.Opt):
+        raise P4NotImplementedError("(TODO) eval_hold_cond_iter Opt")
+    #      | List ->
+    elif isinstance(iter_h, p4specast.List):
+    #          let ctx, cond, values_cond =
+    #            eval_hold_cond_list ctx id notexp vars_h iterexps_t
+        ctx, cond, values_cond = eval_hold_cond_list(ctx, id, notexp, vars_h, iterexps_t)
+    #          in
+    #          let value_cond =
+    #            let vid = Value.fresh () in
+    #            let typ = Il.Ast.IterT (Il.Ast.BoolT $ no_region, Il.Ast.List) in
+    #            Il.Ast.(ListV values_cond $$$ { vid; typ })
+        value_cond = objects.ListV(values_cond, typ=p4specast.IterT(p4specast.BoolT(), p4specast.List()))
+    #          in
+    #          Ctx.add_node ctx value_cond;
+    #          List.iter
+    #            (fun (id, _typ, iters) ->
+    #              let value_sub =
+    #                Ctx.find_value Local ctx (id, iters @ [ Il.Ast.List ])
+    #              in
+    #              Ctx.add_edge ctx value_cond value_sub Dep.Edges.Iter)
+    #            vars_h;
+    #          (ctx, cond, value_cond))
+        return ctx, cond, value_cond
+    else:
+        assert False, "unknown iter_h type: %s" % iter_h.__class__.__name__
+
+def eval_hold_cond_iter(ctx, id, notexp, iterexps):
+    #and eval_hold_cond_iter (ctx : Ctx.t) (id : id) (notexp : notexp)
+    #    (iterexps : iterexp list) : Ctx.t * bool * value =
+    #  let iterexps = List.rev iterexps in
+    iterexps = iterexps[:]
+    iterexps.reverse()
+    #  eval_hold_cond_iter' ctx id notexp iterexps
+    return eval_hold_cond_iter_tick(ctx, id, notexp, iterexps)
+
+#
+class __extend__(p4specast.HoldI):
+    def eval_instr(self, ctx):
+        #and eval_hold_instr (ctx : Ctx.t) (id : id) (notexp : notexp)
+        #    (iterexps : iterexp list) (holdcase : holdcase) : Ctx.t * Sign.t =
+        #  (* Copy the current coverage information *)
+        #  let cover_backup = !(ctx.cover) in
+        #  (* Evaluate the hold condition *)
+        #  let ctx, cond, value_cond = eval_hold_cond_iter ctx id notexp iterexps in
+        ctx, cond, value_cond = eval_hold_cond_iter(ctx, self.id, self.notexp, self.iters)
+        #  (* Evaluate the hold case, and restore the coverage information
+        #     if the expected behavior is the relation not holding *)
+        #  let vid = value_cond.note.vid in
+        vid = value_cond.vid
+        #  match holdcase with
+        #  | BothH (instrs_hold, instrs_not_hold) ->
+        if isinstance(self.holdcase, p4specast.BothH):
+        #      if cond then eval_instrs ctx Cont instrs_hold
+            if cond:
+                return eval_instrs(ctx, Cont(), self.holdcase.hold_instrs)
+        #      else (
+        #        ctx.cover := cover_backup;
+        #        eval_instrs ctx Cont instrs_not_hold)
+            else:
+                return eval_instrs(ctx, Cont(), self.holdcase.nothold_instrs)
+        #  | HoldH (instrs_hold, phantom_opt) ->
+        elif isinstance(self.holdcase, p4specast.HoldH):
+        #      let ctx =
+        #        match phantom_opt with
+        #        | Some (pid, _) -> Ctx.cover ctx (not cond) pid vid
+        #        | None -> ctx
+        #      in
+        #      if cond then eval_instrs ctx Cont instrs_hold else (ctx, Cont)
+            if cond:
+                return eval_instrs(ctx, Cont(), self.holdcase.hold_instrs)
+            else:
+                return ctx, Cont()
+        #  | NotHoldH (instrs_not_hold, phantom_opt) ->
+        elif isinstance(self.holdcase, p4specast.NotHoldH):
+        #      ctx.cover := cover_backup;
+        #      let ctx =
+        #        match phantom_opt with
+        #        | Some (pid, _) -> Ctx.cover ctx cond pid vid
+        #        | None -> ctx
+        #      in
+        #      if not cond then eval_instrs ctx Cont instrs_not_hold else (ctx, Cont)
+            if not cond:
+                return eval_instrs(ctx, Cont(), self.holdcase.nothold_instrs)
+            else:
+                return ctx, Cont()
+        else:
+            assert False, "unknown holdcase type: %s" % self.holdcase.__class__.__name__
+
+
 def assign_exp(ctx, exp, value):
     # INCOMPLETE
     # let note = value.note.typ in
@@ -1348,10 +1512,12 @@ def eval_binop_num(binop, value_l, value_r, typ):
     assert value_l.what == value_r.what
     num_l = value_l.get_num()
     num_r = value_r.get_num()
+    what = value_l.what
     if binop == 'AddOp':
         res_num = num_l.add(num_r)
     elif binop == 'SubOp':
         res_num = num_l.sub(num_r)
+        what = 'Int'
     elif binop == 'MulOp':
         res_num = num_l.mul(num_r)
     elif binop == 'DivOp':
@@ -1369,7 +1535,7 @@ def eval_binop_num(binop, value_l, value_r, typ):
         raise P4NotImplementedError("PowOp")
     else:
         assert 0, "should be unreachable"
-    return objects.NumV(res_num, value_l.what, typ=typ)
+    return objects.NumV(res_num, what, typ=typ)
 
 class __extend__(p4specast.BinE):
     def eval_exp(self, ctx):
@@ -1565,37 +1731,6 @@ class __extend__(p4specast.CallE):
         # let ctx, value_res = invoke_func ctx id targs args in
         # (ctx, value_res)
         return invoke_func(ctx, self)
-
-class __extend__(p4specast.HoldE):
-    def eval_exp(self, ctx):
-        # let _, exps_input = notexp in
-        exps_input = self.notexp.exps
-        # let ctx, values_input = eval_exps ctx exps_input in
-        ctx, values_input = eval_exps(ctx, exps_input)
-        # let ctx, hold =
-        #   match invoke_rel ctx id values_input with
-        #   | Some (ctx, _) -> (ctx, true)
-        #   | None -> (ctx, false)
-        relctx, _ = invoke_rel(ctx, self.id, values_input)
-        if relctx is not None:
-            ctx = relctx
-            hold = True
-        else:
-            hold = False
-        # in
-        # let value_res =
-        #   let vid = Value.fresh () in
-        #   let typ = note in
-        #   Il.Ast.(BoolV hold $$$ { vid; typ })
-        value_res = objects.BoolV(hold, typ=self.typ)
-        # in
-        # Ctx.add_node ctx value_res;
-        # List.iteri
-        #   (fun idx value_input ->
-        #     Ctx.add_edge ctx value_res value_input (Dep.Edges.Rel (id, idx)))
-        #   values_input;
-        # (ctx, value_res)
-        return ctx, value_res
 
 class __extend__(p4specast.StrE):
     def eval_exp(self, ctx):

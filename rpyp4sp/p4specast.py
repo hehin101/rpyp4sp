@@ -461,7 +461,6 @@ class DefA(Arg):
 #   | SliceE of exp * exp * exp             (* exp `[` exp `:` exp `]` *)
 #   | UpdE of exp * path * exp              (* exp `[` path `=` exp `]` *)
 #   | CallE of id * targ list * arg list    (* $id`<` targ* `>``(` arg* `)` *)
-#   | HoldE of id * notexp                  (* id `:` notexp `holds` *)
 #   | IterE of exp * iterexp                (* exp iterexp *)
 
 
@@ -525,8 +524,6 @@ class Exp(AstBase):
             ast = UpdE.fromjson(content)
         elif what == 'CallE':
             ast = CallE.fromjson(content)
-        elif what == 'HoldE':
-            ast = HoldE.fromjson(content)
         elif what == 'IterE':
             ast = IterE.fromjson(content)
         else:
@@ -1093,25 +1090,6 @@ class CallE(Exp):
     def __repr__(self):
         return "p4specast.CallE(%r, %r, %r)" % (self.func, self.targs, self.args)
 
-class HoldE(Exp):
-#   | HoldE of id * notexp                  (* id `:` notexp `holds` *)
-    def __init__(self, id, notexp):
-        self.id = id
-        self.notexp = notexp
-
-    def tostring(self):
-        # | Il.Ast.HoldE (x, n) -> string_of_varid x ^ " : " ^ string_of_notexp n ^ " holds"
-        return "%s : %s holds" % (self.id.value, self.notexp.tostring())
-
-    def __repr__(self):
-        return "p4specast.HoldE(%r, %r)" % (self.id, self.notexp)
-
-    @staticmethod
-    def fromjson(content):
-        return HoldE(
-            id=Id.fromjson(content.get_list_item(1)),
-            notexp=NotExp.fromjson(content.get_list_item(2))
-        )
 
 class IterE(Exp):
 #   | IterE of exp * iterexp                (* exp iterexp *)
@@ -1479,6 +1457,7 @@ TypeCase = NotTyp
 # and instr = instr' phrase [@@deriving yojson]
 # and instr' =
 #   | IfI of exp * iterexp list * instr list * phantom option
+#   | HoldI of id * notexp * iterexp list * holdcase
 #   | CaseI of exp * case list * phantom option
 #   | OtherwiseI of instr
 #   | LetI of exp * exp * iterexp list
@@ -1500,6 +1479,8 @@ class Instr(AstBase):
         what = content.get_list_item(0).value_string()
         if what == 'IfI':
             ast = IfI.fromjson(content)
+        elif what == 'HoldI':
+            ast = HoldI.fromjson(content)
         elif what == 'CaseI':
             ast = CaseI.fromjson(content)
         elif what == 'OtherwiseI':
@@ -1556,6 +1537,43 @@ class IfI(Instr):
 
     def __repr__(self):
         return "p4specast.IfI(%r, %r, %r, %r%s)" % (self.exp, self.iters, self.instrs, self.phantom, (", " + repr(self.region)) if self.region is not None else '')
+
+
+class HoldI(Instr):
+    _immutable_fields_ = ['id', 'notexp', 'iters[*]']
+
+#   | HoldI of id * notexp * iterexp list * holdcase
+    def __init__(self, id, notexp, iters, holdcase, region=None):
+        self.id = id
+        self.notexp = notexp
+        self.iters = iters
+        self.holdcase = holdcase
+        self.region = region
+
+    def tostring(self, level=0, index=0):
+        # | HoldI (id, notexp, iterexps, holdcase) ->
+        #     Format.asprintf "%sIf (%s: %s)%s:\n\n%s" order (string_of_relid id)
+        #       (string_of_notexp notexp)
+        #       (string_of_iterexps iterexps)
+        #       (string_of_holdcase ~level:(level + 1) holdcase)
+        indent = "  " * level
+        order = "%s%d. " % (indent, index)
+        iterexps_str = string_of_iterexps(self.iters)
+        holdcase_str = self.holdcase.tostring(level + 1)
+        return "%sIf (%s: %s)%s:\n\n%s" % (order, self.id.value, self.notexp.tostring(), iterexps_str, holdcase_str)
+
+    @staticmethod
+    def fromjson(content):
+        return HoldI(
+            id=Id.fromjson(content.get_list_item(1)),
+            notexp=NotExp.fromjson(content.get_list_item(2)),
+            iters=[IterExp.fromjson(ite) for ite in content.get_list_item(3).value_array()],
+            holdcase=HoldCase.fromjson(content.get_list_item(4)),
+        )
+
+    def __repr__(self):
+        return "p4specast.HoldI(%r, %r, %r, %r%s)" % (self.id, self.notexp, self.iters, self.holdcase, (", " + repr(self.region)) if self.region is not None else '')
+
 
 class CaseI(Instr):
     def __init__(self, exp, cases, phantom, region=None):
@@ -1714,6 +1732,129 @@ class ReturnI(Instr):
 
     def __repr__(self):
         return "p4specast.ReturnI(%r%s)" % (self.exp, (", " + repr(self.region)) if self.region is not None else '')
+
+
+#and holdcase =
+#  | BothH of instr list * instr list
+#  | HoldH of instr list * phantom option
+#  | NotHoldH of instr list * phantom option
+
+#and string_of_holdcase ?(level = 0) holdcase =
+#  let indent = String.make (level * 2) ' ' in
+#  match holdcase with
+
+class HoldCase(AstBase):
+    # abstract base
+    @staticmethod
+    def fromjson(value):
+        what = value.get_list_item(0).value_string()
+        if what == 'BothH':
+            return BothH.fromjson(value)
+        elif what == 'HoldH':
+            return HoldH.fromjson(value)
+        elif what == 'NotHoldH':
+            return NotHoldH.fromjson(value)
+        else:
+            raise P4UnknownTypeError("Unknown HoldCase: %s" % what)
+
+    def tostring(self, level=0):
+        raise P4NotImplementedError('abstract base class')
+
+
+class BothH(HoldCase):
+    def __init__(self, hold_instrs, nothold_instrs):
+        self.hold_instrs = hold_instrs
+        self.nothold_instrs = nothold_instrs
+
+    @staticmethod
+    def fromjson(content):
+        return BothH(
+            hold_instrs=[Instr.fromjson(instr) for instr in content.get_list_item(1).value_array()],
+            nothold_instrs=[Instr.fromjson(instr) for instr in content.get_list_item(2).value_array()]
+        )
+
+    def tostring(self, level=0):
+        #  let indent = String.make (level * 2) ' ' in
+        #  | BothH (instrs_hold, instrs_nothold) ->
+        #      Format.asprintf "%sHolds:\n\n%s\n\n%sDoes not hold:\n\n%s" indent
+        #        (string_of_instrs ~level:(level + 1) instrs_hold)
+        #        indent
+        #        (string_of_instrs ~level:(level + 1) instrs_nothold)
+        indent = "  " * (level * 2)
+        hold_str = string_of_instrs(self.hold_instrs, level + 1)
+        nothold_str = string_of_instrs(self.nothold_instrs, level + 1)
+        return "%sHolds:\n\n%s\n\n%sDoes not hold:\n\n%s" % (indent, hold_str, indent, nothold_str)
+
+    def __repr__(self):
+        return "p4specast.BothH(%r, %r)" % (self.hold_instrs, self.nothold_instrs)
+
+
+class HoldH(HoldCase):
+    def __init__(self, hold_instrs, phantom):
+        self.hold_instrs = hold_instrs
+        self.phantom = phantom
+
+    @staticmethod
+    def fromjson(content):
+        return HoldH(
+            hold_instrs=[Instr.fromjson(instr) for instr in content.get_list_item(1).value_array()],
+            phantom=content.get_list_item(2)
+        )
+
+    def tostring(self, level=0):
+        #  let indent = String.make (level * 2) ' ' in
+        #  | HoldH (instrs_hold, None) ->
+        #      Format.asprintf "%sHolds:\n\n%s" indent
+        #        (string_of_instrs ~level:(level + 1) instrs_hold)
+        #  | HoldH (instrs_hold, Some phantom) ->
+        #      Format.asprintf "%sHolds:\n\n%s\n\n%sElse %s" indent
+        #        (string_of_instrs ~level:(level + 1) instrs_hold)
+        #        indent
+        #        (string_of_phantom phantom)
+        indent = "  " * (level * 2)
+        hold_str = string_of_instrs(self.hold_instrs, level + 1)
+        if self.phantom.is_null:  # None case
+            return "%sHolds:\n\n%s" % (indent, hold_str)
+        else:  # Some phantom case
+            phantom_str = "TODO_phantom"  # TODO: implement string_of_phantom
+            return "%sHolds:\n\n%s\n\n%sElse %s" % (indent, hold_str, indent, phantom_str)
+
+    def __repr__(self):
+        return "p4specast.HoldH(%r, %r)" % (self.hold_instrs, self.phantom)
+
+class NotHoldH(HoldCase):
+    def __init__(self, nothold_instrs, phantom):
+        self.nothold_instrs = nothold_instrs
+        self.phantom = phantom
+
+    @staticmethod
+    def fromjson(content):
+        return NotHoldH(
+            nothold_instrs=[Instr.fromjson(instr) for instr in content.get_list_item(1).value_array()],
+            phantom=content.get_list_item(2)
+        )
+
+    def tostring(self, level=0):
+        #  let indent = String.make (level * 2) ' ' in
+        #  | NotHoldH (instrs_nothold, None) ->
+        #      Format.asprintf "%sDoes not hold:\n\n%s" indent
+        #        (string_of_instrs ~level:(level + 1) instrs_nothold)
+        #  | NotHoldH (instrs_nothold, Some phantom) ->
+        #      Format.asprintf "%sDoes not hold:\n\n%s\n\n%sElse %s" indent
+        #        (string_of_instrs ~level:(level + 1) instrs_nothold)
+        #        indent
+        #        (string_of_phantom phantom)
+        indent = "  " * (level * 2)
+        nothold_str = string_of_instrs(self.nothold_instrs, level + 1)
+        if self.phantom.is_null:  # None case
+            return "%sDoes not hold:\n\n%s" % (indent, nothold_str)
+        else:  # Some phantom case
+            phantom_str = "TODO_phantom"  # TODO: implement string_of_phantom
+            return "%sDoes not hold:\n\n%s\n\n%sElse %s" % (indent, nothold_str, indent, phantom_str)
+
+
+    def __repr__(self):
+        return "p4specast.NotHoldH(%r, %r)" % (self.nothold_instrs, self.phantom)
 
 
 # cases
