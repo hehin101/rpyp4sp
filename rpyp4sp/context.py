@@ -10,7 +10,16 @@ class GlobalContext(object):
 
     @jit.elidable
     def _find_rel(self, name):
-        return self.renv[name]
+        return self.renv.get(name, None)
+
+    @jit.elidable
+    def _find_func(self, name):
+        return self.fenv.get(name, None)
+
+    @jit.elidable
+    def _find_typdef(self, name):
+        return self.tdenv.get(name, (None, None))
+
 
 
 def iterlist_to_key(l):
@@ -74,7 +83,11 @@ class Context(object):
 
     def find_typdef_local(self, id):
         # TODO: actually use the local tdenv
-        return self.glbl.tdenv[id.value]
+        jit.promote(self.glbl)
+        tup = self.glbl._find_typdef(id.value)
+        if tup[0] is None and tup[1] is None:
+            raise P4ContextError("rel %s not found" % id.value)
+        return tup
 
     def find_rel_local(self, id):
         res = jit.promote(self.glbl)._find_rel(id.value)
@@ -101,7 +114,10 @@ class Context(object):
         if id.value in self.fenv:
             func = self.fenv[id.value]
         else:
-            func = self.glbl.fenv[id.value]
+            jit.promote(self.glbl)
+            func = self.glbl._find_func(id.value)
+            if func is None:
+                raise P4ContextError('func %s not found' % id.value)
         return func
 
     def commit(self, sub_ctx):

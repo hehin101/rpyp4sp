@@ -2099,6 +2099,7 @@ def subtyp(ctx, typ, value):
     #     | NumV (`Nat _) -> true
     #     | NumV (`Int i) -> Bigint.(i >= zero)
     #     | _ -> assert false)
+    jit.promote(typ)
     if isinstance(typ, p4specast.NumT) and isinstance(typ.typ, p4specast.NatT):
         assert isinstance(value, objects.NumV)
         if value.what == p4specast.NatT.INSTANCE:
