@@ -44,6 +44,7 @@ def get_printable_location(name, func):
 
 invoke_func_def_jit_driver = jit.JitDriver(
     reds='auto', greens=['name', 'func'],
+    should_unroll_one_iteration = lambda name, func: True,
     name='invoke_func', get_printable_location=get_printable_location,
     is_recursive=True)
 
@@ -154,6 +155,7 @@ def get_printable_location(name, reld):
 
 invoke_rel_jit_driver = jit.JitDriver(
     reds='auto', greens=['name', 'reld'],
+    should_unroll_one_iteration = lambda name, reld: True,
     name='invoke_rel', get_printable_location=get_printable_location,
     is_recursive=True)
 
