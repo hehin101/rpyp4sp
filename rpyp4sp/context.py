@@ -159,6 +159,7 @@ class Context(object):
             else:
                 first_list = value_list
             values_batch.append(value_list)
+        assert first_list is not None
         if len(first_list) == 0:
             return []
         #   in
