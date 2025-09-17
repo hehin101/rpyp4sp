@@ -41,6 +41,9 @@ def test_venv_dict():
     assert str(d4._keys) == "<keys 'a'>"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> cc35ffd (fixed venv repr for multiple keys)
     value4 = objects.TextV('jkl')
     d5 = d4.set("b", "", value4)
     assert d5.get("a", "") is value3
@@ -48,6 +51,7 @@ def test_venv_dict():
     assert repr(d5._keys) == "context.VENV_KEYS_ROOT.add_key('a', '').add_key('b', '')"
     assert str(d5._keys) == "<keys 'a', 'b'>"
 
+<<<<<<< HEAD
 
 def test_context():
     empty_ctx = Context("dummy")
@@ -89,3 +93,5 @@ def test_context():
 
 =======
 >>>>>>> c8928b5 (venv dict)
+=======
+>>>>>>> cc35ffd (fixed venv repr for multiple keys)
