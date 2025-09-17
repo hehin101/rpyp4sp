@@ -41,36 +41,6 @@ def parse_args(argv, shortname, longname="", want_arg=True, many=False):
 def parse_flag(argv, flagname, longname=""):
     return bool(parse_args(argv, flagname, longname=longname, want_arg=False))
 
-@objectmodel.specialize.arg(4)
-def parse_args(argv, shortname, longname="", want_arg=True, many=False):
-    # crappy argument handling
-    reslist = []
-    if many:
-        assert want_arg
-    i = 0
-    while i < len(argv):
-        if argv[i] == shortname or argv[i] == longname:
-            if not want_arg:
-                res = argv[i]
-                del argv[i]
-                return res
-            if len(argv) == i + 1:
-                print("missing argument after " + argv[i])
-                raise ValueError
-            arg = argv[i + 1]
-            del argv[i : i + 2]
-            if many:
-                reslist.append(arg)
-            else:
-                return arg
-            continue
-        i += 1
-    if many:
-        return reslist
-
-
-def parse_flag(argv, flagname, longname=""):
-    return bool(parse_args(argv, flagname, longname=longname, want_arg=False))
 
 def command_run_test_jsonl(argv):
     ctx = make_context()
