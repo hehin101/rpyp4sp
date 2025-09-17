@@ -1,6 +1,8 @@
 from rpyp4sp.context import Context, VenvDict
 from rpyp4sp import objects, p4specast
 
+import pytest
+
 def test_venv_simple():
     ctx = Context('dummy')
     id1 = p4specast.Id('id1', None)
@@ -44,3 +46,17 @@ def test_venv_dict():
     assert repr(d5._keys) == "context.VENV_KEYS_ROOT.add_key('a', '').add_key('b', '')"
     assert str(d5._keys) == "<keys 'a', 'b'>"
 
+
+@pytest.mark.skip
+def test_context():
+    # copy_and_change
+
+    # localize
+
+    # fidn_value_local
+
+    # bound_value_local
+
+    # add_value_local
+
+    pass
