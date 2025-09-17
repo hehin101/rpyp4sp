@@ -1,3 +1,4 @@
+from rpython.rlib import jit
 from rpython.tool.pairtype import extendabletype
 from rpyp4sp import integers
 from rpyp4sp.error import P4UnknownTypeError, P4NotImplementedError
@@ -265,21 +266,23 @@ def string_of_iterexps(iterexps):
 # type var = id * typ * iter list
 
 class Var(AstBase):
-    _immutable_fields_ = ['id', 'typ', 'iter[*]']
+    _immutable_fields_ = ['id', 'typ', 'iter']
 
     def __init__(self, id, typ, iter):
         self.id = id
         self.typ = typ
-        self.iter = iter
+        if iter == []:
+            self.iter = IterList.EMPTY
+        else:
+            self.iter = IterList(iter)
 
     def tostring(self):
         # let string_of_var (id, _typ, iters) =
         #   string_of_varid id ^ String.concat "" (List.map string_of_iter iters)
-        iters_str = "".join([string_of_iter(i) for i in self.iter])
-        return "%s%s" % (self.id.value, iters_str)
+        return "%s%s" % (self.id.value, self.iter.tostring())
 
     def __repr__(self):
-        return "p4specast.Var(id=%s, typ=%s, iter=%s)" % (self.id, self.typ, self.iter)
+        return "p4specast.Var(id=%s, typ=%s, iter=%s)" % (self.id, self.typ, self.iter.iterlist)
 
     @staticmethod
     def fromjson(content):
@@ -288,6 +291,42 @@ class Var(AstBase):
             typ=Type.fromjson(content.get_list_item(1)),
             iter=[Iter.fromjson(i) for i in content.get_list_item(2).value_array()]
         )
+
+
+class IterList(AstBase):
+    _immutable_fields_ = ['iterlist[*]', '_string']
+
+    def __init__(self, iterlist):
+        self.iterlist = iterlist
+        self._append_opt = None
+        self._append_list = None
+        self._string = "".join([string_of_iter(i) for i in self.iterlist])
+
+    def tostring(self):
+        return self._string
+
+    def to_key(self):
+        return self._string
+
+    @jit.elidable
+    def append_opt(self):
+        if not self._append_opt:
+            self._append_opt = IterList(self.iterlist + [Opt()])
+        return self._append_opt
+
+    @jit.elidable
+    def append_list(self):
+        if not self._append_list:
+            self._append_list = IterList(self.iterlist + [List()])
+        return self._append_list
+
+    def __repr__(self):
+        if not self.iterlist:
+            return "p4specast.IterList.EMPTY"
+        return "p4specast.IterList(%r)" % self.iterlist
+
+IterList.EMPTY = IterList([])
+
 
 # type def = def' phrase
 # and def' =
@@ -1184,7 +1223,7 @@ class IterE(Exp):
         if not isinstance(exp, VarE):
             return False
         var, = self.varlist
-        return len(var.iter) == 0 and exp.id.value == var.id.value
+        return len(var.iter.iterlist) == 0 and exp.id.value == var.id.value
 
     def tostring(self):
         # | Il.Ast.IterE (e, (iter, xs)) -> "(" ^ string_of_exp e ^ " " ^ string_of_iter iter ^ concat_map " " string_of_varid xs ^ ")"

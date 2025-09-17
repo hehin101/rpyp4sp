@@ -22,22 +22,6 @@ class GlobalContext(object):
 
 
 
-def iterlist_to_key(l):
-    if not l:
-        return ''
-    return _iterlist_to_key(l)
-
-@jit.unroll_safe
-def _iterlist_to_key(l):
-    key = []
-    for iter in l:
-        if isinstance(iter, p4specast.Opt):
-            key.append('?')
-        else:
-            assert isinstance(iter, p4specast.List)
-            key.append('*')
-    return ''.join(key)
-
 class VenvKeys(object):
     def __init__(self, keys):
         self.keys = keys # type: dict[tuple[str, str], int]
@@ -148,15 +132,15 @@ class Context(object):
     def localize_venv(self, venv):
         return self.copy_and_change(venv=venv)
 
-    def find_value_local(self, id, iterlist):
-        # type: (p4specast.Id, list) -> objects.BaseV
+    def find_value_local(self, id, iterlist=p4specast.IterList.EMPTY):
+        # type: (p4specast.Id, p4specast.IterList) -> objects.BaseV
         jit.promote(id)
-        return self.venv.get(id.value, iterlist_to_key(iterlist))
+        return self.venv.get(id.value, iterlist.to_key())
 
-    def bound_value_local(self, id, iterlist):
+    def bound_value_local(self, id, iterlist=p4specast.IterList.EMPTY):
         # type: (p4specast.Id, list) -> bool
         jit.promote(id)
-        return self.venv.has_key(id.value, iterlist_to_key(iterlist))
+        return self.venv.has_key(id.value, iterlist.to_key())
 
     def find_typdef_local(self, id):
         # TODO: actually use the local tdenv
@@ -174,7 +158,7 @@ class Context(object):
 
     def add_value_local(self, id, iterlist, value):
         # type: (p4specast.Id, list, objects.BaseV) -> Context
-        venv = self.venv.set(id.value, iterlist_to_key(iterlist), value)
+        venv = self.venv.set(id.value, iterlist.to_key(), value)
         result = self.copy_and_change(venv=venv)
         return result
 
@@ -212,7 +196,7 @@ class Context(object):
         #       vars
         values = []
         for var in vars:
-            value = self.find_value_local(var.id, var.iter + [p4specast.Opt()])
+            value = self.find_value_local(var.id, var.iter.append_opt())
             assert isinstance(value, objects.OptV)
             values.append(value.value)
         # check whether they are all None, all Some, or mixed
@@ -258,7 +242,7 @@ class Context(object):
         assert vars
         first_list = None
         for var in vars:
-            value = self.find_value_local(var.id, var.iter + [p4specast.List()])
+            value = self.find_value_local(var.id, var.iter.append_list())
             value_list = value.get_list()
             if first_list is not None:
                 if len(first_list) != len(value_list):
