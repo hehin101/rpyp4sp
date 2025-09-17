@@ -148,10 +148,19 @@ class Context(object):
         #       vars
         #     |> transpose
         values_batch = []
+        assert vars
+        first_list = None
         for var in vars:
             value = self.find_value_local(var.id, var.iter + [p4specast.List()])
-            values_batch.append(value.get_list())
-        value_matrix = transpose(values_batch)
+            value_list = value.get_list()
+            if first_list is not None:
+                if len(first_list) != len(value_list):
+                    raise P4ContextError("cannot transpose a matrix of value batches")
+            else:
+                first_list = value_list
+            values_batch.append(value_list)
+        if len(first_list) == 0:
+            return []
         #   in
         #   (* For each batch of values, create a sub-context *)
         #   List.fold_left
@@ -165,10 +174,10 @@ class Context(object):
         #       ctxs_sub @ [ ctx_sub ])
         #     [] values_batch
         ctxs_sub = []
-        for value_batch in value_matrix:
+        for j in range(len(first_list)):
             ctx_sub = self
             for i, var in enumerate(vars):
-                value = value_batch[i]
+                value = values_batch[i][j]
                 ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value)
             ctxs_sub.append(ctx_sub)
         return ctxs_sub
