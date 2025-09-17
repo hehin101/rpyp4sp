@@ -153,7 +153,7 @@ def lists_concat_(ctx, targs, values_input):
         res.extend(list_value.get_list())
     typ = value.typ
     assert isinstance(typ, p4specast.IterT)
-    return objects.ListV(res, typ.typ)
+    return objects.ListV(res[:], typ.typ)
 
 @register_builtin("distinct_")
 def lists_distinct_(ctx, targs, values_input):
@@ -214,7 +214,7 @@ def _extract_set_elems(set_value):
 
 def _wrap_set_elems(elems, set_value_for_types):
     assert isinstance(set_value_for_types, objects.CaseV)
-    lst_value = objects.ListV(elems, set_value_for_types._get_list(0).typ)
+    lst_value = objects.ListV(elems[:], set_value_for_types._get_list(0).typ)
     return objects.CaseV.make1(lst_value, set_value_for_types.mixop, set_value_for_types.typ)
 
 @register_builtin("intersect_set")
@@ -245,7 +245,7 @@ def _set_union_elems(elems_l, elems_r):
                 break
         else:
             res.append(el)
-    return res
+    return res[:]
 
 @register_builtin("union_set")
 def sets_union_set(ctx, targs, values_input):
@@ -428,7 +428,7 @@ def maps_add_map(ctx, targs, values_input):
             assert 0, 'unreachable'
     else:
         res.append(new_pair)
-    list_value = objects.ListV(res, p4specast.IterT(new_pair.typ, p4specast.List()))
+    list_value = objects.ListV(res[:], p4specast.IterT(new_pair.typ, p4specast.List()))
     return objects.CaseV.make1(list_value, map_mixop, p4specast.VarT(map_id, targs))
 
 

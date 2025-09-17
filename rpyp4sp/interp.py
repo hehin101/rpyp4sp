@@ -1036,7 +1036,7 @@ def assign_exp(ctx, exp, value):
          isinstance(value, objects.CaseV):
         notexp = exp.notexp
         exps_inner = notexp.exps
-        values_inner = value._get_full_list()[:]
+        values_inner = value._get_full_list()
         ctx = assign_exps(ctx, exps_inner, values_inner)
         # for value_inner in values_inner:
         #    assert False, "ctx.add_edge(ctx, value_inner, value, dep.edges.Assign)"
@@ -1763,7 +1763,7 @@ class __extend__(p4specast.CaseE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(CaseV (mixop, values) $$$ { vid; typ })
-        value_res = objects.CaseV.make(values[:], mixop, self.typ)
+        value_res = objects.CaseV.make(values, mixop, self.typ)
         # in
         # Ctx.add_node ctx value_res;
         # if List.length values = 0 then

@@ -326,6 +326,8 @@ class CaseV(BaseV):
 
 
 class TupleV(BaseV):
+    _immutable_fields_ = ['elements[*]']
+
     def __init__(self, elements, typ=None, vid=-1):
         self.elements = elements # type: list[BaseV]
         self.vid = vid # type: int
@@ -392,6 +394,8 @@ class OptV(BaseV):
         return OptV(value, typ, vid)
 
 class ListV(BaseV):
+    _immutable_fields_ = ['elements[*]']
+
     def __init__(self, elements, typ=None, vid=-1):
         self.elements = elements # type: list[BaseV]
         self.vid = vid # type: int
