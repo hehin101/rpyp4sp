@@ -9,17 +9,17 @@ def test_venv_simple():
     id1 = p4specast.Id('id1', None)
     value1 = objects.TextV('abc')
     ctx2 = ctx.add_value_local(id1, p4specast.IterList.EMPTY, value1)
-    assert ctx2.find_value_local(id1) is value1
+    assert ctx2.find_value_local(id1, p4specast.IterList.EMPTY) is value1
     id2 = p4specast.Id('id2', None)
     value2 = objects.TextV('def')
     ctx3 = ctx2.add_value_local(id2, p4specast.IterList.EMPTY, value2)
-    assert ctx3.find_value_local(id1) is value1
-    assert ctx3.find_value_local(id2) is value2
+    assert ctx3.find_value_local(id1, p4specast.IterList.EMPTY) is value1
+    assert ctx3.find_value_local(id2, p4specast.IterList.EMPTY) is value2
 
     value3 = objects.TextV('ghi')
     ctx4 = ctx3.add_value_local(id2, p4specast.IterList.EMPTY, value3)
-    assert ctx4.find_value_local(id1) is value1
-    assert ctx4.find_value_local(id2) is value3
+    assert ctx4.find_value_local(id1, p4specast.IterList.EMPTY) is value1
+    assert ctx4.find_value_local(id2, p4specast.IterList.EMPTY) is value3
 
 def test_venv_dict():
     d_empty = VenvDict()
@@ -40,6 +40,7 @@ def test_venv_dict():
     assert repr(d4._keys) == "context.VENV_KEYS_ROOT.add_key('a', '')"
     assert str(d4._keys) == "<keys 'a'>"
 
+<<<<<<< HEAD
     value4 = objects.TextV('jkl')
     d5 = d4.set("b", "", value4)
     assert d5.get("a", "") is value3
@@ -86,3 +87,5 @@ def test_context():
     with pytest.raises(P4ContextError):
         ctx5.find_value_local(id2, p4specast.IterList.EMPTY)
 
+=======
+>>>>>>> c8928b5 (venv dict)
