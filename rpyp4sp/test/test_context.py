@@ -86,23 +86,3 @@ def test_context():
     with pytest.raises(P4ContextError):
         ctx5.find_value_local(id2, p4specast.IterList.EMPTY)
 
-=======
->>>>>>> c8928b5 (venv dict)
-=======
->>>>>>> cc35ffd (fixed venv repr for multiple keys)
-=======
-
-@pytest.mark.skip
-def test_context():
-    # copy_and_change
-
-    # localize
-
-    # fidn_value_local
-
-    # bound_value_local
-
-    # add_value_local
-
-    pass
->>>>>>> 2f7bd28 (Add a new test method (skipped for now))
