@@ -8,18 +8,6 @@ class GlobalContext(object):
         self.fenv = {}
 
 
-def iterlist_to_key(l):
-    if not l:
-        return ''
-    key = []
-    for iter in l:
-        if isinstance(iter, p4specast.Opt):
-            key.append('?')
-        else:
-            assert isinstance(iter, p4specast.List)
-            key.append('*')
-    return ''.join(key)
-
 class EnvKeys(object):
     def __init__(self, keys):
         self.keys = keys # type: dict[tuple[str, str], int]
@@ -205,9 +193,9 @@ class Context(object):
         # type: (EnvKeys, list[objects.BaseV]) -> Context
         return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
 
-    def find_value_local(self, id, iterlist, vare_cache=None):
+    def find_value_local(self, id, iterlist=p4specast.IterList.EMPTY, vare_cache=None):
         # type: (p4specast.Id, list[p4specast.Iter], p4specast.VarE | None) -> objects.BaseV
-        var_iter = iterlist_to_key(iterlist)
+        var_iter = iterlist.to_key()
         if vare_cache is not None and vare_cache._ctx_keys is self.venv_keys:
             pos = vare_cache._ctx_index
         else:
@@ -221,7 +209,7 @@ class Context(object):
 
     def bound_value_local(self, id, iterlist):
         # type: (p4specast.Id, list[p4specast.Iter]) -> bool
-        pos = self.venv_keys.get_pos(id.value, iterlist_to_key(iterlist))
+        pos = self.venv_keys.get_pos(id.value, iterlist.to_key())
         return pos >= 0
 
     # TODO: why Id and not Tparam?
@@ -241,7 +229,7 @@ class Context(object):
         if vare_cache is not None and vare_cache._ctx_keys_add is self.venv_keys:
             venv_keys = vare_cache._ctx_keys_next
             return self.copy_and_change_append_venv(value, venv_keys)
-        var_iter = iterlist_to_key(iterlist)
+        var_iter = iterlist.to_key()
         pos = self.venv_keys.get_pos(id.value, var_iter)
         if pos < 0:
             venv_keys = self.venv_keys.add_key(id.value, var_iter)
@@ -287,7 +275,7 @@ class Context(object):
         #       vars
         values = []
         for var in vars:
-            value = self.find_value_local(var.id, var.iter + [p4specast.Opt()])
+            value = self.find_value_local(var.id, var.iter.append_opt())
             assert isinstance(value, objects.OptV)
             values.append(value.value)
         # check whether they are all None, all Some, or mixed
@@ -333,7 +321,7 @@ class Context(object):
         assert vars
         first_list = None
         for var in vars:
-            value = self.find_value_local(var.id, var.iter + [p4specast.List()])
+            value = self.find_value_local(var.id, var.iter.append_list())
             value_list = value.get_list()
             if first_list is not None:
                 if len(first_list) != len(value_list):

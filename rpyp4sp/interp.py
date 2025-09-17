@@ -467,7 +467,7 @@ def _discriminate_bound_binding_variables(ctx, vars):
     vars_bound = []
     vars_binding = []
     for var in vars:
-        if ctx.bound_value_local(var.id, var.iter + [p4specast.List()]):
+        if ctx.bound_value_local(var.id, var.iter.append_list()):
             vars_bound.append(var)
         else:
             vars_binding.append(var)
@@ -556,7 +556,7 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
         typ_binding = var_binding.typ
         iters_binding = var_binding.iter
         value_binding = objects.ListV(values_binding_item, typ_binding)
-        ctx = ctx.add_value_local(id_binding, iters_binding + [p4specast.List()], value_binding)
+        ctx = ctx.add_value_local(id_binding, iters_binding.append_list(), value_binding)
     return ctx
 
 
@@ -798,7 +798,7 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
         typ_binding = var_binding.typ
         iters_binding = var_binding.iter
         value_binding = objects.ListV(values_binding, typ_binding)
-        ctx = ctx.add_value_local(id_binding, iters_binding + [p4specast.List()], value_binding)
+        ctx = ctx.add_value_local(id_binding, iters_binding.append_list(), value_binding)
     return ctx
 
 
@@ -1008,7 +1008,7 @@ def assign_exp(ctx, exp, value):
     if isinstance(exp, p4specast.VarE):
     # | VarE id, _ ->
     #     let ctx = Ctx.add_value Local ctx (id, []) value in
-        ctx = ctx.add_value_local(exp.id, [], value, vare_cache=exp)
+        ctx = ctx.add_value_local(exp.id, p4specast.IterList.EMPTY, value, vare_cache=exp)
         return ctx
     #     ctx
     # | TupleE exps_inner, TupleV values_inner ->
@@ -1108,7 +1108,7 @@ def assign_exp(ctx, exp, value):
             for var in exp.varlist:
                 typ = p4specast.IterT(var.typ, p4specast.Opt())
                 value_sub = objects.OptV(None, typ)
-                ctx = ctx.add_value_local(var.id, var.iter + [p4specast.Opt()], value_sub)
+                ctx = ctx.add_value_local(var.id, var.iter.append_opt(), value_sub)
             return ctx
     # | IterE (exp, (Opt, vars)), OptV (Some value) ->
         else:
@@ -1132,7 +1132,7 @@ def assign_exp(ctx, exp, value):
                 value_sub_inner = ctx.find_value_local(var.id, var.iter)
                 typ = p4specast.IterT(var.typ, p4specast.Opt())
                 value_sub = objects.OptV(value_sub_inner, typ)
-                ctx = ctx.add_value_local(var.id, var.iter + [p4specast.Opt()], value_sub)
+                ctx = ctx.add_value_local(var.id, var.iter.append_opt(), value_sub)
             return ctx
     # | IterE (exp, (List, vars)), ListV values ->
     elif (isinstance(exp, p4specast.IterE) and
@@ -1178,7 +1178,7 @@ def assign_exp(ctx, exp, value):
             values = [ctx_elem.find_value_local(var.id, var.iter) for ctx_elem in ctxs]
             # create a ListV value for these
             value_sub = objects.ListV(values, var.typ)
-            ctx = ctx.add_value_local(var.id, var.iter + [p4specast.List()], value_sub)
+            ctx = ctx.add_value_local(var.id, var.iter.append_list(), value_sub)
         return ctx
 
     #import pdb;pdb.set_trace()
@@ -1326,7 +1326,7 @@ class __extend__(p4specast.TextE):
 class __extend__(p4specast.VarE):
     def eval_exp(self, ctx):
         # let value = Ctx.find_value Local ctx (id, []) in
-        value = ctx.find_value_local(self.id, [], vare_cache=self)
+        value = ctx.find_value_local(self.id, vare_cache=self)
         return ctx, value
 
 class __extend__(p4specast.OptE):

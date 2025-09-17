@@ -42,18 +42,18 @@ def test_venv_simple():
     ctx = Context.make0('dummy')
     id1 = p4specast.Id('id1', None)
     value1 = objects.TextV('abc')
-    ctx2 = ctx.add_value_local(id1, [], value1)
-    assert ctx2.find_value_local(id1, []) is value1
+    ctx2 = ctx.add_value_local(id1, p4specast.IterList.EMPTY, value1)
+    assert ctx2.find_value_local(id1) is value1
     id2 = p4specast.Id('id2', None)
     value2 = objects.TextV('def')
-    ctx3 = ctx2.add_value_local(id2, [], value2)
-    assert ctx3.find_value_local(id1, []) is value1
-    assert ctx3.find_value_local(id2, []) is value2
+    ctx3 = ctx2.add_value_local(id2, p4specast.IterList.EMPTY, value2)
+    assert ctx3.find_value_local(id1) is value1
+    assert ctx3.find_value_local(id2) is value2
 
     value3 = objects.TextV('ghi')
-    ctx4 = ctx3.add_value_local(id2, [], value3)
-    assert ctx4.find_value_local(id1, []) is value1
-    assert ctx4.find_value_local(id2, []) is value3
+    ctx4 = ctx3.add_value_local(id2, p4specast.IterList.EMPTY, value3)
+    assert ctx4.find_value_local(id1) is value1
+    assert ctx4.find_value_local(id2) is value3
 
 def test_tdenv_dict():
     d_empty = TDenvDict()
@@ -120,28 +120,28 @@ def test_venv_vare_caching(monkeypatch):
     id1 = p4specast.Id('id1', None)
     value1 = objects.TextV("abc")
     vare = p4specast.VarE(id1)
-    ctx = Context.make0('dummy').add_value_local(id1, [], value1)
-    value2 = ctx.find_value_local(id1, [], vare_cache=vare)
+    ctx = Context.make0('dummy').add_value_local(id1, p4specast.IterList.EMPTY, value1)
+    value2 = ctx.find_value_local(id1, p4specast.IterList.EMPTY, vare_cache=vare)
     assert value1 is value2
     assert vare._ctx_keys is ctx.venv_keys
     assert vare._ctx_index == 0
     monkeypatch.setattr(type(ctx.venv_keys), 'get_pos', None)
-    value2 = ctx.find_value_local(id1, [], vare_cache=vare)
+    value2 = ctx.find_value_local(id1, p4specast.IterList.EMPTY, vare_cache=vare)
     assert value1 is value2
 
 def test_venv_vare_caching_add(monkeypatch):
     id1 = p4specast.Id('id1', None)
     value1 = objects.TextV("abc")
     vare = p4specast.VarE(id1)
-    ctx = Context.make0('dummy').add_value_local(id1, [], value1, vare_cache=vare)
+    ctx = Context.make0('dummy').add_value_local(id1, p4specast.IterList.EMPTY, value1, vare_cache=vare)
     assert vare._ctx_keys_add is ENV_KEYS_ROOT
     assert vare._ctx_keys_next is ctx.venv_keys
-    value2 = ctx.find_value_local(id1, [], vare_cache=vare)
+    value2 = ctx.find_value_local(id1, p4specast.IterList.EMPTY, vare_cache=vare)
     assert value1 is value2
     monkeypatch.setattr(type(ctx.venv_keys), 'get_pos', None)
     monkeypatch.setattr(type(ctx.venv_keys), 'add_key', None)
-    ctx2 = Context.make0('dummy').add_value_local(id1, [], value1, vare_cache=vare)
-    value2 = ctx2.find_value_local(id1, [], vare_cache=vare)
+    ctx2 = Context.make0('dummy').add_value_local(id1, p4specast.IterList.EMPTY, value1, vare_cache=vare)
+    value2 = ctx2.find_value_local(id1, p4specast.IterList.EMPTY, vare_cache=vare)
     assert value1 is value2
 
 def test_context():
@@ -152,33 +152,33 @@ def test_context():
     value2 = objects.TextV("def")
 
     # add_value_local
-    ctx1 = empty_ctx.add_value_local(id1, [], value1)
-    ctx2 = ctx1.add_value_local(id2, [], value2)
-    ctx3 = empty_ctx.add_value_local(id2, [], value2)
+    ctx1 = empty_ctx.add_value_local(id1, p4specast.IterList.EMPTY, value1)
+    ctx2 = ctx1.add_value_local(id2, p4specast.IterList.EMPTY, value2)
+    ctx3 = empty_ctx.add_value_local(id2, p4specast.IterList.EMPTY, value2)
 
     # bound_value_local
-    assert ctx1.bound_value_local(id1, [])
-    assert ctx2.bound_value_local(id1, [])
-    assert ctx2.bound_value_local(id2, [])
-    assert ctx3.bound_value_local(id2, [])
+    assert ctx1.bound_value_local(id1, p4specast.IterList.EMPTY)
+    assert ctx2.bound_value_local(id1, p4specast.IterList.EMPTY)
+    assert ctx2.bound_value_local(id2, p4specast.IterList.EMPTY)
+    assert ctx3.bound_value_local(id2, p4specast.IterList.EMPTY)
 
     # find_value_local
-    assert ctx1.find_value_local(id1, []) is value1
-    assert ctx2.find_value_local(id1, []) is value1
-    assert ctx2.find_value_local(id2, []) is value2
-    assert ctx3.find_value_local(id2, []) is value2
+    assert ctx1.find_value_local(id1, p4specast.IterList.EMPTY) is value1
+    assert ctx2.find_value_local(id1, p4specast.IterList.EMPTY) is value1
+    assert ctx2.find_value_local(id2, p4specast.IterList.EMPTY) is value2
+    assert ctx3.find_value_local(id2, p4specast.IterList.EMPTY) is value2
 
 
     # copy_and_change
     ctx4 = ctx1.copy_and_change(venv_keys=ctx3.venv_keys, venv_values=ctx3._get_full_list())
-    assert ctx4.find_value_local(id2, []) is value2
+    assert ctx4.find_value_local(id2, p4specast.IterList.EMPTY) is value2
     with pytest.raises(P4ContextError):
-        ctx4.find_value_local(id1, [])
+        ctx4.find_value_local(id1, p4specast.IterList.EMPTY)
 
     # localize
     ctx5 = ctx2.localize()
     with pytest.raises(P4ContextError):
-        ctx5.find_value_local(id1, [])
+        ctx5.find_value_local(id1, p4specast.IterList.EMPTY)
     with pytest.raises(P4ContextError):
-        ctx5.find_value_local(id2, [])
+        ctx5.find_value_local(id2, p4specast.IterList.EMPTY)
 
