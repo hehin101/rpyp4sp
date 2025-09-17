@@ -1158,7 +1158,7 @@ def assign_exp(ctx, exp, value):
         ctxs = []
         values = value.elements
         for value_elem in values:
-            ctx_local = ctx.localize_venv(venv={})
+            ctx_local = ctx.localize_venv(venv=context.VenvDict())
             ctx_local = assign_exp(ctx_local, exp.exp, value_elem)
             ctxs.append(ctx_local)
     #     in

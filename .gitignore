@@ -1,7 +1,10 @@
+.cache
+.hypothesis/
+.vscode/
+
 /pypy/
 /pypy_binary/
-.cache
 *.pyc
-ast.json
 
-.vscode/
+ast.json
+targetrpyp4sp-c
