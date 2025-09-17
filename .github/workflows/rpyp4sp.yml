@@ -22,15 +22,33 @@ jobs:
         with:
           repository: kaist-plrg/p4-spectec
           path: p4-spectec
+          submodules: recursive
+          fetch-depth: 1
 
-      - name: install opam and dependencies
+      - name: Set up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.1.0
+          dune-cache: true
+
+      - name: Install system dependencies
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          make install-opam-dependencies
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Install OCaml dependencies
+        run: |
+          opam update
+          opam install dune bignum menhir core core_unix bisect_ppx yojson ppx_deriving_yojson
+          opam install . --deps-only --with-test
 
       - name: build p4-spectec
         run: |
           cd p4-spectec
-          make build-spec
+          cd p4spec && opam exec -- dune build --profile=release bin/main.exe
+          cd ../
+          ln -f p4spec/_build/default/bin/main.exe ./p4spectec
           cd ..
 
       - name: make ast.json
@@ -57,3 +75,14 @@ jobs:
       - name: translate binary
         run: |
           PYTHONPATH=. _pypy_binary/bin/python pypy/rpython/bin/rpython rpyp4sp/targetrpyp4sp.py
+
+      - name: make p4 json files
+        run: |
+          cd p4-spectec
+          for f in p4c/testdata/p4_16_samples/*.p4; do ./p4spectec p4-program-value-json -i p4c/p4include -p "$f" > "${f}.json"; done
+          cd ..
+
+      - name: run p4 with targetrpyp4sp-c
+        run: |
+          ./targetrpyp4sp-c run-p4-json p4-spectec/p4c/testdata/p4_16_samples/*.p4.json | tee out
+          grep "PASSED: 11[0-9][0-9]" out

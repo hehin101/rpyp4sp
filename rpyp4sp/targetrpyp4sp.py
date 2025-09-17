@@ -221,7 +221,7 @@ def command_bench_p4(argv):
     t2 = time.time()
     fns = argv[1:]
     if not fns:
-        print("usage: %s bench-p4-json [-n/--repetitions N] [-c/--coment COMMENT] fn1, fn2, fn3, ...")
+        print("usage: %s bench-p4-json [-n/--repetitions N] [-c/--comment COMMENT] fn1, fn2, fn3, ...")
         return -1
     print_csv_line("filename", "action", "iteration", "time", "outcome", "comment", "epoch", "executable")
     print_csv_line("ast.json", "load", "0", str(t2 - t1), "ok", comment, str(t2), argv[0])
