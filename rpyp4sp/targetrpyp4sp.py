@@ -8,6 +8,7 @@ from rpython.rlib import objectmodel
 from rpyp4sp import p4specast, objects, builtin, context, integers, rpyjson, interp
 from rpyp4sp.error import P4Error
 from rpyp4sp.test.test_interp import make_context
+from rpython.rlib import rsignal
 
 @objectmodel.specialize.arg(4)
 def parse_args(argv, shortname, longname="", want_arg=True, many=False):
@@ -226,6 +227,11 @@ def command_bench_p4(argv):
     print_csv_line("filename", "action", "iteration", "time", "outcome", "comment", "epoch", "executable")
     print_csv_line("ast.json", "load", "0", str(t2 - t1), "ok", comment, str(t2), argv[0])
     for fn in fns:
+        p = rsignal.pypysig_getaddr_occurred()
+        if p.c_value < 0:
+            # ctrl-c was pressed
+            os.write(2, "ctrl-c pressed\n")
+            return 1
         t1 = time.time()
         with open(fn, 'r') as f:
             content = f.readline()
@@ -259,6 +265,9 @@ def main(argv):
     if len(argv) < 3:
         print("usage: %s run-test-jsonl/run-p4-json/bench-p4-json <fns>" % argv[0])
         return 1
+    if objectmodel.we_are_translated():
+        rsignal.pypysig_setflag(rsignal.SIGINT)
+
     # load test cases from line-based json file
     # check if file exists
     cmd = argv[1]
