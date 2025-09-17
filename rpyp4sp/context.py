@@ -43,10 +43,12 @@ class VenvKeys(object):
         self.keys = keys # type: dict[tuple[str, str], int]
         self.next_venv_keys = {} # type: dict[tuple[str, str], VenvKeys]
 
+    @jit.elidable
     def get_pos(self, var_name, var_iter):
         # type: (str, str) -> int
         return self.keys.get((var_name, var_iter), -1)
 
+    @jit.elidable
     def add_key(self, var_name, var_iter):
         # type: (str, str) -> VenvKeys
         key = (var_name, var_iter)
@@ -85,16 +87,17 @@ class VenvDict(object):
 
     def get(self, var_name, var_iter):
         # type: (str, str) -> objects.BaseV
-        pos = self._keys.get_pos(var_name, var_iter)
+        pos = jit.promote(self._keys).get_pos(var_name, var_iter)
         if pos < 0:
             raise P4ContextError('var_name %s%s does not exist' % (var_name, var_iter))
         return self._values[pos]
 
     def set(self, var_name, var_iter, value):
         # type: (str, str, objects.BaseV) -> VenvDict
-        pos = self._keys.get_pos(var_name, var_iter)
+        pos = jit.promote(self._keys).get_pos(var_name, var_iter)
+        jit.promote(len(self._values))
         if pos < 0:
-            keys = self._keys.add_key(var_name, var_iter)
+            keys = jit.promote(self._keys).add_key(var_name, var_iter)
             values = self._values + [value]
             return VenvDict(keys, values)
         else:
@@ -145,13 +148,14 @@ class Context(object):
     def localize_venv(self, venv):
         return self.copy_and_change(venv=venv)
 
-    # TODO: 'iterlist' is list of what?
     def find_value_local(self, id, iterlist):
         # type: (p4specast.Id, list) -> objects.BaseV
+        jit.promote(id)
         return self.venv.get(id.value, iterlist_to_key(iterlist))
 
     def bound_value_local(self, id, iterlist):
         # type: (p4specast.Id, list) -> bool
+        jit.promote(id)
         return self.venv.has_key(id.value, iterlist_to_key(iterlist))
 
     def find_typdef_local(self, id):
