@@ -76,7 +76,7 @@ def define_enum(basename, *names):
             content = content.value_string()
             for name, cls in unrolling_tups:
                 if name == content:
-                    return cls()
+                    return cls.INSTANCE
             assert 0
 
         def __repr__(self):
@@ -87,6 +87,7 @@ def define_enum(basename, *names):
         class Sub(Base):
             pass
         Sub.__name__ = name
+        Sub.INSTANCE = Sub()
         subs.append(Sub)
     unrolling_tups = [(names[i], cls) for i, cls in enumerate(subs)]
     return [Base] + subs
@@ -559,12 +560,17 @@ class BoolE(Exp):
 class NumE(Exp):
     def __init__(self, value, what, typ=None):
         self.value = value # type: integers.Integer
-        self.what = what # type: str
+        self.what = what # type: IntType
         self.typ = typ # type: Type
 
     @staticmethod
     def fromjson(content):
         what = content.get_list_item(1).get_list_item(0).value_string()
+        if what == 'Int':
+            what = IntT.INSTANCE
+        else:
+            assert what == 'Nat'
+            what = NatT.INSTANCE
         return NumE.fromstr(content.get_list_item(1).get_list_item(1).value_string(), what)
 
     @staticmethod
@@ -1234,7 +1240,7 @@ class BoolT(Type):
 
 class NumT(Type):
     def __init__(self, typ):
-        self.typ = typ
+        self.typ = typ # type: NumTyp
 
     def tostring(self):
         # | NumT numtyp -> Num.string_of_typ numtyp

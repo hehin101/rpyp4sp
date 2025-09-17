@@ -131,8 +131,8 @@ class BoolV(BaseV):
 class NumV(BaseV):
     def __init__(self, value, what, vid=-1, typ=None):
         self.value = value # type: integers.Integer
-        assert what in ('Int', 'Nat')
-        self.what = what # type: str
+        assert isinstance(what, p4specast.NumTyp)
+        self.what = what # type: p4specast.NumTyp
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
 
@@ -161,7 +161,12 @@ class NumV(BaseV):
     @staticmethod
     def fromjson(content):
         inner = content.get_list_item(1)
-        what = inner.get_list_item(0).value_string() # 'Int' or 'Nat'
+        what = inner.get_list_item(0).value_string()
+        if what == 'Int':
+            what = p4specast.IntT.INSTANCE
+        else:
+            assert what == 'Nat'
+            what = p4specast.NatT.INSTANCE
         value = inner.get_list_item(1).value_string()
         return NumV.fromstr(value, what)
 

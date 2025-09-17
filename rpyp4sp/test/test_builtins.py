@@ -2,11 +2,11 @@ import pytest
 from rpyp4sp import p4specast, objects, builtin, context, integers
 
 def test_int_to_text():
-    res = builtin.texts_int_to_text(None, [], [objects.NumV.fromstr('1234', 'Int', typ=p4specast.NumT(p4specast.IntT()))])
+    res = builtin.texts_int_to_text(None, [], [objects.NumV.fromstr('1234', p4specast.IntT.INSTANCE, typ=p4specast.NumT(p4specast.IntT()))])
     assert res.eq(objects.TextV('1234'))
 
 def mkint(val):
-    return objects.NumV.fromstr(str(val), 'Int', typ=p4specast.NumT(p4specast.IntT()))
+    return objects.NumV.fromstr(str(val), p4specast.IntT.INSTANCE, typ=p4specast.NumT(p4specast.IntT()))
 
 def test_shl():
     res = builtin.numerics_shl(None, [], [mkint(1234), mkint(4)])
@@ -144,8 +144,8 @@ def test_lists_concat():
     assert repr(res.typ) == "p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2a-runtime-domain.watsup', 10, 7, 10)), []), p4specast.List())"
 
 def test_list_assoc():
-    input_values = [objects.TextV('input_port', 576, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.ListV([objects.TupleV([objects.TextV('input_port', 161, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('FBitT', 'spec/2c1-runtime-type.watsup', 38, 4, 9)], []]), [objects.NumV.fromstr('32', 'Nat', 5990, p4specast.NumT(p4specast.NatT()))], 5991, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 35, 7, 13)), []))], 47582, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])])), objects.TupleV([objects.TextV('packet_length', 167, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('FBitT', 'spec/2c1-runtime-type.watsup', 38, 4, 9)], []]), [objects.NumV.fromstr('32', 'Nat', 6035, p4specast.NumT(p4specast.NatT()))], 6036, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 35, 7, 13)), []))], 47583, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])])), objects.TupleV([objects.TextV('output_action', 173, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('EnumT', 'spec/2c1-runtime-type.watsup', 61, 4, 9)], [], []]), [objects.TextV('ubpf_action', 152, p4specast.VarT(p4specast.Id('id', p4specast.NO_REGION), [])), objects.ListV([objects.TextV('ABORT', 153, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.TextV('DROP', 154, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.TextV('PASS', 155, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.TextV('REDIRECT', 156, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), []))], 5641, p4specast.IterT(p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.List()))], 5642, p4specast.VarT(p4specast.Id('datatyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 59, 7, 14)), []))], 47584, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])])), objects.TupleV([objects.TextV('output_port', 178, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('FBitT', 'spec/2c1-runtime-type.watsup', 38, 4, 9)], []]), [objects.NumV.fromstr('32', 'Nat', 6122, p4specast.NumT(p4specast.NatT()))], 6123, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 35, 7, 13)), []))], 47585, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])])), objects.TupleV([objects.TextV('clone', 184, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('BoolT', 'spec/2c1-runtime-type.watsup', 33, 4, 9)]]), [], 6133, p4specast.VarT(p4specast.Id('primtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 28, 7, 14)), []))], 47586, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])])), objects.TupleV([objects.TextV('clone_port', 187, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('FBitT', 'spec/2c1-runtime-type.watsup', 38, 4, 9)], []]), [objects.NumV.fromstr('32', 'Nat', 6177, p4specast.NumT(p4specast.NatT()))], 6178, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 35, 7, 13)), []))], 47587, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])]))], 47588, p4specast.IterT(p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])]), p4specast.List()))]
-    expected = objects.OptV(objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('FBitT', 'spec/2c1-runtime-type.watsup', 38, 4, 9)], []]), [objects.NumV.fromstr('32', 'Nat', 5990, p4specast.NumT(p4specast.NatT()))], 5991, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 35, 7, 13)), [])), 47589, p4specast.IterT(p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/4e-typing-expr.watsup', 787, 30, 33)), []), p4specast.Opt()))
+    input_values = [objects.TextV('input_port', 576, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.ListV([objects.TupleV([objects.TextV('input_port', 161, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('FBitT', 'spec/2c1-runtime-type.watsup', 38, 4, 9)], []]), [objects.NumV.fromstr('32', p4specast.NatT(), 5990, p4specast.NumT(p4specast.NatT()))], 5991, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 35, 7, 13)), []))], 47582, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])])), objects.TupleV([objects.TextV('packet_length', 167, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('FBitT', 'spec/2c1-runtime-type.watsup', 38, 4, 9)], []]), [objects.NumV.fromstr('32', p4specast.NatT(), 6035, p4specast.NumT(p4specast.NatT()))], 6036, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 35, 7, 13)), []))], 47583, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])])), objects.TupleV([objects.TextV('output_action', 173, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('EnumT', 'spec/2c1-runtime-type.watsup', 61, 4, 9)], [], []]), [objects.TextV('ubpf_action', 152, p4specast.VarT(p4specast.Id('id', p4specast.NO_REGION), [])), objects.ListV([objects.TextV('ABORT', 153, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.TextV('DROP', 154, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.TextV('PASS', 155, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.TextV('REDIRECT', 156, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), []))], 5641, p4specast.IterT(p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.List()))], 5642, p4specast.VarT(p4specast.Id('datatyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 59, 7, 14)), []))], 47584, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])])), objects.TupleV([objects.TextV('output_port', 178, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('FBitT', 'spec/2c1-runtime-type.watsup', 38, 4, 9)], []]), [objects.NumV.fromstr('32', p4specast.NatT(), 6122, p4specast.NumT(p4specast.NatT()))], 6123, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 35, 7, 13)), []))], 47585, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])])), objects.TupleV([objects.TextV('clone', 184, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('BoolT', 'spec/2c1-runtime-type.watsup', 33, 4, 9)]]), [], 6133, p4specast.VarT(p4specast.Id('primtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 28, 7, 14)), []))], 47586, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])])), objects.TupleV([objects.TextV('clone_port', 187, p4specast.VarT(p4specast.Id('member', p4specast.NO_REGION), [])), objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('FBitT', 'spec/2c1-runtime-type.watsup', 38, 4, 9)], []]), [objects.NumV.fromstr('32', p4specast.NatT(), 6177, p4specast.NumT(p4specast.NatT()))], 6178, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 35, 7, 13)), []))], 47587, p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])]))], 47588, p4specast.IterT(p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/1a-syntax-el.watsup', 35, 7, 13)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 5, 7, 10)), [])]), p4specast.List()))]
+    expected = objects.OptV(objects.CaseV(p4specast.MixOp([[p4specast.AtomT.line_span('FBitT', 'spec/2c1-runtime-type.watsup', 38, 4, 9)], []]), [objects.NumV.fromstr('32', p4specast.NatT(), 5990, p4specast.NumT(p4specast.NatT()))], 5991, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 35, 7, 13)), [])), 47589, p4specast.IterT(p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/4e-typing-expr.watsup', 787, 30, 33)), []), p4specast.Opt()))
     targs = [p4specast.VarT(p4specast.Id('member', p4specast.Region.line_span('spec/4e-typing-expr.watsup', 787, 22, 28)), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region.line_span('spec/4e-typing-expr.watsup', 787, 30, 33)), [])]
     res = builtin.lists_assoc_(None, targs, input_values)
     assert res.eq(expected)
@@ -285,7 +285,7 @@ def test_find_maps():
 def test_lists_partition():
     # Test partitioning an empty list
     empty_list = objects.ListV([], typ=p4specast.IterT(p4specast.TextT(), p4specast.List()))
-    len_val = objects.NumV.fromstr('0', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    len_val = objects.NumV.fromstr('0', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     res = builtin.lists_partition_(None, [p4specast.TextT()], [empty_list, len_val])
     assert isinstance(res, objects.TupleV)
     assert len(res.elements) == 2
@@ -294,7 +294,7 @@ def test_lists_partition():
 
     # Test partitioning at index 0 (all elements go to right)
     test_list = textlist("a", "b", "c")
-    len_val = objects.NumV.fromstr('0', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    len_val = objects.NumV.fromstr('0', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     res = builtin.lists_partition_(None, [p4specast.TextT()], [test_list, len_val])
     assert isinstance(res, objects.TupleV)
     assert len(res.elements) == 2
@@ -304,7 +304,7 @@ def test_lists_partition():
 
     # Test partitioning at index 2 (first 2 elements go to left, rest to right)
     test_list = textlist("a", "b", "c", "d")
-    len_val = objects.NumV.fromstr('2', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    len_val = objects.NumV.fromstr('2', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     res = builtin.lists_partition_(None, [p4specast.TextT()], [test_list, len_val])
     assert isinstance(res, objects.TupleV)
     assert len(res.elements) == 2
@@ -314,7 +314,7 @@ def test_lists_partition():
 
     # Test partitioning with length >= list length (all elements go to left)
     test_list = textlist("x", "y")
-    len_val = objects.NumV.fromstr('5', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    len_val = objects.NumV.fromstr('5', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     res = builtin.lists_partition_(None, [p4specast.TextT()], [test_list, len_val])
     assert isinstance(res, objects.TupleV)
     assert len(res.elements) == 2
@@ -328,7 +328,7 @@ def make_text(s):
 def make_nat_list(*values):
     nat_values = []
     for val in values:
-        nat_values.append(objects.NumV.fromstr(str(val), 'Nat', typ=p4specast.NumT(p4specast.NatT())))
+        nat_values.append(objects.NumV.fromstr(str(val), p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT())))
     return objects.ListV(nat_values, typ=p4specast.IterT(p4specast.NumT(p4specast.NatT()), p4specast.List()))
 
 def test_texts_strip_suffix():
@@ -356,36 +356,36 @@ def test_texts_strip_prefix():
 
 def test_nats_sum():
     res = builtin.nats_sum(None, [], [make_nat_list()])
-    expected = objects.NumV.fromstr('0', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    expected = objects.NumV.fromstr('0', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     assert res.eq(expected)
 
     res = builtin.nats_sum(None, [], [make_nat_list(42)])
-    expected = objects.NumV.fromstr('42', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    expected = objects.NumV.fromstr('42', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     assert res.eq(expected)
 
     res = builtin.nats_sum(None, [], [make_nat_list(1, 2, 3, 4, 5)])
-    expected = objects.NumV.fromstr('15', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    expected = objects.NumV.fromstr('15', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     assert res.eq(expected)
 
     res = builtin.nats_sum(None, [], [make_nat_list(1000000, 2000000, 3000000)])
-    expected = objects.NumV.fromstr('6000000', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    expected = objects.NumV.fromstr('6000000', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     assert res.eq(expected)
 
 def test_nats_max():
     res = builtin.nats_max(None, [], [make_nat_list(42)])
-    expected = objects.NumV.fromstr('42', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    expected = objects.NumV.fromstr('42', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     assert res.eq(expected)
 
     res = builtin.nats_max(None, [], [make_nat_list(1, 5, 3, 2, 4)])
-    expected = objects.NumV.fromstr('5', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    expected = objects.NumV.fromstr('5', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     assert res.eq(expected)
 
     res = builtin.nats_max(None, [], [make_nat_list(7, 3, 7, 1, 7)])
-    expected = objects.NumV.fromstr('7', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    expected = objects.NumV.fromstr('7', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     assert res.eq(expected)
 
     res = builtin.nats_max(None, [], [make_nat_list(1000000, 5000000, 2000000)])
-    expected = objects.NumV.fromstr('5000000', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    expected = objects.NumV.fromstr('5000000', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     assert res.eq(expected)
 
     with pytest.raises(builtin.P4BuiltinError):
@@ -393,19 +393,19 @@ def test_nats_max():
 
 def test_nats_min():
     res = builtin.nats_min(None, [], [make_nat_list(42)])
-    expected = objects.NumV.fromstr('42', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    expected = objects.NumV.fromstr('42', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     assert res.eq(expected)
 
     res = builtin.nats_min(None, [], [make_nat_list(5, 1, 3, 2, 4)])
-    expected = objects.NumV.fromstr('1', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    expected = objects.NumV.fromstr('1', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     assert res.eq(expected)
 
     res = builtin.nats_min(None, [], [make_nat_list(7, 2, 5, 2, 9)])
-    expected = objects.NumV.fromstr('2', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    expected = objects.NumV.fromstr('2', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     assert res.eq(expected)
 
     res = builtin.nats_min(None, [], [make_nat_list(5000000, 1000000, 2000000)])
-    expected = objects.NumV.fromstr('1000000', 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    expected = objects.NumV.fromstr('1000000', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     assert res.eq(expected)
 
     with pytest.raises(builtin.P4BuiltinError):

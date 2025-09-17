@@ -44,7 +44,7 @@ def nats_sum(ctx, targs, values_input):
         sum_result = sum_result.add(value.get_num())
 
     # value_of_bigint ctx sum
-    return objects.NumV(sum_result, 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    return objects.NumV(sum_result, p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
 
 @register_builtin("max")
 def nats_max(ctx, targs, values_input):
@@ -59,7 +59,7 @@ def nats_max(ctx, targs, values_input):
         current = value.get_num()
         if current.gt(max_result):
             max_result = current
-    return objects.NumV(max_result, 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    return objects.NumV(max_result, p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
 
 @register_builtin("min")
 def nats_min(ctx, targs, values_input):
@@ -74,7 +74,7 @@ def nats_min(ctx, targs, values_input):
         current = value.get_num()
         if current.lt(min_result):
             min_result = current
-    return objects.NumV(min_result, 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    return objects.NumV(min_result, p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
 
 @register_builtin("int_to_text")
 def texts_int_to_text(ctx, targs, values_input):
@@ -472,7 +472,7 @@ def fresh_fresh_tid(ctx, targs, values_input):
 
 def _integer_to_value(integer):
     # type: (integers.Integer) -> objects.NumV
-    return objects.NumV(integer, 'Int', typ=p4specast.NumT(p4specast.IntT()))
+    return objects.NumV(integer, p4specast.IntT.INSTANCE, typ=p4specast.NumT(p4specast.IntT()))
 
 
 @register_builtin("shl")

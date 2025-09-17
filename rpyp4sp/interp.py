@@ -1517,7 +1517,7 @@ def eval_binop_num(binop, value_l, value_r, typ):
         res_num = num_l.add(num_r)
     elif binop == 'SubOp':
         res_num = num_l.sub(num_r)
-        what = 'Int'
+        what = p4specast.IntT.INSTANCE
     elif binop == 'MulOp':
         res_num = num_l.mul(num_r)
     elif binop == 'DivOp':
@@ -1834,7 +1834,7 @@ class __extend__(p4specast.LenE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(NumV (`Nat len) $$$ { vid; typ })
-        value_res = objects.NumV(value, 'Nat', typ=self.typ)
+        value_res = objects.NumV(value, p4specast.NatT.INSTANCE, typ=self.typ)
         # in
         # Ctx.add_node ctx value_res;
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op LenOp);
@@ -2054,9 +2054,9 @@ def subtyp(ctx, typ, value):
     #     | _ -> assert false)
     if isinstance(typ, p4specast.NumT) and isinstance(typ.typ, p4specast.NatT):
         assert isinstance(value, objects.NumV)
-        if value.what == "Nat":
+        if value.what == p4specast.NatT.INSTANCE:
             return True
-        elif value.what == "Int":
+        elif value.what == p4specast.IntT.INSTANCE:
             return value.value.ge(integers.Integer.fromint(0))
         else:
             assert 0
@@ -2118,11 +2118,11 @@ def downcast(ctx, typ, value):
     #         (ctx, value_res)
     #     | _ -> assert false)
         assert isinstance(value, objects.NumV)
-        if value.what == "Nat":
+        if value.what == p4specast.NatT.INSTANCE:
             return ctx, value
-        elif value.what == "Int":
+        elif value.what == p4specast.IntT.INSTANCE:
             assert value.value.ge(integers.Integer.fromint(0))
-            return ctx, objects.NumV(value.value, 'Nat', typ=typ)
+            return ctx, objects.NumV(value.value, p4specast.NatT.INSTANCE, typ=typ)
         else:
             assert 0
     # | VarT (tid, targs) -> (
@@ -2173,13 +2173,13 @@ def upcast(ctx, typ, value):
     #   | NumT `IntT -> (
     if isinstance(typ, p4specast.NumT) and isinstance(typ.typ, p4specast.IntT):
     #       match value.it with
-        if isinstance(value, objects.NumV) and value.what == 'Nat':
+        if isinstance(value, objects.NumV) and value.what == p4specast.NatT.INSTANCE:
     #       | NumV (`Nat n) ->
     #           let value_res =
     #             let vid = Value.fresh () in
     #             let typ = typ.it in
     #             Il.Ast.(NumV (`Int n) $$$ { vid; typ })
-            value_res = objects.NumV(value.get_num(), 'Int', typ=typ)
+            value_res = objects.NumV(value.get_num(), p4specast.IntT.INSTANCE, typ=typ)
             return ctx, value_res
     #           in
     #           Ctx.add_node ctx value_res;
