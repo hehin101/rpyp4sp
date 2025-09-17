@@ -33,6 +33,64 @@ def iterlist_to_key(l):
             key.append('*')
     return ''.join(key)
 
+class VenvKeys(object):
+    def __init__(self, keys):
+        self.keys = keys # type: dict[tuple[str, str], int]
+        self.next_venv_keys = {} # type: dict[tuple[str, str], VenvKeys]
+
+    def get_pos(self, var_name, var_iter):
+        return self.keys.get((var_name, var_iter), -1)
+    
+    def add_key(self, var_name, var_iter):
+        key = (var_name, var_iter)
+        res = self.next_venv_keys.get(key)
+        if res is not None:
+            return res
+        else:
+            keys = self.keys.copy()
+            keys[key] = len(keys)
+            res = VenvKeys(keys)
+            self.next_venv_keys[key] = res
+            return res
+        
+    def __repr__(self):
+        l = ["context.VENV_KEYS_ROOT"]
+        for var_name, var_iter in self.keys:
+            l.append(".add_key(%r, %r)" % (var_name, var_iter))
+        return "".join(l)
+    
+    def __str__(self):
+        l = ["<keys "]
+        for var_name, var_iter in self.keys:
+            l.append("%r" % (var_name + var_iter))
+        l.append(">")
+        return "".join(l)
+
+VENV_KEYS_ROOT = VenvKeys({})
+
+class VenvDict(object):
+    def __init__(self, keys=VENV_KEYS_ROOT, values=None):
+        self._keys = keys
+        self._values = [] if values is None else values
+
+    def get(self, var_name, var_iter):
+        pos = self._keys.get_pos(var_name, var_iter)
+        if pos < 0:
+            raise P4ContextError('var_name %s%s does not exist' % (var_name, var_iter))
+        return self._values[pos]
+
+    def set(self, var_name, var_iter, value):
+        # type: (str, str, objects.BaseV) -> VenvDict
+        pos = self._keys.get_pos(var_name, var_iter)
+        if pos < 0:
+            keys = self._keys.add_key(var_name, var_iter)
+            values = self._values + [value]
+            return VenvDict(keys, values)
+        else:
+            values = self._values[:]
+            values[pos] = value
+            return VenvDict(self._keys, values)
+
 class Context(object):
     def __init__(self, filename, derive=False, glbl=None, local=None):
         self.filename = filename
