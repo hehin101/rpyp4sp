@@ -23,8 +23,8 @@ from rpyp4sp.error import P4TypeSubstitutionError
 #       IterT (typ, iter) $ typ.at
 #   | FuncT -> typ
 
-@jit.unroll_safe
 def make_subst_typ(func):
+    @jit.unroll_safe
     def subst_typ(typ, *args):
         if isinstance(typ, p4specast.BoolT) or isinstance(typ, p4specast.NumT) or isinstance(typ, p4specast.TextT):
             return typ
