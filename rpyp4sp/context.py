@@ -44,9 +44,11 @@ class VenvKeys(object):
         self.next_venv_keys = {} # type: dict[tuple[str, str], VenvKeys]
 
     def get_pos(self, var_name, var_iter):
+        # type: (str, str) -> int
         return self.keys.get((var_name, var_iter), -1)
-    
+
     def add_key(self, var_name, var_iter):
+        # type: (str, str) -> VenvKeys
         key = (var_name, var_iter)
         res = self.next_venv_keys.get(key)
         if res is not None:
@@ -78,10 +80,11 @@ VENV_KEYS_ROOT = VenvKeys({})
 
 class VenvDict(object):
     def __init__(self, keys=VENV_KEYS_ROOT, values=None):
-        self._keys = keys
-        self._values = [] if values is None else values
+        self._keys = keys # type: VenvKeys
+        self._values = [] if values is None else values # type: list[objects.BaseV]
 
     def get(self, var_name, var_iter):
+        # type: (str, str) -> objects.BaseV
         pos = self._keys.get_pos(var_name, var_iter)
         if pos < 0:
             raise P4ContextError('var_name %s%s does not exist' % (var_name, var_iter))
@@ -99,6 +102,11 @@ class VenvDict(object):
             values[pos] = value
             return VenvDict(self._keys, values)
 
+    def has_key(self, var_name, var_iter):
+        # type: (str, str) -> int
+        pos = self._keys.get_pos(var_name, var_iter)
+        return pos >= 0
+
 class Context(object):
     def __init__(self, filename, derive=False, glbl=None, values_input=None, tdenv=None, fenv=None, venv=None):
         self.filename = filename
@@ -108,7 +116,7 @@ class Context(object):
         self.values_input = values_input if values_input is not None else []
         self.tdenv = tdenv if tdenv is not None else {}
         self.fenv = fenv if fenv is not None else {}
-        self.venv = venv if venv is not None else {}
+        self.venv = venv if venv is not None else VenvDict()
 
     def copy_and_change(self, values_input=None, tdenv=None, fenv=None, venv=None):
         values_input = values_input if values_input is not None else self.values_input
@@ -128,19 +136,23 @@ class Context(object):
                 self.glbl.fenv[definition.id.value] = definition
 
     def localize(self):
-        return self.copy_and_change(tdenv={}, fenv={}, venv={})
+        return self.copy_and_change(tdenv={}, fenv={}, venv=VenvDict())
 
     def localize_inputs(self, values_input):
+        # tpye: (VenvDict) -> Context
         return self.copy_and_change(values_input=values_input)
-    
+
     def localize_venv(self, venv):
         return self.copy_and_change(venv=venv)
 
+    # TODO: 'iterlist' is list of what?
     def find_value_local(self, id, iterlist):
-        return self.venv[id.value, iterlist_to_key(iterlist)]
+        # type: (p4specast.Id, list) -> objects.BaseV
+        return self.venv.get(id.value, iterlist_to_key(iterlist))
 
     def bound_value_local(self, id, iterlist):
-        return (id.value, iterlist_to_key(iterlist)) in self.venv
+        # type: (p4specast.Id, list) -> bool
+        return self.venv.has_key(id.value, iterlist_to_key(iterlist))
 
     def find_typdef_local(self, id):
         # TODO: actually use the local tdenv
@@ -157,8 +169,9 @@ class Context(object):
         return res
 
     def add_value_local(self, id, iterlist, value):
-        result = self.copy_and_change(venv=self.venv.copy())
-        result.venv[id.value, iterlist_to_key(iterlist)] = value
+        # type: (p4specast.Id, list, objects.BaseV) -> Context
+        venv = self.venv.set(id.value, iterlist_to_key(iterlist), value)
+        result = self.copy_and_change(venv=venv)
         return result
 
     def add_func_local(self, id, func):

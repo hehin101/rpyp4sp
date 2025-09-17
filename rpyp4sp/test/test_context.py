@@ -1,4 +1,5 @@
 from rpyp4sp.context import Context, VenvDict
+from rpyp4sp.error import P4ContextError
 from rpyp4sp import objects, p4specast
 
 import pytest
@@ -47,16 +48,41 @@ def test_venv_dict():
     assert str(d5._keys) == "<keys 'a', 'b'>"
 
 
-@pytest.mark.skip
 def test_context():
-    # copy_and_change
-
-    # localize
-
-    # fidn_value_local
-
-    # bound_value_local
+    empty_ctx = Context("dummy")
+    id1 = p4specast.Id('id1', None)
+    id2 = p4specast.Id('id2', None)
+    value1 = objects.TextV("abc")
+    value2 = objects.TextV("def")
 
     # add_value_local
+    ctx1 = empty_ctx.add_value_local(id1, [], value1)
+    ctx2 = ctx1.add_value_local(id2, [], value2)
+    ctx3 = empty_ctx.add_value_local(id2, [], value2)
 
-    pass
+    # bound_value_local
+    assert ctx1.bound_value_local(id1, [])
+    assert ctx2.bound_value_local(id1, [])
+    assert ctx2.bound_value_local(id2, [])
+    assert ctx3.bound_value_local(id2, [])
+
+    # find_value_local
+    assert ctx1.find_value_local(id1, []) is value1
+    assert ctx2.find_value_local(id1, []) is value1
+    assert ctx2.find_value_local(id2, []) is value2
+    assert ctx3.find_value_local(id2, []) is value2
+
+
+    # copy_and_change
+    ctx4 = ctx1.copy_and_change(venv=ctx3.venv)
+    assert ctx4.find_value_local(id2, []) is value2
+    with pytest.raises(P4ContextError):
+        ctx4.find_value_local(id1, [])
+
+    # localize
+    ctx5 = ctx2.localize()
+    with pytest.raises(P4ContextError):
+        ctx5.find_value_local(id1, [])
+    with pytest.raises(P4ContextError):
+        ctx5.find_value_local(id2, [])
+
