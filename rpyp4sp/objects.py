@@ -486,6 +486,13 @@ def compares(values_l, values_r):
     # lexicographic ordering, iterative version
     len_l = len(values_l)
     len_r = len(values_r)
+    if len_l == len_r == 0:
+        return 0
+    if len_l == len_r == 1:
+        return values_l[0].compare(values_r[0])
+    return _compares(values_l, values_r, len_l, len_r)
+
+def _compares(values_l, values_r, len_l, len_r):
     min_len = min(len_l, len_r)
     for i in range(min_len):
         cmp = values_l[i].compare(values_r[i])

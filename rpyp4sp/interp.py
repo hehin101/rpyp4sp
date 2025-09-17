@@ -692,7 +692,7 @@ def eval_rule(ctx, id, notexp):
     #     let _, exps = notexp in
     #     Hint.split_exps_without_idx inputs exps
     inputs = rel.inputs
-    _, exps = notexp.mixop, notexp.exps
+    exps = notexp.exps
     exps_input, exps_output = split_exps_without_idx(inputs, exps)
     #   let ctx, values_input = eval_exps ctx exps_input in
     ctx, values_input = eval_exps(ctx, exps_input)
@@ -837,7 +837,7 @@ def eval_hold_cond(ctx, id, notexp):
     #and eval_hold_cond (ctx : Ctx.t) (id : id) (notexp : notexp) :
     #    Ctx.t * bool * value =
     #  let _, exps_input = notexp in
-    _, exps_input = notexp.mixop, notexp.exps
+    exps_input = notexp.exps
     #  let ctx, values_input = eval_exps ctx exps_input in
     ctx, values_input = eval_exps(ctx, exps_input)
     #  let ctx, hold =
