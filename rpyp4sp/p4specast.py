@@ -726,7 +726,7 @@ class BinE(Exp):
         )
 
 class CmpE(Exp):
-    _immutable_fields_ = ['binop', 'optyp', 'left', 'right']
+    _immutable_fields_ = ['cmpop', 'optyp', 'left', 'right']
 #   | CmpE of cmpop * optyp * exp * exp     (* exp cmpop exp *)
     def __init__(self, cmpop, optyp, left, right):
         self.cmpop = cmpop # typ: cmpop
