@@ -2315,11 +2315,12 @@ class ListP(Pattern):
         # | ListP `Cons -> "_ :: _"
         # | ListP (`Fixed len) -> Format.asprintf "[ _/%d ]" len
         # | ListP `Nil -> "[]"
-        if isinstance(self.element, Cons):
+        element = self.element
+        if isinstance(element, Cons):
             return "_ :: _"
-        elif isinstance(self.element, Fixed):
-            return "[ _/%d ]" % self.element.value
-        elif isinstance(self.element, Nil):
+        elif isinstance(element, Fixed):
+            return "[ _/%d ]" % element.value
+        elif isinstance(element, Nil):
             return "[]"
         else:
             assert 0, "Unknown ListP element: %s" % self.element
@@ -2361,6 +2362,7 @@ class OptP(Pattern):
 # [ `cons | `fixed of int | `nil ]
 
 class ListPElem(AstBase):
+    _attrs_ = []
     @staticmethod
     def fromjson(content):
         kind = content.get_list_item(0).value_string()
