@@ -48,8 +48,11 @@ class VenvKeys(object):
     
     def __str__(self):
         l = ["<keys "]
-        for var_name, var_iter in self.keys:
-            l.append("%r" % (var_name + var_iter))
+        for index, (var_name, var_iter) in enumerate(self.keys):
+            if index == 0:
+                l.append("%r" % (var_name + var_iter))
+            else:
+                l.append(", %r" % (var_name + var_iter))
         l.append(">")
         return "".join(l)
 

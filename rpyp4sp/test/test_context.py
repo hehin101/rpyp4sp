@@ -1,4 +1,4 @@
-from rpyp4sp.context import LocalContext, Context, VenvDict
+from rpyp4sp.context import Context, VenvDict
 from rpyp4sp import objects, p4specast
 
 def test_venv_simple():
@@ -36,4 +36,11 @@ def test_venv_dict():
     assert d4._keys is d3._keys
     assert repr(d4._keys) == "context.VENV_KEYS_ROOT.add_key('a', '')"
     assert str(d4._keys) == "<keys 'a'>"
+
+    value4 = objects.TextV('jkl')
+    d5 = d4.set("b", "", value4)
+    assert d5.get("a", "") is value3
+    assert d5.get("b", "") is value4
+    assert repr(d5._keys) == "context.VENV_KEYS_ROOT.add_key('a', '').add_key('b', '')"
+    assert str(d5._keys) == "<keys 'a', 'b'>"
 
