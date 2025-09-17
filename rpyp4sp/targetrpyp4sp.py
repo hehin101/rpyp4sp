@@ -3,10 +3,42 @@ from __future__ import print_function
 import os, time
 
 from rpython.rlib.nonconst import NonConstant
+from rpython.rlib import objectmodel
 
 from rpyp4sp import p4specast, objects, builtin, context, integers, rpyjson, interp
 from rpyp4sp.error import P4Error
 from rpyp4sp.test.test_interp import make_context
+
+@objectmodel.specialize.arg(4)
+def parse_args(argv, shortname, longname="", want_arg=True, many=False):
+    # crappy argument handling
+    reslist = []
+    if many:
+        assert want_arg
+    i = 0
+    while i < len(argv):
+        if argv[i] == shortname or argv[i] == longname:
+            if not want_arg:
+                res = argv[i]
+                del argv[i]
+                return res
+            if len(argv) == i + 1:
+                print("missing argument after " + argv[i])
+                raise ValueError
+            arg = argv[i + 1]
+            del argv[i : i + 2]
+            if many:
+                reslist.append(arg)
+            else:
+                return arg
+            continue
+        i += 1
+    if many:
+        return reslist
+
+
+def parse_flag(argv, flagname, longname=""):
+    return bool(parse_args(argv, flagname, longname=longname, want_arg=False))
 
 def command_run_test_jsonl(argv):
     ctx = make_context()
@@ -14,7 +46,7 @@ def command_run_test_jsonl(argv):
     skipped = 0
     failed = 0
     error = 0
-    with open(argv[2], 'r') as f:
+    with open(argv[1], 'r') as f:
         while 1:
             if NonConstant(False):
                 f.read(10021)
@@ -124,7 +156,7 @@ def command_run_p4(argv):
     run_times = []
     passed = 0
     errors = 0
-    for fn in argv[2:]:
+    for fn in argv[1:]:
         t1 = time.time()
         print(fn)
         with open(fn, 'r') as f:
@@ -165,17 +197,78 @@ def command_run_p4(argv):
     print("total time:", fsum(load_times) + fsum(run_times))
     return 0
 
+def print_csv_line(*args):
+    print(convert_csv_line(*args))
+
+def convert_csv_line(*args):
+    if len(args) == 0:
+        assert 0
+    if len(args) == 1:
+        return str(args[0])
+    return "%s, %s" % (args[0], convert_csv_line(*args[1:]))
+
+def command_bench_p4(argv):
+    reps = parse_args(argv, "-n", "--repetitions")
+    if reps:
+        reps = int(reps)
+    else:
+        reps = 5
+    comment = parse_args(argv, "-c", "--comment")
+    if not comment:
+        comment = ''
+    t1 = time.time()
+    ctx = make_context()
+    t2 = time.time()
+    fns = argv[1:]
+    if not fns:
+        print("usage: %s bench-p4-json [-n/--repetitions N] [-c/--coment COMMENT] fn1, fn2, fn3, ...")
+        return -1
+    print_csv_line("filename", "action", "iteration", "time", "outcome", "comment", "epoch", "executable")
+    print_csv_line("ast.json", "load", "0", str(t2 - t1), "ok", comment, str(t2), argv[0])
+    for fn in fns:
+        t1 = time.time()
+        with open(fn, 'r') as f:
+            content = f.readline()
+        assert content is not None
+        if not content.startswith("{"):
+            continue
+        valuejson = rpyjson.loads(content)
+        value = objects.BaseV.fromjson(valuejson)
+        t2 = time.time()
+        print_csv_line(fn, "load", "0", str(t2 - t1), "ok", comment, str(t2), argv[0])
+        for i in range(reps):
+            t1 = time.time()
+            resctx = None
+            res = None
+            try:
+                resctx, values = interp.invoke_rel(ctx, p4specast.Id("Program_ok", p4specast.NO_REGION), [value])
+            except P4Error as e:
+                res = "exception"
+            except KeyError as e:
+                res = "keyerror"
+            t2 = time.time()
+            if resctx is None:
+                if res is None:
+                    res = "failed"
+            else:
+                res = "passed"
+            print_csv_line(fn, "run", str(i), str(t2 - t1), res, comment, str(t2), argv[0])
+    return 0
+
 def main(argv):
     if len(argv) < 3:
-        print("usage: %s run-test-jsonl/run-p4-json <fn>" % argv[0])
+        print("usage: %s run-test-jsonl/run-p4-json/bench-p4-json <fns>" % argv[0])
         return 1
     # load test cases from line-based json file
     # check if file exists
     cmd = argv[1]
+    del argv[1]
     if cmd == 'run-test-jsonl':
         return command_run_test_jsonl(argv)
     if cmd == 'run-p4-json':
         return command_run_p4(argv)
+    if cmd == 'bench-p4-json':
+        return command_bench_p4(argv)
     else:
         print("unknown command", cmd)
         return 2
