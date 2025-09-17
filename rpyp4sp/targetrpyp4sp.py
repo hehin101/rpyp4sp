@@ -49,6 +49,11 @@ def command_run_test_jsonl(argv):
     error = 0
     with open(argv[1], 'r') as f:
         while 1:
+            p = rsignal.pypysig_getaddr_occurred()
+            if p.c_value < 0:
+                # ctrl-c was pressed
+                os.write(2, "ctrl-c pressed\n")
+                return -2
             if NonConstant(False):
                 f.read(10021)
             line = f.readline()
@@ -186,6 +191,11 @@ def command_run_p4(argv):
         else:
             passed += 1
             print("well-typed")
+        p = rsignal.pypysig_getaddr_occurred()
+        if p.c_value < 0:
+            # ctrl-c was pressed
+            os.write(2, "ctrl-c pressed\n")
+            return 1
     print("PASSED:", passed)
     print("ERRORS:", errors)
     def fsum(l):
