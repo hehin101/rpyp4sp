@@ -1,6 +1,6 @@
 from rpyp4sp.smalllist import inline_small_list
 from rpyp4sp import p4specast, integers
-from rpyp4sp.error import P4UnknownTypeError
+from rpyp4sp.error import P4UnknownTypeError, P4NotImplementedError
 # and vid = int [@@deriving yojson]
 # and vnote = { vid : vid; typ : typ' } [@@deriving yojson]
 
