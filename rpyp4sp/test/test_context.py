@@ -1,4 +1,4 @@
-from rpyp4sp.context import Context, VenvDict
+from rpyp4sp.context import Context, FenvDict, VenvDict
 from rpyp4sp.error import P4ContextError
 from rpyp4sp import objects, p4specast
 
@@ -21,9 +21,39 @@ def test_venv_simple():
     assert ctx4.find_value_local(id1, []) is value1
     assert ctx4.find_value_local(id2, []) is value3
 
+def test_fenv_dict():
+    d_empty = FenvDict()
+    assert repr(d_empty) == "context.FenvDict()"
+    assert str(d_empty) == "<fenv >"
+
+    id1 = p4specast.Id("id1", None)
+    func1 = p4specast.DecD(id1, [], [], [])
+    d1 = d_empty.set(id1.value, func1)
+    assert d1.get(id1.value) is func1
+
+    func2 = p4specast.DecD(id1, [], [], [])
+    d2 = d_empty.set(id1.value, func2)
+    assert d2.get(id1.value) is func2
+    # check memoizing works
+    assert d1._keys is d2._keys
+
+    func3 = p4specast.DecD(id1, [], [], [])
+    d3 = d2.set(id1.value, func3)
+    assert d3._keys is d2._keys
+    assert repr(d3) == "context.FenvDict().set('id1', p4specast.DecD(p4specast.Id('id1', None), [], [], []))"
+    assert str(d3) == "<fenv 'id1': p4specast.DecD(p4specast.Id('id1', None), [], [], [])>"
+
+    id2 = p4specast.Id("id2", None)
+    func4 = p4specast.DecD(id2, [], [], [])
+    d4 = d3.set(id2.value, func4)
+    assert d4.get(id1.value) is func3
+    assert d4.get(id2.value) is func4
+    assert repr(d4) == "context.FenvDict().set('id1', p4specast.DecD(p4specast.Id('id1', None), [], [], [])).set('id2', p4specast.DecD(p4specast.Id('id2', None), [], [], []))"
+    assert str(d4) == "<fenv 'id1': p4specast.DecD(p4specast.Id('id1', None), [], [], []), 'id2': p4specast.DecD(p4specast.Id('id2', None), [], [], [])>"
+
 def test_venv_dict():
     d_empty = VenvDict()
-    assert repr(d_empty._keys) == "context.VENV_KEYS_ROOT"
+    assert repr(d_empty._keys) == "context.ENV_KEYS_ROOT"
     assert str(d_empty._keys) == "<keys >"
     assert repr(d_empty) == "context.VenvDict()"
     assert str(d_empty) == "<venv >"
@@ -42,7 +72,7 @@ def test_venv_dict():
     d4 = d3.set("a", "", value3)
     assert d4.get("a", "") is value3
     assert d4._keys is d3._keys
-    assert repr(d4._keys) == "context.VENV_KEYS_ROOT.add_key('a', '')"
+    assert repr(d4._keys) == "context.ENV_KEYS_ROOT.add_key('a', '')"
     assert str(d4._keys) == "<keys 'a'>"
     assert repr(d4) == "context.VenvDict().set('a', '', objects.TextV('ghi', -1, None))"
     assert str(d4) == "<venv 'a': objects.TextV('ghi', -1, None)>"
@@ -51,7 +81,7 @@ def test_venv_dict():
     d5 = d4.set("b", "", value4)
     assert d5.get("a", "") is value3
     assert d5.get("b", "") is value4
-    assert repr(d5._keys) == "context.VENV_KEYS_ROOT.add_key('a', '').add_key('b', '')"
+    assert repr(d5._keys) == "context.ENV_KEYS_ROOT.add_key('a', '').add_key('b', '')"
     assert str(d5._keys) == "<keys 'a', 'b'>"
     assert repr(d5) == "context.VenvDict().set('a', '', objects.TextV('ghi', -1, None)).set('b', '', objects.TextV('jkl', -1, None))"
     assert str(d5) == "<venv 'a': objects.TextV('ghi', -1, None), 'b': objects.TextV('jkl', -1, None)>"
