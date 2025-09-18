@@ -22,10 +22,10 @@ class GlobalContext(object):
 
 
 
-class VenvKeys(object):
+class EnvKeys(object):
     def __init__(self, keys):
         self.keys = keys # type: dict[tuple[str, str], int]
-        self.next_venv_keys = {} # type: dict[tuple[str, str], VenvKeys]
+        self.next_venv_keys = {} # type: dict[tuple[str, str], EnvKeys]
 
     @jit.elidable
     def get_pos(self, var_name, var_iter):
@@ -34,7 +34,7 @@ class VenvKeys(object):
 
     @jit.elidable
     def add_key(self, var_name, var_iter):
-        # type: (str, str) -> VenvKeys
+        # type: (str, str) -> EnvKeys
         key = (var_name, var_iter)
         res = self.next_venv_keys.get(key)
         if res is not None:
@@ -42,12 +42,12 @@ class VenvKeys(object):
         else:
             keys = self.keys.copy()
             keys[key] = len(keys)
-            res = VenvKeys(keys)
+            res = EnvKeys(keys)
             self.next_venv_keys[key] = res
             return res
 
     def __repr__(self):
-        l = ["context.VENV_KEYS_ROOT"]
+        l = ["context.ENV_KEYS_ROOT"]
         for var_name, var_iter in self.keys:
             l.append(".add_key(%r, %r)" % (var_name, var_iter))
         return "".join(l)
@@ -62,11 +62,60 @@ class VenvKeys(object):
         l.append(">")
         return "".join(l)
 
-VENV_KEYS_ROOT = VenvKeys({})
+ENV_KEYS_ROOT = EnvKeys({})
+
+class FenvDict(object):
+    def __init__(self, keys=ENV_KEYS_ROOT, funcs=None):
+        self._keys = keys # type: EnvKeys
+        self._funcs = [] if funcs is None else funcs # type: list[p4specast.DecD]
+
+    def get(self, id_value):
+        # type: (str) -> p4specast.DecD
+        pos = self._keys.get_pos(id_value, '')
+        if pos < 0:
+            raise P4ContextError('id.value %s does not exist' % (id_value))
+        return self._funcs[pos]
+
+    def set(self, id_value, func):
+        # type: (str, p4specast.DecD) -> FenvDict
+        pos = self._keys.get_pos(id_value, '')
+        if pos < 0:
+            keys = self._keys.add_key(id_value, '')
+            funcs = self._funcs + [func]
+            return FenvDict(keys, funcs)
+        else:
+            funcs = self._funcs[:]
+            funcs[pos] = func
+            return FenvDict(self._keys, funcs)
+
+    def has_key(self, id_value):
+        # type: (str) -> bool
+        pos = self._keys.get_pos(id_value, '')
+        return pos >= 0
+
+    def __repr__(self):
+        l = ["context.FenvDict()"]
+        for id_value, _ in self._keys.keys:
+            pos = self._keys.get_pos(id_value, '')
+            func = self._funcs[pos]
+            l.append(".set(%r, %r)" % (id_value, func))
+        return "".join(l)
+
+    def __str__(self):
+        l = ["<fenv "]
+        for index, (id_value, _) in enumerate(self._keys.keys):
+            pos = self._keys.get_pos(id_value, '')
+            func = self._funcs[pos]
+            if index == 0:
+                l.append("%r: %r" % (id_value, func))
+            else:
+                l.append(", %r: %r" % (id_value, func))
+        l.append(">")
+        return "".join(l)
 
 class VenvDict(object):
-    def __init__(self, keys=VENV_KEYS_ROOT, values=None):
-        self._keys = keys # type: VenvKeys
+    def __init__(self, keys=ENV_KEYS_ROOT, values=None):
+        self._keys = keys # type: EnvKeys
         self._values = [] if values is None else values # type: list[objects.BaseV]
 
     def get(self, var_name, var_iter):
@@ -183,6 +232,7 @@ class Context(object):
         return result
 
     def add_func_local(self, id, func):
+        # type: (p4specast.Id, p4specast.DecD) -> Context
         result = self.copy_and_change(fenv=self.fenv.copy())
         result.fenv[id.value] = func
         return result
@@ -193,6 +243,7 @@ class Context(object):
         return result
 
     def find_func_local(self, id):
+        # type: (p4specast.Id) -> p4specast.DecD
         if id.value in self.fenv:
             func = self.fenv[id.value]
         else:
