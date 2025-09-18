@@ -133,7 +133,7 @@ class Context(object):
             for i, var in enumerate(vars):
                 value = values[i]
                 assert value is not None
-                value_sub = objects.OptV(value, typ=var.typ)
+                value_sub = objects.OptV(value, var.typ)
                 ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value_sub.value)
             return ctx_sub
 

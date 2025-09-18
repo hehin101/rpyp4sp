@@ -98,7 +98,7 @@ class BaseV(object):
 class BoolV(BaseV):
     _compare_tag = 0
 
-    def __init__(self, value, vid=-1, typ=None):
+    def __init__(self, value, typ=None, vid=-1):
         # TODO: assign a vid if the argument is -1
         self.value = value # type: bool
         self.vid = vid # type: int
@@ -118,7 +118,7 @@ class BoolV(BaseV):
         return self.value
 
     def __repr__(self):
-        return "objects.BoolV(%r, %r, %r)" % (self.value, self.vid, self.typ)
+        return "objects.BoolV(%r, %r, %r)" % (self.value, self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | BoolV b -> string_of_bool b
@@ -129,7 +129,7 @@ class BoolV(BaseV):
         return BoolV(content.get_list_item(1).value_bool())
 
 class NumV(BaseV):
-    def __init__(self, value, what, vid=-1, typ=None):
+    def __init__(self, value, what, typ=None, vid=-1):
         self.value = value # type: integers.Integer
         assert isinstance(what, p4specast.NumTyp)
         self.what = what # type: p4specast.NumTyp
@@ -145,7 +145,7 @@ class NumV(BaseV):
 
     def __repr__(self):
         return "objects.NumV.fromstr(%r, %r, %r, %r)" % (
-            self.value.str(), self.what, self.vid, self.typ)
+            self.value.str(), self.what, self.typ, self.vid)
 
     def get_num(self):
         return self.value
@@ -155,8 +155,8 @@ class NumV(BaseV):
         return self.value.str()
 
     @staticmethod
-    def fromstr(value, what, vid=-1, typ=None):
-        return NumV(integers.Integer.fromstr(value), what, vid, typ)
+    def fromstr(value, what, typ=None, vid=-1):
+        return NumV(integers.Integer.fromstr(value), what, typ, vid)
 
     @staticmethod
     def fromjson(content):
@@ -171,7 +171,7 @@ class NumV(BaseV):
         return NumV.fromstr(value, what)
 
 class TextV(BaseV):
-    def __init__(self, value, vid=-1, typ=None):
+    def __init__(self, value, typ=None, vid=-1):
         self.value = value #type: str
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
@@ -190,7 +190,7 @@ class TextV(BaseV):
             return 1
 
     def __repr__(self):
-        return "objects.TextV(%r, %r, %r)" % (self.value, self.vid, self.typ)
+        return "objects.TextV(%r, %r, %r)" % (self.value, self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | TextV s -> "\"" ^ s ^ "\""
@@ -201,7 +201,7 @@ class TextV(BaseV):
         return TextV(content.get_list_item(1).value_string())
 
 class StructV(BaseV):
-    def __init__(self, fields, vid=-1, typ=None):
+    def __init__(self, fields, typ=None, vid=-1):
         self.fields = fields # type: list[BaseV]
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
@@ -210,7 +210,7 @@ class StructV(BaseV):
         return self.fields
 
     def __repr__(self):
-        return "objects.StructV(%r, %r, %r)" % (self.fields, self.vid, self.typ)
+        return "objects.StructV(%r, %r, %r)" % (self.fields, self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | StructV [] -> "{}"
@@ -268,14 +268,14 @@ class StructV(BaseV):
         return compares(values_l, values_r)
 
 class CaseV(BaseV):
-    def __init__(self, mixop, values, vid=-1, typ=None):
+    def __init__(self, mixop, values, typ=None, vid=-1):
         self.mixop = mixop # type: p4specast.MixOp
         self.values = values # type: list[BaseV]
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
 
     def __repr__(self):
-        return "objects.CaseV(%r, %r, %r, %r)" % (self.mixop, self.values, self.vid, self.typ)
+        return "objects.CaseV(%r, %r, %r, %r)" % (self.mixop, self.values, self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | CaseV (mixop, _) when short -> string_of_mixop mixop
@@ -321,7 +321,7 @@ class CaseV(BaseV):
 
 
 class TupleV(BaseV):
-    def __init__(self, elements, vid=-1, typ=None):
+    def __init__(self, elements, typ=None, vid=-1):
         self.elements = elements # type: list[BaseV]
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
@@ -332,7 +332,7 @@ class TupleV(BaseV):
         return compares(self.elements, other.elements)
 
     def __repr__(self):
-        return "objects.TupleV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
+        return "objects.TupleV(%r, %r, %r)" % (self.elements, self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | TupleV values ->
@@ -348,7 +348,7 @@ class TupleV(BaseV):
         return TupleV(elements)
 
 class OptV(BaseV):
-    def __init__(self, value, vid=-1, typ=None):
+    def __init__(self, value, typ=None, vid=-1):
         self.value = value # type: BaseV | None
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
@@ -367,7 +367,7 @@ class OptV(BaseV):
 
 
     def __repr__(self):
-        return "objects.OptV(%r, %r, %r)" % (self.value, self.vid, self.typ)
+        return "objects.OptV(%r, %r, %r)" % (self.value, self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | OptV (Some value) ->
@@ -387,7 +387,7 @@ class OptV(BaseV):
         return OptV(value)
 
 class ListV(BaseV):
-    def __init__(self, elements, vid=-1, typ=None):
+    def __init__(self, elements, typ=None, vid=-1):
         self.elements = elements # type: list[BaseV]
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
@@ -401,7 +401,7 @@ class ListV(BaseV):
         return compares(self.elements, other.elements)
 
     def __repr__(self):
-        return "objects.ListV(%r, %r, %r)" % (self.elements, self.vid, self.typ)
+        return "objects.ListV(%r, %r, %r)" % (self.elements, self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | ListV [] -> "[]"
@@ -437,13 +437,13 @@ class ListV(BaseV):
 
 
 class FuncV(BaseV):
-    def __init__(self, id, vid=-1, typ=None):
+    def __init__(self, id, typ=None, vid=-1):
         self.id = id # type: p4specast.Id
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
 
     def __repr__(self):
-        return "objects.FuncV(%r, %r, %r)" % (self.id, self.vid, self.typ)
+        return "objects.FuncV(%r, %r, %r)" % (self.id, self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | FuncV id -> string_of_defid id

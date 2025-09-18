@@ -2,11 +2,11 @@ import pytest
 from rpyp4sp import p4specast, objects, builtin, context, integers
 
 def test_int_to_text():
-    res = builtin.texts_int_to_text(None, [], [objects.NumV.fromstr('1234', p4specast.IntT.INSTANCE, typ=p4specast.NumT(p4specast.IntT()))])
+    res = builtin.texts_int_to_text(None, [], [objects.NumV.fromstr('1234', p4specast.IntT.INSTANCE, p4specast.NumT(p4specast.IntT()))])
     assert res.eq(objects.TextV('1234'))
 
 def mkint(val):
-    return objects.NumV.fromstr(str(val), p4specast.IntT.INSTANCE, typ=p4specast.NumT(p4specast.IntT()))
+    return objects.NumV.fromstr(str(val), p4specast.IntT.INSTANCE, p4specast.NumT(p4specast.IntT()))
 
 def test_shl():
     res = builtin.numerics_shl(None, [], [mkint(1234), mkint(4)])
@@ -102,8 +102,8 @@ def test_fresh():
 
 
 def textlist(*args):
-    l = [objects.TextV(arg, typ=p4specast.TextT()) for arg in args]
-    return objects.ListV(l, typ=p4specast.IterT(p4specast.TextT(), p4specast.List()))
+    l = [objects.TextV(arg, p4specast.TextT()) for arg in args]
+    return objects.ListV(l, p4specast.IterT(p4specast.TextT(), p4specast.List()))
 
 def test_list_rev():
     arg = textlist()
@@ -137,8 +137,8 @@ def test_list_distinct():
     assert res.eq(objects.BoolV(False))
 
 def test_lists_concat():
-    empty = objects.ListV([], -1, p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2a-runtime-domain.watsup', 10, 7, 10)), []), p4specast.List()))
-    args = [objects.ListV([empty, empty], -1, p4specast.IterT(p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2a-runtime-domain.watsup', 10, 7, 10)), []), p4specast.List()), p4specast.List()))]
+    empty = objects.ListV([], p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2a-runtime-domain.watsup', 10, 7, 10)), []), p4specast.List()), -1)
+    args = [objects.ListV([empty, empty], p4specast.IterT(p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2a-runtime-domain.watsup', 10, 7, 10)), []), p4specast.List()), p4specast.List()), -1)]
     res = builtin.lists_concat_(None, None, args)
     assert res.eq(empty)
     assert repr(res.typ) == "p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2a-runtime-domain.watsup', 10, 7, 10)), []), p4specast.List())"
@@ -153,11 +153,11 @@ def test_list_assoc():
 def make_set(*args):
     lst = []
     for el in args:
-        value = objects.TextV(el, typ=p4specast.TextT())
+        value = objects.TextV(el, p4specast.TextT())
         lst.append(value)
-    list_value = objects.ListV(lst, typ=p4specast.IterT(p4specast.TextT(), p4specast.List()))
+    list_value = objects.ListV(lst, p4specast.IterT(p4specast.TextT(), p4specast.List()))
     settyp = p4specast.VarT(builtin.set_id, [p4specast.TextT()])
-    return objects.CaseV(builtin.map_mixop, [list_value], typ=settyp)
+    return objects.CaseV(builtin.map_mixop, [list_value], settyp)
 
 
 def test_union_set():
@@ -231,13 +231,13 @@ def make_map(*args):
     lst = []
     pairtyp = p4specast.VarT(p4specast.Id('pair', p4specast.NO_REGION), [p4specast.TextT(), p4specast.TextT()])
     for key, value in args:
-        key_value = objects.TextV(key, typ=p4specast.TextT())
-        value_value = objects.TextV(value, typ=p4specast.TextT())
-        arrow = objects.CaseV(builtin.arrow_mixop, [key_value, value_value], typ=pairtyp)
+        key_value = objects.TextV(key, p4specast.TextT())
+        value_value = objects.TextV(value, p4specast.TextT())
+        arrow = objects.CaseV(builtin.arrow_mixop, [key_value, value_value], pairtyp)
         lst.append(arrow)
-    list_value = objects.ListV(lst, typ=p4specast.IterT(pairtyp, p4specast.List()))
+    list_value = objects.ListV(lst, p4specast.IterT(pairtyp, p4specast.List()))
     maptyp = p4specast.VarT(builtin.map_id, [p4specast.TextT(), p4specast.TextT()])
-    return objects.CaseV(builtin.map_mixop, [list_value], typ=maptyp)
+    return objects.CaseV(builtin.map_mixop, [list_value], maptyp)
 
 
 def test_add_map():
@@ -270,7 +270,7 @@ def test_add_map():
 def test_find_maps():
     map_value1 = make_map(("A", "a1"), ("B", "b"))
     map_value2 = make_map(("A", "a2"), ("C", "x"))
-    lst_value = objects.ListV([map_value1, map_value2], typ=p4specast.IterT(map_value1.typ, p4specast.List()))
+    lst_value = objects.ListV([map_value1, map_value2], p4specast.IterT(map_value1.typ, p4specast.List()))
 
     res = builtin.maps_find_maps(None, [p4specast.TextT(), p4specast.TextT()],
                                  [lst_value, objects.TextV("C", typ=p4specast.TextT())])
@@ -284,7 +284,7 @@ def test_find_maps():
 
 def test_lists_partition():
     # Test partitioning an empty list
-    empty_list = objects.ListV([], typ=p4specast.IterT(p4specast.TextT(), p4specast.List()))
+    empty_list = objects.ListV([], p4specast.IterT(p4specast.TextT(), p4specast.List()))
     len_val = objects.NumV.fromstr('0', p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT()))
     res = builtin.lists_partition_(None, [p4specast.TextT()], [empty_list, len_val])
     assert isinstance(res, objects.TupleV)
@@ -329,7 +329,7 @@ def make_nat_list(*values):
     nat_values = []
     for val in values:
         nat_values.append(objects.NumV.fromstr(str(val), p4specast.NatT(), typ=p4specast.NumT(p4specast.NatT())))
-    return objects.ListV(nat_values, typ=p4specast.IterT(p4specast.NumT(p4specast.NatT()), p4specast.List()))
+    return objects.ListV(nat_values, p4specast.IterT(p4specast.NumT(p4specast.NatT()), p4specast.List()))
 
 def test_texts_strip_suffix():
     res = builtin.texts_strip_suffix(None, [], [make_text('action_list(t)'), make_text(')')])

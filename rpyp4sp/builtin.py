@@ -106,7 +106,7 @@ def texts_strip_prefix(ctx, targs, values_input):
     if not text.startswith(prefix):
         raise P4BuiltinError("Text '%s' does not start with prefix '%s'" % (text, prefix))
     stripped_text = text[len(prefix):] if prefix else text
-    return objects.TextV(stripped_text, typ=p4specast.TextT())
+    return objects.TextV(stripped_text, p4specast.TextT())
 
 @register_builtin("strip_suffix")
 def texts_strip_suffix(ctx, targs, values_input):
@@ -131,7 +131,7 @@ def texts_strip_suffix(ctx, targs, values_input):
     end = len(text) - len(suffix)
     assert end >= 0
     stripped_text = text[:end]
-    return objects.TextV(stripped_text, typ=p4specast.TextT())
+    return objects.TextV(stripped_text, p4specast.TextT())
 
 @register_builtin("rev_")
 def lists_rev_(ctx, targs, values_input):
@@ -141,7 +141,7 @@ def lists_rev_(ctx, targs, values_input):
         return value
     lst = lst[:]
     lst.reverse()
-    return objects.ListV(lst, typ=value.typ)
+    return objects.ListV(lst, value.typ)
 
 
 @register_builtin("concat_")
@@ -153,20 +153,20 @@ def lists_concat_(ctx, targs, values_input):
         res.extend(list_value.get_list())
     typ = value.typ
     assert isinstance(typ, p4specast.IterT)
-    return objects.ListV(res, typ=typ.typ)
+    return objects.ListV(res, typ.typ)
 
 @register_builtin("distinct_")
 def lists_distinct_(ctx, targs, values_input):
     value, = values_input
     lst = value.get_list()
     if len(lst) <= 1:
-        return objects.BoolV(True, typ=p4specast.BoolT())
+        return objects.BoolV(True, p4specast.BoolT())
     # naive quadratic implementation using .eq
     for i in range(len(lst)):
         for j in range(i + 1, len(lst)):
             if lst[i].eq(lst[j]):
-                return objects.BoolV(False, typ=p4specast.BoolT())
-    return objects.BoolV(True, typ=p4specast.BoolT())
+                return objects.BoolV(False, p4specast.BoolT())
+    return objects.BoolV(True, p4specast.BoolT())
 
 @register_builtin("partition_")
 def lists_partition_(ctx, targs, values_input):
@@ -181,10 +181,10 @@ def lists_partition_(ctx, targs, values_input):
     values_right = values[len_num:]
 
     list_typ = p4specast.IterT(typ, p4specast.List())
-    value_left = objects.ListV(values_left, typ=list_typ)
-    value_right = objects.ListV(values_right, typ=list_typ)
+    value_left = objects.ListV(values_left, list_typ)
+    value_right = objects.ListV(values_right, list_typ)
     tuple_typ = p4specast.TupleT([list_typ, list_typ])
-    return objects.TupleV([value_left, value_right], typ=tuple_typ)
+    return objects.TupleV([value_left, value_right], tuple_typ)
 
 
 @register_builtin("assoc_")
@@ -197,7 +197,7 @@ def lists_assoc_(ctx, targs, values_input):
         if tup.elements[0].eq(value):
             res_value = tup.elements[1]
             break
-    return objects.OptV(res_value, typ=p4specast.IterT(typ_value, p4specast.Opt()))
+    return objects.OptV(res_value, p4specast.IterT(typ_value, p4specast.Opt()))
 
 # ________________________________________________________________
 # sets
@@ -214,8 +214,8 @@ def _extract_set_elems(set_value):
 
 def _wrap_set_elems(elems, set_value_for_types):
     assert isinstance(set_value_for_types, objects.CaseV)
-    lst_value = objects.ListV(elems, typ=set_value_for_types.values[0].typ)
-    return objects.CaseV(set_value_for_types.mixop, [lst_value], typ=set_value_for_types.typ)
+    lst_value = objects.ListV(elems, set_value_for_types.values[0].typ)
+    return objects.CaseV(set_value_for_types.mixop, [lst_value], set_value_for_types.typ)
 
 @register_builtin("intersect_set")
 def sets_intersect_set(ctx, targs, values_input):
@@ -317,8 +317,8 @@ def sets_sub_set(ctx, targs, values_input):
             if el.eq(el2):
                 break
         else:
-            return objects.BoolV(False, typ=p4specast.BoolT())
-    return objects.BoolV(True, typ=p4specast.BoolT())
+            return objects.BoolV(False, p4specast.BoolT())
+    return objects.BoolV(True, p4specast.BoolT())
 
 @register_builtin("eq_set")
 def sets_eq_set(ctx, targs, values_input):
@@ -326,14 +326,14 @@ def sets_eq_set(ctx, targs, values_input):
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
     if len(elems_l) != len(elems_r):
-        return objects.BoolV(False, typ=p4specast.BoolT())
+        return objects.BoolV(False, p4specast.BoolT())
     for el in elems_l:
         for el2 in elems_r:
             if el.eq(el2):
                 break
         else:
-            return objects.BoolV(False, typ=p4specast.BoolT())
-    return objects.BoolV(True, typ=p4specast.BoolT())
+            return objects.BoolV(False, p4specast.BoolT())
+    return objects.BoolV(True, p4specast.BoolT())
 
 # _________________________________________________________________
 
@@ -362,7 +362,7 @@ def _extract_map_item(el):
 
 def _build_map_item(key_value, value_value, key_typ, value_typ):
     pairtyp = p4specast.VarT(pair_id, [key_typ, value_typ])
-    return objects.CaseV(arrow_mixop, [key_value, value_value], typ=pairtyp)
+    return objects.CaseV(arrow_mixop, [key_value, value_value], pairtyp)
 
 def _find_map(map_value, key_value):
     content = _extract_map_content(map_value)
@@ -381,7 +381,7 @@ def maps_find_map(ctx, targs, values_input):
     found_value = _find_map(map_value, key_value)
     typ = p4specast.IterT(key_typ, p4specast.Opt())
     typ.region = p4specast.NO_REGION
-    return objects.OptV(found_value, typ=typ)
+    return objects.OptV(found_value, typ)
 
 
 @register_builtin("find_maps")
@@ -397,7 +397,7 @@ def maps_find_maps(ctx, targs, values_input):
             break
     typ = p4specast.IterT(key_typ, p4specast.Opt())
     typ.region = p4specast.NO_REGION
-    return objects.OptV(res_value, typ=typ)
+    return objects.OptV(res_value, typ)
 
 @register_builtin("add_map")
 def maps_add_map(ctx, targs, values_input):
@@ -425,8 +425,8 @@ def maps_add_map(ctx, targs, values_input):
             assert 0, 'unreachable'
     else:
         res.append(new_pair)
-    list_value = objects.ListV(res, typ=p4specast.IterT(new_pair.typ, p4specast.List()))
-    return objects.CaseV(map_mixop, [list_value], typ=p4specast.VarT(map_id, targs))
+    list_value = objects.ListV(res, p4specast.IterT(new_pair.typ, p4specast.List()))
+    return objects.CaseV(map_mixop, [list_value], p4specast.VarT(map_id, targs))
 
 
 @register_builtin("adds_map")
