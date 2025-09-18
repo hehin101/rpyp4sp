@@ -60,6 +60,55 @@ class EnvKeys(object):
 
 ENV_KEYS_ROOT = EnvKeys({})
 
+class TDenvDict(object):
+    def __init__(self, keys=ENV_KEYS_ROOT, typdefs=None):
+        self._keys = keys # type: EnvKeys
+        self._typdefs = [] if typdefs is None else typdefs # type: list[p4specast.DefTyp]
+
+    def get(self, id_value):
+        # type: (str) -> p4specast.DefTyp
+        pos = self._keys.get_pos(id_value, '')
+        if pos < 0:
+            raise P4ContextError('id_value %s does not exist' % (id_value))
+        return self._typdefs[pos]
+
+    def set(self, id_value, typdef):
+        # type: (str, p4specast.DefTyp) -> TDenvDict
+        pos = self._keys.get_pos(id_value, '')
+        if pos < 0:
+            keys = self._keys.add_key(id_value, '')
+            typdefs = self._typdefs + [typdef]
+            return TDenvDict(keys, typdefs)
+        else:
+            typdefs = self._typdefs[:]
+            typdefs[pos] = typdef
+            return TDenvDict(self._keys, typdefs)
+
+    def has_key(self, id_value):
+        # type: (str) -> bool
+        pos = self._keys.get_pos(id_value, '')
+        return pos >= 0
+
+    def __repr__(self):
+        l = ["context.TDenvDict()"]
+        for id_value, _ in self._keys.keys:
+            pos = self._keys.get_pos(id_value, '')
+            typdef = self._typdefs[pos]
+            l.append(".set(%r, %r)" % (id_value, typdef))
+        return "".join(l)
+
+    def __str__(self):
+        l = ["<tdenv "]
+        for index, (id_value, _) in enumerate(self._keys.keys):
+            pos = self._keys.get_pos(id_value, '')
+            typdef = self._typdefs[pos]
+            if index == 0:
+                l.append("%r: %r" % (id_value, typdef))
+            else:
+                l.append(", %r: %r" % (id_value, typdef))
+        l.append(">")
+        return "".join(l)
+
 class FenvDict(object):
     def __init__(self, keys=ENV_KEYS_ROOT, funcs=None):
         self._keys = keys # type: EnvKeys
@@ -69,7 +118,7 @@ class FenvDict(object):
         # type: (str) -> p4specast.DecD
         pos = self._keys.get_pos(id_value, '')
         if pos < 0:
-            raise P4ContextError('id.value %s does not exist' % (id_value))
+            raise P4ContextError('id_value %s does not exist' % (id_value))
         return self._funcs[pos]
 
     def set(self, id_value, func):
@@ -205,7 +254,9 @@ class Context(object):
         # type: (p4specast.Id, list) -> bool
         return self.venv.has_key(id.value, iterlist_to_key(iterlist))
 
+    # TODO: why Id and not Tparam?
     def find_typdef_local(self, id):
+        # type: (p4specast.Id) -> tuple[list, p4specast.DefTyp]
         # TODO: actually use the local tdenv
         return self.glbl.tdenv[id.value]
 
@@ -224,7 +275,9 @@ class Context(object):
         result.fenv[id.value] = func
         return result
 
+    # TODO: 'typedef' ist list of what?
     def add_typdef_local(self, id, typdef):
+        # type: (p4specast.TParam, tuple[list, p4specast.PlainT]) -> Context
         result = self.copy_and_change(tdenv=self.tdenv.copy())
         result.tdenv[id.value] = typdef
         return result

@@ -1,4 +1,4 @@
-from rpyp4sp.context import Context, FenvDict, VenvDict
+from rpyp4sp.context import Context, FenvDict, TDenvDict, VenvDict
 from rpyp4sp.error import P4ContextError
 from rpyp4sp import objects, p4specast
 
@@ -20,6 +20,36 @@ def test_venv_simple():
     ctx4 = ctx3.add_value_local(id2, [], value3)
     assert ctx4.find_value_local(id1, []) is value1
     assert ctx4.find_value_local(id2, []) is value3
+
+def test_tdenv_dict():
+    d_empty = TDenvDict()
+    assert repr(d_empty) == "context.TDenvDict()"
+    assert str(d_empty) == "<tdenv >"
+
+    id1 = p4specast.Id("id1", None)
+    typdef1 = p4specast.DefTyp()
+    d1 = d_empty.set(id1.value, typdef1)
+    assert d1.get(id1.value) is typdef1
+
+    typdef2 = p4specast.DefTyp()
+    d2 = d_empty.set(id1.value, typdef2)
+    assert d2.get(id1.value) is typdef2
+    # check memoizing works
+    assert d1._keys is d2._keys
+
+    typdef3 = p4specast.DefTyp()
+    d3 = d2.set(id1.value, typdef3)
+    assert d3._keys is d2._keys
+    assert repr(d3) == "context.TDenvDict().set('id1', p4specast.DefTyp())"
+    assert str(d3) == "<tdenv 'id1': p4specast.DefTyp()>"
+
+    id2 = p4specast.Id("id2", None)
+    typdef4 = p4specast.DefTyp()
+    d4 = d3.set(id2.value, typdef4)
+    assert d4.get(id1.value) is typdef3
+    assert d4.get(id2.value) is typdef4
+    assert repr(d4) == "context.TDenvDict().set('id1', p4specast.DefTyp()).set('id2', p4specast.DefTyp())"
+    assert str(d4) == "<tdenv 'id1': p4specast.DefTyp(), 'id2': p4specast.DefTyp()>"
 
 def test_fenv_dict():
     d_empty = FenvDict()

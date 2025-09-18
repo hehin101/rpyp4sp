@@ -1390,6 +1390,9 @@ class DefTyp(AstBase):
         ast.region = region
         return ast
 
+    def __repr__(self):
+        return "p4specast.DefTyp()"
+
 class PlainT(DefTyp):
     def __init__(self, typ, region=None):
         self.typ = typ
