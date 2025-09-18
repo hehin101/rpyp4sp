@@ -207,15 +207,15 @@ set_id = p4specast.Id('set', p4specast.NO_REGION)
 def _extract_set_elems(set_value):
     assert isinstance(set_value, objects.CaseV)
     assert set_value.mixop.eq(map_mixop)
-    assert len(set_value.values) == 1
-    lst_value, = set_value.values
+    assert set_value._get_size_list() == 1
+    lst_value = set_value._get_list(0)
     assert isinstance(lst_value, objects.ListV)
     return lst_value.get_list()
 
 def _wrap_set_elems(elems, set_value_for_types):
     assert isinstance(set_value_for_types, objects.CaseV)
-    lst_value = objects.ListV(elems, set_value_for_types.values[0].typ)
-    return objects.CaseV(set_value_for_types.mixop, [lst_value], set_value_for_types.typ)
+    lst_value = objects.ListV(elems, set_value_for_types._get_list(0).typ)
+    return objects.CaseV.make1(lst_value, set_value_for_types.mixop, set_value_for_types.typ)
 
 @register_builtin("intersect_set")
 def sets_intersect_set(ctx, targs, values_input):
@@ -262,12 +262,12 @@ def sets_unions_set(ctx, targs, values_input):
     sets_l = value_list.get_list()
     element_typ, = targs
     if not sets_l:
-        return objects.CaseV(
-            map_mixop,
-            [objects.ListV(
+        return objects.CaseV.make1(
+            objects.ListV(
                 [],
-                typ=p4specast.IterT(element_typ, p4specast.List()))],
-            typ=p4specast.VarT(set_id, targs))
+                typ=p4specast.IterT(element_typ, p4specast.List())),
+            map_mixop,
+            p4specast.VarT(set_id, targs))
     first = sets_l[0]
     curr = _extract_set_elems(first)
     for i in range(1, len(sets_l)):
@@ -350,19 +350,22 @@ pair_id = p4specast.Id('pair', p4specast.NO_REGION)
 def _extract_map_content(map_value):
     assert isinstance(map_value, objects.CaseV)
     assert map_value.mixop.eq(map_mixop)
-    content, = map_value.values
+    assert map_value._get_size_list() == 1
+    content = map_value._get_list(0)
     assert isinstance(content, objects.ListV)
     return content.elements
 
 def _extract_map_item(el):
     assert isinstance(el, objects.CaseV)
     assert el.mixop.eq(arrow_mixop)
-    key, value = el.values
+    assert el._get_size_list() == 2
+    key = el._get_list(0)
+    value = el._get_list(1)
     return key, value
 
 def _build_map_item(key_value, value_value, key_typ, value_typ):
     pairtyp = p4specast.VarT(pair_id, [key_typ, value_typ])
-    return objects.CaseV(arrow_mixop, [key_value, value_value], pairtyp)
+    return objects.CaseV.make2(key_value, value_value, arrow_mixop, pairtyp)
 
 def _find_map(map_value, key_value):
     content = _extract_map_content(map_value)
@@ -426,7 +429,7 @@ def maps_add_map(ctx, targs, values_input):
     else:
         res.append(new_pair)
     list_value = objects.ListV(res, p4specast.IterT(new_pair.typ, p4specast.List()))
-    return objects.CaseV(map_mixop, [list_value], p4specast.VarT(map_id, targs))
+    return objects.CaseV.make1(list_value, map_mixop, p4specast.VarT(map_id, targs))
 
 
 @register_builtin("adds_map")

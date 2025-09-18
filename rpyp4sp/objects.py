@@ -1,3 +1,4 @@
+from rpyp4sp.smalllist import inline_small_list
 from rpyp4sp import p4specast, integers
 from rpyp4sp.error import P4UnknownTypeError
 # and vid = int [@@deriving yojson]
@@ -265,15 +266,15 @@ class StructV(BaseV):
             return res
         return compares(values_l, values_r)
 
+@inline_small_list(immutable=True)
 class CaseV(BaseV):
-    def __init__(self, mixop, values, typ=None, vid=-1):
+    def __init__(self, mixop, typ=None, vid=-1):
         self.mixop = mixop # type: p4specast.MixOp
-        self.values = values # type: list[BaseV]
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
 
     def __repr__(self):
-        return "objects.CaseV(%r, %r, %r, %r)" % (self.mixop, self.values, self.typ, self.vid)
+        return "objects.CaseV.make(%r, %r, %r, %r)" % (self._get_full_list(), self.mixop, self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | CaseV (mixop, _) when short -> string_of_mixop mixop
@@ -293,8 +294,8 @@ class CaseV(BaseV):
                 result_parts.append(phrase_str)
 
             # Add corresponding value if available
-            if value_idx < len(self.values):
-                result_parts.append(self.values[value_idx].tostring(short, level + 1))
+            if value_idx < self._get_size_list():
+                result_parts.append(self._get_list(value_idx).tostring(short, level + 1))
                 value_idx += 1
 
         return "(" + " ".join(result_parts) + ")"
@@ -304,7 +305,7 @@ class CaseV(BaseV):
         mixop_content, valuelist_content = content.get_list_item(1).value_array()
         mixop = p4specast.MixOp.fromjson(mixop_content)
         values = [BaseV.fromjson(v) for v in valuelist_content.value_array()]
-        return CaseV(mixop, values, typ, vid)
+        return CaseV.make(values, mixop, typ, vid)
 
     def compare(self, other):
         if not isinstance(other, CaseV):
@@ -314,8 +315,14 @@ class CaseV(BaseV):
         # if cmp_mixop <> 0 then cmp_mixop else compares values_l values_r
         if cmp_mixop != 0:
             return cmp_mixop
+        elif self._get_size_list() == 0:
+            assert other._get_size_list() == 0
+            return 0
+        elif self._get_size_list() == 1:
+            assert other._get_size_list() == 1
+            return self._get_list(0).compare(other._get_list(0))
         else:
-            return compares(self.values, other.values)
+            return compares(self._get_full_list()[:], other._get_full_list()[:]) # TODO, could do better?
 
 
 class TupleV(BaseV):
