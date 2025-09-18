@@ -215,7 +215,7 @@ class __extend__(p4specast.IfI):
         #     eval_if_instr (ctx : Ctx.t) (exp_cond : exp) (iterexps : iterexp list)
         #     (instrs_then : instr list) (phantom_opt : phantom option) : Ctx.t * Sign.t =
         #   let ctx, cond, value_cond = eval_if_cond_iter ctx exp_cond iterexps in
-        ctx, cond, value_cond = eval_if_cond_iter(ctx, self.exp, self.iters)
+        ctx, cond, value_cond = eval_if_cond_iter(ctx, self)
         #   let vid = value_cond.note.vid in
         #   let ctx =
         #     match phantom_opt with
@@ -227,12 +227,11 @@ class __extend__(p4specast.IfI):
             return eval_instrs(ctx, Cont(), self.instrs)
         return (ctx, Cont())
 
-def eval_if_cond_iter(ctx, exp_cond, iterexps):
+def eval_if_cond_iter(ctx, instr):
     # let iterexps = List.rev iterexps in
-    iterexps = iterexps[:]
-    iterexps.reverse()
+    iterexps = instr._get_reverse_iters()
     # eval_if_cond_iter' ctx exp_cond iterexps
-    return eval_if_cond_iter_tick(ctx, exp_cond, iterexps)
+    return eval_if_cond_iter_tick(ctx, instr.exp, iterexps)
 
 def eval_if_cond_list(ctx, exp_cond, vars, iterexps):
     #   let ctxs_sub = Ctx.sub_list ctx vars in
@@ -262,13 +261,13 @@ def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
     # INCOMPLETE
     # match iterexps with
     # | [] -> eval_if_cond ctx exp_cond
-    if iterexps == []:
+    if iterexps is None:
         return eval_if_cond(ctx, exp_cond)
     else:
     # | iterexp_h :: iterexps_t -> (
     #     let iter_h, vars_h = iterexp_h in
-        iterexp = iterexps[0]
-        iterexps_t = iterexps[1:]
+        iterexp = iterexps.head
+        iterexps_t = iterexps.tail
         iter_h = iterexp.iter
         vars_h = iterexp.vars
     #     match iter_h with
@@ -321,7 +320,7 @@ def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
     #           vars_h;
     #         (ctx, cond, value_cond))
     # TODO: test it
-    iterexp_h, iterexps_t = iterexps[0], iterexps[1:]
+    iterexp_h, iterexps_t = iterexps.head, iterexps.tail
     iter_h, vars_h = iterexp_h.iter, iterexp_h.vars
     if isinstance(iter_h, p4specast.Opt):
         raise Exception("TODO")
@@ -568,12 +567,12 @@ def eval_let_iter_tick(ctx, exp_l, exp_r, iterexps):
     # TODO: should test it
     # match iterexps with
     # | [] -> eval_let ctx exp_l exp_r
-    if iterexps == []:
+    if iterexps is None:
         return eval_let(ctx, exp_l, exp_r)
     # | iterexp_h :: iterexps_t -> (
     else:
-        iterexp = iterexps[0]
-        iterexps_t = iterexps[1:]
+        iterexp = iterexps.head
+        iterexps_t = iterexps.tail
         iter_h = iterexp.iter
         vars_h = iterexp.vars
     #     let iter_h, vars_h = iterexp_h in
@@ -591,8 +590,7 @@ def eval_let_iter_tick(ctx, exp_l, exp_r, iterexps):
 
 def eval_let_iter(ctx, let_instr):
     # let iterexps = List.rev iterexps in
-    iterexps = let_instr.iters[:]
-    iterexps.reverse()
+    iterexps = let_instr._get_reverse_iters()
     # eval_let_iter' ctx exp_l exp_r iterexps
     return eval_let_iter_tick(ctx, let_instr.var, let_instr.value, iterexps)
 
@@ -817,8 +815,8 @@ def eval_rule_iter_tick(ctx, id, notexp, iterexps):
     #       match iter_h with
     #       | Opt -> eval_rule_opt ctx id notexp vars_h iterexps_t
     #       | List -> eval_rule_list ctx id notexp vars_h iterexps_t)
-    iterexp = iterexps[0]
-    iterexps_t = iterexps[1:]
+    iterexp = iterexps.head
+    iterexps_t = iterexps.tail
     iter_h = iterexp.iter
     vars_h = iterexp.vars
     if isinstance(iter_h, p4specast.Opt):
@@ -832,8 +830,7 @@ def eval_rule_iter_tick(ctx, id, notexp, iterexps):
 def eval_rule_iter(ctx, instr):
     # let iterexps = List.rev iterexps in
     # eval_rule_iter' ctx id notexp iterexps
-    iterexps = instr.iters[:]
-    iterexps.reverse()
+    iterexps = instr._get_reverse_iters()
     return eval_rule_iter_tick(ctx, instr.id, instr.notexp, iterexps)
 
 class __extend__(p4specast.RuleI):
@@ -910,8 +907,8 @@ def eval_hold_cond_iter_tick(ctx, id, notexp, iterexps):
     if not iterexps:
         return eval_hold_cond(ctx, id, notexp)
     #  | iterexp_h :: iterexps_t -> (
-    iterexp_h = iterexps[0]
-    iterexps_t = iterexps[1:]
+    iterexp_h = iterexps.head
+    iterexps_t = iterexps.tail
     #      let iter_h, vars_h = iterexp_h in
     iter_h = iterexp_h.iter
     vars_h = iterexp_h.vars
@@ -944,14 +941,13 @@ def eval_hold_cond_iter_tick(ctx, id, notexp, iterexps):
     else:
         assert False, "unknown iter_h type: %s" % iter_h.__class__.__name__
 
-def eval_hold_cond_iter(ctx, id, notexp, iterexps):
+def eval_hold_cond_iter(ctx, instr):
     #and eval_hold_cond_iter (ctx : Ctx.t) (id : id) (notexp : notexp)
     #    (iterexps : iterexp list) : Ctx.t * bool * value =
     #  let iterexps = List.rev iterexps in
-    iterexps = iterexps[:]
-    iterexps.reverse()
+    iterexps = instr._get_reverse_iters()
     #  eval_hold_cond_iter' ctx id notexp iterexps
-    return eval_hold_cond_iter_tick(ctx, id, notexp, iterexps)
+    return eval_hold_cond_iter_tick(ctx, instr.id, instr.notexp, iterexps)
 
 #
 class __extend__(p4specast.HoldI):
@@ -962,7 +958,7 @@ class __extend__(p4specast.HoldI):
         #  let cover_backup = !(ctx.cover) in
         #  (* Evaluate the hold condition *)
         #  let ctx, cond, value_cond = eval_hold_cond_iter ctx id notexp iterexps in
-        ctx, cond, value_cond = eval_hold_cond_iter(ctx, self.id, self.notexp, self.iters)
+        ctx, cond, value_cond = eval_hold_cond_iter(ctx, self)
         #  (* Evaluate the hold case, and restore the coverage information
         #     if the expected behavior is the relation not holding *)
         #  let vid = value_cond.note.vid in

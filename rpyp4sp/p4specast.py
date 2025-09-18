@@ -1476,6 +1476,7 @@ TypeCase = NotTyp
 #   | ReturnI of exp
 
 class Instr(AstBase):
+    _attrs_ = ['region']
     # has a .region
 
     def tostring(self, level=0, index=0):
@@ -1508,7 +1509,22 @@ class Instr(AstBase):
         ast.region = region
         return ast
 
-class IfI(Instr):
+
+class InstrWithIters(Instr):
+    _attrs_ = ['iters', '_reverse_iters']
+    _immutable_fields_ = ['iters[*]']
+
+    _reverse_iters = None
+
+    def _get_reverse_iters(self):
+        if self._reverse_iters is not None:
+            return self._reverse_iters
+        res = ReverseIterExp.from_unreversed_list(self.iters)
+        self._reverse_iters = res
+        return res
+
+
+class IfI(InstrWithIters):
     def __init__(self, exp, iters, instrs, phantom, region=None):
         self.exp = exp
         self.iters = iters
@@ -1549,8 +1565,8 @@ class IfI(Instr):
         return "p4specast.IfI(%r, %r, %r, %r%s)" % (self.exp, self.iters, self.instrs, self.phantom, (", " + repr(self.region)) if self.region is not None else '')
 
 
-class HoldI(Instr):
-    _immutable_fields_ = ['id', 'notexp', 'iters[*]']
+class HoldI(InstrWithIters):
+    _immutable_fields_ = ['id', 'notexp']
 
 #   | HoldI of id * notexp * iterexp list * holdcase
     def __init__(self, id, notexp, iters, holdcase, region=None):
@@ -1583,6 +1599,28 @@ class HoldI(Instr):
 
     def __repr__(self):
         return "p4specast.HoldI(%r, %r, %r, %r%s)" % (self.id, self.notexp, self.iters, self.holdcase, (", " + repr(self.region)) if self.region is not None else '')
+
+
+class ReverseIterExp(object):
+    def __init__(self, head, tail):
+        self.head = head # type: IterExp
+        self.tail = tail # type: ReverseIterExp
+
+    @staticmethod
+    def from_unreversed_list(l):
+        next = None
+        for index in range(len(l) - 1, -1, -1):
+            el = l[index]
+            next = ReverseIterExp(el, next)
+        return next
+
+    def __repr__(self):
+        l = []
+        while self:
+            l.append(self.head)
+            self = self.tail
+        l.reverse()
+        return "ReverseIterExp.from_unreversed_list(%r)" % (l, )
 
 
 class CaseI(Instr):
@@ -1644,7 +1682,7 @@ class OtherwiseI(Instr):
     def __repr__(self):
         return "p4specast.OtherwiseI(%r)" % (self.instr,)
 
-class LetI(Instr):
+class LetI(InstrWithIters):
     def __init__(self, var, value, iters, region=None):
         self.var = var
         self.value = value
@@ -1671,7 +1709,7 @@ class LetI(Instr):
     def __repr__(self):
         return "p4specast.LetI(%r, %r, %r%s)" % (self.var, self.value, self.iters, (", " + repr(self.region)) if self.region is not None else '')
 
-class RuleI(Instr):
+class RuleI(InstrWithIters):
     def __init__(self, id, notexp, iters, region=None):
         self.id = id
         self.notexp = notexp
