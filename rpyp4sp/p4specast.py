@@ -1244,7 +1244,11 @@ class NumT(Type):
 
     def tostring(self):
         # | NumT numtyp -> Num.string_of_typ numtyp
-        return self.typ.__class__.__name__.lower().replace('t', '')  # TODO: implement proper Num.string_of_typ
+        if isinstance(self.typ, NatT):
+            return 'nat'
+        if isinstance(self.typ, IntT):
+            return 'int'
+        assert 0, 'unreachable'
 
     def __repr__(self):
         return "p4specast.NumT(%r)" % (self.typ,)
