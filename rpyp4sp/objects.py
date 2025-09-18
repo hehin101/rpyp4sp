@@ -34,27 +34,25 @@ class BaseV(object):
         content = value.get_dict_value('it')
         what = content.get_list_item(0).value_string()
         if what == 'BoolV':
-            value = BoolV.fromjson(content)
+            value = BoolV.fromjson(content, typ, vid)
         elif what == 'NumV':
-            value = NumV.fromjson(content)
+            value = NumV.fromjson(content, typ, vid)
         elif what == 'TextV':
-            value = TextV.fromjson(content)
+            value = TextV.fromjson(content, typ, vid)
         elif what == 'StructV':
-            value = StructV.fromjson(content)
+            value = StructV.fromjson(content, typ, vid)
         elif what == 'CaseV':
-            value = CaseV.fromjson(content)
+            value = CaseV.fromjson(content, typ, vid)
         elif what == 'TupleV':
-            value = TupleV.fromjson(content)
+            value = TupleV.fromjson(content, typ, vid)
         elif what == 'OptV':
-            value = OptV.fromjson(content)
+            value = OptV.fromjson(content, typ, vid)
         elif what == 'ListV':
-            value = ListV.fromjson(content)
+            value = ListV.fromjson(content, typ, vid)
         elif what == 'FuncV':
-            value = FuncV.fromjson(content)
+            value = FuncV.fromjson(content, typ, vid)
         else:
             raise P4UnknownTypeError("Unknown content type")
-        value.vid = vid
-        value.typ = typ
         return value
 
     def get_bool(self):
@@ -125,8 +123,8 @@ class BoolV(BaseV):
         return "true" if self.value else "false"
 
     @staticmethod
-    def fromjson(content):
-        return BoolV(content.get_list_item(1).value_bool())
+    def fromjson(content, typ, vid):
+        return BoolV(content.get_list_item(1).value_bool(), typ, vid)
 
 class NumV(BaseV):
     def __init__(self, value, what, typ=None, vid=-1):
@@ -159,7 +157,7 @@ class NumV(BaseV):
         return NumV(integers.Integer.fromstr(value), what, typ, vid)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, typ, vid):
         inner = content.get_list_item(1)
         what = inner.get_list_item(0).value_string()
         if what == 'Int':
@@ -168,7 +166,7 @@ class NumV(BaseV):
             assert what == 'Nat'
             what = p4specast.NatT.INSTANCE
         value = inner.get_list_item(1).value_string()
-        return NumV.fromstr(value, what)
+        return NumV.fromstr(value, what, typ, vid)
 
 class TextV(BaseV):
     def __init__(self, value, typ=None, vid=-1):
@@ -197,8 +195,8 @@ class TextV(BaseV):
         return string_escape_encode(self.value)
 
     @staticmethod
-    def fromjson(content):
-        return TextV(content.get_list_item(1).value_string())
+    def fromjson(content, typ, vid):
+        return TextV(content.get_list_item(1).value_string(), typ, vid)
 
 class StructV(BaseV):
     def __init__(self, fields, typ=None, vid=-1):
@@ -242,14 +240,14 @@ class StructV(BaseV):
         return "{ %s }" % ";\n".join(parts)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, typ, vid):
         fields = []
         for f in content.get_list_item(1).value_array():
             atom_content, field_content = f.value_array()
             atom = p4specast.AtomT.fromjson(atom_content)
             field = BaseV.fromjson(field_content)
             fields.append((atom, field))
-        return StructV(fields)
+        return StructV(fields, typ, vid)
 
     def compare(self, other):
         if not isinstance(other, StructV):
@@ -302,11 +300,11 @@ class CaseV(BaseV):
         return "(" + " ".join(result_parts) + ")"
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, typ, vid):
         mixop_content, valuelist_content = content.get_list_item(1).value_array()
         mixop = p4specast.MixOp.fromjson(mixop_content)
         values = [BaseV.fromjson(v) for v in valuelist_content.value_array()]
-        return CaseV(mixop, values)
+        return CaseV(mixop, values, typ, vid)
 
     def compare(self, other):
         if not isinstance(other, CaseV):
@@ -343,9 +341,9 @@ class TupleV(BaseV):
         return "(%s)" % ", ".join(element_strs)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, typ, vid):
         elements = [BaseV.fromjson(e) for e in content.get_list_item(1).value_array()]
-        return TupleV(elements)
+        return TupleV(elements, typ, vid)
 
 class OptV(BaseV):
     def __init__(self, value, typ=None, vid=-1):
@@ -380,11 +378,11 @@ class OptV(BaseV):
             return "Some(%s)" % self.value.tostring(short, level + 1)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, typ, vid):
         value = None
         if not content.get_list_item(1).is_null:
             value = BaseV.fromjson(content.get_list_item(1))
-        return OptV(value)
+        return OptV(value, typ, vid)
 
 class ListV(BaseV):
     def __init__(self, elements, typ=None, vid=-1):
@@ -431,9 +429,9 @@ class ListV(BaseV):
         return "[ %s ]" % ",\n".join(parts)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, typ, vid):
         elements = [BaseV.fromjson(e) for e in content.get_list_item(1).value_array()]
-        return ListV(elements)
+        return ListV(elements, typ, vid)
 
 
 class FuncV(BaseV):
@@ -450,9 +448,9 @@ class FuncV(BaseV):
         return self.id.value
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, typ, vid):
         id = p4specast.Id.fromjson(content.get_list_item(1))
-        return FuncV(id)
+        return FuncV(id, typ, vid)
 
 def atom_compares(atoms_l, atoms_r):
     len_l = len(atoms_l)
