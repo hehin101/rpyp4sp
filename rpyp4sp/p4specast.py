@@ -1579,6 +1579,9 @@ class DefTyp(AstBase):
         ast.region = region
         return ast
 
+    def __repr__(self):
+        return "p4specast.DefTyp()"
+
 class PlainT(DefTyp):
     _immutable_fields_ = ['typ', 'region']
 
