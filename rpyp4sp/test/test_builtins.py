@@ -91,6 +91,19 @@ def test_numerics_bor():
     res = builtin.numerics_bor(None, [], inputs)
     assert res.eq(mkint(42))
 
+def test_numerics_pow2():
+    v = mkint(12)
+    res = builtin.numerics_pow2(None, [], [v])
+    assert res.eq(mkint(4096))
+
+    v = mkint(0)
+    res = builtin.numerics_pow2(None, [], [v])
+    assert res.eq(mkint(1))
+
+    v = mkint(-1)
+    with pytest.raises(builtin.P4BuiltinError):
+        res = builtin.numerics_pow2(None, [], [v])
+
 def test_fresh():
     oldval = builtin.HOLDER.counter
     try:

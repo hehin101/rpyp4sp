@@ -491,7 +491,12 @@ def numerics_shr_arith(ctx, targs, values_input):
 
 @register_builtin("pow2")
 def numerics_pow2(ctx, targs, values_input):
-    raise P4NotImplementedError("numerics_pow2 is not implemented yet")
+    arg, = values_input
+    val = arg.get_num().toint()
+    if val < 0:
+        raise P4BuiltinError("pow2 argument must not be negative")
+    res = integers.Integer.fromint(1).lshift(val)
+    return _integer_to_value(res)
 
 @register_builtin("to_int")
 def numerics_to_int(ctx, targs, values_input):
