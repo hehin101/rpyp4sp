@@ -44,7 +44,7 @@ def nats_sum(ctx, targs, values_input):
         sum_result = sum_result.add(value.get_num())
 
     # value_of_bigint ctx sum
-    return objects.NumV(sum_result, p4specast.NatT.INSTANCE, typ=p4specast.NumT(p4specast.NatT.INSTANCE))
+    return objects.NumV(sum_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
 
 @register_builtin("max")
 def nats_max(ctx, targs, values_input):
@@ -59,7 +59,7 @@ def nats_max(ctx, targs, values_input):
         current = value.get_num()
         if current.gt(max_result):
             max_result = current
-    return objects.NumV(max_result, p4specast.NatT.INSTANCE, typ=p4specast.NumT(p4specast.NatT.INSTANCE))
+    return objects.NumV(max_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
 
 @register_builtin("min")
 def nats_min(ctx, targs, values_input):
@@ -74,12 +74,12 @@ def nats_min(ctx, targs, values_input):
         current = value.get_num()
         if current.lt(min_result):
             min_result = current
-    return objects.NumV(min_result, p4specast.NatT.INSTANCE, typ=p4specast.NumT(p4specast.NatT.INSTANCE))
+    return objects.NumV(min_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
 
 @register_builtin("int_to_text")
 def texts_int_to_text(ctx, targs, values_input):
     int_value, = values_input
-    return objects.TextV(int_value.get_num().str(), typ=p4specast.TextT())
+    return objects.TextV(int_value.get_num().str(), p4specast.TextT.INSTANCE)
 
 @register_builtin("strip_prefix")
 def texts_strip_prefix(ctx, targs, values_input):
@@ -106,7 +106,7 @@ def texts_strip_prefix(ctx, targs, values_input):
     if not text.startswith(prefix):
         raise P4BuiltinError("Text '%s' does not start with prefix '%s'" % (text, prefix))
     stripped_text = text[len(prefix):] if prefix else text
-    return objects.TextV(stripped_text, p4specast.TextT())
+    return objects.TextV(stripped_text, p4specast.TextT.INSTANCE)
 
 @register_builtin("strip_suffix")
 def texts_strip_suffix(ctx, targs, values_input):
@@ -131,7 +131,7 @@ def texts_strip_suffix(ctx, targs, values_input):
     end = len(text) - len(suffix)
     assert end >= 0
     stripped_text = text[:end]
-    return objects.TextV(stripped_text, p4specast.TextT())
+    return objects.TextV(stripped_text, p4specast.TextT.INSTANCE)
 
 @register_builtin("rev_")
 def lists_rev_(ctx, targs, values_input):
@@ -160,13 +160,13 @@ def lists_distinct_(ctx, targs, values_input):
     value, = values_input
     lst = value.get_list()
     if len(lst) <= 1:
-        return objects.BoolV(True, p4specast.BoolT())
+        return objects.BoolV(True, p4specast.BoolT.INSTANCE)
     # naive quadratic implementation using .eq
     for i in range(len(lst)):
         for j in range(i + 1, len(lst)):
             if lst[i].eq(lst[j]):
-                return objects.BoolV(False, p4specast.BoolT())
-    return objects.BoolV(True, p4specast.BoolT())
+                return objects.BoolV(False, p4specast.BoolT.INSTANCE)
+    return objects.BoolV(True, p4specast.BoolT.INSTANCE)
 
 @register_builtin("partition_")
 def lists_partition_(ctx, targs, values_input):
@@ -317,8 +317,8 @@ def sets_sub_set(ctx, targs, values_input):
             if el.eq(el2):
                 break
         else:
-            return objects.BoolV(False, p4specast.BoolT())
-    return objects.BoolV(True, p4specast.BoolT())
+            return objects.BoolV(False, p4specast.BoolT.INSTANCE)
+    return objects.BoolV(True, p4specast.BoolT.INSTANCE)
 
 @register_builtin("eq_set")
 def sets_eq_set(ctx, targs, values_input):
@@ -326,14 +326,14 @@ def sets_eq_set(ctx, targs, values_input):
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
     if len(elems_l) != len(elems_r):
-        return objects.BoolV(False, p4specast.BoolT())
+        return objects.BoolV(False, p4specast.BoolT.INSTANCE)
     for el in elems_l:
         for el2 in elems_r:
             if el.eq(el2):
                 break
         else:
-            return objects.BoolV(False, p4specast.BoolT())
-    return objects.BoolV(True, p4specast.BoolT())
+            return objects.BoolV(False, p4specast.BoolT.INSTANCE)
+    return objects.BoolV(True, p4specast.BoolT.INSTANCE)
 
 # _________________________________________________________________
 
@@ -472,7 +472,7 @@ def fresh_fresh_tid(ctx, targs, values_input):
 
 def _integer_to_value(integer):
     # type: (integers.Integer) -> objects.NumV
-    return objects.NumV(integer, p4specast.IntT.INSTANCE, typ=p4specast.NumT(p4specast.IntT()))
+    return objects.NumV(integer, p4specast.IntT.INSTANCE, p4specast.NumT.INT)
 
 
 @register_builtin("shl")

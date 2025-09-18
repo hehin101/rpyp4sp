@@ -80,7 +80,7 @@ def define_enum(basename, *names):
             assert 0
 
         def __repr__(self):
-            return "p4specast." + self.__class__.__name__ + "()"
+            return "p4specast." + self.__class__.__name__ + ".INSTANCE"
     Base.__name__ = basename
     subs = []
     for name in names:
@@ -1231,11 +1231,12 @@ class BoolT(Type):
         return "bool"
 
     def __repr__(self):
-        return "p4specast.BoolT()"
+        return "p4specast.BoolT.INSTANCE"
 
     @staticmethod
     def fromjson(content):
-        return BoolT()
+        return BoolT.INSTANCE
+BoolT.INSTANCE = BoolT()
 
 
 class NumT(Type):
@@ -1251,11 +1252,25 @@ class NumT(Type):
         assert 0, 'unreachable'
 
     def __repr__(self):
-        return "p4specast.NumT(%r)" % (self.typ,)
+        if isinstance(self.typ, IntT):
+            return "p4specast.NumT.INT"
+        elif isinstance(self.typ, NatT):
+            return "p4specast.NumT.NAT"
+        else:
+            return "p4specast.NumT(%r)" % (self.typ,)
 
     @staticmethod
     def fromjson(content):
-        return NumT(NumTyp.fromjson(content.get_list_item(1)))
+        typ = NumTyp.fromjson(content.get_list_item(1))
+        if isinstance(typ, IntT):
+            return NumT.INT
+        elif isinstance(typ, NatT):
+            return NumT.NAT
+        else:
+            return NumT(typ)
+NumT.INT = NumT(IntT.INSTANCE)
+NumT.NAT = NumT(NatT.INSTANCE)
+
 
 
 class TextT(Type):
@@ -1267,11 +1282,11 @@ class TextT(Type):
         return "text"
 
     def __repr__(self):
-        return "p4specast.TextT()"
+        return "p4specast.TextT.INSTANCE"
 
     @staticmethod
     def fromjson(content):
-        return TextT()
+        return TextT.INSTANCE
 
 class VarT(Type):
     def __init__(self, id, targs):
@@ -1341,11 +1356,14 @@ class FuncT(Type):
         return "func"
 
     def __repr__(self):
-        return "p4specast.FuncT()"
+        return "p4specast.FuncT.INSTANCE"
 
     @staticmethod
     def fromjson(content):
-        return FuncT()
+        return FuncT.INSTANCE
+
+TextT.INSTANCE = TextT()
+FuncT.INSTANCE = FuncT()
 
 # and nottyp = nottyp' phrase
 # [@@deriving yojson]

@@ -124,7 +124,7 @@ def eval_arg(ctx, arg):
     #     Ctx.add_node ctx value_res;
     #     (ctx, value_res)
     elif isinstance(arg, p4specast.DefA):
-        return ctx, objects.FuncV(arg.id, p4specast.FuncT())
+        return ctx, objects.FuncV(arg.id, p4specast.FuncT.INSTANCE)
     else:
         assert 0, "unreachable"
 
@@ -294,7 +294,7 @@ def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
     #         (ctx, cond, value_cond))
         elif isinstance(iter_h, p4specast.List):
             ctx, cond, values_cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexps_t)
-            typ = p4specast.IterT(p4specast.BoolT(), p4specast.List())
+            typ = p4specast.IterT(p4specast.BoolT.INSTANCE, p4specast.List())
             value_cond = objects.ListV(values_cond, typ)
             return ctx, cond, value_cond
     # | iterexp_h :: iterexps_t -> (
@@ -348,7 +348,7 @@ def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
         #           vars_h;
         #         (ctx, cond, value_cond))
         ctx, cond, values_cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexps_t)
-        typ = p4specast.IterT(p4specast.BoolT(), p4specast.List())
+        typ = p4specast.IterT(p4specast.BoolT.INSTANCE, p4specast.List())
         value_cond = objects.ListV(values_cond, typ)
         # for (id, _typ, iters) in vars_h:
         #     value_sub = ctx.find_value_local(id, iters + [p4specast.List])
@@ -388,24 +388,24 @@ def eval_cases(ctx, exp, cases):
         #          | BoolG false -> Il.Ast.UnE (`NotOp, `BoolT, exp)
         elif isinstance(guard, p4specast.BoolG) and not guard.value:
             exp_cond = p4specast.UnE("NotOp", "BoolT", exp)
-            exp_cond.typ = p4specast.BoolT()
+            exp_cond.typ = p4specast.BoolT.INSTANCE
         #          | CmpG (cmpop, optyp, exp_r) ->
         #              Il.Ast.CmpE (cmpop, optyp, exp, exp_r)
         elif isinstance(guard, p4specast.CmpG):
             exp_cond = p4specast.CmpE(guard.op, guard.typ, exp, guard.exp)
-            exp_cond.typ = p4specast.BoolT()
+            exp_cond.typ = p4specast.BoolT.INSTANCE
         #          | SubG typ -> Il.Ast.SubE (exp, typ)
         elif isinstance(guard, p4specast.SubG):
             exp_cond = p4specast.SubE(exp, guard.typ)
-            exp_cond.typ = p4specast.BoolT()
+            exp_cond.typ = p4specast.BoolT.INSTANCE
         #          | MatchG pattern -> Il.Ast.MatchE (exp, pattern)
         elif isinstance(guard, p4specast.MatchG):
             exp_cond = p4specast.MatchE(exp, guard.pattern)
-            exp_cond.typ = p4specast.BoolT()
+            exp_cond.typ = p4specast.BoolT.INSTANCE
         #          | MemG exp_s -> Il.Ast.MemE (exp, exp_s)
         elif isinstance(guard, p4specast.MemG):
             exp_cond = p4specast.MemE(exp, guard.exp)
-            exp_cond.typ = p4specast.BoolT()
+            exp_cond.typ = p4specast.BoolT.INSTANCE
         else:
             #import pdb;pdb.set_trace()
             assert 0, 'missing case'
@@ -862,7 +862,7 @@ def eval_hold_cond(ctx, id, notexp):
     #    let vid = Value.fresh () in
     #    let typ = Il.Ast.BoolT in
     #    Il.Ast.(BoolV hold $$$ { vid; typ })
-    value_res = objects.BoolV(hold, p4specast.BoolT())
+    value_res = objects.BoolV(hold, p4specast.BoolT.INSTANCE)
     #  in
     #  Ctx.add_node ctx value_res;
     #  List.iteri
@@ -926,7 +926,7 @@ def eval_hold_cond_iter_tick(ctx, id, notexp, iterexps):
     #            let vid = Value.fresh () in
     #            let typ = Il.Ast.IterT (Il.Ast.BoolT $ no_region, Il.Ast.List) in
     #            Il.Ast.(ListV values_cond $$$ { vid; typ })
-        value_cond = objects.ListV(values_cond, p4specast.IterT(p4specast.BoolT(), p4specast.List()))
+        value_cond = objects.ListV(values_cond, p4specast.IterT(p4specast.BoolT.INSTANCE, p4specast.List()))
     #          in
     #          Ctx.add_node ctx value_cond;
     #          List.iter
