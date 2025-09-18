@@ -23,6 +23,11 @@ def test_venv_simple():
 
 def test_venv_dict():
     d_empty = VenvDict()
+    assert repr(d_empty._keys) == "context.VENV_KEYS_ROOT"
+    assert str(d_empty._keys) == "<keys >"
+    assert repr(d_empty) == "context.VenvDict()"
+    assert str(d_empty) == "<venv >"
+
     value1 = objects.TextV('abc')
     d2 = d_empty.set("a", "", value1)
     assert d2.get("a", "") is value1
@@ -39,6 +44,8 @@ def test_venv_dict():
     assert d4._keys is d3._keys
     assert repr(d4._keys) == "context.VENV_KEYS_ROOT.add_key('a', '')"
     assert str(d4._keys) == "<keys 'a'>"
+    assert repr(d4) == "context.VenvDict().set('a', '', objects.TextV('ghi', -1, None))"
+    assert str(d4) == "<venv 'a': objects.TextV('ghi', -1, None)>"
 
     value4 = objects.TextV('jkl')
     d5 = d4.set("b", "", value4)
@@ -46,7 +53,8 @@ def test_venv_dict():
     assert d5.get("b", "") is value4
     assert repr(d5._keys) == "context.VENV_KEYS_ROOT.add_key('a', '').add_key('b', '')"
     assert str(d5._keys) == "<keys 'a', 'b'>"
-
+    assert repr(d5) == "context.VenvDict().set('a', '', objects.TextV('ghi', -1, None)).set('b', '', objects.TextV('jkl', -1, None))"
+    assert str(d5) == "<venv 'a': objects.TextV('ghi', -1, None), 'b': objects.TextV('jkl', -1, None)>"
 
 def test_context():
     empty_ctx = Context("dummy")

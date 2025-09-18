@@ -45,13 +45,13 @@ class VenvKeys(object):
             res = VenvKeys(keys)
             self.next_venv_keys[key] = res
             return res
-        
+
     def __repr__(self):
         l = ["context.VENV_KEYS_ROOT"]
         for var_name, var_iter in self.keys:
             l.append(".add_key(%r, %r)" % (var_name, var_iter))
         return "".join(l)
-    
+
     def __str__(self):
         l = ["<keys "]
         for index, (var_name, var_iter) in enumerate(self.keys):
@@ -93,6 +93,26 @@ class VenvDict(object):
         # type: (str, str) -> int
         pos = jit.promote(self._keys).get_pos(var_name, var_iter)
         return pos >= 0
+
+    def __repr__(self):
+        l = ["context.VenvDict()"]
+        for var_name, var_iter in self._keys.keys:
+            pos = self._keys.get_pos(var_name, var_iter)
+            value = self._values[pos]
+            l.append(".set(%r, %r, %r)" % (var_name, var_iter, value))
+        return "".join(l)
+
+    def __str__(self):
+        l = ["<venv "]
+        for index, (var_name, var_iter) in enumerate(self._keys.keys):
+            pos = self._keys.get_pos(var_name, var_iter)
+            value = self._values[pos]
+            if index == 0:
+                l.append("%r: %r" % (var_name + var_iter, value))
+            else:
+                l.append(", %r: %r" % (var_name + var_iter, value))
+        l.append(">")
+        return "".join(l)
 
 class Context(object):
     def __init__(self, filename, derive=False, glbl=None, values_input=None, tdenv=None, fenv=None, venv=None):
