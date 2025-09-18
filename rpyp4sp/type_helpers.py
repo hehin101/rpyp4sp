@@ -51,8 +51,9 @@ def subst_typ(theta, typ):
     return _subst_typ_dict_key(typ, theta)
 
 def ctx_search(name, ctx):
-    if name in ctx.glbl.tdenv:
-        _, deftyp = ctx.glbl.tdenv[name]
+    a, b = jit.promote(ctx.glbl)._find_typdef(name)
+    if a is not None and b is not None:
+        deftyp = b
         if isinstance(deftyp, p4specast.PlainT):
             return deftyp.typ
     if name in ctx.tdenv:
