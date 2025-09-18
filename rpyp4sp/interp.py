@@ -1,3 +1,4 @@
+from __future__ import print_function
 from rpython.rlib import objectmodel
 from rpyp4sp import p4specast, objects, builtin, context, integers
 from rpyp4sp.error import (P4EvaluationError, P4CastError, P4NotImplementedError, 
@@ -1509,7 +1510,7 @@ def eval_binop_num(binop, value_l, value_r, typ):
     # Il.Ast.NumV (Num.bin binop num_l num_r)
     assert isinstance(value_l, objects.NumV)
     assert isinstance(value_r, objects.NumV)
-    assert value_l.what == value_r.what
+    assert type(value_l.what) is type(value_r.what)
     num_l = value_l.get_num()
     num_r = value_r.get_num()
     what = value_l.what
