@@ -4,6 +4,23 @@ from rpyp4sp import objects, p4specast
 
 import pytest
 
+def test_fenv_simple():
+    ctx = Context('dummy')
+    id1 = p4specast.Id('id1', None)
+    func1 = p4specast.DecD(id1, [], [], [])
+    ctx2 = ctx.add_func_local(id1, func1)
+    assert ctx2.find_func_local(id1) is func1
+    id2 = p4specast.Id('id2', None)
+    func2 = p4specast.DecD(id2, [], [], [])
+    ctx3 = ctx2.add_func_local(id2, func2)
+    assert ctx3.find_func_local(id1) is func1
+    assert ctx3.find_func_local(id2) is func2
+
+    func3 = p4specast.DecD(id2, [], [], [])
+    ctx4 = ctx3.add_func_local(id2, func3)
+    assert ctx4.find_func_local(id1) is func1
+    assert ctx4.find_func_local(id2) is func3
+
 def test_venv_simple():
     ctx = Context('dummy')
     id1 = p4specast.Id('id1', None)

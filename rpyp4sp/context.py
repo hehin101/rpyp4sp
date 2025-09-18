@@ -220,7 +220,7 @@ class Context(object):
         self.derive = derive
         self.values_input = values_input if values_input is not None else []
         self.tdenv = tdenv if tdenv is not None else {}
-        self.fenv = fenv if fenv is not None else {}
+        self.fenv = fenv if fenv is not None else FenvDict()
         self.venv = venv if venv is not None else VenvDict()
 
     def copy_and_change(self, values_input=None, tdenv=None, fenv=None, venv=None):
@@ -241,7 +241,7 @@ class Context(object):
                 self.glbl.fenv[definition.id.value] = definition
 
     def localize(self):
-        return self.copy_and_change(tdenv={}, fenv={}, venv=VenvDict())
+        return self.copy_and_change(tdenv={}, fenv=FenvDict(), venv=VenvDict())
 
     def localize_inputs(self, values_input):
         # tpye: (VenvDict) -> Context
@@ -284,8 +284,8 @@ class Context(object):
 
     def add_func_local(self, id, func):
         # type: (p4specast.Id, p4specast.DecD) -> Context
-        result = self.copy_and_change(fenv=self.fenv.copy())
-        result.fenv[id.value] = func
+        fenv = self.fenv.set(id.value, func)
+        result = self.copy_and_change(fenv=fenv)
         return result
 
     # TODO: 'typedef' ist list of what?
@@ -297,8 +297,8 @@ class Context(object):
 
     def find_func_local(self, id):
         # type: (p4specast.Id) -> p4specast.DecD
-        if id.value in self.fenv:
-            func = self.fenv[id.value]
+        if self.fenv.has_key(id.value):
+            func = self.fenv.get(id.value)
         else:
             jit.promote(self.glbl)
             func = self.glbl._find_func(id.value)
