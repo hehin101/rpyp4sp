@@ -176,9 +176,15 @@ class VenvDict(object):
         self._keys = keys # type: EnvKeys
         self._values = [] if values is None else values # type: list[objects.BaseV]
 
-    def get(self, var_name, var_iter):
-        # type: (str, str) -> objects.BaseV
-        pos = jit.promote(self._keys).get_pos(var_name, var_iter)
+    def get(self, var_name, var_iter, vare_cache=None):
+        # type: (str, str, p4specast.VarE | None) -> objects.BaseV
+        if vare_cache is not None and vare_cache._ctx_keys is self._keys:
+            pos = vare_cache._ctx_index
+        else:
+            pos = jit.promote(self._keys).get_pos(var_name, var_iter)
+            if vare_cache is not None:
+                vare_cache._ctx_index = pos
+                vare_cache._ctx_keys = self._keys
         if pos < 0:
             raise P4ContextError('id_value %s%s does not exist' % (var_name, var_iter))
         return self._values[pos]
@@ -259,15 +265,15 @@ class Context(object):
     def localize_venv(self, venv):
         return self.copy_and_change(venv=venv)
 
-    def find_value_local(self, id, iterlist=p4specast.IterList.EMPTY):
-        # type: (p4specast.Id, p4specast.IterList) -> objects.BaseV
+    def find_value_local(self, id, iterlist, vare_cache=None):
+        # type: (p4specast.Id, list[p4specast.Iter], p4specast.VarE | None) -> objects.BaseV
         jit.promote(id)
-        return self.venv.get(id.value, iterlist.to_key())
+        return self.venv.get(id.value, iterlist_to_key(iterlist), vare_cache)
 
-    def bound_value_local(self, id, iterlist=p4specast.IterList.EMPTY):
-        # type: (p4specast.Id, list) -> bool
+    def bound_value_local(self, id, iterlist):
+        # type: (p4specast.Id, list[p4specast.Iter]) -> bool
         jit.promote(id)
-        return self.venv.has_key(id.value, iterlist.to_key())
+        return self.venv.has_key(id.value, iterlist_to_key(iterlist))
 
     # TODO: why Id and not Tparam?
     def find_typdef_local(self, id):

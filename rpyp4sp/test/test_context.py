@@ -148,8 +148,22 @@ def test_venv_dict():
     assert d5.get("b", "") is value4
     assert repr(d5._keys) == "context.ENV_KEYS_ROOT.add_key('a', '').add_key('b', '')"
     assert str(d5._keys) == "<keys 'a', 'b'>"
-    assert repr(d5) == "context.VenvDict().set('a', '', objects.TextV('ghi', -1, None)).set('b', '', objects.TextV('jkl', -1, None))"
-    assert str(d5) == "<venv 'a': objects.TextV('ghi', -1, None), 'b': objects.TextV('jkl', -1, None)>"
+    assert repr(d5) == "context.VenvDict().set('a', '', objects.TextV('ghi', None, -1)).set('b', '', objects.TextV('jkl', None, -1))"
+    assert str(d5) == "<venv 'a': objects.TextV('ghi', None, -1), 'b': objects.TextV('jkl', None, -1)>"
+
+def test_venv_vare_cashing(monkeypatch):
+    id1 = p4specast.Id('id1', None)
+    value1 = objects.TextV("abc")
+    vare = p4specast.VarE(id1)
+    venv = VenvDict().set(id1.value, "", value1)
+    value2 = venv.get(id1.value, "", vare_cache=vare)
+    assert value1 is value2
+    #assert vare._ctx_keys is venv._keys
+    #assert vare._ctx_index == 0
+    monkeypatch.setattr(type(venv._keys), 'get_pos', None)
+    value2 = venv.get(id1.value, "", vare_cache=vare)
+    assert value1 is value2
+
 
 def test_context():
     empty_ctx = Context("dummy")

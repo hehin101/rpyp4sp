@@ -1375,7 +1375,11 @@ class __extend__(p4specast.TextE):
 class __extend__(p4specast.VarE):
     def eval_exp(self, ctx):
         # let value = Ctx.find_value Local ctx (id, []) in
+<<<<<<< HEAD
         value = ctx.find_value_local(self.id)
+=======
+        value = ctx.find_value_local(self.id, [], vare_cache=self)
+>>>>>>> 34ecca0 (vare cache)
         return ctx, value
 
 class __extend__(p4specast.OptE):
