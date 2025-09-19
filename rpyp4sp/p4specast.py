@@ -1160,8 +1160,25 @@ class IterExp(AstBase):
         self.vars = vars
 
     def tostring(self):
-        # and string_of_iterexp (iter, _) = Il.Print.string_of_iter iter
-        return string_of_iter(self.iter)
+        # and string_of_iterexp iterexp =
+        #   let iter, vars = iterexp in
+        #   string_of_iter iter ^ "{"
+        #   ^ String.concat ", "
+        #       (List.map
+        #          (fun var ->
+        #            let id, typ, iters = var in
+        #            string_of_var var ^ " <- " ^ string_of_var (id, typ, iters @ [ iter ]))
+        #          vars)
+        #   ^ "}"
+        res = [string_of_iter(self.iter)]
+        res.append("{")
+        var_strs = []
+        for var in self.vars:
+            id, typ, iters = var.id, var.typ, var.iter
+            var_strs.append("%s <- %s" % (var.tostring(), Var(id, typ, iters + [self.iter]).tostring()))
+        res.append(", ".join(var_strs))
+        res.append("}")
+        return "".join(res)
 
     @staticmethod
     def fromjson(content):
@@ -1627,8 +1644,7 @@ class ReverseIterExp(object):
     @staticmethod
     def from_unreversed_list(l):
         next = None
-        for index in range(len(l) - 1, -1, -1):
-            el = l[index]
+        for el in l:
             next = ReverseIterExp(el, next)
         return next
 

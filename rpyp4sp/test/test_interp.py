@@ -52,6 +52,14 @@ def test_upcast_list():
     _, res = interp.upcast(None, typ, value)
     assert res is value
 
+def test_reversed_iters_list():
+    res = p4specast.ReverseIterExp.from_unreversed_list([1, 2, 3])
+    assert res.head == 3
+    assert res.tail.head == 2
+    assert res.tail.tail.head == 1
+    assert res.tail.tail.tail is None
+    assert repr(res) == 'ReverseIterExp.from_unreversed_list([1, 2, 3])'
+
 
 def test_binop_num_sub_is_int():
     def mknat(val): return objects.NumV.fromstr(str(val), p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
