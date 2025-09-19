@@ -4,6 +4,23 @@ from rpyp4sp import objects, p4specast
 
 import pytest
 
+def test_tdenv_simple():
+    ctx = Context('dummy')
+    id1 = p4specast.Id('id1', None)
+    typdef1 = ([], p4specast.DefTyp())
+    ctx2 = ctx.add_typdef_local(id1, typdef1)
+    assert ctx2.find_typdef_local(id1) is typdef1
+    id2 = p4specast.Id('id2', None)
+    typdef2 = ([], p4specast.DefTyp())
+    ctx3 = ctx2.add_typdef_local(id2, typdef2)
+    assert ctx3.find_typdef_local(id1) is typdef1
+    assert ctx3.find_typdef_local(id2) is typdef2
+
+    typdef3 = ([], p4specast.DefTyp())
+    ctx4 = ctx3.add_typdef_local(id2, typdef3)
+    assert ctx4.find_typdef_local(id1) is typdef1
+    assert ctx4.find_typdef_local(id2) is typdef3
+
 def test_fenv_simple():
     ctx = Context('dummy')
     id1 = p4specast.Id('id1', None)
@@ -67,6 +84,7 @@ def test_tdenv_dict():
     assert d4.get(id2.value) is typdef4
     assert repr(d4) == "context.TDenvDict().set('id1', p4specast.DefTyp()).set('id2', p4specast.DefTyp())"
     assert str(d4) == "<tdenv 'id1': p4specast.DefTyp(), 'id2': p4specast.DefTyp()>"
+    assert d4.bindings() == [(id1.value, typdef3), (id2.value, typdef4)]
 
 def test_fenv_dict():
     d_empty = FenvDict()
