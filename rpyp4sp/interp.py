@@ -455,6 +455,7 @@ class __extend__(p4specast.LetI):
         ctx = eval_let_iter(ctx, self)
         return ctx, Cont()
 
+@jit.unroll_safe
 def _discriminate_bound_binding_variables(ctx, vars):
     vars_bound = []
     vars_binding = []
@@ -465,6 +466,7 @@ def _discriminate_bound_binding_variables(ctx, vars):
             vars_binding.append(var)
     return vars_bound, vars_binding
 
+@jit.unroll_safe
 def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     # (* Discriminate between bound and binding variables *)
     # let vars_bound, vars_binding =
@@ -482,16 +484,15 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     #   (* If the bound variable supposed to guide the iteration is already empty,
     #      then the binding variables are also empty *)
     #   | [] ->
-    if ctxs_sub == []:
     #       let values_binding =
     #         List.init (List.length vars_binding) (fun _ -> [])
     #       in
     #       (ctx, values_binding)
-        values_binding = [[] for _ in vars_binding]
+        # the empty list case is the same in rpython, due to mutation
+        # and not needing the transpose
     #   (* Otherwise, evaluate the premise for each batch of bound values,
     #      and collect the resulting binding batches *)
     #   | _ ->
-    else:
     #       let ctx, values_binding_batch =
     #         List.fold_left
     #           (fun (ctx, values_binding_batch) ctx_sub ->
@@ -509,18 +510,8 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     #             (ctx, values_binding_batch))
     #           (ctx, []) ctxs_sub
     #       in
-        values_binding_batch = []
-        for ctx_sub in ctxs_sub:
-            ctx_sub = eval_let_iter_tick(ctx_sub, exp_l, exp_r, iterexps_t)
-            ctx = ctx.commit(ctx_sub)
-            value_binding_batch = []
-            for var_binding in vars_binding:
-                value_binding = ctx_sub.find_value_local(var_binding.id, var_binding.iter)
-                value_binding_batch.append(value_binding)
-            values_binding_batch.append(value_binding_batch)
+    ctx, values_binding = _eval_let_list_loop(ctx, ctxs_sub, vars_binding, exp_l, exp_r, iterexps_t)
     #       let values_binding = values_binding_batch |> Ctx.transpose in
-        values_binding = context.transpose(values_binding_batch)
-        assert len(values_binding) == len(vars_binding)
     #       (ctx, values_binding)
     # in
     # (* Finally, bind the resulting binding batches *)
@@ -547,9 +538,28 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
         id_binding = var_binding.id
         typ_binding = var_binding.typ
         iters_binding = var_binding.iter
-        value_binding = objects.ListV(values_binding_item, typ_binding)
+        value_binding = objects.ListV(values_binding_item[:], typ_binding)
         ctx = ctx.add_value_local(id_binding, iters_binding.append_list(), value_binding)
     return ctx
+
+def get_printable_location(exp_l, exp_r):
+    return "eval_let_list_loop %s %s" % (exp_l.tostring(), exp_r.tostring())
+
+jitdriver_eval_let_list_loop = jit.JitDriver(
+    reds='auto', greens=['exp_l', 'exp_r'],
+    should_unroll_one_iteration = lambda exp_l, exp_r: True,
+    name='eval_let_list_loop', get_printable_location=get_printable_location)
+
+def _eval_let_list_loop(ctx, ctxs_sub, vars_binding, exp_l, exp_r, iterexps_t):
+    values_binding = [[] for _ in vars_binding]
+    for ctx_sub in ctxs_sub:
+        #jitdriver_eval_let_list_loop.jit_merge_point(exp_l=exp_l, exp_r=exp_r)
+        ctx_sub = eval_let_iter_tick(ctx_sub, exp_l, exp_r, iterexps_t)
+        ctx = ctx.commit(ctx_sub)
+        for i, var_binding in enumerate(vars_binding):
+            value_binding = ctx_sub.find_value_local(var_binding.id, var_binding.iter)
+            values_binding[i].append(value_binding)
+    return ctx, values_binding
 
 
 def eval_let_iter_tick(ctx, exp_l, exp_r, iterexps):
@@ -726,7 +736,7 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
     #   (* If the bound variable supposed to guide the iteration is already empty,
     #      then the binding variables are also empty *)
     #   | [] ->
-    if ctxs_sub == []:
+    if ctxs_sub.length == 0:
     #       let values_binding =
     #         List.init (List.length vars_binding) (fun _ -> [])
     #       in
@@ -1982,25 +1992,10 @@ def eval_iter_exp_opt(note, ctx, exp, vars):
     #     vars;
     #   (ctx, value_res)
 
-
 def eval_iter_exp_list(note, ctx, exp, vars):
-    return _eval_iter_exp_list(note, ctx, exp, vars)
-
-def _eval_iter_exp_list(note, ctx, exp, vars):
     # let ctxs_sub = Ctx.sub_list ctx vars in
     ctxs_sub = ctx.sub_list(vars)
-    # let ctx, values =
-    values = []
-    for ctx_sub in ctxs_sub:
-        #   List.fold_left
-        #     (fun (ctx, values) ctx_sub ->
-        #       let ctx_sub, value = eval_exp ctx_sub exp in
-        ctx_sub, value = eval_exp(ctx_sub, exp)
-        #       let ctx = Ctx.commit ctx ctx_sub in
-        ctx = ctx.commit(ctx_sub)
-        #       (ctx, values @ [ value ]))
-        #     (ctx, []) ctxs_sub
-        values.append(value)
+    values = _eval_iter_exp_list(ctx, exp, ctxs_sub)
     # in
     # let value_res =
     #   let vid = Value.fresh () in
@@ -2017,6 +2012,34 @@ def _eval_iter_exp_list(note, ctx, exp, vars):
     #   vars;
     # (ctx, value_res)
     return ctx, value_res
+
+def get_printable_location(exp):
+    return "eval_iter_exp_list %s" % exp.tostring()
+
+
+jitdriver_eval_iter_exp_list = jit.JitDriver(
+    reds='auto', greens=['exp'],
+    should_unroll_one_iteration = lambda exp: True,
+    name='eval_iter_exp_list', get_printable_location=get_printable_location)
+
+
+def _eval_iter_exp_list(ctx, exp, ctxs_sub):
+    # let ctx, values =
+    values = [None] * ctxs_sub.length
+    i = 0
+    for ctx_sub in ctxs_sub:
+        jitdriver_eval_iter_exp_list.jit_merge_point(exp=exp)
+        #   List.fold_left
+        #     (fun (ctx, values) ctx_sub ->
+        #       let ctx_sub, value = eval_exp ctx_sub exp in
+        ctx_sub, value = eval_exp(ctx_sub, exp)
+        #       let ctx = Ctx.commit ctx ctx_sub in
+        ctx = ctx.commit(ctx_sub)
+        #       (ctx, values @ [ value ]))
+        #     (ctx, []) ctxs_sub
+        values[i] = value
+        i += 1
+    return values
 
 class __extend__(p4specast.IterE):
     def eval_exp(self, ctx):

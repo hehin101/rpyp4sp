@@ -228,8 +228,11 @@ class Context(object):
                 ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value_sub.value)
             return ctx_sub
 
-
+    @jit.unroll_safe
     def sub_list(self, vars):
+        # this is unroll_safe because vars comes from an ast, so is
+        # constant-sized.
+
         # First break the values that are to be iterated over,
         # into a batch of values
         #   let values_batch =
@@ -251,8 +254,22 @@ class Context(object):
                 first_list = value_list
             values_batch.append(value_list)
         assert first_list is not None
-        if len(first_list) == 0:
-            return []
+        return SubListIter(self, vars, len(first_list), values_batch)
+
+
+class SubListIter(object):
+    def __init__(self, ctx, vars, length, values_batch):
+        self.vars = vars
+        self.length = length
+        self.j = 0
+        self.values_batch = values_batch
+        self.ctx = ctx
+
+    def __iter__(self):
+        return self
+
+    @jit.unroll_safe
+    def next(self):
         #   in
         #   (* For each batch of values, create a sub-context *)
         #   List.fold_left
@@ -265,15 +282,14 @@ class Context(object):
         #       in
         #       ctxs_sub @ [ ctx_sub ])
         #     [] values_batch
-        ctxs_sub = []
-        for j in range(len(first_list)):
-            ctx_sub = self
-            for i, var in enumerate(vars):
-                value = values_batch[i][j]
-                ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value)
-            ctxs_sub.append(ctx_sub)
-        return ctxs_sub
-
+        if self.j >= self.length:
+            raise StopIteration
+        ctx_sub = self.ctx
+        for i, var in enumerate(self.vars):
+            value = self.values_batch[i][self.j]
+            ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value)
+        self.j += 1
+        return ctx_sub
 
 def transpose(value_matrix):
     if not value_matrix:
