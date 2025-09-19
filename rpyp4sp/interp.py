@@ -297,6 +297,19 @@ def eval_if_cond_list(ctx, exp_cond, vars, iterexps):
     #         (ctx, cond, values_cond))
     #     (ctx, true, []) ctxs_sub
     ctxs_sub = ctx.sub_list(vars)
+    if ctxs_sub.length == 0:
+        cond = True
+        values_cond = []
+        return ctx, cond, values_cond
+    elif ctxs_sub.length == 1:
+        ctx_sub = next(ctxs_sub)
+        ctx_sub, cond, value_cond = eval_if_cond_iter_tick(ctx_sub, exp_cond, iterexps)
+        values_cond = [value_cond]
+        ctx = ctx.commit(ctx_sub)
+        return ctx, cond, values_cond
+    return _eval_if_cond_list_loop(ctx, ctxs_sub, exp_cond, iterexps)
+
+def _eval_if_cond_list_loop(ctx, ctxs_sub, exp_cond, iterexps):
     cond = True
     values_cond = []
     for ctx_sub in ctxs_sub:
@@ -2032,7 +2045,15 @@ def eval_iter_exp_opt(note, ctx, exp, vars):
 def eval_iter_exp_list(note, ctx, exp, vars):
     # let ctxs_sub = Ctx.sub_list ctx vars in
     ctxs_sub = ctx.sub_list(vars)
-    values = _eval_iter_exp_list(ctx, exp, ctxs_sub)
+    if ctxs_sub.length == 0:
+        values = []
+    elif ctxs_sub.length == 1:
+        ctx_sub = next(ctxs_sub)
+        ctx_sub, value = eval_exp(ctx_sub, exp)
+        ctx = ctx.commit(ctx_sub)
+        values = [value]
+    else:
+        ctx, values = _eval_iter_exp_list(ctx, exp, ctxs_sub)
     # in
     # let value_res =
     #   let vid = Value.fresh () in
@@ -2076,7 +2097,7 @@ def _eval_iter_exp_list(ctx, exp, ctxs_sub):
         #     (ctx, []) ctxs_sub
         values[i] = value
         i += 1
-    return values
+    return ctx, values
 
 class __extend__(p4specast.IterE):
     def eval_exp(self, ctx):
