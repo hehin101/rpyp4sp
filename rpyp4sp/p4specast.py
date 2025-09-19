@@ -309,6 +309,14 @@ class IterList(AstBase):
         return self._string
 
     @jit.elidable
+    def append(self, iter):
+        if isinstance(iter, List):
+            return self.append_list()
+        elif isinstance(iter, Opt):
+            return self.append_opt()
+        assert 0
+
+    @jit.elidable
     def append_opt(self):
         if not self._append_opt:
             self._append_opt = IterList(self.iterlist + [Opt()])
@@ -1299,7 +1307,7 @@ class IterExp(AstBase):
         var_strs = []
         for var in self.vars:
             id, typ, iters = var.id, var.typ, var.iter
-            var_strs.append("%s <- %s" % (var.tostring(), Var(id, typ, iters + [self.iter]).tostring()))
+            var_strs.append("%s <- %s" % (var.tostring(), Var(id, typ, iters.append(self.iter).iterlist).tostring()))
         res.append(", ".join(var_strs))
         res.append("}")
         return "".join(res)
