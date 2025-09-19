@@ -76,17 +76,18 @@ def define_enum(basename, *names):
             content = content.value_string()
             for name, cls in unrolling_tups:
                 if name == content:
-                    return cls()
+                    return cls.INSTANCE
             assert 0
 
         def __repr__(self):
-            return "p4specast." + self.__class__.__name__ + "()"
+            return "p4specast." + self.__class__.__name__ + ".INSTANCE"
     Base.__name__ = basename
     subs = []
     for name in names:
         class Sub(Base):
             pass
         Sub.__name__ = name
+        Sub.INSTANCE = Sub()
         subs.append(Sub)
     unrolling_tups = [(names[i], cls) for i, cls in enumerate(subs)]
     return [Base] + subs
@@ -559,12 +560,17 @@ class BoolE(Exp):
 class NumE(Exp):
     def __init__(self, value, what, typ=None):
         self.value = value # type: integers.Integer
-        self.what = what # type: str
+        self.what = what # type: IntType
         self.typ = typ # type: Type
 
     @staticmethod
     def fromjson(content):
         what = content.get_list_item(1).get_list_item(0).value_string()
+        if what == 'Int':
+            what = IntT.INSTANCE
+        else:
+            assert what == 'Nat'
+            what = NatT.INSTANCE
         return NumE.fromstr(content.get_list_item(1).get_list_item(1).value_string(), what)
 
     @staticmethod
@@ -1154,8 +1160,25 @@ class IterExp(AstBase):
         self.vars = vars
 
     def tostring(self):
-        # and string_of_iterexp (iter, _) = Il.Print.string_of_iter iter
-        return string_of_iter(self.iter)
+        # and string_of_iterexp iterexp =
+        #   let iter, vars = iterexp in
+        #   string_of_iter iter ^ "{"
+        #   ^ String.concat ", "
+        #       (List.map
+        #          (fun var ->
+        #            let id, typ, iters = var in
+        #            string_of_var var ^ " <- " ^ string_of_var (id, typ, iters @ [ iter ]))
+        #          vars)
+        #   ^ "}"
+        res = [string_of_iter(self.iter)]
+        res.append("{")
+        var_strs = []
+        for var in self.vars:
+            id, typ, iters = var.id, var.typ, var.iter
+            var_strs.append("%s <- %s" % (var.tostring(), Var(id, typ, iters + [self.iter]).tostring()))
+        res.append(", ".join(var_strs))
+        res.append("}")
+        return "".join(res)
 
     @staticmethod
     def fromjson(content):
@@ -1225,27 +1248,46 @@ class BoolT(Type):
         return "bool"
 
     def __repr__(self):
-        return "p4specast.BoolT()"
+        return "p4specast.BoolT.INSTANCE"
 
     @staticmethod
     def fromjson(content):
-        return BoolT()
+        return BoolT.INSTANCE
+BoolT.INSTANCE = BoolT()
 
 
 class NumT(Type):
     def __init__(self, typ):
-        self.typ = typ
+        self.typ = typ # type: NumTyp
 
     def tostring(self):
         # | NumT numtyp -> Num.string_of_typ numtyp
-        return self.typ.__class__.__name__.lower().replace('t', '')  # TODO: implement proper Num.string_of_typ
+        if isinstance(self.typ, NatT):
+            return 'nat'
+        if isinstance(self.typ, IntT):
+            return 'int'
+        assert 0, 'unreachable'
 
     def __repr__(self):
-        return "p4specast.NumT(%r)" % (self.typ,)
+        if isinstance(self.typ, IntT):
+            return "p4specast.NumT.INT"
+        elif isinstance(self.typ, NatT):
+            return "p4specast.NumT.NAT"
+        else:
+            return "p4specast.NumT(%r)" % (self.typ,)
 
     @staticmethod
     def fromjson(content):
-        return NumT(NumTyp.fromjson(content.get_list_item(1)))
+        typ = NumTyp.fromjson(content.get_list_item(1))
+        if isinstance(typ, IntT):
+            return NumT.INT
+        elif isinstance(typ, NatT):
+            return NumT.NAT
+        else:
+            return NumT(typ)
+NumT.INT = NumT(IntT.INSTANCE)
+NumT.NAT = NumT(NatT.INSTANCE)
+
 
 
 class TextT(Type):
@@ -1257,11 +1299,11 @@ class TextT(Type):
         return "text"
 
     def __repr__(self):
-        return "p4specast.TextT()"
+        return "p4specast.TextT.INSTANCE"
 
     @staticmethod
     def fromjson(content):
-        return TextT()
+        return TextT.INSTANCE
 
 class VarT(Type):
     def __init__(self, id, targs):
@@ -1331,11 +1373,14 @@ class FuncT(Type):
         return "func"
 
     def __repr__(self):
-        return "p4specast.FuncT()"
+        return "p4specast.FuncT.INSTANCE"
 
     @staticmethod
     def fromjson(content):
-        return FuncT()
+        return FuncT.INSTANCE
+
+TextT.INSTANCE = TextT()
+FuncT.INSTANCE = FuncT()
 
 # and nottyp = nottyp' phrase
 # [@@deriving yojson]
@@ -1469,6 +1514,7 @@ TypeCase = NotTyp
 #   | ReturnI of exp
 
 class Instr(AstBase):
+    _attrs_ = ['region']
     # has a .region
 
     def tostring(self, level=0, index=0):
@@ -1501,7 +1547,22 @@ class Instr(AstBase):
         ast.region = region
         return ast
 
-class IfI(Instr):
+
+class InstrWithIters(Instr):
+    _attrs_ = ['iters', '_reverse_iters']
+    _immutable_fields_ = ['iters[*]']
+
+    _reverse_iters = None
+
+    def _get_reverse_iters(self):
+        if self._reverse_iters is not None:
+            return self._reverse_iters
+        res = ReverseIterExp.from_unreversed_list(self.iters)
+        self._reverse_iters = res
+        return res
+
+
+class IfI(InstrWithIters):
     def __init__(self, exp, iters, instrs, phantom, region=None):
         self.exp = exp
         self.iters = iters
@@ -1542,8 +1603,8 @@ class IfI(Instr):
         return "p4specast.IfI(%r, %r, %r, %r%s)" % (self.exp, self.iters, self.instrs, self.phantom, (", " + repr(self.region)) if self.region is not None else '')
 
 
-class HoldI(Instr):
-    _immutable_fields_ = ['id', 'notexp', 'iters[*]']
+class HoldI(InstrWithIters):
+    _immutable_fields_ = ['id', 'notexp']
 
 #   | HoldI of id * notexp * iterexp list * holdcase
     def __init__(self, id, notexp, iters, holdcase, region=None):
@@ -1576,6 +1637,27 @@ class HoldI(Instr):
 
     def __repr__(self):
         return "p4specast.HoldI(%r, %r, %r, %r%s)" % (self.id, self.notexp, self.iters, self.holdcase, (", " + repr(self.region)) if self.region is not None else '')
+
+
+class ReverseIterExp(object):
+    def __init__(self, head, tail):
+        self.head = head # type: IterExp
+        self.tail = tail # type: ReverseIterExp
+
+    @staticmethod
+    def from_unreversed_list(l):
+        next = None
+        for el in l:
+            next = ReverseIterExp(el, next)
+        return next
+
+    def __repr__(self):
+        l = []
+        while self:
+            l.append(self.head)
+            self = self.tail
+        l.reverse()
+        return "ReverseIterExp.from_unreversed_list(%r)" % (l, )
 
 
 class CaseI(Instr):
@@ -1637,7 +1719,7 @@ class OtherwiseI(Instr):
     def __repr__(self):
         return "p4specast.OtherwiseI(%r)" % (self.instr,)
 
-class LetI(Instr):
+class LetI(InstrWithIters):
     def __init__(self, var, value, iters, region=None):
         self.var = var
         self.value = value
@@ -1664,7 +1746,7 @@ class LetI(Instr):
     def __repr__(self):
         return "p4specast.LetI(%r, %r, %r%s)" % (self.var, self.value, self.iters, (", " + repr(self.region)) if self.region is not None else '')
 
-class RuleI(Instr):
+class RuleI(InstrWithIters):
     def __init__(self, id, notexp, iters, region=None):
         self.id = id
         self.notexp = notexp

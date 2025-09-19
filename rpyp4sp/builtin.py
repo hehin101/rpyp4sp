@@ -44,7 +44,7 @@ def nats_sum(ctx, targs, values_input):
         sum_result = sum_result.add(value.get_num())
 
     # value_of_bigint ctx sum
-    return objects.NumV(sum_result, 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    return objects.NumV(sum_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
 
 @register_builtin("max")
 def nats_max(ctx, targs, values_input):
@@ -59,7 +59,7 @@ def nats_max(ctx, targs, values_input):
         current = value.get_num()
         if current.gt(max_result):
             max_result = current
-    return objects.NumV(max_result, 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    return objects.NumV(max_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
 
 @register_builtin("min")
 def nats_min(ctx, targs, values_input):
@@ -74,12 +74,12 @@ def nats_min(ctx, targs, values_input):
         current = value.get_num()
         if current.lt(min_result):
             min_result = current
-    return objects.NumV(min_result, 'Nat', typ=p4specast.NumT(p4specast.NatT()))
+    return objects.NumV(min_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
 
 @register_builtin("int_to_text")
 def texts_int_to_text(ctx, targs, values_input):
     int_value, = values_input
-    return objects.TextV(int_value.get_num().str(), typ=p4specast.TextT())
+    return objects.TextV(int_value.get_num().str(), p4specast.TextT.INSTANCE)
 
 @register_builtin("strip_prefix")
 def texts_strip_prefix(ctx, targs, values_input):
@@ -106,7 +106,7 @@ def texts_strip_prefix(ctx, targs, values_input):
     if not text.startswith(prefix):
         raise P4BuiltinError("Text '%s' does not start with prefix '%s'" % (text, prefix))
     stripped_text = text[len(prefix):] if prefix else text
-    return objects.TextV(stripped_text, typ=p4specast.TextT())
+    return objects.TextV(stripped_text, p4specast.TextT.INSTANCE)
 
 @register_builtin("strip_suffix")
 def texts_strip_suffix(ctx, targs, values_input):
@@ -131,7 +131,7 @@ def texts_strip_suffix(ctx, targs, values_input):
     end = len(text) - len(suffix)
     assert end >= 0
     stripped_text = text[:end]
-    return objects.TextV(stripped_text, typ=p4specast.TextT())
+    return objects.TextV(stripped_text, p4specast.TextT.INSTANCE)
 
 @register_builtin("rev_")
 def lists_rev_(ctx, targs, values_input):
@@ -141,7 +141,7 @@ def lists_rev_(ctx, targs, values_input):
         return value
     lst = lst[:]
     lst.reverse()
-    return objects.ListV(lst, typ=value.typ)
+    return objects.ListV(lst, value.typ)
 
 
 @register_builtin("concat_")
@@ -153,20 +153,20 @@ def lists_concat_(ctx, targs, values_input):
         res.extend(list_value.get_list())
     typ = value.typ
     assert isinstance(typ, p4specast.IterT)
-    return objects.ListV(res, typ=typ.typ)
+    return objects.ListV(res[:], typ.typ)
 
 @register_builtin("distinct_")
 def lists_distinct_(ctx, targs, values_input):
     value, = values_input
     lst = value.get_list()
     if len(lst) <= 1:
-        return objects.BoolV(True, typ=p4specast.BoolT())
+        return objects.BoolV(True, p4specast.BoolT.INSTANCE)
     # naive quadratic implementation using .eq
     for i in range(len(lst)):
         for j in range(i + 1, len(lst)):
             if lst[i].eq(lst[j]):
-                return objects.BoolV(False, typ=p4specast.BoolT())
-    return objects.BoolV(True, typ=p4specast.BoolT())
+                return objects.BoolV(False, p4specast.BoolT.INSTANCE)
+    return objects.BoolV(True, p4specast.BoolT.INSTANCE)
 
 @register_builtin("partition_")
 def lists_partition_(ctx, targs, values_input):
@@ -181,10 +181,10 @@ def lists_partition_(ctx, targs, values_input):
     values_right = values[len_num:]
 
     list_typ = p4specast.IterT(typ, p4specast.List())
-    value_left = objects.ListV(values_left, typ=list_typ)
-    value_right = objects.ListV(values_right, typ=list_typ)
+    value_left = objects.ListV(values_left, list_typ)
+    value_right = objects.ListV(values_right, list_typ)
     tuple_typ = p4specast.TupleT([list_typ, list_typ])
-    return objects.TupleV([value_left, value_right], typ=tuple_typ)
+    return objects.TupleV([value_left, value_right], tuple_typ)
 
 
 @register_builtin("assoc_")
@@ -197,7 +197,7 @@ def lists_assoc_(ctx, targs, values_input):
         if tup.elements[0].eq(value):
             res_value = tup.elements[1]
             break
-    return objects.OptV(res_value, typ=p4specast.IterT(typ_value, p4specast.Opt()))
+    return objects.OptV(res_value, p4specast.IterT(typ_value, p4specast.Opt()))
 
 # ________________________________________________________________
 # sets
@@ -207,15 +207,15 @@ set_id = p4specast.Id('set', p4specast.NO_REGION)
 def _extract_set_elems(set_value):
     assert isinstance(set_value, objects.CaseV)
     assert set_value.mixop.eq(map_mixop)
-    assert len(set_value.values) == 1
-    lst_value, = set_value.values
+    assert set_value._get_size_list() == 1
+    lst_value = set_value._get_list(0)
     assert isinstance(lst_value, objects.ListV)
     return lst_value.get_list()
 
 def _wrap_set_elems(elems, set_value_for_types):
     assert isinstance(set_value_for_types, objects.CaseV)
-    lst_value = objects.ListV(elems, typ=set_value_for_types.values[0].typ)
-    return objects.CaseV(set_value_for_types.mixop, [lst_value], typ=set_value_for_types.typ)
+    lst_value = objects.ListV(elems[:], set_value_for_types._get_list(0).typ)
+    return objects.CaseV.make1(lst_value, set_value_for_types.mixop, set_value_for_types.typ)
 
 @register_builtin("intersect_set")
 def sets_intersect_set(ctx, targs, values_input):
@@ -245,7 +245,7 @@ def _set_union_elems(elems_l, elems_r):
                 break
         else:
             res.append(el)
-    return res
+    return res[:]
 
 @register_builtin("union_set")
 def sets_union_set(ctx, targs, values_input):
@@ -262,12 +262,12 @@ def sets_unions_set(ctx, targs, values_input):
     sets_l = value_list.get_list()
     element_typ, = targs
     if not sets_l:
-        return objects.CaseV(
-            map_mixop,
-            [objects.ListV(
+        return objects.CaseV.make1(
+            objects.ListV(
                 [],
-                typ=p4specast.IterT(element_typ, p4specast.List()))],
-            typ=p4specast.VarT(set_id, targs))
+                typ=p4specast.IterT(element_typ, p4specast.List())),
+            map_mixop,
+            p4specast.VarT(set_id, targs))
     first = sets_l[0]
     curr = _extract_set_elems(first)
     for i in range(1, len(sets_l)):
@@ -317,8 +317,8 @@ def sets_sub_set(ctx, targs, values_input):
             if el.eq(el2):
                 break
         else:
-            return objects.BoolV(False, typ=p4specast.BoolT())
-    return objects.BoolV(True, typ=p4specast.BoolT())
+            return objects.BoolV(False, p4specast.BoolT.INSTANCE)
+    return objects.BoolV(True, p4specast.BoolT.INSTANCE)
 
 @register_builtin("eq_set")
 def sets_eq_set(ctx, targs, values_input):
@@ -326,14 +326,14 @@ def sets_eq_set(ctx, targs, values_input):
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
     if len(elems_l) != len(elems_r):
-        return objects.BoolV(False, typ=p4specast.BoolT())
+        return objects.BoolV(False, p4specast.BoolT.INSTANCE)
     for el in elems_l:
         for el2 in elems_r:
             if el.eq(el2):
                 break
         else:
-            return objects.BoolV(False, typ=p4specast.BoolT())
-    return objects.BoolV(True, typ=p4specast.BoolT())
+            return objects.BoolV(False, p4specast.BoolT.INSTANCE)
+    return objects.BoolV(True, p4specast.BoolT.INSTANCE)
 
 # _________________________________________________________________
 
@@ -350,19 +350,22 @@ pair_id = p4specast.Id('pair', p4specast.NO_REGION)
 def _extract_map_content(map_value):
     assert isinstance(map_value, objects.CaseV)
     assert map_value.mixop.eq(map_mixop)
-    content, = map_value.values
+    assert map_value._get_size_list() == 1
+    content = map_value._get_list(0)
     assert isinstance(content, objects.ListV)
     return content.elements
 
 def _extract_map_item(el):
     assert isinstance(el, objects.CaseV)
     assert el.mixop.eq(arrow_mixop)
-    key, value = el.values
+    assert el._get_size_list() == 2
+    key = el._get_list(0)
+    value = el._get_list(1)
     return key, value
 
 def _build_map_item(key_value, value_value, key_typ, value_typ):
     pairtyp = p4specast.VarT(pair_id, [key_typ, value_typ])
-    return objects.CaseV(arrow_mixop, [key_value, value_value], typ=pairtyp)
+    return objects.CaseV.make2(key_value, value_value, arrow_mixop, pairtyp)
 
 def _find_map(map_value, key_value):
     content = _extract_map_content(map_value)
@@ -381,7 +384,7 @@ def maps_find_map(ctx, targs, values_input):
     found_value = _find_map(map_value, key_value)
     typ = p4specast.IterT(key_typ, p4specast.Opt())
     typ.region = p4specast.NO_REGION
-    return objects.OptV(found_value, typ=typ)
+    return objects.OptV(found_value, typ)
 
 
 @register_builtin("find_maps")
@@ -397,7 +400,7 @@ def maps_find_maps(ctx, targs, values_input):
             break
     typ = p4specast.IterT(key_typ, p4specast.Opt())
     typ.region = p4specast.NO_REGION
-    return objects.OptV(res_value, typ=typ)
+    return objects.OptV(res_value, typ)
 
 @register_builtin("add_map")
 def maps_add_map(ctx, targs, values_input):
@@ -425,8 +428,8 @@ def maps_add_map(ctx, targs, values_input):
             assert 0, 'unreachable'
     else:
         res.append(new_pair)
-    list_value = objects.ListV(res, typ=p4specast.IterT(new_pair.typ, p4specast.List()))
-    return objects.CaseV(map_mixop, [list_value], typ=p4specast.VarT(map_id, targs))
+    list_value = objects.ListV(res[:], p4specast.IterT(new_pair.typ, p4specast.List()))
+    return objects.CaseV.make1(list_value, map_mixop, p4specast.VarT(map_id, targs))
 
 
 @register_builtin("adds_map")
@@ -472,7 +475,7 @@ def fresh_fresh_tid(ctx, targs, values_input):
 
 def _integer_to_value(integer):
     # type: (integers.Integer) -> objects.NumV
-    return objects.NumV(integer, 'Int', typ=p4specast.NumT(p4specast.IntT()))
+    return objects.NumV(integer, p4specast.IntT.INSTANCE, p4specast.NumT.INT)
 
 
 @register_builtin("shl")
@@ -491,7 +494,12 @@ def numerics_shr_arith(ctx, targs, values_input):
 
 @register_builtin("pow2")
 def numerics_pow2(ctx, targs, values_input):
-    raise P4NotImplementedError("numerics_pow2 is not implemented yet")
+    arg, = values_input
+    val = arg.get_num().toint()
+    if val < 0:
+        raise P4BuiltinError("pow2 argument must not be negative")
+    res = integers.Integer.fromint(1).lshift(val)
+    return _integer_to_value(res)
 
 @register_builtin("to_int")
 def numerics_to_int(ctx, targs, values_input):

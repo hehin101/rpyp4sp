@@ -139,8 +139,8 @@ def test_venv_dict():
     assert d4._keys is d3._keys
     assert repr(d4._keys) == "context.ENV_KEYS_ROOT.add_key('a', '')"
     assert str(d4._keys) == "<keys 'a'>"
-    assert repr(d4) == "context.VenvDict().set('a', '', objects.TextV('ghi', -1, None))"
-    assert str(d4) == "<venv 'a': objects.TextV('ghi', -1, None)>"
+    assert repr(d4) == "context.VenvDict().set('a', '', objects.TextV('ghi', None, -1))"
+    assert str(d4) == "<venv 'a': objects.TextV('ghi', None, -1)>"
 
     value4 = objects.TextV('jkl')
     d5 = d4.set("b", "", value4)

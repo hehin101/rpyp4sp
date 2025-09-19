@@ -8,6 +8,38 @@ from rpython.rlib import objectmodel
 from rpyp4sp import p4specast, objects, builtin, context, integers, rpyjson, interp
 from rpyp4sp.error import P4Error
 from rpyp4sp.test.test_interp import make_context
+from rpython.rlib import rsignal
+
+@objectmodel.specialize.arg(4)
+def parse_args(argv, shortname, longname="", want_arg=True, many=False):
+    # crappy argument handling
+    reslist = []
+    if many:
+        assert want_arg
+    i = 0
+    while i < len(argv):
+        if argv[i] == shortname or argv[i] == longname:
+            if not want_arg:
+                res = argv[i]
+                del argv[i]
+                return res
+            if len(argv) == i + 1:
+                print("missing argument after " + argv[i])
+                raise ValueError
+            arg = argv[i + 1]
+            del argv[i : i + 2]
+            if many:
+                reslist.append(arg)
+            else:
+                return arg
+            continue
+        i += 1
+    if many:
+        return reslist
+
+
+def parse_flag(argv, flagname, longname=""):
+    return bool(parse_args(argv, flagname, longname=longname, want_arg=False))
 
 @objectmodel.specialize.arg(4)
 def parse_args(argv, shortname, longname="", want_arg=True, many=False):
@@ -48,6 +80,11 @@ def command_run_test_jsonl(argv):
     error = 0
     with open(argv[1], 'r') as f:
         while 1:
+            p = rsignal.pypysig_getaddr_occurred()
+            if p.c_value < 0:
+                # ctrl-c was pressed
+                os.write(2, "ctrl-c pressed\n")
+                return -2
             if NonConstant(False):
                 f.read(10021)
             line = f.readline()
@@ -185,6 +222,11 @@ def command_run_p4(argv):
         else:
             passed += 1
             print("well-typed")
+        p = rsignal.pypysig_getaddr_occurred()
+        if p.c_value < 0:
+            # ctrl-c was pressed
+            os.write(2, "ctrl-c pressed\n")
+            return 1
     print("PASSED:", passed)
     print("ERRORS:", errors)
     def fsum(l):
@@ -226,6 +268,11 @@ def command_bench_p4(argv):
     print_csv_line("filename", "action", "iteration", "time", "outcome", "comment", "epoch", "executable")
     print_csv_line("ast.json", "load", "0", str(t2 - t1), "ok", comment, str(t2), argv[0])
     for fn in fns:
+        p = rsignal.pypysig_getaddr_occurred()
+        if p.c_value < 0:
+            # ctrl-c was pressed
+            os.write(2, "ctrl-c pressed\n")
+            return 1
         t1 = time.time()
         with open(fn, 'r') as f:
             content = f.readline()
@@ -259,6 +306,9 @@ def main(argv):
     if len(argv) < 3:
         print("usage: %s run-test-jsonl/run-p4-json/bench-p4-json <fns>" % argv[0])
         return 1
+    if objectmodel.we_are_translated():
+        rsignal.pypysig_setflag(rsignal.SIGINT)
+
     # load test cases from line-based json file
     # check if file exists
     cmd = argv[1]
