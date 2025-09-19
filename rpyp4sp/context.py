@@ -81,6 +81,7 @@ class TDenvDict(object):
     def set(self, id_value, typdef):
         # type: (str, p4specast.DefTyp) -> TDenvDict
         pos = jit.promote(self._keys).get_pos(id_value, '')
+        jit.promote(len(self._typdefs))
         if pos < 0:
             keys = self._keys.add_key(id_value, '')
             typdefs = self._typdefs + [typdef]
@@ -136,6 +137,7 @@ class FenvDict(object):
 
     def set(self, id_value, func):
         # type: (str, p4specast.DecD) -> FenvDict
+        jit.promote(len(self._funcs))
         pos = jit.promote(self._keys).get_pos(id_value, '')
         if pos < 0:
             keys = self._keys.add_key(id_value, '')
