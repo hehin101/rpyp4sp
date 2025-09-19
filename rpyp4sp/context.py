@@ -73,14 +73,14 @@ class TDenvDict(object):
 
     def get(self, id_value):
         # type: (str) -> p4specast.DefTyp
-        pos = self._keys.get_pos(id_value, '')
+        pos = jit.promote(self._keys).get_pos(id_value, '')
         if pos < 0:
             raise P4ContextError('id_value %s does not exist' % (id_value))
         return self._typdefs[pos]
 
     def set(self, id_value, typdef):
         # type: (str, p4specast.DefTyp) -> TDenvDict
-        pos = self._keys.get_pos(id_value, '')
+        pos = jit.promote(self._keys).get_pos(id_value, '')
         if pos < 0:
             keys = self._keys.add_key(id_value, '')
             typdefs = self._typdefs + [typdef]
@@ -92,7 +92,7 @@ class TDenvDict(object):
 
     def has_key(self, id_value):
         # type: (str) -> bool
-        pos = self._keys.get_pos(id_value, '')
+        pos = jit.promote(self._keys).get_pos(id_value, '')
         return pos >= 0
 
     def bindings(self):
@@ -105,7 +105,7 @@ class TDenvDict(object):
     def __repr__(self):
         l = ["context.TDenvDict()"]
         for id_value, _ in self._keys.keys:
-            pos = self._keys.get_pos(id_value, '')
+            pos = jit.promote(self._keys).get_pos(id_value, '')
             typdef = self._typdefs[pos]
             l.append(".set(%r, %r)" % (id_value, typdef))
         return "".join(l)
@@ -113,7 +113,7 @@ class TDenvDict(object):
     def __str__(self):
         l = ["<tdenv "]
         for index, (id_value, _) in enumerate(self._keys.keys):
-            pos = self._keys.get_pos(id_value, '')
+            pos = jit.promote(self._keys).get_pos(id_value, '')
             typdef = self._typdefs[pos]
             if index == 0:
                 l.append("%r: %r" % (id_value, typdef))
@@ -129,14 +129,14 @@ class FenvDict(object):
 
     def get(self, id_value):
         # type: (str) -> p4specast.DecD
-        pos = self._keys.get_pos(id_value, '')
+        pos = jit.promote(self._keys).get_pos(id_value, '')
         if pos < 0:
             raise P4ContextError('id_value %s does not exist' % (id_value))
         return self._funcs[pos]
 
     def set(self, id_value, func):
         # type: (str, p4specast.DecD) -> FenvDict
-        pos = self._keys.get_pos(id_value, '')
+        pos = jit.promote(self._keys).get_pos(id_value, '')
         if pos < 0:
             keys = self._keys.add_key(id_value, '')
             funcs = self._funcs + [func]
@@ -148,13 +148,13 @@ class FenvDict(object):
 
     def has_key(self, id_value):
         # type: (str) -> bool
-        pos = self._keys.get_pos(id_value, '')
+        pos = jit.promote(self._keys).get_pos(id_value, '')
         return pos >= 0
 
     def __repr__(self):
         l = ["context.FenvDict()"]
         for id_value, _ in self._keys.keys:
-            pos = self._keys.get_pos(id_value, '')
+            pos = jit.promote(self._keys).get_pos(id_value, '')
             func = self._funcs[pos]
             l.append(".set(%r, %r)" % (id_value, func))
         return "".join(l)
@@ -162,7 +162,7 @@ class FenvDict(object):
     def __str__(self):
         l = ["<fenv "]
         for index, (id_value, _) in enumerate(self._keys.keys):
-            pos = self._keys.get_pos(id_value, '')
+            pos = jit.promote(self._keys).get_pos(id_value, '')
             func = self._funcs[pos]
             if index == 0:
                 l.append("%r: %r" % (id_value, func))
@@ -178,11 +178,11 @@ class VenvDict(object):
 
     def get(self, var_name, var_iter, vare_cache=None):
         # type: (str, str, p4specast.VarE | None) -> objects.BaseV
-        if vare_cache is not None and vare_cache._ctx_keys is self._keys:
+        if not jit.we_are_jitted() and vare_cache is not None and vare_cache._ctx_keys is self._keys:
             pos = vare_cache._ctx_index
         else:
             pos = jit.promote(self._keys).get_pos(var_name, var_iter)
-            if vare_cache is not None:
+            if not jit.we_are_jitted() and vare_cache is not None:
                 vare_cache._ctx_index = pos
                 vare_cache._ctx_keys = self._keys
         if pos < 0:
@@ -203,7 +203,7 @@ class VenvDict(object):
             return VenvDict(self._keys, values)
 
     def has_key(self, var_name, var_iter):
-        # type: (str, str) -> int
+        # type: (str, str) -> bool
         pos = jit.promote(self._keys).get_pos(var_name, var_iter)
         return pos >= 0
 
