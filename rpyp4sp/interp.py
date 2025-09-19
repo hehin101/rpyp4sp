@@ -4,6 +4,39 @@ from rpyp4sp import p4specast, objects, builtin, context, integers
 from rpyp4sp.error import (P4EvaluationError, P4CastError, P4NotImplementedError, 
                            P4RelationError)
 
+class VarList(object):
+    _immutable_fields_ = ['vars[*]']
+
+    def __init__(self, vars):
+        self.vars = vars  # type: list
+        self.next_var_lists = {}  # type: dict[tuple[str, str], VarList]
+
+    @jit.elidable
+    def add_var(self, var):
+        # type: (object) -> VarList
+        key = (var.id.value, var.iter.to_key())
+        res = self.next_var_lists.get(key)
+        if res is not None:
+            return res
+        else:
+            new_vars = self.vars + [var]
+            res = VarList(new_vars)
+            self.next_var_lists[key] = res
+            return res
+
+    def tostring(self):
+        if not self.vars:
+            return "[]"
+        return "[%s]" % ", ".join([var.tostring() for var in self.vars])
+
+    def __repr__(self):
+        l = ["interp.VARLIST_ROOT"]
+        for var in self.vars:
+            l.append(".add_var(%r)" % var)
+        return "".join(l)
+
+VARLIST_ROOT = VarList([])
+
 class Sign(object):
     # abstract base
     pass
@@ -457,14 +490,14 @@ class __extend__(p4specast.LetI):
 
 @jit.unroll_safe
 def _discriminate_bound_binding_variables(ctx, vars):
-    vars_bound = []
-    vars_binding = []
+    vars_bound_list = VARLIST_ROOT
+    vars_binding_list = VARLIST_ROOT
     for var in vars:
         if ctx.bound_value_local(var.id, var.iter.append_list()):
-            vars_bound.append(var)
+            vars_bound_list = vars_bound_list.add_var(var)
         else:
-            vars_binding.append(var)
-    return vars_bound, vars_binding
+            vars_binding_list = vars_binding_list.add_var(var)
+    return vars_bound_list, vars_binding_list
 
 @jit.unroll_safe
 def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
@@ -475,10 +508,10 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     #       Ctx.bound_value Local ctx (id, iters @ [ Il.Ast.List ]))
     #     vars
     # in
-    vars_bound, vars_binding = _discriminate_bound_binding_variables(ctx, vars_h)
+    vars_bound_list, vars_binding_list = _discriminate_bound_binding_variables(ctx, vars_h)
     # (* Create a subcontext for each batch of bound values *)
     # let ctxs_sub = Ctx.sub_list ctx vars_bound in
-    ctxs_sub = ctx.sub_list(vars_bound)
+    ctxs_sub = ctx.sub_list(vars_bound_list.vars)
     # let ctx, values_binding =
     #   match ctxs_sub with
     #   (* If the bound variable supposed to guide the iteration is already empty,
@@ -510,7 +543,7 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     #             (ctx, values_binding_batch))
     #           (ctx, []) ctxs_sub
     #       in
-    ctx, values_binding = _eval_let_list_loop(ctx, ctxs_sub, vars_binding, exp_l, exp_r, iterexps_t)
+    ctx, values_binding = _eval_let_list_loop(ctx, ctxs_sub, vars_binding_list, exp_l, exp_r, iterexps_t)
     #       let values_binding = values_binding_batch |> Ctx.transpose in
     #       (ctx, values_binding)
     # in
@@ -533,7 +566,7 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     #     Ctx.add_value Local ctx
     #       (id_binding, iters_binding @ [ Il.Ast.List ])
     #       value_binding)
-    for i, var_binding in enumerate(vars_binding):
+    for i, var_binding in enumerate(vars_binding_list.vars):
         values_binding_item = values_binding[i]
         id_binding = var_binding.id
         typ_binding = var_binding.typ
@@ -542,21 +575,21 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
         ctx = ctx.add_value_local(id_binding, iters_binding.append_list(), value_binding)
     return ctx
 
-def get_printable_location(exp_l, exp_r):
-    return "eval_let_list_loop %s %s" % (exp_l.tostring(), exp_r.tostring())
+def get_printable_location(exp_l, exp_r, vars_binding_list):
+    return "eval_let_list_loop %s %s %s" % (exp_l.tostring(), exp_r.tostring(), vars_binding_list.tostring())
 
 jitdriver_eval_let_list_loop = jit.JitDriver(
-    reds='auto', greens=['exp_l', 'exp_r'],
-    should_unroll_one_iteration = lambda exp_l, exp_r: True,
+    reds='auto', greens=['exp_l', 'exp_r', 'vars_binding_list'],
+    should_unroll_one_iteration = lambda exp_l, exp_r, vars_binding_list: True,
     name='eval_let_list_loop', get_printable_location=get_printable_location)
 
-def _eval_let_list_loop(ctx, ctxs_sub, vars_binding, exp_l, exp_r, iterexps_t):
-    values_binding = [[] for _ in vars_binding]
+def _eval_let_list_loop(ctx, ctxs_sub, vars_binding_list, exp_l, exp_r, iterexps_t):
+    values_binding = [[] for _ in vars_binding_list.vars]
     for ctx_sub in ctxs_sub:
-        #jitdriver_eval_let_list_loop.jit_merge_point(exp_l=exp_l, exp_r=exp_r)
+        jitdriver_eval_let_list_loop.jit_merge_point(exp_l=exp_l, exp_r=exp_r, vars_binding_list=vars_binding_list)
         ctx_sub = eval_let_iter_tick(ctx_sub, exp_l, exp_r, iterexps_t)
         ctx = ctx.commit(ctx_sub)
-        for i, var_binding in enumerate(vars_binding):
+        for i, var_binding in enumerate(vars_binding_list.vars):
             value_binding = ctx_sub.find_value_local(var_binding.id, var_binding.iter)
             values_binding[i].append(value_binding)
     return ctx, values_binding
@@ -727,10 +760,10 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
     #       Ctx.bound_value Local ctx (id, iters @ [ Il.Ast.List ]))
     #     vars
     # in
-    vars_bound, vars_binding = _discriminate_bound_binding_variables(ctx, vars)
+    vars_bound_list, vars_binding_list = _discriminate_bound_binding_variables(ctx, vars)
     # (* Create a subcontext for each batch of bound values *)
     # let ctxs_sub = Ctx.sub_list ctx vars_bound in
-    ctxs_sub = ctx.sub_list(vars_bound)
+    ctxs_sub = ctx.sub_list(vars_bound_list.vars)
     # let ctx, values_binding =
     #   match ctxs_sub with
     #   (* If the bound variable supposed to guide the iteration is already empty,
@@ -741,7 +774,7 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
     #         List.init (List.length vars_binding) (fun _ -> [])
     #       in
     #       (ctx, values_binding)
-        values_binding = [[] for _ in vars_binding]
+        values_binding = [[] for _ in vars_binding_list.vars]
     #   (* Otherwise, evaluate the premise for each batch of bound values,
     #      and collect the resulting binding batches *)
     #   | _ ->
@@ -767,14 +800,14 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
             ctx_sub = eval_rule_iter_tick(ctx_sub, id, notexp, iterexps)
             ctx = ctx.commit(ctx_sub)
             value_binding_batch = []
-            for var_binding in vars_binding:
+            for var_binding in vars_binding_list.vars:
                 value_binding = ctx_sub.find_value_local(var_binding.id, var_binding.iter)
                 value_binding_batch.append(value_binding)
             values_binding_batch.append(value_binding_batch)
     #       in
     #       let values_binding = values_binding_batch |> Ctx.transpose in
         values_binding = context.transpose(values_binding_batch)
-        assert len(values_binding) == len(vars_binding)
+        assert len(values_binding) == len(vars_binding_list.vars)
     #       (ctx, values_binding)
     # in
     # (* Finally, bind the resulting binding batches *)
@@ -798,7 +831,7 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
     #       value_binding)
     #   ctx vars_binding values_binding
     for index, values_binding in enumerate(values_binding):
-        var_binding = vars_binding[index]
+        var_binding = vars_binding_list.vars[index]
         id_binding = var_binding.id
         typ_binding = var_binding.typ
         iters_binding = var_binding.iter

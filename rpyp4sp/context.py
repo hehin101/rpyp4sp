@@ -91,7 +91,7 @@ class VenvDict(object):
 
     def has_key(self, var_name, var_iter):
         # type: (str, str) -> int
-        pos = self._keys.get_pos(var_name, var_iter)
+        pos = jit.promote(self._keys).get_pos(var_name, var_iter)
         return pos >= 0
 
 class Context(object):
