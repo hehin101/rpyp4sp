@@ -60,7 +60,7 @@ def invoke_func_def(ctx, calle):
     #            | _ -> None)
     #     |> TIdMap.of_list
         theta = {}
-        for tid, (_, deftyp) in ctx.glbl.tdenv.items() + ctx.tdenv.items():
+        for tid, (_, deftyp) in ctx.glbl.tdenv.items() + ctx.tdenv.bindings():
             if isinstance(deftyp, p4specast.PlainT):
                 theta[tid] = deftyp.typ
         #   in

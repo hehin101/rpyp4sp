@@ -89,6 +89,13 @@ class TDenvDict(object):
         pos = self._keys.get_pos(id_value, '')
         return pos >= 0
 
+    def bindings(self):
+        # type: () -> list[tuple[str, tuple[list, p4specast.DefTyp]]]
+        bindings = []
+        for ((id_value, _), pos) in self._keys.keys.items():
+            bindings.append((id_value, self._typdefs[pos]))
+        return bindings
+
     def __repr__(self):
         l = ["context.TDenvDict()"]
         for id_value, _ in self._keys.keys:
@@ -214,7 +221,7 @@ class Context(object):
         # the local context is inlined
         self.derive = derive
         self.values_input = values_input if values_input is not None else []
-        self.tdenv = tdenv if tdenv is not None else {}
+        self.tdenv = tdenv if tdenv is not None else TDenvDict()
         self.fenv = fenv if fenv is not None else FenvDict()
         self.venv = venv if venv is not None else VenvDict()
 
@@ -236,7 +243,7 @@ class Context(object):
                 self.glbl.fenv[definition.id.value] = definition
 
     def localize(self):
-        return self.copy_and_change(tdenv={}, fenv=FenvDict(), venv=VenvDict())
+        return self.copy_and_change(tdenv=TDenvDict(), fenv=FenvDict(), venv=VenvDict())
 
     def localize_inputs(self, values_input):
         # tpye: (VenvDict) -> Context
@@ -257,8 +264,11 @@ class Context(object):
     # TODO: why Id and not Tparam?
     def find_typdef_local(self, id):
         # type: (p4specast.Id) -> tuple[list, p4specast.DefTyp]
-        # TODO: actually use the local tdenv
-        return self.glbl.tdenv[id.value]
+        if self.tdenv.has_key(id.value):
+            typdef = self.tdenv.get(id.value)
+        else:
+            typdef =  self.glbl.tdenv[id.value]
+        return typdef
 
     def find_rel_local(self, id):
         return self.glbl.renv[id.value]
@@ -278,8 +288,8 @@ class Context(object):
     # TODO: 'typedef' ist list of what?
     def add_typdef_local(self, id, typdef):
         # type: (p4specast.TParam, tuple[list, p4specast.PlainT]) -> Context
-        result = self.copy_and_change(tdenv=self.tdenv.copy())
-        result.tdenv[id.value] = typdef
+        tdenv = self.tdenv.set(id.value, typdef)
+        result = self.copy_and_change(tdenv=tdenv)
         return result
 
     def find_func_local(self, id):
