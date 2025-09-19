@@ -534,8 +534,14 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     #         List.init (List.length vars_binding) (fun _ -> [])
     #       in
     #       (ctx, values_binding)
-        # the empty list case is the same in rpython, due to mutation
-        # and not needing the transpose
+    if ctxs_sub.length == 0:
+        values_binding = [[] for _ in vars_binding_list.vars]
+    elif ctxs_sub.length == 1:
+        ctx_sub = next(ctxs_sub)
+        ctx_sub = eval_let_iter_tick(ctx_sub, exp_l, exp_r, iterexps_t)
+        ctx = ctx.commit(ctx_sub)
+        values_binding = [[ctx_sub.find_value_local(var_binding.id, var_binding.iter)]
+                          for var_binding in vars_binding_list.vars]
     #   (* Otherwise, evaluate the premise for each batch of bound values,
     #      and collect the resulting binding batches *)
     #   | _ ->
@@ -556,7 +562,8 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     #             (ctx, values_binding_batch))
     #           (ctx, []) ctxs_sub
     #       in
-    ctx, values_binding = _eval_let_list_loop(ctx, ctxs_sub, vars_binding_list, exp_l, exp_r, iterexps_t)
+    else:
+        ctx, values_binding = _eval_let_list_loop(ctx, ctxs_sub, vars_binding_list, exp_l, exp_r, iterexps_t)
     #       let values_binding = values_binding_batch |> Ctx.transpose in
     #       (ctx, values_binding)
     # in
@@ -937,6 +944,17 @@ def eval_hold_cond_list(ctx, id, notexp, vars, iterexps):
     #        let values_cond = values_cond @ [ value_cond ] in
     #        (ctx, cond, values_cond))
     #    (ctx, true, []) ctxs_sub
+    if ctxs_sub.length == 0:
+        return ctx, True, []
+    elif ctxs_sub.length == 1:
+        ctx_sub = next(ctxs_sub)
+        ctx_sub, cond, value_cond = eval_hold_cond_iter_tick(ctx_sub, id, notexp, iterexps)
+        ctx = ctx.commit(ctx_sub)
+        values_cond = [value_cond]
+        return ctx, cond, values_cond
+    return _eval_hold_cond_list_loop(ctx, ctxs_sub, id, notexp, vars, iterexps)
+
+def _eval_hold_cond_list_loop(ctx, ctxs_sub, id, notexp, vars, iterexps):
     cond = True
     values_cond = []
     for ctx_sub in ctxs_sub:
