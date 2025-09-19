@@ -171,7 +171,7 @@ class VenvDict(object):
         # type: (str, str) -> objects.BaseV
         pos = jit.promote(self._keys).get_pos(var_name, var_iter)
         if pos < 0:
-            raise P4ContextError('var_name %s%s does not exist' % (var_name, var_iter))
+            raise P4ContextError('id_value %s%s does not exist' % (var_name, var_iter))
         return self._values[pos]
 
     def set(self, var_name, var_iter, value):
