@@ -369,8 +369,8 @@ class TypD(Def):
 
     def __init__(self, id, tparams, deftyp):
         self.id = id            # type: Id
-        self.tparams = tparams  # type: list[tparam]
-        self.deftyp = deftyp    # type: deftyp
+        self.tparams = tparams  # type: list[TParam]
+        self.deftyp = deftyp    # type: DefTyp
 
     def __repr__(self):
         return "p4specast.TypD(%s, %s, %s)" % (self.id, self.tparams, self.deftyp)
@@ -420,9 +420,9 @@ class DecD(Def):
 
     def __init__(self, id, tparams, args, instrs):
         self.id = id            # type: Id
-        self.tparams = tparams  # type: list[tparam]
-        self.args = args        # type: list[arg]
-        self.instrs = instrs    # type: list[instr]
+        self.tparams = tparams  # type: list[TParam]
+        self.args = args        # type: list[Arg]
+        self.instrs = instrs    # type: list[Instr]
 
     def __repr__(self):
         return "p4specast.DecD(%r, %r, %r, %r)" % (self.id, self.tparams, self.args, self.instrs)

@@ -27,11 +27,13 @@ class EnvKeys(object):
         self.keys = keys # type: dict[tuple[str, str], int]
         self.next_venv_keys = {} # type: dict[tuple[str, str], EnvKeys]
 
+    # TODO: default für var_iter
     @jit.elidable
     def get_pos(self, var_name, var_iter):
         # type: (str, str) -> int
         return self.keys.get((var_name, var_iter), -1)
 
+    # TODO: default für var_iter
     @jit.elidable
     def add_key(self, var_name, var_iter):
         # type: (str, str) -> EnvKeys
@@ -294,9 +296,8 @@ class Context(object):
         result = self.copy_and_change(fenv=fenv)
         return result
 
-    # TODO: 'typedef' ist list of what?
     def add_typdef_local(self, id, typdef):
-        # type: (p4specast.TParam, tuple[list, p4specast.PlainT]) -> Context
+        # type: (p4specast.TParam, tuple[list[p4specast.TParam], p4specast.DefTyp]) -> Context
         tdenv = self.tdenv.set(id.value, typdef)
         result = self.copy_and_change(tdenv=tdenv)
         return result
