@@ -607,6 +607,8 @@ class TextE(Exp):
 class VarE(Exp):
     def __init__(self, id):
         self.id = id # typ: id
+        self._ctx_keys = None
+        self._ctx_index = -1
 
     @staticmethod
     def fromjson(content):
