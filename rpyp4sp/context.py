@@ -23,7 +23,7 @@ def iterlist_to_key(l):
 class EnvKeys(object):
     def __init__(self, keys):
         self.keys = keys # type: dict[tuple[str, str], int]
-        self.next_venv_keys = {} # type: dict[tuple[str, str], EnvKeys]
+        self.next_env_keys = {} # type: dict[tuple[str, str], EnvKeys]
 
     # TODO: default für var_iter
     def get_pos(self, var_name, var_iter):
@@ -34,14 +34,14 @@ class EnvKeys(object):
     def add_key(self, var_name, var_iter):
         # type: (str, str) -> EnvKeys
         key = (var_name, var_iter)
-        res = self.next_venv_keys.get(key)
+        res = self.next_env_keys.get(key)
         if res is not None:
             return res
         else:
             keys = self.keys.copy()
             keys[key] = len(keys)
             res = EnvKeys(keys)
-            self.next_venv_keys[key] = res
+            self.next_env_keys[key] = res
             return res
 
     def __repr__(self):
@@ -167,63 +167,9 @@ class FenvDict(object):
         l.append(">")
         return "".join(l)
 
-class VenvDict(object):
-    def __init__(self, keys=ENV_KEYS_ROOT, values=None):
-        self._keys = keys # type: EnvKeys
-        self._values = [] if values is None else values # type: list[objects.BaseV]
-
-    def get(self, var_name, var_iter, vare_cache=None):
-        # type: (str, str, p4specast.VarE | None) -> objects.BaseV
-        if vare_cache is not None and vare_cache._ctx_keys is self._keys:
-            pos = vare_cache._ctx_index
-        else:
-            pos = self._keys.get_pos(var_name, var_iter)
-            if vare_cache is not None:
-                vare_cache._ctx_index = pos
-                vare_cache._ctx_keys = self._keys
-        if pos < 0:
-            raise P4ContextError('id_value %s%s does not exist' % (var_name, var_iter))
-        return self._values[pos]
-
-    def set(self, var_name, var_iter, value):
-        # type: (str, str, objects.BaseV) -> VenvDict
-        pos = self._keys.get_pos(var_name, var_iter)
-        if pos < 0:
-            keys = self._keys.add_key(var_name, var_iter)
-            values = self._values + [value]
-            return VenvDict(keys, values)
-        else:
-            values = self._values[:]
-            values[pos] = value
-            return VenvDict(self._keys, values)
-
-    def has_key(self, var_name, var_iter):
-        # type: (str, str) -> bool
-        pos = self._keys.get_pos(var_name, var_iter)
-        return pos >= 0
-
-    def __repr__(self):
-        l = ["context.VenvDict()"]
-        for var_name, var_iter in self._keys.keys:
-            pos = self._keys.get_pos(var_name, var_iter)
-            value = self._values[pos]
-            l.append(".set(%r, %r, %r)" % (var_name, var_iter, value))
-        return "".join(l)
-
-    def __str__(self):
-        l = ["<venv "]
-        for index, (var_name, var_iter) in enumerate(self._keys.keys):
-            pos = self._keys.get_pos(var_name, var_iter)
-            value = self._values[pos]
-            if index == 0:
-                l.append("%r: %r" % (var_name + var_iter, value))
-            else:
-                l.append(", %r: %r" % (var_name + var_iter, value))
-        l.append(">")
-        return "".join(l)
-
 class Context(object):
-    def __init__(self, filename, derive=False, glbl=None, values_input=None, tdenv=None, fenv=None, venv=None):
+    def __init__(self,filename, derive=False, glbl=None, values_input=None,
+                 tdenv=None, fenv=None, venv_keys=None, venv_values=None):
         self.filename = filename
         self.glbl = GlobalContext() if glbl is None else glbl
         # the local context is inlined
@@ -231,14 +177,16 @@ class Context(object):
         self.values_input = values_input if values_input is not None else []
         self.tdenv = tdenv if tdenv is not None else TDenvDict()
         self.fenv = fenv if fenv is not None else FenvDict()
-        self.venv = venv if venv is not None else VenvDict()
+        self.venv_keys = venv_keys if venv_keys is not None else ENV_KEYS_ROOT # type: EnvKeys
+        self.venv_values = venv_values if venv_values is not None else [] # type: list[objects.BaseV]
 
-    def copy_and_change(self, values_input=None, tdenv=None, fenv=None, venv=None):
+    def copy_and_change(self, values_input=None, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
         values_input = values_input if values_input is not None else self.values_input
         tdenv = tdenv if tdenv is not None else self.tdenv
         fenv = fenv if fenv is not None else self.fenv
-        venv = venv if venv is not None else self.venv
-        return Context(self.filename, self.derive, self.glbl, values_input, tdenv, fenv, venv)
+        venv_keys = venv_keys if venv_keys is not None else self.venv_keys
+        venv_values = venv_values if venv_values is not None else self.venv_values
+        return Context(self.filename, self.derive, self.glbl, values_input, tdenv, fenv, venv_keys, venv_values)
 
     def load_spec(self, spec):
         for definition in spec:
@@ -251,22 +199,34 @@ class Context(object):
                 self.glbl.fenv[definition.id.value] = definition
 
     def localize(self):
-        return self.copy_and_change(tdenv=TDenvDict(), fenv=FenvDict(), venv=VenvDict())
+        return self.copy_and_change(tdenv=TDenvDict(), fenv=FenvDict(), venv_keys=ENV_KEYS_ROOT, venv_values=[])
 
     def localize_inputs(self, values_input):
-        # tpye: (VenvDict) -> Context
+        # type: (list[objects.BaseV]) -> Context
         return self.copy_and_change(values_input=values_input)
 
-    def localize_venv(self, venv):
-        return self.copy_and_change(venv=venv)
+    def localize_venv(self, venv_keys, venv_values):
+        # type: (EnvKeys, list[objects.BaseV]) -> Context
+        return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
 
     def find_value_local(self, id, iterlist, vare_cache=None):
         # type: (p4specast.Id, list[p4specast.Iter], p4specast.VarE | None) -> objects.BaseV
-        return self.venv.get(id.value, iterlist_to_key(iterlist), vare_cache)
+        var_iter = iterlist_to_key(iterlist)
+        if vare_cache is not None and vare_cache._ctx_keys is self.venv_keys:
+            pos = vare_cache._ctx_index
+        else:
+            pos = self.venv_keys.get_pos(id.value, var_iter)
+            if vare_cache is not None:
+                vare_cache._ctx_index = pos
+                vare_cache._ctx_keys = self.venv_keys
+        if pos < 0:
+            raise P4ContextError('id_value %s%s does not exist' % (id.value, var_iter))
+        return self.venv_values[pos]
 
     def bound_value_local(self, id, iterlist):
         # type: (p4specast.Id, list[p4specast.Iter]) -> bool
-        return self.venv.has_key(id.value, iterlist_to_key(iterlist))
+        pos = self.venv_keys.get_pos(id.value, iterlist_to_key(iterlist))
+        return pos >= 0
 
     # TODO: why Id and not Tparam?
     def find_typdef_local(self, id):
@@ -282,9 +242,16 @@ class Context(object):
 
     def add_value_local(self, id, iterlist, value):
         # type: (p4specast.Id, list, objects.BaseV) -> Context
-        venv = self.venv.set(id.value, iterlist_to_key(iterlist), value)
-        result = self.copy_and_change(venv=venv)
-        return result
+        var_iter = iterlist_to_key(iterlist)
+        pos = self.venv_keys.get_pos(id.value, var_iter)
+        if pos < 0:
+            venv_keys = self.venv_keys.add_key(id.value, var_iter)
+            venv_values = self.venv_values + [value]
+            return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
+        else:
+            venv_values = self.venv_values[:]
+            venv_values[pos] = value
+            return self.copy_and_change(venv_values=venv_values)
 
     def add_func_local(self, id, func):
         # type: (p4specast.Id, p4specast.DecD) -> Context
@@ -396,6 +363,18 @@ class Context(object):
                 ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value)
             ctxs_sub.append(ctx_sub)
         return ctxs_sub
+
+    def _venv_str(self):
+        l = ["<venv "]
+        for index, (var_name, var_iter) in enumerate(self.venv_keys.keys):
+            pos = self.venv_keys.get_pos(var_name, var_iter)
+            value = self.venv_values[pos]
+            if index == 0:
+                l.append("%r: %r" % (var_name + var_iter, value))
+            else:
+                l.append(", %r: %r" % (var_name + var_iter, value))
+        l.append(">")
+        return "".join(l)
 
 
 def transpose(value_matrix):

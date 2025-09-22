@@ -1,4 +1,4 @@
-from rpyp4sp.context import Context, FenvDict, TDenvDict, VenvDict
+from rpyp4sp.context import Context, FenvDict, TDenvDict
 from rpyp4sp.error import P4ContextError
 from rpyp4sp import objects, p4specast
 
@@ -116,52 +116,17 @@ def test_fenv_dict():
     assert repr(d4) == "context.FenvDict().set('id1', p4specast.DecD(p4specast.Id('id1', None), [], [], [])).set('id2', p4specast.DecD(p4specast.Id('id2', None), [], [], []))"
     assert str(d4) == "<fenv 'id1': p4specast.DecD(p4specast.Id('id1', None), [], [], []), 'id2': p4specast.DecD(p4specast.Id('id2', None), [], [], [])>"
 
-def test_venv_dict():
-    d_empty = VenvDict()
-    assert repr(d_empty._keys) == "context.ENV_KEYS_ROOT"
-    assert str(d_empty._keys) == "<keys >"
-    assert repr(d_empty) == "context.VenvDict()"
-    assert str(d_empty) == "<venv >"
-
-    value1 = objects.TextV('abc')
-    d2 = d_empty.set("a", "", value1)
-    assert d2.get("a", "") is value1
-
-    value2 = objects.TextV('def')
-    d3 = d_empty.set("a", "", value2)
-    assert d3.get("a", "") is value2
-    # check memoizing works
-    assert d2._keys is d3._keys
-
-    value3 = objects.TextV('ghi')
-    d4 = d3.set("a", "", value3)
-    assert d4.get("a", "") is value3
-    assert d4._keys is d3._keys
-    assert repr(d4._keys) == "context.ENV_KEYS_ROOT.add_key('a', '')"
-    assert str(d4._keys) == "<keys 'a'>"
-    assert repr(d4) == "context.VenvDict().set('a', '', objects.TextV('ghi', None, -1))"
-    assert str(d4) == "<venv 'a': objects.TextV('ghi', None, -1)>"
-
-    value4 = objects.TextV('jkl')
-    d5 = d4.set("b", "", value4)
-    assert d5.get("a", "") is value3
-    assert d5.get("b", "") is value4
-    assert repr(d5._keys) == "context.ENV_KEYS_ROOT.add_key('a', '').add_key('b', '')"
-    assert str(d5._keys) == "<keys 'a', 'b'>"
-    assert repr(d5) == "context.VenvDict().set('a', '', objects.TextV('ghi', None, -1)).set('b', '', objects.TextV('jkl', None, -1))"
-    assert str(d5) == "<venv 'a': objects.TextV('ghi', None, -1), 'b': objects.TextV('jkl', None, -1)>"
-
 def test_venv_vare_cashing(monkeypatch):
     id1 = p4specast.Id('id1', None)
     value1 = objects.TextV("abc")
     vare = p4specast.VarE(id1)
-    venv = VenvDict().set(id1.value, "", value1)
-    value2 = venv.get(id1.value, "", vare_cache=vare)
+    ctx = Context('dummy').add_value_local(id1, [], value1)
+    value2 = ctx.find_value_local(id1, [], vare_cache=vare)
     assert value1 is value2
-    #assert vare._ctx_keys is venv._keys
-    #assert vare._ctx_index == 0
-    monkeypatch.setattr(type(venv._keys), 'get_pos', None)
-    value2 = venv.get(id1.value, "", vare_cache=vare)
+    assert vare._ctx_keys is ctx.venv_keys
+    assert vare._ctx_index == 0
+    monkeypatch.setattr(type(ctx.venv_keys), 'get_pos', None)
+    value2 = ctx.find_value_local(id1, [], vare_cache=vare)
     assert value1 is value2
 
 
@@ -191,7 +156,7 @@ def test_context():
 
 
     # copy_and_change
-    ctx4 = ctx1.copy_and_change(venv=ctx3.venv)
+    ctx4 = ctx1.copy_and_change(venv_keys=ctx3.venv_keys, venv_values=ctx3.venv_values)
     assert ctx4.find_value_local(id2, []) is value2
     with pytest.raises(P4ContextError):
         ctx4.find_value_local(id1, [])
