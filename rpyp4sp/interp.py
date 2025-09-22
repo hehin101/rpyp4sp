@@ -1243,7 +1243,7 @@ def _assign_exp_iter_cases(ctx, exp, value):
         ctxs = []
         values = value.elements
         for value_elem in values:
-            ctx_local = ctx.localize_venv(venv=context.VenvDict())
+            ctx_local = ctx.localize_venv(venv_keys=context.ENV_KEYS_ROOT, venv_values=[])
             ctx_local = assign_exp(ctx_local, exp.exp, value_elem)
             ctxs.append(ctx_local)
     #     in
@@ -1372,15 +1372,12 @@ class __extend__(p4specast.ReturnI):
 # ____________________________________________________________
 # expressions
 
-<<<<<<< HEAD
-=======
 @jit.elidable
 def exp_tostring(exp):
     return "exp:" + exp.tostring()
 
 def eval_exp(ctx, exp):
     return exp.eval_exp(ctx)
->>>>>>> 8b10c2d (wip)
 
 @jit.unroll_safe
 def eval_exps(ctx, exps):
@@ -1426,11 +1423,7 @@ class __extend__(p4specast.TextE):
 class __extend__(p4specast.VarE):
     def eval_exp(self, ctx):
         # let value = Ctx.find_value Local ctx (id, []) in
-<<<<<<< HEAD
-        value = ctx.find_value_local(self.id)
-=======
-        value = ctx.find_value_local(self.id, [], vare_cache=self)
->>>>>>> 34ecca0 (vare cache)
+        value = ctx.find_value_local(self.id, vare_cache=self)
         return ctx, value
 
 class __extend__(p4specast.OptE):
