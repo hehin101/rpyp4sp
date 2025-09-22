@@ -1,7 +1,7 @@
 from __future__ import print_function
 from rpython.rlib import objectmodel
 from rpyp4sp import p4specast, objects, builtin, context, integers
-from rpyp4sp.error import (P4EvaluationError, P4CastError, P4NotImplementedError, 
+from rpyp4sp.error import (P4EvaluationError, P4CastError, P4NotImplementedError,
                            P4RelationError)
 
 class Sign(object):
@@ -19,6 +19,19 @@ class Ret(Sign):
     def __init__(self, value):
         self.value = value
 
+class SubInstructions(Sign):
+    def __init__(self, instrs):
+        self.instrs = instrs
+
+class Continuation(object):
+    def __init__(self, index, instrs, next):
+        self.index = index
+        self.instrs = instrs
+        self.next = next
+
+    def __repr__(self):
+        return "Contiuation(%d, %s, %s)" % (
+            self.index, self.instrs, self.next)
 
 def invoke_func(ctx, calle):
     # if Builtin.is_builtin id then invoke_func_builtin ctx id targs args
@@ -201,12 +214,23 @@ def eval_instrs(ctx, sign, instrs):
     #     (fun (ctx, sign) instr ->
     #       match sign with Sign.Cont -> eval_instr ctx instr | _ -> (ctx, sign))
     #     (ctx, sign) instrs
-    for instr in instrs:
-        if isinstance(sign, Cont):
-            ctx, sign = eval_instr(ctx, instr)
-        else:
-            if not objectmodel.we_are_translated():
-                assert sign is not Cont
+    continuation = Continuation(0, instrs, None)
+    while continuation is not None:
+        instrs = continuation.instrs
+        index = continuation.index
+        continuation = continuation.next # pop element from stack or linked list
+        for i in range(index, len(instrs)):
+            instr = instrs[i]
+            if isinstance(sign, Cont):
+                ctx, sign = eval_instr(ctx, instr)
+                if isinstance(sign, SubInstructions):
+                    continuation = Continuation(i, instrs, continuation)
+                    continuation = Continuation(0, sign.instrs, continuation)
+                    sign = Cont()
+                    break
+            else:
+                if not objectmodel.we_are_translated():
+                    assert sign is not Cont
     return ctx, sign
 
 class __extend__(p4specast.IfI):
@@ -224,7 +248,8 @@ class __extend__(p4specast.IfI):
         #   in
         #   if cond then eval_instrs ctx Cont instrs_then else (ctx, Cont)
         if cond:
-            return eval_instrs(ctx, Cont(), self.instrs)
+            return ctx, SubInstructions(self.instrs)
+            # return eval_instrs(ctx, Cont(), self.instrs)
         return (ctx, Cont())
 
 def eval_if_cond_iter(ctx, instr):
