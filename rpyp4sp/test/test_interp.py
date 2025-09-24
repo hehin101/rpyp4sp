@@ -23,7 +23,7 @@ def make_context(loaded=[]):
     if loaded:
         return loaded[0]
     spec = load()
-    ctx = Context('dummy')
+    ctx = Context.make0('dummy')
     ctx.load_spec(spec)
     loaded.append(ctx)
     return ctx

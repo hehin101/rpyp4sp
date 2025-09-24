@@ -1090,7 +1090,6 @@ class __extend__(p4specast.HoldI):
 
 @jit.unroll_safe
 def assign_exp(ctx, exp, value):
-    # INCOMPLETE
     # let note = value.note.typ in
     # match (exp.it, value.it) with
     if isinstance(exp, p4specast.VarE):
@@ -1226,12 +1225,8 @@ def assign_exp(ctx, exp, value):
           exp.is_simple_list_expr() and
           isinstance(value, objects.ListV)):
         return ctx.add_value_local(exp.varlist[0].id, exp.varlist[0].iter.append_list(), value)
-    return _assign_exp_iter_cases(ctx, exp, value)
-
-def _assign_exp_iter_cases(ctx, exp, value):
-    # split for the benefit of the jit, the rest of the code contains loops
     # | IterE (exp, (List, vars)), ListV values ->
-    if (isinstance(exp, p4specast.IterE) and
+    elif (isinstance(exp, p4specast.IterE) and
           isinstance(exp.iter, p4specast.List) and
           isinstance(value, objects.ListV)):
     #     (* Map over the value list elements,
@@ -1246,45 +1241,67 @@ def _assign_exp_iter_cases(ctx, exp, value):
     #           ctxs @ [ ctx ])
     #         [] values
     #     in
-        # TODO: move rest into its own function
-        ctxs = []
         values = value.elements
-        for value_elem in values:
+        if len(values) == 0:
+            for var in exp.varlist:
+                values = []
+                # create a ListV value for these
+                value_sub = objects.ListV(values, var.typ)
+                ctx = ctx.add_value_local(var.id, var.iter.append_list(), value_sub)
+            return ctx
+        elif len(values) == 1:
+            value_elem, = values
             ctx_local = ctx.localize_venv(venv_keys=context.ENV_KEYS_ROOT, venv_values=[])
             ctx_local = assign_exp(ctx_local, exp.exp, value_elem)
-            ctxs.append(ctx_local)
-    #     in
-    #     (* Per iterated variable, collect its elementwise value,
-    #        then make a sequence out of them *)
-    #     List.fold_left
-    #       (fun ctx (id, typ, iters) ->
-    #         let values =
-    #           List.map (fun ctx -> Ctx.find_value Local ctx (id, iters)) ctxs
-    #         in
-    #         let value_sub =
-    #           let vid = Value.fresh () in
-    #           let typ = Typ.iterate typ (iters @ [ Il.Ast.List ]) in
-    #           Il.Ast.(ListV values $$$ { vid; typ = typ.it })
-    #         in
-    #         Ctx.add_node ctx value_sub;
-    #         Ctx.add_edge ctx value_sub value Dep.Edges.Assign;
-    #         Ctx.add_value Local ctx (id, iters @ [ Il.Ast.List ]) value_sub)
-    #       ctx vars
-        for var in exp.varlist:
-            # collect elementwise values from each ctx in ctxs
-            values = [ctx_elem.find_value_local(var.id, var.iter) for ctx_elem in ctxs]
-            # create a ListV value for these
-            value_sub = objects.ListV(values, var.typ)
-            ctx = ctx.add_value_local(var.id, var.iter.append_list(), value_sub)
-        return ctx
+            for var in exp.varlist:
+                # collect elementwise values from each ctx in ctxs
+                values = [ctx_local.find_value_local(var.id, var.iter)]
+                # create a ListV value for these
+                value_sub = objects.ListV(values, var.typ)
+                ctx = ctx.add_value_local(var.id, var.iter.append_list(), value_sub)
+            return ctx
+        else:
+            ctx_local = ctx.localize_venv(venv_keys=context.ENV_KEYS_ROOT, venv_values=[])
+            values = _assign_exp_iter_cases(ctx_local, exp, values)
+            #     in
+            #     (* Per iterated variable, collect its elementwise value,
+            #        then make a sequence out of them *)
+            #     List.fold_left
+            #       (fun ctx (id, typ, iters) ->
+            #         let values =
+            #           List.map (fun ctx -> Ctx.find_value Local ctx (id, iters)) ctxs
+            #         in
+            #         let value_sub =
+            #           let vid = Value.fresh () in
+            #           let typ = Typ.iterate typ (iters @ [ Il.Ast.List ]) in
+            #           Il.Ast.(ListV values $$$ { vid; typ = typ.it })
+            #         in
+            #         Ctx.add_node ctx value_sub;
+            #         Ctx.add_edge ctx value_sub value Dep.Edges.Assign;
+            #         Ctx.add_value Local ctx (id, iters @ [ Il.Ast.List ]) value_sub)
+            #       ctx vars
+            for i, var in enumerate(exp.varlist):
+                # collect elementwise values from each ctx in ctxs
+                # create a ListV value for these
+                value_sub = objects.ListV(values[i], var.typ)
+                ctx = ctx.add_value_local(var.id, var.iter.append_list(), value_sub)
+            return ctx
 
-    #import pdb;pdb.set_trace()
-    raise P4EvaluationError("todo assign_exp: unhandled expression type %s" % exp.__class__.__name__)
     # | _ ->
     #     error exp.at
     #       (F.asprintf "(TODO) match failed %s <- %s"
     #          (Sl.Print.string_of_exp exp)
     #          (Sl.Print.string_of_value ~short:true value))
+    #import pdb;pdb.set_trace()
+    raise P4EvaluationError("todo assign_exp: unhandled expression type %s" % exp.__class__.__name__)
+
+def _assign_exp_iter_cases(ctx_local, exp, values):
+    values_result = [[None] * len(values) for _ in exp.varlist]
+    for i, value_elem in enumerate(values):
+        ctx_local = assign_exp(ctx_local, exp.exp, value_elem)
+        for index, var in enumerate(exp.varlist):
+            values_result[index][i] = ctx_local.find_value_local(var.id, var.iter)
+    return values_result
 
 @jit.unroll_safe
 def assign_exps(ctx, exps, values):
