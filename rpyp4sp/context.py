@@ -1,3 +1,4 @@
+from __future__ import print_function
 from rpython.rlib import jit
 from rpyp4sp import p4specast, objects
 from rpyp4sp.smalllist import inline_small_list
@@ -378,10 +379,10 @@ class Context(object):
         #         find_value Local ctx (id, iters @ [ Il.Ast.List ]) |> Value.get_list)
         #       vars
         #     |> transpose
-        values_batch = []
+        values_batch = [None] * len(varlist.vars)
         assert varlist
         first_list = None
-        for var in varlist.vars:
+        for i, var in enumerate(varlist.vars):
             value = self.find_value_local(var.id, var.iter.append_list())
             value_list = value.get_list()
             if first_list is not None:
@@ -389,7 +390,7 @@ class Context(object):
                     raise P4ContextError("cannot transpose a matrix of value batches")
             else:
                 first_list = value_list
-            values_batch.append(value_list)
+            values_batch[i] = value_list
         assert first_list is not None
         return SubListIter(self, varlist, len(first_list), values_batch)
 
