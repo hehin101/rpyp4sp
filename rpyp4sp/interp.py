@@ -1726,11 +1726,9 @@ class __extend__(p4specast.DotE):
         #   let ctx, value_b = eval_exp ctx exp_b in
         ctx, value_b = eval_exp(ctx, self.obj)
         #   let fields = Value.get_struct value_b in
-        fields = value_b.get_struct()
-        for (atom, value) in fields:
-            if atom.value == self.field.value:
-                return ctx, value
-        assert 0, "field not found"
+        value_b = value_b.get_struct()
+        value = value_b.get_field(self.field)
+        return ctx, value
         #   let value_res =
         #     fields
         #     |> List.map (fun (atom, value) -> (atom.it, value))
@@ -1832,19 +1830,22 @@ class __extend__(p4specast.CallE):
         return invoke_func(ctx, self)
 
 class __extend__(p4specast.StrE):
+    @jit.unroll_safe
     def eval_exp(self, ctx):
         # let atoms, exps = List.split fields in
-        exps = [exp for (atom, exp) in self.fields]
         # let ctx, values = eval_exps ctx exps in
-        ctx, values = eval_exps(ctx, exps)
         # let fields = List.combine atoms values in
-        fields = [(atom, values[i]) for i, (atom, exp) in enumerate(self.fields)]
+        map = objects.StructMap.EMPTY
+        values = []
+        for (atom, exp) in self.fields:
+            ctx, value = eval_exp(ctx, exp)
+            map = map.add_field(atom.value)
+            values.append(value)
         # let value_res =
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(StructV fields $$$ { vid; typ })
         # in
-        value_res = objects.StructV(fields, self.typ)
         # Ctx.add_node ctx value_res;
         # if List.length values = 0 then
         #   List.iter
@@ -1852,7 +1853,7 @@ class __extend__(p4specast.StrE):
         #       Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
         #     ctx.local.values_input;
         # (ctx, value_res)
-        return ctx, value_res
+        return ctx, objects.StructV.make(values, map, self.typ)
 
 class __extend__(p4specast.CaseE):
     def eval_exp(self, ctx):
@@ -1981,6 +1982,7 @@ class __extend__(p4specast.SliceE):
         # Ctx.add_node ctx value_res;
         # (ctx, value_res)
 
+@jit.unroll_safe
 def eval_access_path(value_b, path):
     # match path.it with
     if isinstance(path, p4specast.RootP):
@@ -1995,15 +1997,14 @@ def eval_access_path(value_b, path):
         # fields
         # |> List.map (fun (atom, value) -> (atom.it, value))
         # |> List.assoc atom.it
-        for atom, val in fields:
-            if atom.value == path.atom.value:
-                return val
+        return fields.get_field(path.atom)
         # | _ -> failwith "(TODO) access_path"
         raise Exception("(TODO) access_path: field not found")
     else:
         raise Exception("(TODO) access_path")
 
 
+@jit.unroll_safe
 def eval_update_path(ctx, value_b, path, value_n):
     # match path.it with
     if isinstance(path, p4specast.RootP):
@@ -2014,23 +2015,17 @@ def eval_update_path(ctx, value_b, path, value_n):
         # let value = eval_access_path value_b path in
         value = eval_access_path(value_b, path.path)
         # let fields = value |> Value.get_struct in
-        fields = value.get_struct()
+        value = value.get_struct()
         # let fields =
         #   List.map
         #     (fun (atom_f, value_f) ->
         #       if atom_f.it = atom.it then (atom_f, value_n) else (atom_f, value_f))
         #     fields
-        new_fields = []
-        for atom_f, value_f in fields:
-            if atom_f.value == path.atom.value:
-                new_fields.append((atom_f, value_n))
-            else:
-                new_fields.append((atom_f, value_f))
+        value_struct = value.replace_field(path.atom, value_n)
         # let value =
         #   let vid = Value.fresh () in
         #   let typ = path.note in
         #   Il.Ast.(StructV fields $$$ { vid; typ })
-        value_struct = objects.StructV(new_fields, path.path.typ)
         # Ctx.add_node ctx value;
         # eval_update_path ctx value_b path value
         return eval_update_path(ctx, value_b, path.path, value_struct)
