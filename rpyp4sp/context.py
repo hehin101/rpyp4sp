@@ -261,18 +261,24 @@ class Context(object):
             raise P4ContextError("rel %s not found" % id.value)
         return res
 
+    @jit.unroll_safe
     def add_value_local(self, id, iterlist, value):
         # type: (p4specast.Id, list, objects.BaseV) -> Context
         var_iter = iterlist.to_key()
-        pos = self.venv_keys.get_pos(id.value, var_iter)
+        venv_keys = jit.promote(self.venv_keys)
+        pos = venv_keys.get_pos(id.value, var_iter)
         if pos < 0:
-            venv_keys = self.venv_keys.add_key(id.value, var_iter)
+            venv_keys = venv_keys.add_key(id.value, var_iter)
             venv_values = self.venv_values + [value]
             return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
         else:
-            venv_values = self.venv_values[:]
-            venv_values[pos] = value
-            return self.copy_and_change(venv_values=venv_values)
+            venv_keys = venv_keys
+
+        venv_values = [None] * length
+        for i in range(len(self.venv_values)):
+            venv_values[i] = self.venv_values[i]
+        venv_values[pos] = value
+        return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
 
     def add_func_local(self, id, func):
         # type: (p4specast.Id, p4specast.DecD) -> Context

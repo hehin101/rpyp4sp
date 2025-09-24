@@ -246,7 +246,7 @@ def instr_tostring(instr):
 
 
 def eval_instr(ctx, instr):
-    jit.jit_debug(instr_tostring(instr))
+    #jit.jit_debug(instr_tostring(instr))
     try:
         return instr.eval_instr(ctx)
     except P4Error as e:
@@ -1882,7 +1882,12 @@ class __extend__(p4specast.CatE):
             value_res = objects.TextV(value_l.value + value_r.value, self.typ)
         #     | ListV values_l, ListV values_r -> Il.Ast.ListV (values_l @ values_r)
         elif isinstance(value_l, objects.ListV) and isinstance(value_r, objects.ListV):
-            value_res = objects.ListV(value_l.elements + value_r.elements, self.typ)
+            if not value_l.elements:
+                value_res = value_r
+            elif not value_r.elements:
+                value_res = value_l
+            else:
+                value_res = objects.ListV(value_l.elements + value_r.elements, self.typ)
         else:
             assert 0, "concatenation expects either two texts or two lists"
         #     | _ -> error at "concatenation expects either two texts or two lists"
