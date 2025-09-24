@@ -369,7 +369,7 @@ def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
         elif isinstance(iter_h, p4specast.List):
             ctx, cond, values_cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexps_t)
             typ = p4specast.IterT(p4specast.BoolT.INSTANCE, p4specast.List())
-            value_cond = objects.ListV(values_cond, typ)
+            value_cond = objects.ListV.make(values_cond, typ)
             return ctx, cond, value_cond
     # | iterexp_h :: iterexps_t -> (
     #     let iter_h, vars_h = iterexp_h in
@@ -423,7 +423,7 @@ def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
         #         (ctx, cond, value_cond))
         ctx, cond, values_cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexps_t)
         typ = p4specast.IterT(p4specast.BoolT.INSTANCE, p4specast.List())
-        value_cond = objects.ListV(values_cond, typ)
+        value_cond = objects.ListV.make(values_cond, typ)
         # for (id, _typ, iters) in vars_h:
         #     value_sub = ctx.find_value_local(id, iters + [p4specast.List])
         #     # TODO: add edge
@@ -609,7 +609,7 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
         id_binding = var_binding.id
         typ_binding = var_binding.typ
         iters_binding = var_binding.iter
-        value_binding = objects.ListV(values_binding_item[:], typ_binding)
+        value_binding = objects.ListV.make(values_binding_item[:], typ_binding)
         ctx = ctx.add_value_local(id_binding, iters_binding.append_list(), value_binding)
     return ctx
 
@@ -873,7 +873,7 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
         id_binding = var_binding.id
         typ_binding = var_binding.typ
         iters_binding = var_binding.iter
-        value_binding = objects.ListV(values_binding, typ_binding)
+        value_binding = objects.ListV.make(values_binding, typ_binding)
         ctx = ctx.add_value_local(id_binding, iters_binding.append_list(), value_binding)
     return ctx
 
@@ -1011,7 +1011,7 @@ def eval_hold_cond_iter_tick(ctx, id, notexp, iterexps):
     #            let vid = Value.fresh () in
     #            let typ = Il.Ast.IterT (Il.Ast.BoolT $ no_region, Il.Ast.List) in
     #            Il.Ast.(ListV values_cond $$$ { vid; typ })
-        value_cond = objects.ListV(values_cond, p4specast.IterT(p4specast.BoolT.INSTANCE, p4specast.List()))
+        value_cond = objects.ListV.make(values_cond, p4specast.IterT(p4specast.BoolT.INSTANCE, p4specast.List()))
     #          in
     #          Ctx.add_node ctx value_cond;
     #          List.iter
@@ -1103,7 +1103,7 @@ def assign_exp(ctx, exp, value):
          isinstance(value, objects.TupleV):
     #     let ctx = assign_exps ctx exps_inner values_inner in
         exps_inner = exp.elts
-        values_inner = value.elements
+        values_inner = value.get_tuple()
         ctx = assign_exps(ctx, exps_inner, values_inner)
     #     List.iter
     #       (fun value_inner -> Ctx.add_edge ctx value_inner value Dep.Edges.Assign)
@@ -1147,7 +1147,7 @@ def assign_exp(ctx, exp, value):
     if isinstance(exp, p4specast.ListE) and \
        isinstance(value, objects.ListV):
     #     let ctx = assign_exps ctx exps_inner values_inner in
-        ctx = assign_exps(ctx, exp.elts, value.elements)
+        ctx = assign_exps(ctx, exp.elts, value.get_list())
     #     List.iter
     #       (fun value_inner -> Ctx.add_edge ctx value_inner value Dep.Edges.Assign)
     #       values_inner;
@@ -1156,7 +1156,7 @@ def assign_exp(ctx, exp, value):
     # | ConsE (exp_h, exp_t), ListV values_inner ->
     elif isinstance(exp, p4specast.ConsE) and \
          isinstance(value, objects.ListV):
-        values_inner = value.elements
+        values_inner = value.get_list()
         assert values_inner, "cannot assign empty list to ConsE"
     #     let value_h = List.hd values_inner in
         value_h = values_inner[0]
@@ -1164,7 +1164,7 @@ def assign_exp(ctx, exp, value):
     #       let vid = Value.fresh () in
     #       let typ = note in
     #       Il.Ast.(ListV (List.tl values_inner) $$$ { vid; typ })
-        value_t = objects.ListV(values_inner[1:], value.typ)
+        value_t = objects.ListV.make(values_inner[1:], value.typ)
     #     in
     #     Ctx.add_node ctx value_t;
     #     let ctx = assign_exp ctx exp_h value_h in
@@ -1241,12 +1241,11 @@ def assign_exp(ctx, exp, value):
     #           ctxs @ [ ctx ])
     #         [] values
     #     in
-        values = value.elements
+        values = value.get_list()
         if len(values) == 0:
             for var in exp.varlist:
-                values = []
                 # create a ListV value for these
-                value_sub = objects.ListV(values, var.typ)
+                value_sub = objects.ListV.make0(var.typ)
                 ctx = ctx.add_value_local(var.id, var.iter.append_list(), value_sub)
             return ctx
         elif len(values) == 1:
@@ -1255,9 +1254,9 @@ def assign_exp(ctx, exp, value):
             ctx_local = assign_exp(ctx_local, exp.exp, value_elem)
             for var in exp.varlist:
                 # collect elementwise values from each ctx in ctxs
-                values = [ctx_local.find_value_local(var.id, var.iter)]
+                newvalue = ctx_local.find_value_local(var.id, var.iter)
                 # create a ListV value for these
-                value_sub = objects.ListV(values, var.typ)
+                value_sub = objects.ListV.make1(newvalue, var.typ)
                 ctx = ctx.add_value_local(var.id, var.iter.append_list(), value_sub)
             return ctx
         else:
@@ -1283,7 +1282,7 @@ def assign_exp(ctx, exp, value):
             for i, var in enumerate(exp.varlist):
                 # collect elementwise values from each ctx in ctxs
                 # create a ListV value for these
-                value_sub = objects.ListV(values[i], var.typ)
+                value_sub = objects.ListV.make(values[i], var.typ)
                 ctx = ctx.add_value_local(var.id, var.iter.append_list(), value_sub)
             return ctx
 
@@ -1487,7 +1486,7 @@ class __extend__(p4specast.TupleE):
         #     let vid = Value.fresh () in
         #     let typ = note in
         #     Il.Ast.(TupleV values $$$ { vid; typ })
-        value_res = objects.TupleV(values, self.typ)
+        value_res = objects.TupleV.make(values, self.typ)
         #   in
         #   Ctx.add_node ctx value_res;
         #   if List.length values = 0 then
@@ -1506,7 +1505,7 @@ class __extend__(p4specast.ListE):
         #     let vid = Value.fresh () in
         #     let typ = note in
         #     Il.Ast.(ListV values $$$ { vid; typ })
-        value_res = objects.ListV(values, self.typ)
+        value_res = objects.ListV.make(values, self.typ)
         #   in
         #   Ctx.add_node ctx value_res;
         #   if List.length values = 0 then
@@ -1544,7 +1543,7 @@ class __extend__(p4specast.ConsE):
         ctx, value_t = eval_exp(ctx, exp_t)
         assert isinstance(value_t, objects.ListV)
         values_t = value_t.get_list()
-        value_res = objects.ListV([value_h] + values_t, self.typ)
+        value_res = objects.ListV.make([value_h] + values_t, self.typ)
         return ctx, value_res
 
 def eval_cmp_num(cmpop, value_l, value_r, typ):
@@ -1804,7 +1803,7 @@ class __extend__(p4specast.MatchE):
         elif (isinstance(pattern, p4specast.ListP) and
                 isinstance(value, objects.ListV)):
             listpattern = pattern.element
-            len_v = len(value.elements)
+            len_v = value._get_size_list()
         #       let len_v = List.length values in
         #       match listpattern with
         #       | `Cons -> len_v > 0
@@ -1908,12 +1907,12 @@ class __extend__(p4specast.CatE):
             value_res = objects.TextV(value_l.value + value_r.value, self.typ)
         #     | ListV values_l, ListV values_r -> Il.Ast.ListV (values_l @ values_r)
         elif isinstance(value_l, objects.ListV) and isinstance(value_r, objects.ListV):
-            if not value_l.elements:
+            if not value_l._get_size_list():
                 value_res = value_r
-            elif not value_r.elements:
+            elif not value_r._get_size_list():
                 value_res = value_l
             else:
-                value_res = objects.ListV(value_l.elements + value_r.elements, self.typ)
+                value_res = objects.ListV.make(value_l.get_list() + value_r.get_list(), self.typ)
         else:
             assert 0, "concatenation expects either two texts or two lists"
         #     | _ -> error at "concatenation expects either two texts or two lists"
@@ -1941,7 +1940,7 @@ class __extend__(p4specast.ConsE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(ListV (value_h :: values_t) $$$ { vid; typ })
-        value_res = objects.ListV([value_h] + values_t, self.typ)
+        value_res = objects.ListV.make([value_h] + values_t, self.typ)
         return ctx, value_res
         # in
         # Ctx.add_node ctx value_res;
@@ -1994,7 +1993,7 @@ class __extend__(p4specast.SliceE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(ListV values_slice $$$ { vid; typ })
-        value_res = objects.ListV(values_slice, self.typ)
+        value_res = objects.ListV.make(values_slice, self.typ)
         return ctx, value_res
         # in
         # Ctx.add_node ctx value_res;
@@ -2102,21 +2101,21 @@ def eval_iter_exp_list(note, ctx, exp, vars):
     # let ctxs_sub = Ctx.sub_list ctx vars in
     ctxs_sub = ctx.sub_list(_make_varlist(vars))
     if ctxs_sub.length == 0:
-        values = []
+        value_res = objects.ListV.make0(note)
     elif ctxs_sub.length == 1:
         ctx_sub = next(ctxs_sub)
         ctx_sub, value = eval_exp(ctx_sub, exp)
         ctx = ctx.commit(ctx_sub)
-        values = [value]
+        value_res = objects.ListV.make1(value, note)
     else:
         ctx, values = _eval_iter_exp_list(ctx, exp, ctxs_sub)
+        value_res = objects.ListV.make(values, note)
     # in
     # let value_res =
     #   let vid = Value.fresh () in
     #   let typ = note in
     #   Il.Ast.(ListV values $$$ { vid; typ })
     # in
-    value_res = objects.ListV(values, note)
 
     # Ctx.add_node ctx value_res;
     # List.iter

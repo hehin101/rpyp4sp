@@ -154,7 +154,7 @@ def lists_rev_(ctx, targs, values_input):
         return value
     lst = lst[:]
     lst.reverse()
-    return objects.ListV(lst, value.typ)
+    return objects.ListV.make(lst, value.typ)
 
 
 @register_builtin("concat_")
@@ -166,7 +166,7 @@ def lists_concat_(ctx, targs, values_input):
         _lists_concat(lists, res)
     typ = value.typ
     assert isinstance(typ, p4specast.IterT)
-    return objects.ListV(res[:], typ.typ)
+    return objects.ListV.make(res[:], typ.typ)
 
 def _lists_concat(lists, res):
     for list_value in lists:
@@ -198,10 +198,10 @@ def lists_partition_(ctx, targs, values_input):
     values_right = values[len_num:]
 
     list_typ = p4specast.IterT(typ, p4specast.List())
-    value_left = objects.ListV(values_left, list_typ)
-    value_right = objects.ListV(values_right, list_typ)
+    value_left = objects.ListV.make(values_left, list_typ)
+    value_right = objects.ListV.make(values_right, list_typ)
     tuple_typ = p4specast.TupleT([list_typ, list_typ])
-    return objects.TupleV([value_left, value_right], tuple_typ)
+    return objects.TupleV.make2(value_left, value_right, tuple_typ)
 
 
 @register_builtin("assoc_")
@@ -211,8 +211,8 @@ def lists_assoc_(ctx, targs, values_input):
     res_value = None
     for tup in value_list.get_list():
         assert isinstance(tup, objects.TupleV)
-        if tup.elements[0].eq(value):
-            res_value = tup.elements[1]
+        if tup._get_list(0).eq(value):
+            res_value = tup._get_list(1)
             break
     return objects.OptV(res_value, p4specast.IterT(typ_value, p4specast.Opt()))
 
@@ -231,7 +231,7 @@ def _extract_set_elems(set_value):
 
 def _wrap_set_elems(elems, set_value_for_types):
     assert isinstance(set_value_for_types, objects.CaseV)
-    lst_value = objects.ListV(elems, set_value_for_types._get_list(0).typ)
+    lst_value = objects.ListV.make(elems, set_value_for_types._get_list(0).typ)
     return objects.CaseV.make1(lst_value, set_value_for_types.mixop, set_value_for_types.typ)
 
 @register_builtin("intersect_set")
@@ -285,9 +285,9 @@ def sets_unions_set(ctx, targs, values_input):
     element_typ, = targs
     if not sets_l:
         return objects.CaseV.make1(
-            objects.ListV(
+            objects.ListV.make(
                 [],
-                typ=p4specast.IterT(element_typ, p4specast.List())),
+                p4specast.IterT(element_typ, p4specast.List())),
             map_mixop,
             p4specast.VarT(set_id, targs))
     first = sets_l[0]
@@ -377,8 +377,7 @@ def _extract_map_content(map_value):
     assert map_value.mixop.eq(map_mixop)
     assert map_value._get_size_list() == 1
     content = map_value._get_list(0)
-    assert isinstance(content, objects.ListV)
-    return content.elements
+    return content.get_list()
 
 def _extract_map_item(el):
     assert isinstance(el, objects.CaseV)
@@ -426,7 +425,7 @@ def maps_find_maps(ctx, targs, values_input):
     return objects.OptV(res_value, typ)
 
 def _maps_find_map(list_maps_value, key_value):
-    for map_value in list_maps_value.elements:
+    for map_value in list_maps_value.get_list():
         res_value = find_map(map_value, key_value)
         if res_value is not None:
             return res_value
@@ -442,7 +441,7 @@ def maps_add_map(ctx, targs, values_input):
         res = [new_pair]
     else:
         res = _add_map(key_value, content, new_pair)
-    list_value = objects.ListV(res, p4specast.IterT(new_pair.typ, p4specast.List()))
+    list_value = objects.ListV.make(res, p4specast.IterT(new_pair.typ, p4specast.List()))
     return objects.CaseV.make1(list_value, map_mixop, p4specast.VarT(map_id, targs))
 
 def _add_map(key_value, content, new_pair):

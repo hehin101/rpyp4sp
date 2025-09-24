@@ -45,14 +45,19 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                             debug.check_annotation(result, _not_null)
                         return result
                 raise IndexError
-            def _get_full_list(self):
-                res = [None] * size
-                for i, attr in unrolling_enumerate_attrs:
-                    elem = getattr(self, attr)
-                    if nonull:
-                        debug.check_annotation(elem, _not_null)
-                    res[i] = getattr(self, attr)
-                return res
+            if size == 0 and immutable:
+                empty = []
+                def _get_full_list(self):
+                    return empty
+            else:
+                def _get_full_list(self):
+                    res = [None] * size
+                    for i, attr in unrolling_enumerate_attrs:
+                        elem = getattr(self, attr)
+                        if nonull:
+                            debug.check_annotation(elem, _not_null)
+                        res[i] = getattr(self, attr)
+                    return res
             def _set_list(self, i, val):
                 if nonull:
                     assert val is not None
