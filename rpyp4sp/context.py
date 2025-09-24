@@ -21,11 +21,13 @@ class GlobalContext(object):
         return self.tdenv.get(name, (None, None))
 
 
-
 class EnvKeys(object):
     def __init__(self, keys):
         self.keys = keys # type: dict[tuple[str, str], int]
         self.next_venv_keys = {} # type: dict[tuple[str, str], EnvKeys]
+        self._next_var_name = None
+        self._next_var_iter = None
+        self._next_env_keys = None
 
     # TODO: default für var_iter
     @jit.elidable
@@ -37,6 +39,10 @@ class EnvKeys(object):
     @jit.elidable
     def add_key(self, var_name, var_iter):
         # type: (str, str) -> EnvKeys
+        if (self._next_var_name is not None and 
+                self._next_var_name == var_name and
+                self._next_var_iter == var_iter):
+            return self._next_env_keys
         key = (var_name, var_iter)
         res = self.next_venv_keys.get(key)
         if res is not None:
@@ -46,6 +52,10 @@ class EnvKeys(object):
             keys[key] = len(keys)
             res = EnvKeys(keys)
             self.next_venv_keys[key] = res
+            if self._next_env_keys is None:
+                self._next_var_name = var_name
+                self._next_var_iter = var_iter
+                self._next_env_keys = res
             return res
 
     def __repr__(self):
@@ -191,14 +201,19 @@ class VenvDict(object):
             raise P4ContextError('id_value %s%s does not exist' % (var_name, var_iter))
         return self._values[pos]
 
+    @jit.unroll_safe
     def set(self, var_name, var_iter, value):
         # type: (str, str, objects.BaseV) -> VenvDict
         pos = jit.promote(self._keys).get_pos(var_name, var_iter)
-        jit.promote(len(self._values))
+        values = self._values
+        length = jit.promote(len(values))
         if pos < 0:
             keys = jit.promote(self._keys).add_key(var_name, var_iter)
-            values = self._values + [value]
-            return VenvDict(keys, values)
+            newvalues = [None] * (length + 1)
+            for i in range(length):
+                newvalues[i] = values[i]
+            newvalues[length] = value
+            return VenvDict(keys, newvalues)
         else:
             values = self._values[:]
             values[pos] = value
@@ -315,8 +330,7 @@ class Context(object):
         if self.fenv.has_key(id.value):
             func = self.fenv.get(id.value)
         else:
-            jit.promote(self.glbl)
-            func = self.glbl._find_func(id.value)
+            func = jit.promote(self.glbl)._find_func(id.value)
             if func is None:
                 raise P4ContextError('func %s not found' % id.value)
         return func

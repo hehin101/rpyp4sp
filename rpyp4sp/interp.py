@@ -240,8 +240,19 @@ def invoke_rel(ctx, id, values_input):
 # ____________________________________________________________
 # instructions
 
+@jit.elidable
+def instr_tostring(instr):
+    return "instr: " + instr.tostring().split("\n")[0]
+
+
 def eval_instr(ctx, instr):
-    return instr.eval_instr(ctx)
+    jit.jit_debug(instr_tostring(instr))
+    try:
+        return instr.eval_instr(ctx)
+    except P4Error as e:
+        if e.region is None:
+            e.region = instr.region
+        raise
 
 @jit.unroll_safe
 def eval_instrs(ctx, sign, instrs):
@@ -1361,6 +1372,15 @@ class __extend__(p4specast.ReturnI):
 # ____________________________________________________________
 # expressions
 
+<<<<<<< HEAD
+=======
+@jit.elidable
+def exp_tostring(exp):
+    return "exp:" + exp.tostring()
+
+def eval_exp(ctx, exp):
+    return exp.eval_exp(ctx)
+>>>>>>> 8b10c2d (wip)
 
 @jit.unroll_safe
 def eval_exps(ctx, exps):
