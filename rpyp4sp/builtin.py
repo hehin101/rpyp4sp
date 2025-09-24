@@ -1,3 +1,4 @@
+from rpython.rlib import jit
 from rpyp4sp import p4specast, objects, integers
 from rpyp4sp.error import P4NotImplementedError, P4BuiltinError
 
@@ -9,14 +10,18 @@ def register_builtin(name):
         return func
     return decorator
 
-
+@jit.elidable
 def is_builtin(name):
     return name in all_builtins
+
+@jit.elidable
+def _get_function(name):
+    return all_builtins.get(name, None)
 
 def invoke(ctx, name, targs, values_input):
     if not is_builtin(name.value):
         raise P4BuiltinError("Unknown built-in function: %s" % name.value)
-    func = all_builtins[name.value]
+    func = _get_function(name.value)
     return func(ctx, targs, values_input)
 
 @register_builtin("sum")
