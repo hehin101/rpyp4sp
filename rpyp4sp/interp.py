@@ -307,7 +307,7 @@ def eval_if_cond_list(ctx, exp_cond, vars, iterexps):
     #         let values_cond = values_cond @ [ value_cond ] in
     #         (ctx, cond, values_cond))
     #     (ctx, true, []) ctxs_sub
-    ctxs_sub = ctx.sub_list(vars)
+    ctxs_sub = ctx.sub_list(_make_varlist(vars))
     if ctxs_sub.length == 0:
         cond = True
         values_cond = []
@@ -513,6 +513,13 @@ class __extend__(p4specast.LetI):
         return ctx, Cont()
 
 @jit.unroll_safe
+def _make_varlist(vars):
+    varlist = VARLIST_ROOT
+    for var in vars:
+        varlist = varlist.add_var(var)
+    return varlist
+
+@jit.unroll_safe
 def _discriminate_bound_binding_variables(ctx, vars):
     vars_bound_list = VARLIST_ROOT
     vars_binding_list = VARLIST_ROOT
@@ -535,7 +542,7 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     vars_bound_list, vars_binding_list = _discriminate_bound_binding_variables(ctx, vars_h)
     # (* Create a subcontext for each batch of bound values *)
     # let ctxs_sub = Ctx.sub_list ctx vars_bound in
-    ctxs_sub = ctx.sub_list(vars_bound_list.vars)
+    ctxs_sub = ctx.sub_list(vars_bound_list)
     # let ctx, values_binding =
     #   match ctxs_sub with
     #   (* If the bound variable supposed to guide the iteration is already empty,
@@ -794,7 +801,7 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
     vars_bound_list, vars_binding_list = _discriminate_bound_binding_variables(ctx, vars)
     # (* Create a subcontext for each batch of bound values *)
     # let ctxs_sub = Ctx.sub_list ctx vars_bound in
-    ctxs_sub = ctx.sub_list(vars_bound_list.vars)
+    ctxs_sub = ctx.sub_list(vars_bound_list)
     # let ctx, values_binding =
     #   match ctxs_sub with
     #   (* If the bound variable supposed to guide the iteration is already empty,
@@ -943,7 +950,7 @@ def eval_hold_cond_list(ctx, id, notexp, vars, iterexps):
     #and eval_hold_cond_list (ctx : Ctx.t) (id : id) (notexp : notexp)
     #    (vars : var list) (iterexps : iterexp list) : Ctx.t * bool * value list =
     #  let ctxs_sub = Ctx.sub_list ctx vars in
-    ctxs_sub = ctx.sub_list(vars)
+    ctxs_sub = ctx.sub_list(_make_varlist(vars))
     #  List.fold_left
     #    (fun (ctx, cond, values_cond) ctx_sub ->
     #      if not cond then (ctx, cond, values_cond)
@@ -2080,7 +2087,7 @@ def eval_iter_exp_opt(note, ctx, exp, vars):
 
 def eval_iter_exp_list(note, ctx, exp, vars):
     # let ctxs_sub = Ctx.sub_list ctx vars in
-    ctxs_sub = ctx.sub_list(vars)
+    ctxs_sub = ctx.sub_list(_make_varlist(vars))
     if ctxs_sub.length == 0:
         values = []
     elif ctxs_sub.length == 1:
@@ -2107,13 +2114,13 @@ def eval_iter_exp_list(note, ctx, exp, vars):
     # (ctx, value_res)
     return ctx, value_res
 
-def get_printable_location(exp):
-    return "eval_iter_exp_list %s" % exp.tostring()
+def get_printable_location(exp, varlist):
+    return "eval_iter_exp_list %s %s" % (exp.tostring(), varlist.tostring())
 
 
 jitdriver_eval_iter_exp_list = jit.JitDriver(
-    reds='auto', greens=['exp'],
-    should_unroll_one_iteration = lambda exp: True,
+    reds='auto', greens=['exp', 'varlist'],
+    should_unroll_one_iteration = lambda exp, varlist: True,
     name='eval_iter_exp_list', get_printable_location=get_printable_location)
 
 
@@ -2122,7 +2129,7 @@ def _eval_iter_exp_list(ctx, exp, ctxs_sub):
     values = [None] * ctxs_sub.length
     i = 0
     for ctx_sub in ctxs_sub:
-        jitdriver_eval_iter_exp_list.jit_merge_point(exp=exp)
+        jitdriver_eval_iter_exp_list.jit_merge_point(exp=exp, varlist=ctxs_sub.varlist)
         #   List.fold_left
         #     (fun (ctx, values) ctx_sub ->
         #       let ctx_sub, value = eval_exp ctx_sub exp in

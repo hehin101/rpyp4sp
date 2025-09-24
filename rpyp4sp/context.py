@@ -349,8 +349,10 @@ class Context(object):
             return ctx_sub
 
     @jit.unroll_safe
-    def sub_list(self, vars):
-        # this is unroll_safe because vars comes from an ast, so is
+    def sub_list(self, varlist):
+        from rpyp4sp import interp
+        # type: (interp.VarList) -> SubListIter
+        # this is unroll_safe because varlist comes from an ast, so is
         # constant-sized.
 
         # First break the values that are to be iterated over,
@@ -362,9 +364,9 @@ class Context(object):
         #       vars
         #     |> transpose
         values_batch = []
-        assert vars
+        assert varlist
         first_list = None
-        for var in vars:
+        for var in varlist.vars:
             value = self.find_value_local(var.id, var.iter.append_list())
             value_list = value.get_list()
             if first_list is not None:
@@ -374,7 +376,7 @@ class Context(object):
                 first_list = value_list
             values_batch.append(value_list)
         assert first_list is not None
-        return SubListIter(self, vars, len(first_list), values_batch)
+        return SubListIter(self, varlist, len(first_list), values_batch)
 
     def _venv_str(self):
         l = ["<venv "]
@@ -390,8 +392,8 @@ class Context(object):
 
 
 class SubListIter(object):
-    def __init__(self, ctx, vars, length, values_batch):
-        self.vars = vars
+    def __init__(self, ctx, varlist, length, values_batch):
+        self.varlist = varlist
         self.length = length
         self.j = 0
         self.values_batch = values_batch
@@ -417,7 +419,7 @@ class SubListIter(object):
         if self.j >= self.length:
             raise StopIteration
         ctx_sub = self.ctx
-        for i, var in enumerate(self.vars):
+        for i, var in enumerate(jit.promote(self.varlist).vars):
             value = self.values_batch[i][self.j]
             ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value)
         self.j += 1
