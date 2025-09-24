@@ -279,7 +279,7 @@ class StructV(BaseV):
         idx = jit.promote(self).map.get_field(atom.value)
         if idx == -1:
             raise P4EvaluationError("no such field %s" % atom.value)
-        new_fields = self._get_full_list()
+        new_fields = self._get_full_list()[:]
         new_fields[idx] = value
         return StructV.make(new_fields, self.map, self.typ, self.vid)
 

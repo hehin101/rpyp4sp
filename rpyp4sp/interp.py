@@ -1853,7 +1853,8 @@ class __extend__(p4specast.StrE):
         #       Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
         #     ctx.local.values_input;
         # (ctx, value_res)
-        return ctx, objects.StructV.make(values, map, self.typ)
+        value_res = objects.StructV.make(values, map, self.typ)
+        return ctx, value_res
 
 class __extend__(p4specast.CaseE):
     def eval_exp(self, ctx):
