@@ -231,7 +231,7 @@ def _extract_set_elems(set_value):
 
 def _wrap_set_elems(elems, set_value_for_types):
     assert isinstance(set_value_for_types, objects.CaseV)
-    lst_value = objects.ListV(elems[:], set_value_for_types._get_list(0).typ)
+    lst_value = objects.ListV(elems, set_value_for_types._get_list(0).typ)
     return objects.CaseV.make1(lst_value, set_value_for_types.mixop, set_value_for_types.typ)
 
 @register_builtin("intersect_set")

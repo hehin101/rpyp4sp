@@ -267,18 +267,27 @@ class Context(object):
         return res
 
     @jit.unroll_safe
-    def add_value_local(self, id, iterlist, value):
+    def add_value_local(self, id, iterlist, value, vare_cache=None):
         # type: (p4specast.Id, list, objects.BaseV) -> Context
         var_iter = iterlist.to_key()
         venv_keys = jit.promote(self.venv_keys)
-        pos = venv_keys.get_pos(id.value, var_iter)
         length = jit.promote(self._get_size_list())
-        if pos < 0:
-            venv_keys = venv_keys.add_key(id.value, var_iter)
-            venv_values = self.venv_values + [value]
-            return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
+        if not jit.we_are_jitted() and vare_cache and venv_keys is vare_cache._ctx_keys_add:
+            pos = length
+            length += 1
+            venv_keys = vare_cache._ctx_keys_next
         else:
-            venv_keys = venv_keys
+            pos = venv_keys.get_pos(id.value, var_iter)
+            if pos < 0:
+                pos = length
+                length += 1
+                venv_keys_old = venv_keys
+                venv_keys = venv_keys.add_key(id.value, var_iter)
+                if not jit.we_are_jitted() and vare_cache:
+                    vare_cache._ctx_keys_add = venv_keys_old
+                    vare_cache._ctx_keys_next = venv_keys
+            else:
+                venv_keys = venv_keys
 
         venv_values = [None] * length
         for i in range(self._get_size_list()):
