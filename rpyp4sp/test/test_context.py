@@ -56,8 +56,8 @@ def test_venv_simple():
     assert ctx4.find_value_local(id2, p4specast.IterList.EMPTY) is value3
 
 def test_tdenv_dict():
-    d_empty = TDenvDict()
-    assert repr(d_empty) == "context.TDenvDict()"
+    d_empty = TDenvDict.EMPTY
+    assert repr(d_empty) == "context.TDenvDict.EMPTY"
     assert str(d_empty) == "<tdenv >"
 
     id1 = p4specast.Id("id1", None)
@@ -74,7 +74,7 @@ def test_tdenv_dict():
     typdef3 = p4specast.DefTyp()
     d3 = d2.set(id1.value, typdef3)
     assert d3._keys is d2._keys
-    assert repr(d3) == "context.TDenvDict().set('id1', p4specast.DefTyp())"
+    assert repr(d3) == "context.TDenvDict.EMPTY.set('id1', p4specast.DefTyp())"
     assert str(d3) == "<tdenv 'id1': p4specast.DefTyp()>"
 
     id2 = p4specast.Id("id2", None)
@@ -82,13 +82,13 @@ def test_tdenv_dict():
     d4 = d3.set(id2.value, typdef4)
     assert d4.get(id1.value) is typdef3
     assert d4.get(id2.value) is typdef4
-    assert repr(d4) == "context.TDenvDict().set('id1', p4specast.DefTyp()).set('id2', p4specast.DefTyp())"
+    assert repr(d4) == "context.TDenvDict.EMPTY.set('id1', p4specast.DefTyp()).set('id2', p4specast.DefTyp())"
     assert str(d4) == "<tdenv 'id1': p4specast.DefTyp(), 'id2': p4specast.DefTyp()>"
     assert d4.bindings() == [(id1.value, typdef3), (id2.value, typdef4)]
 
 def test_fenv_dict():
-    d_empty = FenvDict()
-    assert repr(d_empty) == "context.FenvDict()"
+    d_empty = FenvDict.EMPTY
+    assert repr(d_empty) == "context.FenvDict.EMPTY"
     assert str(d_empty) == "<fenv >"
 
     id1 = p4specast.Id("id1", None)
@@ -105,7 +105,7 @@ def test_fenv_dict():
     func3 = p4specast.DecD(id1, [], [], [])
     d3 = d2.set(id1.value, func3)
     assert d3._keys is d2._keys
-    assert repr(d3) == "context.FenvDict().set('id1', p4specast.DecD(p4specast.Id('id1', None), [], [], []))"
+    assert repr(d3) == "context.FenvDict.EMPTY.set('id1', p4specast.DecD(p4specast.Id('id1', None), [], [], []))"
     assert str(d3) == "<fenv 'id1': p4specast.DecD(p4specast.Id('id1', None), [], [], [])>"
 
     id2 = p4specast.Id("id2", None)
@@ -113,7 +113,7 @@ def test_fenv_dict():
     d4 = d3.set(id2.value, func4)
     assert d4.get(id1.value) is func3
     assert d4.get(id2.value) is func4
-    assert repr(d4) == "context.FenvDict().set('id1', p4specast.DecD(p4specast.Id('id1', None), [], [], [])).set('id2', p4specast.DecD(p4specast.Id('id2', None), [], [], []))"
+    assert repr(d4) == "context.FenvDict.EMPTY.set('id1', p4specast.DecD(p4specast.Id('id1', None), [], [], [])).set('id2', p4specast.DecD(p4specast.Id('id2', None), [], [], []))"
     assert str(d4) == "<fenv 'id1': p4specast.DecD(p4specast.Id('id1', None), [], [], []), 'id2': p4specast.DecD(p4specast.Id('id2', None), [], [], [])>"
 
 def test_venv_vare_cashing(monkeypatch):
