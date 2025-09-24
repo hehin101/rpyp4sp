@@ -2571,7 +2571,7 @@ class MixOp(AstBase):
     def __init__(self, phrases):
         self.phrases = phrases # type: list[list[AtomT]]
 
-    @jit.elidable
+    @jit.elidable_promote('0,1')
     def compare(self, other):
         # type: (MixOp, MixOp) -> int
         """ Compare two MixOp objects lexicographically by their phrases
