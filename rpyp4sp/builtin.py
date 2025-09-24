@@ -59,12 +59,16 @@ def nats_max(ctx, targs, values_input):
     if not values:
         raise P4BuiltinError("max: empty list")
     max_result = values[0].get_num()
+    max_result = _nats_max(values, max_result)
+    return objects.NumV(max_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
+
+def _nats_max(values, max_result):
     for index in range(1, len(values)):
         value = values[index]
         current = value.get_num()
         if current.gt(max_result):
             max_result = current
-    return objects.NumV(max_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
+    return max_result
 
 @register_builtin("min")
 def nats_min(ctx, targs, values_input):
@@ -74,12 +78,16 @@ def nats_min(ctx, targs, values_input):
     if not values:
         raise P4BuiltinError("min: empty list")
     min_result = values[0].get_num()
+    min_result = _nats_min(values, min_result)
+    return objects.NumV(min_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
+
+def _nats_min(values, min_result):
     for index in range(1, len(values)):
         value = values[index]
         current = value.get_num()
         if current.lt(min_result):
             min_result = current
-    return objects.NumV(min_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
+    return min_result
 
 @register_builtin("int_to_text")
 def texts_int_to_text(ctx, targs, values_input):
@@ -154,11 +162,15 @@ def lists_concat_(ctx, targs, values_input):
     value, = values_input
     lists = value.get_list()
     res = []
-    for list_value in lists:
-        res.extend(list_value.get_list())
+    if lists:
+        _lists_concat(lists, res)
     typ = value.typ
     assert isinstance(typ, p4specast.IterT)
     return objects.ListV(res[:], typ.typ)
+
+def _lists_concat(lists, res):
+    for list_value in lists:
+        res.extend(list_value.get_list())
 
 @register_builtin("distinct_")
 def lists_distinct_(ctx, targs, values_input):
@@ -380,21 +392,22 @@ def _build_map_item(key_value, value_value, key_typ, value_typ):
     pairtyp = p4specast.VarT(pair_id, [key_typ, value_typ])
     return objects.CaseV.make2(key_value, value_value, arrow_mixop, pairtyp)
 
-def _find_map(map_value, key_value):
+def find_map(map_value, key_value):
     content = _extract_map_content(map_value)
-    found_value = None
+    return _find_map(key_value, content)
+
+def _find_map(key_value, content):
     for el in content:
         key, value = _extract_map_item(el)
         if key.eq(key_value):
-            found_value = value
-            break
-    return found_value
+            return value
+    return None
 
 @register_builtin("find_map")
 def maps_find_map(ctx, targs, values_input):
     key_typ, value_typ = targs
     map_value, key_value = values_input
-    found_value = _find_map(map_value, key_value)
+    found_value = find_map(map_value, key_value)
     typ = p4specast.IterT(key_typ, p4specast.Opt())
     typ.region = p4specast.NO_REGION
     return objects.OptV(found_value, typ)
@@ -407,22 +420,34 @@ def maps_find_maps(ctx, targs, values_input):
     list_maps_value, key_value = values_input
     assert isinstance(list_maps_value, objects.ListV)
     res_value = None
-    for map_value in list_maps_value.elements:
-        res_value = _find_map(map_value, key_value)
-        if res_value is not None:
-            break
+    res_value = _maps_find_map(list_maps_value, key_value)
     typ = p4specast.IterT(key_typ, p4specast.Opt())
     typ.region = p4specast.NO_REGION
     return objects.OptV(res_value, typ)
+
+def _maps_find_map(list_maps_value, key_value):
+    for map_value in list_maps_value.elements:
+        res_value = find_map(map_value, key_value)
+        if res_value is not None:
+            return res_value
+    return None
 
 @register_builtin("add_map")
 def maps_add_map(ctx, targs, values_input):
     map_value, key_value, value_value = values_input
     key_typ, value_typ = targs
     content = _extract_map_content(map_value)
+    new_pair = _build_map_item(key_value, value_value, key_typ, value_typ)
+    if not content:
+        res = [new_pair]
+    else:
+        res = _add_map(key_value, content, new_pair)
+    list_value = objects.ListV(res, p4specast.IterT(new_pair.typ, p4specast.List()))
+    return objects.CaseV.make1(list_value, map_mixop, p4specast.VarT(map_id, targs))
+
+def _add_map(key_value, content, new_pair):
     res = []
     index = 0
-    new_pair = _build_map_item(key_value, value_value, key_typ, value_typ)
     for index, el in enumerate(content):
         curr_key_value, value = _extract_map_item(el)
         cmp = curr_key_value.compare(key_value)
@@ -441,8 +466,8 @@ def maps_add_map(ctx, targs, values_input):
             assert 0, 'unreachable'
     else:
         res.append(new_pair)
-    list_value = objects.ListV(res[:], p4specast.IterT(new_pair.typ, p4specast.List()))
-    return objects.CaseV.make1(list_value, map_mixop, p4specast.VarT(map_id, targs))
+    res = res[:]
+    return res
 
 
 @register_builtin("adds_map")
