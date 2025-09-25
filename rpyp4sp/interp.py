@@ -2,7 +2,7 @@ from __future__ import print_function
 from rpython.rlib import objectmodel, jit
 from rpyp4sp import p4specast, objects, builtin, context, integers
 from rpyp4sp.error import (P4EvaluationError, P4CastError, P4NotImplementedError, 
-                           P4RelationError)
+                           P4RelationError, P4Error)
 
 class VarList(object):
     _immutable_fields_ = ['vars[*]']
@@ -776,7 +776,7 @@ def eval_rule(ctx, id, notexp):
     exps = notexp.exps
     exps_input, exps_output = split_exps_without_idx(inputs, exps)
     #   let ctx, values_input = eval_exps ctx exps_input in
-    ctx, values_input = eval_exps(ctx, exps_input)
+    ctx, values_input = eval_exps(ctx, exps_input, id)
     #   let ctx, values_output =
     #     match invoke_rel ctx id values_input with
     #     | Some (ctx, values_output) -> (ctx, values_output)
@@ -920,7 +920,7 @@ def eval_hold_cond(ctx, id, notexp):
     #  let _, exps_input = notexp in
     exps_input = notexp.exps
     #  let ctx, values_input = eval_exps ctx exps_input in
-    ctx, values_input = eval_exps(ctx, exps_input)
+    ctx, values_input = eval_exps(ctx, exps_input, id)
     #  let ctx, hold =
     #    match invoke_rel ctx id values_input with
     #    | Some (ctx, _) -> (ctx, true)
@@ -1382,7 +1382,7 @@ class __extend__(p4specast.ResultI):
         # type: (p4specast.ResultI, context.Context) -> tuple[context.Context, Res]
         #  let ctx, values = eval_exps ctx exps in
         #  (ctx, Res values)
-        ctx, values = eval_exps(ctx, self.exps)
+        ctx, values = eval_exps(ctx, self.exps, self)
         return ctx, Res(values)
 
 class __extend__(p4specast.ReturnI):
@@ -1399,11 +1399,8 @@ class __extend__(p4specast.ReturnI):
 def exp_tostring(exp):
     return "exp:" + exp.tostring()
 
-def eval_exp(ctx, exp):
-    return exp.eval_exp(ctx)
-
 @jit.unroll_safe
-def eval_exps(ctx, exps):
+def eval_exps(ctx, exps, caller=None):
     # List.fold_left
     #   (fun (ctx, values) exp ->
     #     let ctx, value = eval_exp ctx exp in
@@ -1446,7 +1443,7 @@ class __extend__(p4specast.TextE):
 class __extend__(p4specast.VarE):
     def eval_exp(self, ctx):
         # let value = Ctx.find_value Local ctx (id, []) in
-        value = ctx.find_value_local(self.id, vare_cache=self)
+        value = ctx.find_value_local(self.id, p4specast.IterList.EMPTY, vare_cache=self)
         return ctx, value
 
 class __extend__(p4specast.OptE):
@@ -1481,7 +1478,7 @@ class __extend__(p4specast.OptE):
 class __extend__(p4specast.TupleE):
     def eval_exp(self, ctx):
         #   let ctx, values = eval_exps ctx exps in
-        ctx, values = eval_exps(ctx, self.elts)
+        ctx, values = eval_exps(ctx, self.elts, self)
         #   let value_res =
         #     let vid = Value.fresh () in
         #     let typ = note in
@@ -1500,7 +1497,7 @@ class __extend__(p4specast.TupleE):
 class __extend__(p4specast.ListE):
     def eval_exp(self, ctx):
         #   let ctx, values = eval_exps ctx exps in
-        ctx, values = eval_exps(ctx, self.elts)
+        ctx, values = eval_exps(ctx, self.elts, self)
         #   let value_res =
         #     let vid = Value.fresh () in
         #     let typ = note in
@@ -1878,7 +1875,7 @@ class __extend__(p4specast.CaseE):
         mixop = self.notexp.mixop
         exps = self.notexp.exps
         # let ctx, values = eval_exps ctx exps in
-        ctx, values = eval_exps(ctx, exps)
+        ctx, values = eval_exps(ctx, exps, self)
         # let value_res =
         #   let vid = Value.fresh () in
         #   let typ = note in
