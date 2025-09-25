@@ -8,6 +8,10 @@ class GlobalContext(object):
         self.renv = {}
         self.fenv = {}
 
+    @jit.elidable
+    def _find_rel(self, name):
+        return self.renv[name]
+
 
 def iterlist_to_key(l):
     if not l:
@@ -73,7 +77,10 @@ class Context(object):
         return self.glbl.tdenv[id.value]
 
     def find_rel_local(self, id):
-        return self.glbl.renv[id.value]
+        res = jit.promote(self.glbl)._find_rel(id.value)
+        if res is None:
+            raise P4ContextError("rel %s not found" % id.value)
+        return res
 
     def add_value_local(self, id, iterlist, value):
         result = self.copy_and_change(venv=self.venv.copy())
