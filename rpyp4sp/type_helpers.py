@@ -55,8 +55,8 @@ def ctx_search(name, ctx):
         _, deftyp = ctx.glbl.tdenv[name]
         if isinstance(deftyp, p4specast.PlainT):
             return deftyp.typ
-    if name in ctx.tdenv:
-        _, deftyp = ctx.tdenv[name]
+    if ctx.tdenv.has_key(name):
+        _, deftyp = ctx.tdenv.get(name)
         if isinstance(deftyp, p4specast.PlainT):
             return deftyp.typ
     return None
