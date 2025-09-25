@@ -130,7 +130,6 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     if ctx_local is None:
         ctx_local = ctx.localize()
     # let ctx_local = Ctx.localize_inputs ctx_local values_input in
-    ctx_local = ctx_local.localize_inputs(values_input)
     # let ctx_local = assign_args ctx ctx_local args_input values_input in
     ctx_local = assign_args(ctx, ctx_local, args_input, values_input)
     # let ctx_local, sign = eval_instrs ctx_local Cont instrs in
@@ -202,7 +201,6 @@ def invoke_rel(ctx, id, values_input):
     #   let ctx_local = Ctx.localize ctx in
     ctx_local = ctx.localize()
     #   let ctx_local = Ctx.localize_inputs ctx_local values_input in
-    ctx_local = ctx_local.localize_inputs(values_input)
     #   let ctx_local = assign_exps ctx_local exps_input values_input in
     ctx_local = assign_exps(ctx_local, reld.exps, values_input)
     #   let ctx_local, sign = eval_instrs ctx_local Cont instrs in
@@ -1446,7 +1444,7 @@ class __extend__(p4specast.TextE):
 class __extend__(p4specast.VarE):
     def eval_exp(self, ctx):
         # let value = Ctx.find_value Local ctx (id, []) in
-        value = ctx.find_value_local(self.id, p4specast.IterList.EMPTY, vare_cache=self)
+        value = ctx.find_value_local(self.id, vare_cache=self)
         return ctx, value
 
 class __extend__(p4specast.OptE):

@@ -1,7 +1,6 @@
 from __future__ import print_function
 from rpython.rlib import jit
-from rpyp4sp import p4specast, objects
-from rpyp4sp.smalllist import inline_small_list
+from rpyp4sp import p4specast, objects, smalllist
 from rpyp4sp.error import P4ContextError
 
 class GlobalContext(object):
@@ -164,12 +163,13 @@ class FenvDict(object):
     def has_key(self, id_value):
         # type: (str) -> bool
         pos = jit.promote(self._keys).get_pos(id_value, '')
+        pos = self._keys.get_pos(id_value, '')
         return pos >= 0
 
     def __repr__(self):
         l = ["context.FenvDict.EMPTY"]
         for id_value, _ in self._keys.keys:
-            pos = jit.promote(self._keys).get_pos(id_value, '')
+            pos = self._keys.get_pos(id_value, '')
             func = self._funcs[pos]
             l.append(".set(%r, %r)" % (id_value, func))
         return "".join(l)
@@ -187,28 +187,28 @@ class FenvDict(object):
         return "".join(l)
 FenvDict.EMPTY = FenvDict()
 
-@inline_small_list(immutable=True)
+@smalllist.inline_small_list(immutable=True)
 class Context(object):
     _immutable_fields_ = ['filename', 'derive', 'glbl', 'values_input[*]',
                           'tdenv', 'fenv', 'venv_keys']
-    def __init__(self, filename, derive=False, glbl=None, values_input=None,
-                 tdenv=None, fenv=None, venv_keys=None):
+    def __init__(self, filename, derive=False, glbl=None, tdenv=None, fenv=None, venv_keys=None):
         self.filename = filename
         self.glbl = GlobalContext() if glbl is None else glbl
         # the local context is inlined
         self.derive = derive
-        self.values_input = values_input if values_input is not None else []
-        self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY
-        self.fenv = fenv if fenv is not None else FenvDict.EMPTY
+        self.tdenv = tdenv if tdenv is not None else TDenvDict()
+        self.fenv = fenv if fenv is not None else FenvDict()
         self.venv_keys = venv_keys if venv_keys is not None else ENV_KEYS_ROOT # type: EnvKeys
 
-    def copy_and_change(self, values_input=None, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
-        values_input = values_input if values_input is not None else self.values_input
+    def copy_and_change(self, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
         tdenv = tdenv if tdenv is not None else self.tdenv
         fenv = fenv if fenv is not None else self.fenv
         venv_keys = venv_keys if venv_keys is not None else self.venv_keys
         venv_values = venv_values if venv_values is not None else self._get_full_list()
-        return Context.make(venv_values, self.filename, self.derive, self.glbl, values_input, tdenv, fenv, venv_keys)
+        return Context.make(venv_values, self.filename, self.derive, self.glbl, tdenv, fenv, venv_keys)
+
+    def copy_and_change_append_venv(self, value, venv_keys):
+        return self._append_list(value, self.filename, self.derive, self.glbl, self.tdenv, self.fenv, venv_keys)
 
     def load_spec(self, spec):
         for definition in spec:
@@ -223,18 +223,14 @@ class Context(object):
     def localize(self):
         return self.copy_and_change(tdenv=TDenvDict.EMPTY, fenv=FenvDict.EMPTY, venv_keys=ENV_KEYS_ROOT, venv_values=[])
 
-    def localize_inputs(self, values_input):
-        # type: (list[objects.BaseV]) -> Context
-        return self.copy_and_change(values_input=values_input)
-
     def localize_venv(self, venv_keys, venv_values):
         # type: (EnvKeys, list[objects.BaseV]) -> Context
         return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
 
-    def find_value_local(self, id, iterlist, vare_cache=None):
+    def find_value_local(self, id, iterlist=p4specast.IterList.EMPTY, vare_cache=None):
         # type: (p4specast.Id, list[p4specast.Iter], p4specast.VarE | None) -> objects.BaseV
-        jit.promote(id)
         var_iter = iterlist.to_key()
+        jit.promote(id)
         if not jit.we_are_jitted() and vare_cache is not None and vare_cache._ctx_keys is self.venv_keys:
             pos = vare_cache._ctx_index
         else:
@@ -267,34 +263,25 @@ class Context(object):
             raise P4ContextError("rel %s not found" % id.value)
         return res
 
-    @jit.unroll_safe
     def add_value_local(self, id, iterlist, value, vare_cache=None):
-        # type: (p4specast.Id, list, objects.BaseV) -> Context
+        # type: (p4specast.Id, list, objects.BaseV, p4specast.VarE | None) -> Context
+        if not jit.we_are_jitted() and vare_cache is not None and vare_cache._ctx_keys_add is self.venv_keys:
+            venv_keys = vare_cache._ctx_keys_next
+            return self.copy_and_change_append_venv(value, venv_keys)
         var_iter = iterlist.to_key()
         venv_keys = jit.promote(self.venv_keys)
         length = jit.promote(self._get_size_list())
-        if not jit.we_are_jitted() and vare_cache and venv_keys is vare_cache._ctx_keys_add:
-            pos = length
-            length += 1
-            venv_keys = vare_cache._ctx_keys_next
+        pos = self.venv_keys.get_pos(id.value, var_iter)
+        if pos < 0:
+            venv_keys = self.venv_keys.add_key(id.value, var_iter)
+            if not jit.we_are_jitted() and vare_cache:
+                vare_cache._ctx_keys_add = self.venv_keys
+                vare_cache._ctx_keys_next = venv_keys
+            return self.copy_and_change_append_venv(value, venv_keys)
         else:
-            pos = venv_keys.get_pos(id.value, var_iter)
-            if pos < 0:
-                pos = length
-                length += 1
-                venv_keys_old = venv_keys
-                venv_keys = venv_keys.add_key(id.value, var_iter)
-                if not jit.we_are_jitted() and vare_cache:
-                    vare_cache._ctx_keys_add = venv_keys_old
-                    vare_cache._ctx_keys_next = venv_keys
-            else:
-                venv_keys = venv_keys
-
-        venv_values = [None] * length
-        for i in range(self._get_size_list()):
-            venv_values[i] = self._get_list(i)
-        venv_values[pos] = value
-        return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
+            venv_values = self._get_full_list_copy()
+            venv_values[pos] = value
+            return self.copy_and_change(venv_values=venv_values)
 
     def add_func_local(self, id, func):
         # type: (p4specast.Id, p4specast.DecD) -> Context
