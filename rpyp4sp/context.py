@@ -1,4 +1,4 @@
-from rpyp4sp import p4specast, objects
+from rpyp4sp import p4specast, objects, smalllist
 from rpyp4sp.error import P4ContextError
 
 class GlobalContext(object):
@@ -167,26 +167,23 @@ class FenvDict(object):
         l.append(">")
         return "".join(l)
 
+@smalllist.inline_small_list(immutable=True)
 class Context(object):
-    def __init__(self,filename, derive=False, glbl=None, values_input=None,
-                 tdenv=None, fenv=None, venv_keys=None, venv_values=None):
+    def __init__(self,filename, derive=False, glbl=None, tdenv=None, fenv=None, venv_keys=None):
         self.filename = filename
         self.glbl = GlobalContext() if glbl is None else glbl
         # the local context is inlined
         self.derive = derive
-        self.values_input = values_input if values_input is not None else []
         self.tdenv = tdenv if tdenv is not None else TDenvDict()
         self.fenv = fenv if fenv is not None else FenvDict()
         self.venv_keys = venv_keys if venv_keys is not None else ENV_KEYS_ROOT # type: EnvKeys
-        self.venv_values = venv_values if venv_values is not None else [] # type: list[objects.BaseV]
 
-    def copy_and_change(self, values_input=None, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
-        values_input = values_input if values_input is not None else self.values_input
+    def copy_and_change(self, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
         tdenv = tdenv if tdenv is not None else self.tdenv
         fenv = fenv if fenv is not None else self.fenv
         venv_keys = venv_keys if venv_keys is not None else self.venv_keys
-        venv_values = venv_values if venv_values is not None else self.venv_values
-        return Context(self.filename, self.derive, self.glbl, values_input, tdenv, fenv, venv_keys, venv_values)
+        venv_values = venv_values if venv_values is not None else self._get_full_list()
+        return Context.make(venv_values, self.filename, self.derive, self.glbl, tdenv, fenv, venv_keys)
 
     def load_spec(self, spec):
         for definition in spec:
@@ -200,10 +197,6 @@ class Context(object):
 
     def localize(self):
         return self.copy_and_change(tdenv=TDenvDict(), fenv=FenvDict(), venv_keys=ENV_KEYS_ROOT, venv_values=[])
-
-    def localize_inputs(self, values_input):
-        # type: (list[objects.BaseV]) -> Context
-        return self.copy_and_change(values_input=values_input)
 
     def localize_venv(self, venv_keys, venv_values):
         # type: (EnvKeys, list[objects.BaseV]) -> Context
@@ -221,7 +214,7 @@ class Context(object):
                 vare_cache._ctx_keys = self.venv_keys
         if pos < 0:
             raise P4ContextError('id_value %s%s does not exist' % (id.value, var_iter))
-        return self.venv_values[pos]
+        return self._get_list(pos)
 
     def bound_value_local(self, id, iterlist):
         # type: (p4specast.Id, list[p4specast.Iter]) -> bool
@@ -246,10 +239,10 @@ class Context(object):
         pos = self.venv_keys.get_pos(id.value, var_iter)
         if pos < 0:
             venv_keys = self.venv_keys.add_key(id.value, var_iter)
-            venv_values = self.venv_values + [value]
+            venv_values = self._get_full_list() + [value]
             return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
         else:
-            venv_values = self.venv_values[:]
+            venv_values = self._get_full_list()[:]
             venv_values[pos] = value
             return self.copy_and_change(venv_values=venv_values)
 
@@ -368,7 +361,7 @@ class Context(object):
         l = ["<venv "]
         for index, (var_name, var_iter) in enumerate(self.venv_keys.keys):
             pos = self.venv_keys.get_pos(var_name, var_iter)
-            value = self.venv_values[pos]
+            value = self._get_list(pos)
             if index == 0:
                 l.append("%r: %r" % (var_name + var_iter, value))
             else:

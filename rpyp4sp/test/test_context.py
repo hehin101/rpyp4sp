@@ -5,7 +5,7 @@ from rpyp4sp import objects, p4specast
 import pytest
 
 def test_tdenv_simple():
-    ctx = Context('dummy')
+    ctx = Context.make0('dummy')
     id1 = p4specast.Id('id1', None)
     typdef1 = ([], p4specast.DefTyp())
     ctx2 = ctx.add_typdef_local(id1, typdef1)
@@ -22,7 +22,7 @@ def test_tdenv_simple():
     assert ctx4.find_typdef_local(id2) is typdef3
 
 def test_fenv_simple():
-    ctx = Context('dummy')
+    ctx = Context.make0('dummy')
     id1 = p4specast.Id('id1', None)
     func1 = p4specast.DecD(id1, [], [], [])
     ctx2 = ctx.add_func_local(id1, func1)
@@ -39,7 +39,7 @@ def test_fenv_simple():
     assert ctx4.find_func_local(id2) is func3
 
 def test_venv_simple():
-    ctx = Context('dummy')
+    ctx = Context.make0('dummy')
     id1 = p4specast.Id('id1', None)
     value1 = objects.TextV('abc')
     ctx2 = ctx.add_value_local(id1, [], value1)
@@ -120,7 +120,7 @@ def test_venv_vare_cashing(monkeypatch):
     id1 = p4specast.Id('id1', None)
     value1 = objects.TextV("abc")
     vare = p4specast.VarE(id1)
-    ctx = Context('dummy').add_value_local(id1, [], value1)
+    ctx = Context.make0('dummy').add_value_local(id1, [], value1)
     value2 = ctx.find_value_local(id1, [], vare_cache=vare)
     assert value1 is value2
     assert vare._ctx_keys is ctx.venv_keys
@@ -131,7 +131,7 @@ def test_venv_vare_cashing(monkeypatch):
 
 
 def test_context():
-    empty_ctx = Context("dummy")
+    empty_ctx = Context.make0("dummy")
     id1 = p4specast.Id('id1', None)
     id2 = p4specast.Id('id2', None)
     value1 = objects.TextV("abc")
@@ -156,7 +156,7 @@ def test_context():
 
 
     # copy_and_change
-    ctx4 = ctx1.copy_and_change(venv_keys=ctx3.venv_keys, venv_values=ctx3.venv_values)
+    ctx4 = ctx1.copy_and_change(venv_keys=ctx3.venv_keys, venv_values=ctx3._get_full_list())
     assert ctx4.find_value_local(id2, []) is value2
     with pytest.raises(P4ContextError):
         ctx4.find_value_local(id1, [])
