@@ -24,7 +24,10 @@ from rpyp4sp.error import P4UnknownTypeError
 def indent(level):
     return "  " * level
 
-class BaseV(object):
+class SubBase(object):
+    _attrs_ = []
+
+class BaseV(SubBase):
     _attrs_ = ['typ', 'vid']
     # vid: int
     # typ: p4specast.Type

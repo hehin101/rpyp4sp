@@ -1277,9 +1277,6 @@ class __extend__(p4specast.ReturnI):
 # ____________________________________________________________
 # expressions
 
-def eval_exp(ctx, exp):
-    return exp.eval_exp(ctx)
-
 def eval_exps(ctx, exps):
     # List.fold_left
     #   (fun (ctx, values) exp ->
@@ -2033,6 +2030,43 @@ class __extend__(p4specast.IdxE):
         value_res = values[idx]
         # (ctx, value_res)
         return ctx, value_res
+
+class CtxTup(objects.SubBase):
+    def __init__(self, ctx, value):
+        self.ctx = ctx
+        self.value = value
+
+@objectmodel.always_inline
+def pack_if_ctx_different(ctx, value, ctx_orig=None):
+    if ctx is ctx_orig:
+        return value
+    return CtxTup(ctx, value)
+
+@objectmodel.always_inline
+def recreate_tuple(tup_or_value, ctx):
+    if isinstance(tup_or_value, CtxTup):
+        return tup_or_value.ctx, tup_or_value.value
+    assert isinstance(tup_or_value, objects.BaseV)
+    return ctx, tup_or_value
+
+@objectmodel.always_inline
+def eval_exp(ctx, exp):
+    return recreate_tuple(exp.tuplifying_eval_exp(ctx), ctx)
+
+def _patch_exp_subcls(cls):
+    def tuplifying_eval_exp(self, ctx_orig):
+        ctx, value = func(self, ctx_orig)
+        return pack_if_ctx_different(ctx, value, ctx_orig)
+    func = cls.eval_exp.im_func
+    objectmodel.always_inline(func)
+    func.func_name += "_" + cls.__name__
+    tuplifying_eval_exp.func_name += "_" + cls.__name__
+    cls.tuplifying_eval_exp = tuplifying_eval_exp
+
+for cls in p4specast.Exp.__subclasses__():
+    _patch_exp_subcls(cls)
+del cls
+
 
 # ____________________________________________________________
 
