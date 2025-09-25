@@ -43,13 +43,13 @@ def test_subtyp_nat():
 def test_downcast_nat():
     typ = p4specast.NumT.NAT
     value = objects.NumV.fromstr('32', p4specast.IntT.INSTANCE, p4specast.NumT.INT, 3)
-    _, res = interp.downcast(None, typ, value)
+    res = interp.downcast(None, typ, value)
     assert res.what == p4specast.NatT.INSTANCE
 
 def test_upcast_list():
     typ = p4specast.IterT(p4specast.VarT(p4specast.Id('paramIL', p4specast.Region.line_span('spec/4g-typing-decl.watsup', 787, 32, 39)), []), p4specast.List())
     value = objects.ListV([], p4specast.IterT(p4specast.VarT(p4specast.Id('paramtyp', p4specast.Region.line_span('spec/2c1-runtime-type.watsup', 18, 9, 17)), []), p4specast.List()), -1)
-    _, res = interp.upcast(None, typ, value)
+    res = interp.upcast(None, typ, value)
     assert res is value
 
 def test_reversed_iters_list():
@@ -79,7 +79,7 @@ def test_coerce_binary():
 
     ctx = make_context()
     func = ctx.glbl.fenv["coerce_binary"]
-    ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, [arg0, arg1])
+    ctx, value = interp.untuple(interp.invoke_func_def_attempt_clauses(ctx, func, [arg0, arg1]))
     assert value.eq(expected)
 
 
@@ -92,7 +92,7 @@ def test_bin_plus():
     arg1 = objects.CaseV.make([objects.NumV.fromstr('3', p4specast.IntT.INSTANCE, p4specast.NumT.INT, 5)], p4specast.MixOp([[p4specast.AtomT('IntV', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 13, 4), p4specast.Position('spec/2b2-runtime-value.watsup', 13, 8)))], []]), 231, p4specast.VarT(p4specast.Id('val', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 7, 7), p4specast.Position('spec/2b2-runtime-value.watsup', 7, 10))), []))
 
     res = objects.CaseV.make([objects.NumV.fromstr('8', p4specast.IntT.INSTANCE, p4specast.NumT.INT, 240)], p4specast.MixOp([[p4specast.AtomT('IntV', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 13, 4), p4specast.Position('spec/2b2-runtime-value.watsup', 13, 8)))], []]), 241, p4specast.VarT(p4specast.Id('val', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 7, 7), p4specast.Position('spec/2b2-runtime-value.watsup', 7, 10))), []))
-    ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, [arg0, arg1])
+    ctx, value = interp.untuple(interp.invoke_func_def_attempt_clauses(ctx, func, [arg0, arg1]))
     assert value.eq(res)
 
 
@@ -110,7 +110,7 @@ def test_concat_text():
 
     ctx = make_context()
     func = ctx.glbl.fenv[name]
-    ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+    ctx, value = interp.untuple(interp.invoke_func_def_attempt_clauses(ctx, func, input_values))
     assert value.eq(expected)
 
 def test_conse_fresh_tids():
@@ -119,7 +119,7 @@ def test_conse_fresh_tids():
     res = objects.ListV([objects.TextV('FRESH__0', 8289, p4specast.VarT(p4specast.Id('tid', p4specast.Region(p4specast.Position('', 0, 0), p4specast.Position('', 0, 0))), []))], 8295, p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region(p4specast.Position('spec/2a-runtime-domain.watsup', 13, 19), p4specast.Position('spec/2a-runtime-domain.watsup', 13, 22))), []), p4specast.List()))
     ctx = make_context()
     func = ctx.glbl.fenv[name]
-    ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+    ctx, value = interp.untuple(interp.invoke_func_def_attempt_clauses(ctx, func, input_values))
     assert value.eq(res)
 
 def test_check_arity():
@@ -128,18 +128,18 @@ def test_check_arity():
     res = objects.BoolV(True, p4specast.BoolT.INSTANCE, 4819)
     ctx = make_context()
     func = ctx.glbl.fenv[name]
-    _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+    _, value = interp.untuple(interp.invoke_func_def_attempt_clauses(ctx, func, input_values))
     assert value.eq(res)
 
     input_values = [objects.ListV([objects.OptV(None, 3943, p4specast.IterT(p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 21, 7), p4specast.Position('spec/1a-syntax-el.watsup', 21, 9))), []), p4specast.Opt()))], 3944, p4specast.IterT(p4specast.IterT(p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 21, 7), p4specast.Position('spec/1a-syntax-el.watsup', 21, 9))), []), p4specast.Opt()), p4specast.List())), objects.ListV([objects.TextV('p', 92, p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('', 0, 0), p4specast.Position('', 0, 0))), []))], 3945, p4specast.IterT(p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 21, 7), p4specast.Position('spec/1a-syntax-el.watsup', 21, 9))), []), p4specast.List()))]
-    _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+    _, value = interp.untuple(interp.invoke_func_def_attempt_clauses(ctx, func, input_values))
     assert value.eq(res)
 
 
     res = objects.BoolV(False, p4specast.BoolT.INSTANCE, 4803)
     name = 'check_arity_more'
     func = ctx.glbl.fenv[name]
-    _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+    _, value = interp.untuple(interp.invoke_func_def_attempt_clauses(ctx, func, input_values))
     assert value.eq(res)
 
 def test_eval_num_expr():
@@ -189,7 +189,7 @@ def test_all():
                 continue
             func = ctx.glbl.fenv[name]
             try:
-                _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+                _, value = interp.untuple(interp.invoke_func_def_attempt_clauses(ctx, func, input_values))
                 if not value.eq(res):
                     failed += 1
                     print("Function test failed:", name, value, res)

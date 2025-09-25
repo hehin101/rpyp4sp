@@ -72,7 +72,7 @@ def command_run_test_jsonl(argv):
                     continue
                 func = ctx.glbl.fenv[name]
                 try:
-                    _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
+                    _, value = interp.untuple(interp.invoke_func_def_attempt_clauses(ctx, func, input_values))
                     if not value.eq(res_value):
                         if "FRESH" in value.tostring():
                             skipped += 1

@@ -37,7 +37,7 @@ def invoke_func_builtin(ctx, calle):
     #     Ctx.add_edge ctx value_output value_input (Dep.Edges.Func (id, idx_arg)))
     #   values_input;
     # (ctx, value_output)
-    return ctx, value_output
+    return maybe_tuplify(ctx, value_output,)
 
 def invoke_func_def(ctx, calle):
     from rpyp4sp.type_helpers import subst_typ_ctx
@@ -101,9 +101,9 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     #           (Dep.Edges.Func (id, idx_arg)))
     #       values_input;
     #     (ctx, value_output)
-        return ctx, sign.value
+        return maybe_tuplify(ctx, sign.value,)
     # | _ -> error id.at "function was not matched"
-    raise P4EvaluationError("TODO invoke_func_def_attempt_clauses")
+    raise P4EvaluationError("function was not matched")
 
 def eval_arg(ctx, arg):
     # match arg.it with
@@ -1277,8 +1277,27 @@ class __extend__(p4specast.ReturnI):
 # ____________________________________________________________
 # expressions
 
+class CtxTup(objects.SubBase):
+    def __init__(self, ctx, value):
+        self.ctx = ctx
+        self.value = value
+
+@objectmodel.always_inline
+def maybe_tuplify(ctx, value, ctx_orig=None):
+    if ctx is ctx_orig:
+        return value
+    return CtxTup(ctx, value)
+
+@objectmodel.try_inline
+def untuple(tup_or_value, ctx=None):
+    if isinstance(tup_or_value, CtxTup):
+        return tup_or_value.ctx, tup_or_value.value
+    assert isinstance(tup_or_value, objects.BaseV)
+    return ctx, tup_or_value
+
+@objectmodel.always_inline
 def eval_exp(ctx, exp):
-    return exp.eval_exp(ctx)
+    return untuple(exp.eval_exp(ctx), ctx)
 
 def eval_exps(ctx, exps):
     # List.fold_left
@@ -1310,30 +1329,31 @@ class __extend__(p4specast.BoolE):
         #     Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
         #   ctx.local.values_input;
         # (ctx, value_res)
-        return ctx, objects.BoolV(self.value, self.typ)
+        return maybe_tuplify(ctx, objects.BoolV(self.value, self.typ), ctx)
 
 class __extend__(p4specast.NumE):
     def eval_exp(self, ctx):
-        return ctx, objects.NumV(self.value, self.what, typ=self.typ)
+        return maybe_tuplify(ctx, objects.NumV(self.value, self.what, typ=self.typ), ctx)
 
 class __extend__(p4specast.TextE):
     def eval_exp(self, ctx):
-        return ctx, objects.TextV(self.value, self.typ)
+        return maybe_tuplify(ctx, objects.TextV(self.value, self.typ), ctx)
 
 class __extend__(p4specast.VarE):
     def eval_exp(self, ctx):
         # let value = Ctx.find_value Local ctx (id, []) in
         value = ctx.find_value_local(self.id, [])
-        return ctx, value
+        return maybe_tuplify(ctx, value, ctx)
 
 class __extend__(p4specast.OptE):
-    def eval_exp(self, ctx):
+    def eval_exp(self, orig_ctx):
         #     Ctx.t * value =
         #   let ctx, value_opt =
         #     match exp_opt with
         if self.exp is not None:
-            ctx, value = eval_exp(ctx, self.exp)
+            ctx, value = eval_exp(orig_ctx, self.exp)
         else:
+            ctx = orig_ctx
             value = None
         #     | Some exp ->
         #         let ctx, value = eval_exp ctx exp in
@@ -1345,7 +1365,7 @@ class __extend__(p4specast.OptE):
         #     let typ = note in
         #     Il.Ast.(OptV value_opt $$$ { vid; typ })
         value_res = objects.OptV(value, self.typ)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res, orig_ctx)
         #   in
         #   Ctx.add_node ctx value_res;
         #   if Option.is_none value_opt then
@@ -1356,9 +1376,9 @@ class __extend__(p4specast.OptE):
         #   (ctx, value_res)
 
 class __extend__(p4specast.TupleE):
-    def eval_exp(self, ctx):
+    def eval_exp(self, orig_ctx):
         #   let ctx, values = eval_exps ctx exps in
-        ctx, values = eval_exps(ctx, self.elts)
+        ctx, values = eval_exps(orig_ctx, self.elts)
         #   let value_res =
         #     let vid = Value.fresh () in
         #     let typ = note in
@@ -1372,12 +1392,12 @@ class __extend__(p4specast.TupleE):
         #         Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
         #       ctx.local.values_input;
         #   (ctx, value_res)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res, orig_ctx)
 
 class __extend__(p4specast.ListE):
-    def eval_exp(self, ctx):
+    def eval_exp(self, orig_ctx):
         #   let ctx, values = eval_exps ctx exps in
-        ctx, values = eval_exps(ctx, self.elts)
+        ctx, values = eval_exps(orig_ctx, self.elts)
         #   let value_res =
         #     let vid = Value.fresh () in
         #     let typ = note in
@@ -1391,7 +1411,7 @@ class __extend__(p4specast.ListE):
         #         Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
         #       ctx.local.values_input;
         #   (ctx, value_res)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res, orig_ctx)
 
 def eval_cmp_bool(cmpop, value_l, value_r, typ):
     # let eq = Value.eq value_l value_r in
@@ -1401,7 +1421,7 @@ def eval_cmp_bool(cmpop, value_l, value_r, typ):
     return objects.BoolV(value, typ)
 
 class __extend__(p4specast.ConsE):
-    def eval_exp(self, ctx):
+    def eval_exp(self, orig_ctx):
         # and eval_cons_exp (note : typ') (ctx : Ctx.t) (exp_h : exp) (exp_t : exp) :
         #     Ctx.t * value =
         #   let ctx, value_h = eval_exp ctx exp_h in
@@ -1416,12 +1436,12 @@ class __extend__(p4specast.ConsE):
         #   (ctx, value_res)
         exp_h = self.head
         exp_t = self.tail
-        ctx, value_h = eval_exp(ctx, exp_h)
+        ctx, value_h = eval_exp(orig_ctx, exp_h)
         ctx, value_t = eval_exp(ctx, exp_t)
         assert isinstance(value_t, objects.ListV)
         values_t = value_t.get_list()
         value_res = objects.ListV([value_h] + values_t, self.typ)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res, orig_ctx)
 
 def eval_cmp_num(cmpop, value_l, value_r, typ):
     # let num_l = Value.get_num value_l in
@@ -1446,9 +1466,9 @@ def eval_cmp_num(cmpop, value_l, value_r, typ):
 
 
 class __extend__(p4specast.CmpE):
-    def eval_exp(self, ctx):
+    def eval_exp(self, orig_ctx):
         # let ctx, value_l = eval_exp ctx exp_l in
-        ctx, value_l = eval_exp(ctx, self.left)
+        ctx, value_l = eval_exp(orig_ctx, self.left)
         # let ctx, value_r = eval_exp ctx exp_r in
         ctx, value_r = eval_exp(ctx, self.right)
         # let value_res =
@@ -1471,7 +1491,7 @@ class __extend__(p4specast.CmpE):
         # Ctx.add_edge ctx value_res value_l (Dep.Edges.Op (CmpOp cmpop));
         # Ctx.add_edge ctx value_res value_r (Dep.Edges.Op (CmpOp cmpop));
         # (ctx, value_res)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res, orig_ctx)
 
 def eval_binop_bool(binop, value_l, value_r, typ):
     # let bool_l = Value.get_bool value_l in
@@ -1530,9 +1550,9 @@ def eval_binop_num(binop, value_l, value_r, typ):
     return objects.NumV(res_num, what, typ=typ)
 
 class __extend__(p4specast.BinE):
-    def eval_exp(self, ctx):
+    def eval_exp(self, orig_ctx):
         # let ctx, value_l = eval_exp ctx exp_l in
-        ctx, value_l = eval_exp(ctx, self.left)
+        ctx, value_l = eval_exp(orig_ctx, self.left)
         # let ctx, value_r = eval_exp ctx exp_r in
         ctx, value_r = eval_exp(ctx, self.right)
         # let value_res =
@@ -1555,7 +1575,7 @@ class __extend__(p4specast.BinE):
         # Ctx.add_edge ctx value_res value_l (Dep.Edges.Op (BinOp binop));
         # Ctx.add_edge ctx value_res value_r (Dep.Edges.Op (BinOp binop));
         # (ctx, value_res)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res, orig_ctx)
 
 def eval_unop_bool(unop, value, typ):
     # match unop with `NotOp -> Il.Ast.BoolV (not (Value.get_bool value))
@@ -1577,9 +1597,9 @@ def eval_unop_num(unop, value, typ):
         assert 0, "Unknown numeric unary operator: %s" % unop
 
 class __extend__(p4specast.UnE):
-    def eval_exp(self, ctx):
+    def eval_exp(self, orig_ctx):
         # let ctx, value = eval_exp ctx exp in
-        ctx, value = eval_exp(ctx, self.exp)
+        ctx, value = eval_exp(orig_ctx, self.exp)
         unop = self.op
         if unop in ('NotOp',):
             value_res = eval_unop_bool(unop, value, self.typ)
@@ -1587,12 +1607,12 @@ class __extend__(p4specast.UnE):
             value_res = eval_unop_num(unop, value, self.typ)
         else:
             assert 0, "Unknown unary operator: %s" % unop
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res, orig_ctx)
 
 class __extend__(p4specast.MemE):
-    def eval_exp(self, ctx):
+    def eval_exp(self, orig_ctx):
         #   let ctx, value_e = eval_exp ctx exp_e in
-        ctx, value_e = eval_exp(ctx, self.elem)
+        ctx, value_e = eval_exp(orig_ctx, self.elem)
         #   let ctx, value_s = eval_exp ctx exp_s in
         ctx, value_s = eval_exp(ctx, self.lst)
         #   let values_s = Value.get_list value_s in
@@ -1607,7 +1627,7 @@ class __extend__(p4specast.MemE):
                 res = True
                 break
         value_res = objects.BoolV(res, self.typ)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res, orig_ctx)
         #   in
         #   Ctx.add_node ctx value_res;
         #   Ctx.add_edge ctx value_res value_e (Dep.Edges.Op MemOp);
@@ -1622,7 +1642,7 @@ class __extend__(p4specast.DotE):
         fields = value_b.get_struct()
         for (atom, value) in fields:
             if atom.value == self.field.value:
-                return ctx, value
+                return maybe_tuplify(ctx, value,)
         assert 0, "field not found"
         #   let value_res =
         #     fields
@@ -1648,7 +1668,7 @@ class __extend__(p4specast.SubE):
         # Ctx.add_node ctx value_res;
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op (SubOp typ));
         # (ctx, value_res)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res,)
 
 class __extend__(p4specast.DownCastE):
     def eval_exp(self, ctx):
@@ -1656,7 +1676,7 @@ class __extend__(p4specast.DownCastE):
         ctx, value = eval_exp(ctx, self.exp)
         # let ctx, value_res = downcast ctx typ value in
         # (ctx, value_res)
-        return downcast(ctx, self.check_typ, value)
+        return maybe_tuplify(ctx, downcast(ctx, self.check_typ, value),)
 
 class __extend__(p4specast.UpCastE):
     def eval_exp(self, ctx):
@@ -1664,7 +1684,7 @@ class __extend__(p4specast.UpCastE):
         ctx, value = eval_exp(ctx, self.exp)
         # let ctx, value_res = upcast ctx typ value in
         # (ctx, value_res)
-        return upcast(ctx, self.check_typ, value)
+        return maybe_tuplify(ctx, upcast(ctx, self.check_typ, value),)
 
 class __extend__(p4specast.MatchE):
     def eval_exp(self, ctx):
@@ -1716,7 +1736,7 @@ class __extend__(p4specast.MatchE):
         # Ctx.add_node ctx value_res;
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op (MatchOp pattern));
         # (ctx, value_res)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res,)
 
 class __extend__(p4specast.CallE):
     def eval_exp(self, ctx):
@@ -1745,7 +1765,7 @@ class __extend__(p4specast.StrE):
         #       Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
         #     ctx.local.values_input;
         # (ctx, value_res)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res,)
 
 class __extend__(p4specast.CaseE):
     def eval_exp(self, ctx):
@@ -1767,7 +1787,7 @@ class __extend__(p4specast.CaseE):
         #       Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
         #     ctx.local.values_input;
         # (ctx, value_res)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res,)
 
 class __extend__(p4specast.CatE):
     def eval_exp(self, ctx):
@@ -1796,7 +1816,7 @@ class __extend__(p4specast.CatE):
         #   Ctx.add_edge ctx value_res value_l (Dep.Edges.Op CatOp);
         #   Ctx.add_edge ctx value_res value_r (Dep.Edges.Op CatOp);
         #   (ctx, value_res)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res,)
 
 class __extend__(p4specast.ConsE):
     def eval_exp(self, ctx):
@@ -1811,7 +1831,7 @@ class __extend__(p4specast.ConsE):
         #   let typ = note in
         #   Il.Ast.(ListV (value_h :: values_t) $$$ { vid; typ })
         value_res = objects.ListV([value_h] + values_t, self.typ)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res,)
         # in
         # Ctx.add_node ctx value_res;
         # (ctx, value_res)
@@ -1831,7 +1851,7 @@ class __extend__(p4specast.LenE):
         # Ctx.add_node ctx value_res;
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op LenOp);
         # (ctx, value_res)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res,)
 
 class __extend__(p4specast.SliceE):
     def eval_exp(self, ctx):
@@ -1864,7 +1884,7 @@ class __extend__(p4specast.SliceE):
         #   let typ = note in
         #   Il.Ast.(ListV values_slice $$$ { vid; typ })
         value_res = objects.ListV(values_slice, self.typ)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res,)
         # in
         # Ctx.add_node ctx value_res;
         # (ctx, value_res)
@@ -1932,7 +1952,7 @@ class __extend__(p4specast.UpdE):
         #   let ctx, value_f = eval_exp ctx exp_f in
         ctx, value_f = eval_exp(ctx, self.value)
         #   let value_res = eval_update_path ctx value_b path value_f in
-        return ctx, eval_update_path(ctx, value_b, self.path, value_f)
+        return maybe_tuplify(ctx, eval_update_path(ctx, value_b, self.path, value_f),)
 
 def eval_iter_exp_opt(note, ctx, exp, vars):
     #   let ctx_sub_opt = Ctx.sub_opt ctx vars in
@@ -1953,7 +1973,7 @@ def eval_iter_exp_opt(note, ctx, exp, vars):
     #         in
     #         (ctx, value_res)
         value_res = objects.OptV(value, note)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res,)
     #     | None ->
     else:
     #         let value_res =
@@ -1963,7 +1983,7 @@ def eval_iter_exp_opt(note, ctx, exp, vars):
         value_res = objects.OptV(None, note)
     #         in
     #         (ctx, value_res)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res,)
     #   in
     #   Ctx.add_node ctx value_res;
     #   List.iter
@@ -2003,7 +2023,7 @@ def eval_iter_exp_list(note, ctx, exp, vars):
     #     Ctx.add_edge ctx value_res value_sub Dep.Edges.Iter)
     #   vars;
     # (ctx, value_res)
-    return ctx, value_res
+    return maybe_tuplify(ctx, value_res,)
 
 class __extend__(p4specast.IterE):
     def eval_exp(self, ctx):
@@ -2032,7 +2052,7 @@ class __extend__(p4specast.IdxE):
         # let value_res = List.nth values idx in
         value_res = values[idx]
         # (ctx, value_res)
-        return ctx, value_res
+        return maybe_tuplify(ctx, value_res,)
 
 # ____________________________________________________________
 
@@ -2111,10 +2131,10 @@ def downcast(ctx, typ, value):
     #     | _ -> assert false)
         assert isinstance(value, objects.NumV)
         if value.what == p4specast.NatT.INSTANCE:
-            return ctx, value
+            return value
         elif value.what == p4specast.IntT.INSTANCE:
             assert value.value.ge(integers.Integer.fromint(0))
-            return ctx, objects.NumV(value.value, p4specast.NatT.INSTANCE, typ=typ)
+            return objects.NumV(value.value, p4specast.NatT.INSTANCE, typ=typ)
         else:
             assert 0
     # | VarT (tid, targs) -> (
@@ -2132,7 +2152,7 @@ def downcast(ctx, typ, value):
     #         downcast ctx typ value
     #     | _ -> (ctx, value))
         else:
-            return ctx, value
+            return value
     # | TupleT typs -> (
     if isinstance(typ, p4specast.TupleT):
         #import pdb;pdb.set_trace()
@@ -2156,7 +2176,7 @@ def downcast(ctx, typ, value):
     #         (ctx, value_res)
     #     | _ -> assert false)
     # | _ -> (ctx, value)
-    return ctx, value
+    return value
 
 def upcast(ctx, typ, value):
     from rpyp4sp.type_helpers import subst_typ
@@ -2172,7 +2192,7 @@ def upcast(ctx, typ, value):
     #             let typ = typ.it in
     #             Il.Ast.(NumV (`Int n) $$$ { vid; typ })
             value_res = objects.NumV(value.get_num(), p4specast.IntT.INSTANCE, typ=typ)
-            return ctx, value_res
+            return value_res
     #           in
     #           Ctx.add_node ctx value_res;
     #           Ctx.add_edge ctx value_res value (Dep.Edges.Op (CastOp typ));
@@ -2193,7 +2213,7 @@ def upcast(ctx, typ, value):
             # upcast ctx typ value
             return upcast(ctx, subst_typ(theta, deftyp.typ), value)
         else:
-            return ctx, value
+            return value
     #       | PlainT typ ->
     #           let typ = Typ.subst_typ theta typ in
     #           upcast ctx typ value
@@ -2221,7 +2241,7 @@ def upcast(ctx, typ, value):
     #           (ctx, value_res)
     #       | _ -> assert false)
     #   | _ -> (ctx, value)
-    return ctx, value
+    return value
 
 
 def mixop_eq(a, b):
