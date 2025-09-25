@@ -30,6 +30,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
     def wrapper(cls):
 
         _immutable_ = getattr(cls, "_immutable_", False)
+        empty_list = []
 
         def make_class(size):
             attrs = ["_%s_%s" % (attrname, i) for i in range(size)]
@@ -46,6 +47,8 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                         return result
                 raise IndexError
             def _get_full_list(self):
+                if size == 0:
+                    return empty_list
                 res = [None] * size
                 for i, attr in unrolling_enumerate_attrs:
                     elem = getattr(self, attr)
