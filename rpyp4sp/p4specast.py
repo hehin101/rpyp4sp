@@ -1658,11 +1658,14 @@ class ReverseIterExp(object):
 
 
 class CaseI(Instr):
+    _immutable_fields_ = ['exp', 'cases[*]', 'cases_exps[*]']
+
     def __init__(self, exp, cases, phantom, region=None):
         self.exp = exp
         self.cases = cases
         self.phantom = phantom
         self.region = region
+        self.cases_exps = [_combine_case_exp(exp, case) for case in cases]
 
     def tostring(self, level=0, index=0):
         # | CaseI (exp, cases, None) ->
@@ -1692,6 +1695,37 @@ class CaseI(Instr):
 
     def __repr__(self):
         return "p4specast.CaseI(%r, %r, %r%s)" % (self.exp, self.cases, self.phantom, (", " + repr(self.region)) if self.region is not None else '')
+
+def _combine_case_exp(exp, case):
+    guard = case.guard
+    #          | BoolG true -> exp.it
+    if isinstance(guard, BoolG) and guard.value:
+        exp_cond = exp
+    #          | BoolG false -> Il.Ast.UnE (`NotOp, `BoolT, exp)
+    elif isinstance(guard, BoolG) and not guard.value:
+        exp_cond = UnE("NotOp", "BoolT", exp)
+        exp_cond.typ = BoolT.INSTANCE
+    #          | CmpG (cmpop, optyp, exp_r) ->
+    #              Il.Ast.CmpE (cmpop, optyp, exp, exp_r)
+    elif isinstance(guard, CmpG):
+        exp_cond = CmpE(guard.op, guard.typ, exp, guard.exp)
+        exp_cond.typ = BoolT.INSTANCE
+    #          | SubG typ -> Il.Ast.SubE (exp, typ)
+    elif isinstance(guard, SubG):
+        exp_cond = SubE(exp, guard.typ)
+        exp_cond.typ = BoolT.INSTANCE
+    #          | MatchG pattern -> Il.Ast.MatchE (exp, pattern)
+    elif isinstance(guard, MatchG):
+        exp_cond = MatchE(exp, guard.pattern)
+        exp_cond.typ = BoolT.INSTANCE
+    #          | MemG exp_s -> Il.Ast.MemE (exp, exp_s)
+    elif isinstance(guard, MemG):
+        exp_cond = MemE(exp, guard.exp)
+        exp_cond.typ = BoolT.INSTANCE
+    else:
+        #import pdb;pdb.set_trace()
+        assert 0, 'missing case'
+    return exp_cond
 
 class OtherwiseI(Instr):
     def __init__(self, instr, region=None):
