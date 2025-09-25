@@ -1717,16 +1717,18 @@ class __extend__(p4specast.MemE):
         #   let ctx, value_s = eval_exp ctx exp_s in
         ctx, value_s = eval_exp(ctx, self.lst)
         #   let values_s = Value.get_list value_s in
-        values_s = value_s.get_list()
+        assert isinstance(value_s, objects.ListV)
         #   let value_res =
         #     let vid = Value.fresh () in
         #     let typ = note in
         #     Il.Ast.(BoolV (List.exists (Value.eq value_e) values_s) $$$ { vid; typ })
-        res = False
-        for v in values_s:
-            if value_e.eq(v):
-                res = True
-                break
+        if value_s._get_size_list() == 0:
+            res = False
+        elif value_s._get_size_list() == 1:
+            res = value_e.eq(value_s._get_list(0))
+        else:
+            values_s = value_s.get_list()
+            res = _mem_list(value_e, values_s)
         value_res = objects.BoolV(res, self.typ)
         return ctx, value_res
         #   in
@@ -1734,6 +1736,12 @@ class __extend__(p4specast.MemE):
         #   Ctx.add_edge ctx value_res value_e (Dep.Edges.Op MemOp);
         #   Ctx.add_edge ctx value_res value_s (Dep.Edges.Op MemOp);
         #   (ctx, value_res)
+
+def _mem_list(value_e, values_s):
+    for v in values_s:
+        if value_e.eq(v):
+            return True
+    return False
 
 class __extend__(p4specast.DotE):
     def eval_exp(self, ctx):
