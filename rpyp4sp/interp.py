@@ -361,49 +361,20 @@ def eval_if_cond(ctx, exp_cond):
     return ctx, cond, value_cond
 
 
-def eval_cases(ctx, exp, cases):
+def eval_cases(ctx, exp, cases, cases_exps):
     # returns  Ctx.t * instr list option * value =
     # cases
     block_match = None
     values_cond = []
     # |> List.fold_left
-    for case in cases:
+    for i, case in enumerate(cases):
         #  (fun (ctx, block_match, values_cond) (guard, block) ->
         #    match block_match with
         #    | Some _ -> (ctx, block_match, values_cond)
-        if block_match is not None:
-            continue
         #    | None ->
     #            let exp_cond =
     #              match guard with
-        guard = case.guard
-        #          | BoolG true -> exp.it
-        if isinstance(guard, p4specast.BoolG) and guard.value:
-            exp_cond = exp
-        #          | BoolG false -> Il.Ast.UnE (`NotOp, `BoolT, exp)
-        elif isinstance(guard, p4specast.BoolG) and not guard.value:
-            exp_cond = p4specast.UnE("NotOp", "BoolT", exp)
-            exp_cond.typ = p4specast.BoolT.INSTANCE
-        #          | CmpG (cmpop, optyp, exp_r) ->
-        #              Il.Ast.CmpE (cmpop, optyp, exp, exp_r)
-        elif isinstance(guard, p4specast.CmpG):
-            exp_cond = p4specast.CmpE(guard.op, guard.typ, exp, guard.exp)
-            exp_cond.typ = p4specast.BoolT.INSTANCE
-        #          | SubG typ -> Il.Ast.SubE (exp, typ)
-        elif isinstance(guard, p4specast.SubG):
-            exp_cond = p4specast.SubE(exp, guard.typ)
-            exp_cond.typ = p4specast.BoolT.INSTANCE
-        #          | MatchG pattern -> Il.Ast.MatchE (exp, pattern)
-        elif isinstance(guard, p4specast.MatchG):
-            exp_cond = p4specast.MatchE(exp, guard.pattern)
-            exp_cond.typ = p4specast.BoolT.INSTANCE
-        #          | MemG exp_s -> Il.Ast.MemE (exp, exp_s)
-        elif isinstance(guard, p4specast.MemG):
-            exp_cond = p4specast.MemE(exp, guard.exp)
-            exp_cond.typ = p4specast.BoolT.INSTANCE
-        else:
-            #import pdb;pdb.set_trace()
-            assert 0, 'missing case'
+        exp_cond = cases_exps[i]
 
         #        in
         #        let exp_cond = exp_cond $$ (exp.at, Il.Ast.BoolT) in
@@ -416,6 +387,7 @@ def eval_cases(ctx, exp, cases):
         #        if cond then (ctx, Some block, values_cond)
         if cond:
             block_match = case.instrs
+            break
         #        else (ctx, None, values_cond))
         else:
             assert block_match is None
@@ -434,7 +406,7 @@ def eval_cases(ctx, exp, cases):
 class __extend__(p4specast.CaseI):
     def eval_instr(self, ctx):
         # let ctx, instrs_opt, value_cond = eval_cases ctx exp cases in
-        ctx, instrs_opt, value_cond = eval_cases(ctx, self.exp, self.cases)
+        ctx, instrs_opt, value_cond = eval_cases(ctx, self.exp, self.cases, self.cases_exps)
         assert value_cond is None
         # let vid = value_cond.note.vid in
         # let ctx =
