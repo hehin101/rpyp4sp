@@ -1307,6 +1307,16 @@ class __extend__(p4specast.ReturnI):
 # ____________________________________________________________
 # expressions
 
+class SubExp(object):
+    def __init__(self, value):
+        self.value = value
+
+class ContinuationExp(object):
+    def __init__(self, index, exps, next):
+        self.index = index
+        self.exps = exps
+        self.next = next
+
 def eval_exp(ctx, exp):
     return exp.eval_exp(ctx)
 
