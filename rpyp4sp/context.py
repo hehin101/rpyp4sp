@@ -233,12 +233,19 @@ class Context(object):
     def find_rel_local(self, id):
         return self.glbl.renv[id.value]
 
-    def add_value_local(self, id, iterlist, value):
-        # type: (p4specast.Id, list, objects.BaseV) -> Context
+    def add_value_local(self, id, iterlist, value, vare_cache=None):
+        # type: (p4specast.Id, list, objects.BaseV, p4specast.VarE | None) -> Context
+        if vare_cache is not None and vare_cache._ctx_keys_add is self.venv_keys:
+            venv_keys = vare_cache._ctx_keys_next
+            venv_values = self._get_full_list() + [value]
+            return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
         var_iter = iterlist_to_key(iterlist)
         pos = self.venv_keys.get_pos(id.value, var_iter)
         if pos < 0:
             venv_keys = self.venv_keys.add_key(id.value, var_iter)
+            if vare_cache:
+                vare_cache._ctx_keys_add = self.venv_keys
+                vare_cache._ctx_keys_next = venv_keys
             venv_values = self._get_full_list() + [value]
             return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
         else:

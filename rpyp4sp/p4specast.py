@@ -609,6 +609,8 @@ class VarE(Exp):
         self.id = id # typ: id
         self._ctx_keys = None
         self._ctx_index = -1
+        self._ctx_keys_add = None
+        self._ctx_keys_next = None
 
     @staticmethod
     def fromjson(content):

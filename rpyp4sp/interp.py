@@ -1008,7 +1008,7 @@ def assign_exp(ctx, exp, value):
     if isinstance(exp, p4specast.VarE):
     # | VarE id, _ ->
     #     let ctx = Ctx.add_value Local ctx (id, []) value in
-        ctx = ctx.add_value_local(exp.id, [], value)
+        ctx = ctx.add_value_local(exp.id, [], value, vare_cache=exp)
         return ctx
     #     ctx
     # | TupleE exps_inner, TupleV values_inner ->
