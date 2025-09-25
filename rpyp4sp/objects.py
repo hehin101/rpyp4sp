@@ -270,13 +270,13 @@ class StructV(BaseV):
         return self
 
     def get_field(self, atom):
-        idx = jit.promote(self).map.get_field(atom.value)
+        idx = jit.promote(self.map).get_field(atom.value)
         if idx == -1:
             raise P4EvaluationError("no such field %s" % atom.value)
         return self._get_list(idx)
 
     def replace_field(self, atom, value):
-        idx = jit.promote(self).map.get_field(atom.value)
+        idx = jit.promote(self.map).get_field(atom.value)
         if idx == -1:
             raise P4EvaluationError("no such field %s" % atom.value)
         new_fields = self._get_full_list()[:]
