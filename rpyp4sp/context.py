@@ -169,7 +169,7 @@ class FenvDict(object):
 
 @smalllist.inline_small_list(immutable=True)
 class Context(object):
-    def __init__(self,filename, derive=False, glbl=None, tdenv=None, fenv=None, venv_keys=None):
+    def __init__(self, filename, derive=False, glbl=None, tdenv=None, fenv=None, venv_keys=None):
         self.filename = filename
         self.glbl = GlobalContext() if glbl is None else glbl
         # the local context is inlined
@@ -184,6 +184,9 @@ class Context(object):
         venv_keys = venv_keys if venv_keys is not None else self.venv_keys
         venv_values = venv_values if venv_values is not None else self._get_full_list()
         return Context.make(venv_values, self.filename, self.derive, self.glbl, tdenv, fenv, venv_keys)
+
+    def copy_and_change_append_venv(self, value, venv_keys):
+        return self._append_list(value, self.filename, self.derive, self.glbl, self.tdenv, self.fenv, venv_keys)
 
     def load_spec(self, spec):
         for definition in spec:
@@ -237,8 +240,7 @@ class Context(object):
         # type: (p4specast.Id, list, objects.BaseV, p4specast.VarE | None) -> Context
         if vare_cache is not None and vare_cache._ctx_keys_add is self.venv_keys:
             venv_keys = vare_cache._ctx_keys_next
-            venv_values = self._get_full_list() + [value]
-            return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
+            return self.copy_and_change_append_venv(value, venv_keys)
         var_iter = iterlist_to_key(iterlist)
         pos = self.venv_keys.get_pos(id.value, var_iter)
         if pos < 0:
@@ -246,8 +248,7 @@ class Context(object):
             if vare_cache:
                 vare_cache._ctx_keys_add = self.venv_keys
                 vare_cache._ctx_keys_next = venv_keys
-            venv_values = self._get_full_list() + [value]
-            return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
+            return self.copy_and_change_append_venv(value, venv_keys)
         else:
             venv_values = self._get_full_list()[:]
             venv_values[pos] = value
