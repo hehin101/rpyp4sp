@@ -238,8 +238,8 @@ class Context(object):
         if not jit.we_are_jitted() and vare_cache is not None and vare_cache._ctx_keys is self.venv_keys:
             pos = vare_cache._ctx_index
         else:
-            pos = self.venv_keys.get_pos(id.value, var_iter)
-            if vare_cache is not None:
+            pos = jit.promote(self.venv_keys).get_pos(id.value, var_iter)
+            if not jit.we_are_jitted() and vare_cache is not None:
                 vare_cache._ctx_index = pos
                 vare_cache._ctx_keys = self.venv_keys
         if pos < 0:
@@ -258,7 +258,7 @@ class Context(object):
         if self.tdenv.has_key(id.value):
             typdef = self.tdenv.get(id.value)
         else:
-            typdef = jit.promote(self.glbl).tdenv[id.value]
+            typdef = jit.promote(self.glbl)._find_typdef(id.value)
         return typdef
 
     def find_rel_local(self, id):

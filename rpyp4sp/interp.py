@@ -1,8 +1,8 @@
 from __future__ import print_function
 from rpython.rlib import objectmodel, jit
 from rpyp4sp import p4specast, objects, builtin, context, integers
-from rpyp4sp.error import (P4EvaluationError, P4CastError, P4NotImplementedError, 
-                           P4RelationError)
+from rpyp4sp.error import (P4Error, P4EvaluationError, P4CastError,
+                           P4NotImplementedError, P4RelationError)
 
 class VarList(object):
     _immutable_fields_ = ['vars[*]']
@@ -1446,7 +1446,7 @@ class __extend__(p4specast.TextE):
 class __extend__(p4specast.VarE):
     def eval_exp(self, ctx):
         # let value = Ctx.find_value Local ctx (id, []) in
-        value = ctx.find_value_local(self.id, vare_cache=self)
+        value = ctx.find_value_local(self.id, p4specast.IterList.EMPTY, vare_cache=self)
         return ctx, value
 
 class __extend__(p4specast.OptE):
