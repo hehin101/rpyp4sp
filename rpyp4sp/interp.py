@@ -40,7 +40,7 @@ def invoke_func_builtin(ctx, calle):
     return ctx, value_output
 
 def invoke_func_def(ctx, calle):
-    from rpyp4sp.type_helpers import subst_typ
+    from rpyp4sp.type_helpers import subst_typ_ctx
     # let tparams, args_input, instrs = Ctx.find_func Local ctx id in
     func = ctx.find_func_local(calle.func)
     # check (instrs <> []) id.at "function has no instructions";
@@ -60,13 +60,9 @@ def invoke_func_def(ctx, calle):
     #            | Il.Ast.PlainT typ -> Some (tid, typ)
     #            | _ -> None)
     #     |> TIdMap.of_list
-        theta = {}
-        for tid, (_, deftyp) in ctx.glbl.tdenv.items() + ctx.tdenv.items():
-            if isinstance(deftyp, p4specast.PlainT):
-                theta[tid] = deftyp.typ
         #   in
         #   List.map (Typ.subst_typ theta) targs
-        targs = [subst_typ(theta, targ) for targ in calle.targs]
+        targs = [subst_typ_ctx(ctx, targ) for targ in calle.targs]
     # in
     # let ctx_local =
     #   List.fold_left2
@@ -85,7 +81,6 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     # INCOMPLETE
     # and invoke_func_def (ctx : Ctx.t) (id : id) (targs : targ list) (args : arg list) : Ctx.t * value =
     # let tparams, args_input, instrs = Ctx.find_func Local ctx id in
-    func = ctx.find_func_local(func.id)
     tparams, args_input, instrs = func.tparams, func.args, func.instrs
     # let ctx_local = Ctx.localize ctx in
     if ctx_local is None:
