@@ -32,12 +32,13 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
         _immutable_ = getattr(cls, "_immutable_", False)
         empty_list = []
 
+        def _get_size_list(self):
+            return self._size_list
+
         def make_class(size):
             attrs = ["_%s_%s" % (attrname, i) for i in range(size)]
             unrolling_enumerate_attrs = unrolling_iterable(enumerate(attrs))
 
-            def _get_size_list(self):
-                return size
             def _get_list(self, i):
                 for j, attr in unrolling_enumerate_attrs:
                     if j == i:
@@ -80,6 +81,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                 listgettername : _get_full_list,
                 settername     : _set_list,
                 "__init__"     : _init,
+                "_size_list"   : size,
             }
 
             newcls = type(cls)("%sSize%s" % (cls.__name__, size), (cls, ), methods)
