@@ -250,7 +250,7 @@ class Context(object):
                 vare_cache._ctx_keys_next = venv_keys
             return self.copy_and_change_append_venv(value, venv_keys)
         else:
-            venv_values = self._get_full_list()[:]
+            venv_values = self._get_full_list_copy()
             venv_values[pos] = value
             return self.copy_and_change(venv_values=venv_values)
 

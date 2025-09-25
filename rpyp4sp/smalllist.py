@@ -99,6 +99,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                 listgettername : _get_full_list,
                 settername     : _set_list,
                 "_append_list" : _append_list,
+                "_get_full_list_copy": _get_full_list,
                 "__init__"     : _init,
             }
 
@@ -121,6 +122,8 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             return len(getattr(self, attrname))
         def _get_list_arbitrary(self):
             return getattr(self, attrname)
+        def _get_list_arbitrary_copy(self):
+            return getattr(self, attrname)[:]
         def _set_arbitrary(self, i, val):
             if nonull:
                 assert val is not None
@@ -137,6 +140,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             gettername     : _get_arbitrary,
             listsizename   : _get_size_list_arbitrary,
             listgettername : _get_list_arbitrary,
+            "_get_full_list_copy" : _get_list_arbitrary_copy,
             settername     : _set_arbitrary,
             "_append_list" : _append_list_arbitrary,
             "__init__"     : _init,
