@@ -285,7 +285,15 @@ class StructV(BaseV):
 
 
     def __repr__(self):
-        return "objects.StructV.make(%r, %r, %r, %r)" % (self._get_full_list(), self.map, self.typ, self.vid)
+        size = self._get_size_list()
+        if size == 0:
+            return "objects.StructV.make0(%r, %r, %r)" % (self.map, self.typ, self.vid)
+        elif size == 1:
+            return "objects.StructV.make1(%r, %r, %r, %r)" % (self._get_list(0), self.map, self.typ, self.vid)
+        elif size == 2:
+            return "objects.StructV.make2(%r, %r, %r, %r, %r)" % (self._get_list(0), self._get_list(1), self.map, self.typ, self.vid)
+        else:
+            return "objects.StructV.make(%r, %r, %r, %r)" % (self._get_full_list(), self.map, self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | StructV [] -> "{}"
@@ -346,7 +354,15 @@ class CaseV(BaseV):
         self.typ = typ # type: p4specast.Type | None
 
     def __repr__(self):
-        return "objects.CaseV.make(%r, %r, %r, %r)" % (self._get_full_list(), self.mixop, self.typ, self.vid)
+        size = self._get_size_list()
+        if size == 0:
+            return "objects.CaseV.make0(%r, %r, %r)" % (self.mixop, self.typ, self.vid)
+        elif size == 1:
+            return "objects.CaseV.make1(%r, %r, %r, %r)" % (self._get_list(0), self.mixop, self.typ, self.vid)
+        elif size == 2:
+            return "objects.CaseV.make2(%r, %r, %r, %r, %r)" % (self._get_list(0), self._get_list(1), self.mixop, self.typ, self.vid)
+        else:
+            return "objects.CaseV.make(%r, %r, %r, %r)" % (self._get_full_list(), self.mixop, self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | CaseV (mixop, _) when short -> string_of_mixop mixop
@@ -409,7 +425,15 @@ class TupleV(BaseV):
         return compares(self._get_full_list(), other._get_full_list())
 
     def __repr__(self):
-        return "objects.TupleV.make(%r, %r, %r)" % (self._get_full_list(), self.typ, self.vid)
+        size = self._get_size_list()
+        if size == 0:
+            return "objects.TupleV.make0(%r, %r)" % (self.typ, self.vid)
+        elif size == 1:
+            return "objects.TupleV.make1(%r, %r, %r)" % (self._get_list(0), self.typ, self.vid)
+        elif size == 2:
+            return "objects.TupleV.make2(%r, %r, %r, %r)" % (self._get_list(0), self._get_list(1), self.typ, self.vid)
+        else:
+            return "objects.TupleV.make(%r, %r, %r)" % (self._get_full_list(), self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | TupleV values ->
@@ -479,7 +503,13 @@ class ListV(BaseV):
         return compares(self._get_full_list(), other._get_full_list())
 
     def __repr__(self):
-        return "objects.ListV.make(%r, %r, %r)" % (self._get_full_list(), self.typ, self.vid)
+        size = self._get_size_list()
+        if size == 0:
+            return "objects.ListV.make0(%r, %r)" % (self.typ, self.vid)
+        elif size == 1:
+            return "objects.ListV.make1(%r, %r, %r)" % (self._get_list(0), self.typ, self.vid)
+        else:
+            return "objects.ListV.make(%r, %r, %r)" % (self._get_full_list(), self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | ListV [] -> "[]"
