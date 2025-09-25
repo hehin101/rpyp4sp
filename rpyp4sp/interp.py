@@ -249,7 +249,6 @@ class __extend__(p4specast.IfI):
         #   if cond then eval_instrs ctx Cont instrs_then else (ctx, Cont)
         if cond:
             return ctx, SubInstructions(self.instrs)
-            # return eval_instrs(ctx, Cont(), self.instrs)
         return (ctx, Cont())
 
 def eval_if_cond_iter(ctx, instr):
@@ -475,7 +474,8 @@ class __extend__(p4specast.CaseI):
         # match instrs_opt with
         # | Some instrs -> eval_instrs ctx Cont instrs
         if instrs_opt is not None:
-            return eval_instrs(ctx, Cont(), instrs_opt)
+            return ctx, SubInstructions(instrs_opt)
+            # return eval_instrs(ctx, Cont(), instrs_opt)
         # | None -> (ctx, Cont)
         return ctx, Cont()
 
@@ -993,12 +993,12 @@ class __extend__(p4specast.HoldI):
         if isinstance(self.holdcase, p4specast.BothH):
         #      if cond then eval_instrs ctx Cont instrs_hold
             if cond:
-                return eval_instrs(ctx, Cont(), self.holdcase.hold_instrs)
+                return ctx, SubInstructions(self.holdcase.hold_instrs)
         #      else (
         #        ctx.cover := cover_backup;
         #        eval_instrs ctx Cont instrs_not_hold)
             else:
-                return eval_instrs(ctx, Cont(), self.holdcase.nothold_instrs)
+                return ctx, SubInstructions(self.holdcase.nothold_instrs)
         #  | HoldH (instrs_hold, phantom_opt) ->
         elif isinstance(self.holdcase, p4specast.HoldH):
         #      let ctx =
@@ -1008,7 +1008,7 @@ class __extend__(p4specast.HoldI):
         #      in
         #      if cond then eval_instrs ctx Cont instrs_hold else (ctx, Cont)
             if cond:
-                return eval_instrs(ctx, Cont(), self.holdcase.hold_instrs)
+                return ctx, SubInstructions(self.holdcase.hold_instrs)
             else:
                 return ctx, Cont()
         #  | NotHoldH (instrs_not_hold, phantom_opt) ->
@@ -1021,7 +1021,7 @@ class __extend__(p4specast.HoldI):
         #      in
         #      if not cond then eval_instrs ctx Cont instrs_not_hold else (ctx, Cont)
             if not cond:
-                return eval_instrs(ctx, Cont(), self.holdcase.nothold_instrs)
+                return ctx, SubInstructions(self.holdcase.nothold_instrs)
             else:
                 return ctx, Cont()
         else:
