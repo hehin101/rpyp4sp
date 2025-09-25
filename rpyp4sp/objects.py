@@ -1,6 +1,8 @@
+from rpython.rlib import jit
+
 from rpyp4sp.smalllist import inline_small_list
 from rpyp4sp import p4specast, integers
-from rpyp4sp.error import P4UnknownTypeError
+from rpyp4sp.error import P4UnknownTypeError, P4NotImplementedError, P4EvaluationError
 # and vid = int [@@deriving yojson]
 # and vnote = { vid : vid; typ : typ' } [@@deriving yojson]
 
@@ -199,17 +201,88 @@ class TextV(BaseV):
     def fromjson(content, typ, vid):
         return TextV(content.get_list_item(1).value_string(), typ, vid)
 
+class StructMap(object):
+    def __init__(self, fieldpos):
+        self.fieldpos = fieldpos # type: dict[str, int]
+        self.next_maps = {} # type: dict[str, StructMap]
+
+    @jit.elidable
+    def get_field(self, fieldname):
+        return self.fieldpos.get(fieldname, -1)
+
+    @jit.elidable
+    def add_field(self, fieldname):
+        if fieldname in self.next_maps:
+            return self.next_maps[fieldname]
+        new_fieldpos = self.fieldpos.copy()
+        new_fieldpos[fieldname] = len(new_fieldpos)
+        res = StructMap(new_fieldpos)
+        self.next_maps[fieldname] = res
+        return res
+
+    @jit.elidable_promote('0,1')
+    def compare(self, other):
+        # lexicographic ordering on field names
+        keys_l = list(self.fieldpos.keys())
+        keys_r = list(other.fieldpos.keys())
+        len_l = len(keys_l)
+        len_r = len(keys_r)
+        if len_l == len_r == 0:
+            return 0
+        min_len = min(len_l, len_r)
+        for i in range(min_len):
+            k_l = keys_l[i]
+            k_r = keys_r[i]
+            if k_l < k_r:
+                return -1
+            elif k_l > k_r:
+                return 1
+        if len_l == len_r:
+            return 0
+        elif len_l < len_r:
+            return -1
+        else:
+            return 1
+
+    def __repr__(self):
+        res = ["objects.StructMap.EMPTY"]
+        for k in self.fieldpos.keys():
+            res.append(".add_field(%r)" % k)
+        return "".join(res)
+StructMap.EMPTY = StructMap({})
+
+
+@inline_small_list(immutable=True)
 class StructV(BaseV):
-    def __init__(self, fields, typ=None, vid=-1):
-        self.fields = fields # type: list[BaseV]
+    _immutable_fields_ = ['map']
+
+    @jit.unroll_safe
+    def __init__(self, map, typ=None, vid=-1):
+        assert isinstance(map, StructMap)
+        self.map = map # type: StructMap
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
 
     def get_struct(self):
-        return self.fields
+        return self
+
+    def get_field(self, atom):
+        idx = jit.promote(self).map.get_field(atom.value)
+        if idx == -1:
+            raise P4EvaluationError("no such field %s" % atom.value)
+        return self._get_list(idx)
+
+    def replace_field(self, atom, value):
+        idx = jit.promote(self).map.get_field(atom.value)
+        if idx == -1:
+            raise P4EvaluationError("no such field %s" % atom.value)
+        new_fields = self._get_full_list()[:]
+        new_fields[idx] = value
+        return StructV.make(new_fields, self.map, self.typ, self.vid)
+
 
     def __repr__(self):
-        return "objects.StructV(%r, %r, %r)" % (self.fields, self.typ, self.vid)
+        return "objects.StructV.make(%r, %r, %r, %r)" % (self._get_full_list(), self.map, self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | StructV [] -> "{}"
@@ -224,50 +297,46 @@ class StructV(BaseV):
         #               Format.asprintf "%s%s %s" indent (string_of_atom atom)
         #                 (string_of_value ~short ~level:(level + 2) value))
         #             valuefields))
-        if not self.fields:
+        if not self._get_size_list():
             return "{}"
         if short:
-            return "{ .../%d }" % len(self.fields)
+            return "{ .../%d }" % self._get_size_list()
 
         parts = []
-        for idx, (atom, value) in enumerate(self.fields):
-            if idx == 0:
+        for fieldname, index in self.map.fieldpos.items():
+            value = self._get_list(index)
+            if index == 0:
                 indent_str = ""
             else:
                 indent_str = indent(level + 1)
-            part = "%s%s %s" % (indent_str, atom.value, value.tostring(short, level + 2))
+            part = "%s%s %s" % (indent_str, fieldname, value.tostring(short, level + 2))
             parts.append(part)
 
         return "{ %s }" % ";\n".join(parts)
 
     @staticmethod
     def fromjson(content, typ, vid):
-        fields = []
+        values = []
+        map = StructMap.EMPTY
         for f in content.get_list_item(1).value_array():
             atom_content, field_content = f.value_array()
             atom = p4specast.AtomT.fromjson(atom_content)
             field = BaseV.fromjson(field_content)
-            fields.append((atom, field))
-        return StructV(fields, typ, vid)
+            values.append(field)
+            map = map.add_field(atom.value)
+        return StructV.make(values, map, typ, vid)
 
     def compare(self, other):
         if not isinstance(other, StructV):
             return self._base_compare(other)
-        def split_fields(fields):
-            atoms, values = [], []
-            for atom, value in fields:
-                atoms.append(atom)
-                values.append(value)
-            return atoms, values
-        atoms_l, values_l = split_fields(self.fields)
-        atoms_r, values_r = split_fields(other.fields)
-        res = atom_compares(atoms_l, atoms_r)
+        res = self.map.compare(other.map)
         if res:
             return res
-        return compares(values_l, values_r)
+        return compares(self._get_full_list(), other._get_full_list())
 
 @inline_small_list(immutable=True)
 class CaseV(BaseV):
+    _immutable_fields_ = ['mixop']
     def __init__(self, mixop, typ=None, vid=-1):
         self.mixop = mixop # type: p4specast.MixOp
         self.vid = vid # type: int
