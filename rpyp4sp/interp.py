@@ -1307,8 +1307,21 @@ class __extend__(p4specast.ReturnI):
 # ____________________________________________________________
 # expressions
 
+class ContinueExps(Exception):
+    def __init__(self, ctx, exp):
+        self.ctx = ctx
+        self.exp = exp
+
+def tailcall_eval_exp(ctx, exp):
+    raise ContinueExps(ctx, exp)
+
 def eval_exp(ctx, exp):
-    return exp.eval_exp(ctx)
+    # return exp.eval_exp(ctx)
+    while True:
+        try:
+            return exp.eval_exp(ctx)
+        except ContinueExps as e:
+            ctx, exp = e.ctx, e.exp
 
 def eval_exps(ctx, exps):
     # List.fold_left
