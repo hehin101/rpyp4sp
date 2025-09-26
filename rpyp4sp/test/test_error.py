@@ -569,7 +569,7 @@ def test_format_entry_with_colors():
     # Check for color codes in file line
     assert '\033[35m"test.py"\033[0m' in result[0]  # MAGENTA filename
     assert '\033[35m1\033[0m' in result[0]          # MAGENTA line number
-    assert ', in test_func' in result[0]
+    assert '\033[35mtest_func\033[0m' in result[0]  # MAGENTA function name
 
     # Source line should be plain (no colors on source code itself)
     assert result[1] == '    error'
@@ -602,7 +602,7 @@ def test_format_entry_with_colors_unknown_region():
     # Check for color codes in unknown file line
     assert '\033[35m"<unknown>"\033[0m' in result[0]  # MAGENTA filename
     assert '\033[35m?\033[0m' in result[0]            # MAGENTA line number
-    assert ', in unknown_func' in result[0]
+    assert '\033[35munknown_func\033[0m' in result[0]  # MAGENTA function name
 
 def test_traceback_format_with_colors():
     # Should format complete traceback with colors
@@ -686,6 +686,7 @@ def test_format_p4error_function():
     # File line should have color codes
     assert '\033[35m"calc.py"\033[0m' in lines_colored[1]  # MAGENTA filename
     assert '\033[35m10\033[0m' in lines_colored[1]  # MAGENTA line number
+    assert '\033[35mdivide\033[0m' in lines_colored[1]  # MAGENTA function name
     assert lines_colored[-1] == "\033[35mDivision by zero\033[0m"  # Error message at bottom with magenta color
 
     # Test with new list format [filenames, contents]
@@ -854,3 +855,18 @@ def test_should_skip_highlighting():
     assert tb._should_skip_highlighting(1, 16, stripped_code) == True  # Full line
     assert tb._should_skip_highlighting(1, 6, stripped_code) == False  # Just "return"
     assert tb._should_skip_highlighting(8, 13, stripped_code) == False  # Just "value"
+
+    # Test case 9: Special handling for "-- " prefix (language-specific quirk)
+    comment_line = "-- some comment here"
+    assert tb._should_skip_highlighting(3, 20, comment_line) == True  # Skip "-- " prefix
+    assert tb._should_skip_highlighting(3, 21, comment_line) == True  # Skip "-- " prefix, extends beyond end
+    assert tb._should_skip_highlighting(1, 20, comment_line) == True  # Full line including "--"
+
+    # Should not skip if highlighting doesn't start at column 3 after "--"
+    assert tb._should_skip_highlighting(4, 20, comment_line) == False  # Start after "-- "
+    assert tb._should_skip_highlighting(1, 15, comment_line) == False  # Partial, includes "--"
+    assert tb._should_skip_highlighting(3, 15, comment_line) == False  # Start at 3 but doesn't cover full line
+
+    # Should not skip if line doesn't start with "-- "
+    regular_line = "if condition then"
+    assert tb._should_skip_highlighting(3, 17, regular_line) == False  # No "-- " prefix

@@ -159,16 +159,27 @@ class Traceback(object):
     def _format_file_line(self, name, filename, line_num, color):
         """Helper to format the file/line/function header line."""
         if color:
-            return '  File %s"%s"%s, line %s%s%s, in %s' % (
+            return '  File %s"%s"%s, line %s%s%s, in %s%s%s' % (
                 ANSIColors.MAGENTA, filename, ANSIColors.RESET,
-                ANSIColors.MAGENTA, line_num, ANSIColors.RESET, name)
+                ANSIColors.MAGENTA, line_num, ANSIColors.RESET,
+                ANSIColors.MAGENTA, name, ANSIColors.RESET)
         else:
             return '  File "%s", line %s, in %s' % (filename, line_num, name)
 
     def _should_skip_highlighting(self, adjusted_start_col, adjusted_end_col, stripped_line):
         """Helper to determine if highlighting should be skipped for full-line coverage."""
         stripped_line_length = len(stripped_line.rstrip())
-        return adjusted_start_col == 1 and adjusted_end_col >= stripped_line_length
+
+        # Skip if highlighting covers the entire line
+        if adjusted_start_col == 1 and adjusted_end_col >= stripped_line_length:
+            return True
+
+        # Skip if the only non-covered part is a "-- " prefix at the start
+        if (adjusted_start_col == 3 and adjusted_end_col >= stripped_line_length and
+            stripped_line.startswith("-- ")):
+            return True
+
+        return False
 
     def _adjust_column_positions(self, start_col, end_col, original_indent):
         """Helper to adjust column positions after stripping indentation."""
