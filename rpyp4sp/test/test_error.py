@@ -1032,6 +1032,208 @@ def test_terminal_links_direct_format_entry():
     assert 'relative/file.watsup' in result_no_links[0]
 
 
+# Tests for multi-line region formatting in _format_entry
+
+def test_format_entry_multi_line_small():
+    # Test multi-line region with 3 lines (should show all)
+    tb = Traceback()
+    region = Region(Position('test.py', 1, 1), Position('test.py', 3, 5))
+    file_content = {"test.py": "line one\nline two\nline three"}
+    result = tb._format_entry("multi_func", region, file_content)
+
+    expected = [
+        '  File "test.py", line 1, in multi_func',
+        '    line one',
+        '    line two',
+        '    line three'
+    ]
+    assert result == expected
+
+def test_format_entry_multi_line_exactly_five():
+    # Test multi-line region with exactly 5 lines (should show all)
+    tb = Traceback()
+    region = Region(Position('test.py', 1, 1), Position('test.py', 5, 10))
+    file_content = {"test.py": "line1\nline2\nline3\nline4\nline5"}
+    result = tb._format_entry("five_func", region, file_content)
+
+    expected = [
+        '  File "test.py", line 1, in five_func',
+        '    line1',
+        '    line2',
+        '    line3',
+        '    line4',
+        '    line5'
+    ]
+    assert result == expected
+
+def test_format_entry_multi_line_large():
+    # Test multi-line region with more than 5 lines (should truncate)
+    tb = Traceback()
+    region = Region(Position('test.py', 1, 1), Position('test.py', 8, 5))
+    file_content = {"test.py": "first\nsecond\nthird\nfourth\nfifth\nsixth\nseventh\neighth"}
+    result = tb._format_entry("large_func", region, file_content)
+
+    expected = [
+        '  File "test.py", line 1, in large_func',
+        '    first',
+        '    second',
+        '    [4 lines omitted]',
+        '    seventh',
+        '    eighth'
+    ]
+    assert result == expected
+
+def test_format_entry_multi_line_with_indentation():
+    # Test multi-line region preserves indentation stripping
+    tb = Traceback()
+    region = Region(Position('test.py', 1, 1), Position('test.py', 3, 5))
+    file_content = {"test.py": "  indented line one\n    more indented\n  back to two"}
+    result = tb._format_entry("indent_func", region, file_content)
+
+    expected = [
+        '  File "test.py", line 1, in indent_func',
+        '    indented line one',
+        '    more indented',
+        '    back to two'
+    ]
+    assert result == expected
+
+def test_format_entry_multi_line_six_lines():
+    # Test with exactly 6 lines to ensure proper omission calculation
+    tb = Traceback()
+    region = Region(Position('test.py', 1, 1), Position('test.py', 6, 1))
+    file_content = {"test.py": "line1\nline2\nline3\nline4\nline5\nline6"}
+    result = tb._format_entry("six_func", region, file_content)
+
+    expected = [
+        '  File "test.py", line 1, in six_func',
+        '    line1',
+        '    line2',
+        '    [2 lines omitted]',
+        '    line5',
+        '    line6'
+    ]
+    assert result == expected
+
+def test_format_entry_single_line_vs_multi_line():
+    # Test that line_span still uses old behavior with carets
+    tb = Traceback()
+    # Single line region (line_span)
+    single_region = Region.line_span('test.py', 1, 5, 10)
+    # Multi-line region (not line_span)
+    multi_region = Region(Position('test.py', 1, 5), Position('test.py', 2, 10))
+    file_content = {"test.py": "hello world test\nsecond line here"}
+
+    single_result = tb._format_entry("single_func", single_region, file_content)
+    multi_result = tb._format_entry("multi_func", multi_region, file_content)
+
+    # Single line should have carets
+    assert any('^' in line for line in single_result)
+    # Multi line should not have carets
+    assert not any('^' in line for line in multi_result)
+    # Multi line should show both lines
+    assert 'hello world test' in str(multi_result)
+    assert 'second line here' in str(multi_result)
+
+# Tests for _format_multiline_source helper method
+
+def test_format_multiline_source_single_line():
+    # Test single line (edge case)
+    tb = Traceback()
+    result = tb._format_multiline_source("single line")
+    expected = ['    single line']
+    assert result == expected
+
+def test_format_multiline_source_two_lines():
+    # Test two lines
+    tb = Traceback()
+    result = tb._format_multiline_source("first line\nsecond line")
+    expected = ['    first line', '    second line']
+    assert result == expected
+
+def test_format_multiline_source_exactly_five_lines():
+    # Test exactly 5 lines (boundary case)
+    tb = Traceback()
+    source = "line1\nline2\nline3\nline4\nline5"
+    result = tb._format_multiline_source(source)
+    expected = [
+        '    line1', '    line2', '    line3', '    line4', '    line5'
+    ]
+    assert result == expected
+
+def test_format_multiline_source_six_lines():
+    # Test 6 lines (should truncate)
+    tb = Traceback()
+    source = "line1\nline2\nline3\nline4\nline5\nline6"
+    result = tb._format_multiline_source(source)
+    expected = [
+        '    line1',
+        '    line2',
+        '    [2 lines omitted]',
+        '    line5',
+        '    line6'
+    ]
+    assert result == expected
+
+def test_format_multiline_source_many_lines():
+    # Test many lines
+    tb = Traceback()
+    lines = ["line%d" % i for i in range(1, 11)]  # line1 through line10
+    source = '\n'.join(lines)
+    result = tb._format_multiline_source(source)
+    expected = [
+        '    line1',
+        '    line2',
+        '    [6 lines omitted]',
+        '    line9',
+        '    line10'
+    ]
+    assert result == expected
+
+def test_format_multiline_source_with_indentation():
+    # Test indentation stripping
+    tb = Traceback()
+    source = "  indented1\n    more indented\n  indented2"
+    result = tb._format_multiline_source(source)
+    expected = [
+        '    indented1',
+        '    more indented',
+        '    indented2'
+    ]
+    assert result == expected
+
+def test_format_multiline_source_with_empty_lines():
+    # Test empty lines handling
+    tb = Traceback()
+    source = "line1\n\nline3\n\nline5"
+    result = tb._format_multiline_source(source)
+    expected = [
+        '    line1',
+        '    ',
+        '    line3',
+        '    ',
+        '    line5'
+    ]
+    assert result == expected
+
+def test_format_multiline_source_omission_count():
+    # Test correct omission count calculation
+    tb = Traceback()
+    # Create 10 lines: should show first 2, omit 6, show last 2
+    lines = ["line%d" % i for i in range(1, 11)]
+    source = '\n'.join(lines)
+    result = tb._format_multiline_source(source)
+
+    # Check the omission message
+    omission_line = None
+    for line in result:
+        if 'omitted' in line:
+            omission_line = line
+            break
+
+    assert omission_line == '    [6 lines omitted]'
+    assert len(result) == 5  # 2 first + 1 omission + 2 last
+
 def test_find_nth():
     # Test the find_nth helper function
     from rpyp4sp.error import find_nth
