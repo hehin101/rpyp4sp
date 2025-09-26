@@ -24,6 +24,8 @@ class P4Error(Exception):
         self.traceback.add_frame(name, region, ast)
 
     def format(self, color=False):
+        if color:
+            return ANSIColors.MAGENTA + self.msg + ANSIColors.RESET
         return self.msg
 
     def __repr__(self):

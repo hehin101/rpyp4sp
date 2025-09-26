@@ -57,6 +57,7 @@ def test_p4error_format_with_special_characters():
     error = P4Error("error with 'quotes' and \"double quotes\" and newlines\nand tabs\t")
     assert error.format() == "error with 'quotes' and \"double quotes\" and newlines\nand tabs\t"
 
+
 # Tests for P4Error.maybe_add_region method
 
 def test_maybe_add_region_none():
@@ -626,10 +627,10 @@ def test_traceback_format_with_colors():
     assert '\033[1;31m^^^\033[0m' in result[3]
 
 def test_p4error_format_with_colors():
-    # Should work with color parameter (though P4Error doesn't use it yet)
+    # Should work with color parameter and show message in magenta
     error = P4Error("Test error message")
     result = error.format(color=True)
-    assert result == "Test error message"  # Color doesn't change the message for basic P4Error
+    assert result == "\033[35mTest error message\033[0m"  # Color shows message in magenta
 
 def test_can_colorize():
     # Should return a boolean indicating if stderr is a TTY
@@ -685,7 +686,7 @@ def test_format_p4error_function():
     # File line should have color codes
     assert '\033[35m"calc.py"\033[0m' in lines_colored[1]  # MAGENTA filename
     assert '\033[35m10\033[0m' in lines_colored[1]  # MAGENTA line number
-    assert lines_colored[-1] == "Division by zero"  # Error message at bottom
+    assert lines_colored[-1] == "\033[35mDivision by zero\033[0m"  # Error message at bottom with magenta color
 
     # Test with new list format [filenames, contents]
     file_content_list = [["calc.py"], ["error content"]]
