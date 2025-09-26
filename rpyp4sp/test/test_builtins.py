@@ -119,7 +119,7 @@ def test_fresh():
 
 def textlist(*args):
     l = [mktext(arg) for arg in args]
-    return objects.ListV.make(l, p4specast.IterT(p4specast.TextT.INSTANCE, p4specast.List()))
+    return objects.ListV.make(l, p4specast.TextT.INSTANCE.list_of())
 
 def test_list_rev():
     arg = textlist()
@@ -154,7 +154,7 @@ def test_list_distinct():
 
 def test_lists_concat():
     empty = textlist()
-    args = [objects.ListV.make([empty, empty], p4specast.IterT(p4specast.IterT(p4specast.TextT.INSTANCE, p4specast.List()), p4specast.List()), -1)]
+    args = [objects.ListV.make([empty, empty], p4specast.TextT.INSTANCE.list_of().list_of(), -1)]
     res = builtin.lists_concat_(None, None, args)
     assert res.eq(empty)
     assert repr(res.typ) == "p4specast.IterT(p4specast.TextT.INSTANCE, p4specast.List.INSTANCE)"
@@ -166,10 +166,10 @@ def test_list_assoc():
         objects.TupleV.make2(mktext('input_port'), mktext('32'), p4specast.TupleT([p4specast.TextT.INSTANCE, p4specast.TextT.INSTANCE])),
         objects.TupleV.make2(mktext('packet_length'), mktext('16'), p4specast.TupleT([p4specast.TextT.INSTANCE, p4specast.TextT.INSTANCE])),
         objects.TupleV.make2(mktext('output_port'), mktext('8'), p4specast.TupleT([p4specast.TextT.INSTANCE, p4specast.TextT.INSTANCE]))
-    ], p4specast.IterT(p4specast.TupleT([p4specast.TextT.INSTANCE, p4specast.TextT.INSTANCE]), p4specast.List()))
+    ], p4specast.TupleT([p4specast.TextT.INSTANCE, p4specast.TextT.INSTANCE]).list_of())
 
     input_values = [search_key, assoc_list]
-    expected = objects.OptV(mktext('32'), p4specast.IterT(p4specast.TextT.INSTANCE, p4specast.Opt()))
+    expected = objects.OptV(mktext('32'), p4specast.TextT.INSTANCE.opt_of())
     targs = [p4specast.TextT.INSTANCE, p4specast.TextT.INSTANCE]
     res = builtin.lists_assoc_(None, targs, input_values)
     assert res.eq(expected)
@@ -179,7 +179,7 @@ def make_set(*args):
     for el in args:
         value = mktext(el)
         lst.append(value)
-    list_value = objects.ListV.make(lst, p4specast.IterT(p4specast.TextT.INSTANCE, p4specast.List()))
+    list_value = objects.ListV.make(lst, p4specast.TextT.INSTANCE.list_of())
     settyp = p4specast.VarT(builtin.set_id, [p4specast.TextT()])
     return objects.CaseV.make([list_value], builtin.map_mixop, settyp)
 
@@ -201,7 +201,7 @@ def test_unions_set():
     assert res.eq(exp)
 
 def test_diff_set():
-    args = [objects.CaseV.make([objects.ListV.make([mktext('H')], p4specast.IterT(p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 116, 13, 14)), []), p4specast.List()))], p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), 11710, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 113, 36, 37)), [])])), objects.CaseV.make([objects.ListV.make([mktext('H')], p4specast.IterT(p4specast.TextT.INSTANCE, p4specast.List()))], p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), -1, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c6-runtime-type-wellformed.watsup', 373, 29, 32)), [])]))]
+    args = [objects.CaseV.make([objects.ListV.make([mktext('H')], p4specast.IterT(p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 116, 13, 14)), []), p4specast.List()))], p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), 11710, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 113, 36, 37)), [])])), objects.CaseV.make([objects.ListV.make([mktext('H')], p4specast.TextT.INSTANCE.list_of())], p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), -1, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('tid', p4specast.Region.line_span('spec/2c6-runtime-type-wellformed.watsup', 373, 29, 32)), [])]))]
     res = builtin.sets_diff_set(None, None, args)
     exp = objects.CaseV.make([objects.ListV.make([], p4specast.IterT(p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 116, 13, 14)), []), p4specast.List()))], p4specast.MixOp([[p4specast.AtomT.line_span('{', 'spec/0-aux.watsup', 71, 17, 18)], [p4specast.AtomT.line_span('}', 'spec/0-aux.watsup', 71, 22, 23)]]), -1, p4specast.VarT(p4specast.Id('set', p4specast.Region.line_span('spec/0-aux.watsup', 71, 7, 11)), [p4specast.VarT(p4specast.Id('K', p4specast.Region.line_span('spec/0-aux.watsup', 113, 36, 37)), [])]))
     assert res.eq(exp)
@@ -320,7 +320,7 @@ def make_map(*args):
         value_value = mktext(value)
         arrow = objects.CaseV.make([key_value, value_value], builtin.arrow_mixop, pairtyp)
         lst.append(arrow)
-    list_value = objects.ListV.make(lst, p4specast.IterT(pairtyp, p4specast.List()))
+    list_value = objects.ListV.make(lst, pairtyp.list_of())
     maptyp = p4specast.VarT(builtin.map_id, [p4specast.TextT(), p4specast.TextT()])
     return objects.CaseV.make([list_value], builtin.map_mixop, maptyp)
 
@@ -355,7 +355,7 @@ def test_add_map():
 def test_find_maps():
     map_value1 = make_map(("A", "a1"), ("B", "b"))
     map_value2 = make_map(("A", "a2"), ("C", "x"))
-    lst_value = objects.ListV.make([map_value1, map_value2], p4specast.IterT(map_value1.typ, p4specast.List()))
+    lst_value = objects.ListV.make([map_value1, map_value2], map_value1.typ.list_of())
 
     res = builtin.maps_find_maps(None, [p4specast.TextT(), p4specast.TextT()],
                                  [lst_value, mktext("C")])
@@ -414,7 +414,7 @@ def make_nat_list(*values):
     nat_values = []
     for val in values:
         nat_values.append(objects.NumV.fromstr(str(val), p4specast.NatT.INSTANCE, typ=p4specast.NumT.NAT))
-    return objects.ListV.make(nat_values, p4specast.IterT(p4specast.NumT.NAT, p4specast.List()))
+    return objects.ListV.make(nat_values, p4specast.NumT.NAT.list_of())
 
 def test_texts_strip_suffix():
     res = builtin.texts_strip_suffix(None, [], [make_text('action_list(t)'), make_text(')')])
@@ -498,20 +498,20 @@ def test_nats_min():
 
 def test_unions_set_2():
     # Union of empty list of sets
-    res = builtin.sets_unions_set(None, [p4specast.TextT.INSTANCE], [objects.ListV.make0(p4specast.IterT(p4specast.TextT.INSTANCE, p4specast.List()))])
+    res = builtin.sets_unions_set(None, [p4specast.TextT.INSTANCE], [objects.ListV.make0(p4specast.TextT.INSTANCE.list_of())])
     assert res.eq(make_set())
     # Union of single set
-    res = builtin.sets_unions_set(None, [p4specast.TextT.INSTANCE], [objects.ListV.make1(make_set("a"), p4specast.IterT(p4specast.TextT.INSTANCE, p4specast.List()))])
+    res = builtin.sets_unions_set(None, [p4specast.TextT.INSTANCE], [objects.ListV.make1(make_set("a"), p4specast.TextT.INSTANCE.list_of())])
     assert res.eq(make_set("a"))
     # Union of two empty sets
-    res = builtin.sets_unions_set(None, [p4specast.TextT.INSTANCE], [objects.ListV.make2(make_set(), make_set(), p4specast.IterT(p4specast.TextT.INSTANCE, p4specast.List()))])
+    res = builtin.sets_unions_set(None, [p4specast.TextT.INSTANCE], [objects.ListV.make2(make_set(), make_set(), p4specast.TextT.INSTANCE.list_of())])
     assert res.eq(make_set())
     # Union of two disjoint sets
-    res = builtin.sets_unions_set(None, [p4specast.TextT.INSTANCE], [objects.ListV.make2(make_set("a"), make_set("b"), p4specast.IterT(p4specast.TextT.INSTANCE, p4specast.List()))])
+    res = builtin.sets_unions_set(None, [p4specast.TextT.INSTANCE], [objects.ListV.make2(make_set("a"), make_set("b"), p4specast.TextT.INSTANCE.list_of())])
     assert res.eq(make_set("a", "b"))
     # Union of three overlapping sets
-    res = builtin.sets_unions_set(None, [p4specast.TextT.INSTANCE], [objects.ListV.make([make_set("a", "b"), make_set("b", "c"), make_set("c", "d")], p4specast.IterT(p4specast.TextT.INSTANCE, p4specast.List()))])
+    res = builtin.sets_unions_set(None, [p4specast.TextT.INSTANCE], [objects.ListV.make([make_set("a", "b"), make_set("b", "c"), make_set("c", "d")], p4specast.TextT.INSTANCE.list_of())])
     assert res.eq(make_set("a", "b", "c", "d"))
     # Union of identical sets
-    res = builtin.sets_unions_set(None, [p4specast.TextT.INSTANCE], [objects.ListV.make2(make_set("x", "y"), make_set("x", "y"), p4specast.IterT(p4specast.TextT.INSTANCE, p4specast.List()))])
+    res = builtin.sets_unions_set(None, [p4specast.TextT.INSTANCE], [objects.ListV.make2(make_set("x", "y"), make_set("x", "y"), p4specast.TextT.INSTANCE.list_of())])
     assert res.eq(make_set("x", "y"))

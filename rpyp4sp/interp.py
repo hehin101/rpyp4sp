@@ -289,7 +289,7 @@ def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
     #         (ctx, cond, value_cond))
         elif isinstance(iter_h, p4specast.List):
             ctx, cond, values_cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexps_t)
-            typ = p4specast.IterT(p4specast.BoolT.INSTANCE, p4specast.List())
+            typ = p4specast.BoolT.INSTANCE.list_of()
             value_cond = objects.ListV.make(values_cond, typ)
             return ctx, cond, value_cond
     # | iterexp_h :: iterexps_t -> (
@@ -343,7 +343,7 @@ def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
         #           vars_h;
         #         (ctx, cond, value_cond))
         ctx, cond, values_cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexps_t)
-        typ = p4specast.IterT(p4specast.BoolT.INSTANCE, p4specast.List())
+        typ = p4specast.BoolT.INSTANCE.list_of()
         value_cond = objects.ListV.make(values_cond, typ)
         # for (id, _typ, iters) in vars_h:
         #     value_sub = ctx.find_value_local(id, iters + [p4specast.List])
@@ -893,7 +893,7 @@ def eval_hold_cond_iter_tick(ctx, id, notexp, iterexps):
     #            let vid = Value.fresh () in
     #            let typ = Il.Ast.IterT (Il.Ast.BoolT $ no_region, Il.Ast.List) in
     #            Il.Ast.(ListV values_cond $$$ { vid; typ })
-        value_cond = objects.ListV.make(values_cond, p4specast.IterT(p4specast.BoolT.INSTANCE, p4specast.List()))
+        value_cond = objects.ListV.make(values_cond, p4specast.BoolT.INSTANCE.list_of())
     #          in
     #          Ctx.add_node ctx value_cond;
     #          List.iter
@@ -1075,7 +1075,7 @@ def assign_exp(ctx, exp, value):
     #         Ctx.add_value Local ctx (id, iters @ [ Il.Ast.Opt ]) value_sub)
     #       ctx vars
             for var in exp.varlist:
-                typ = p4specast.IterT(var.typ, p4specast.Opt())
+                typ = var.typ.opt_of()
                 value_sub = objects.OptV(None, typ)
                 ctx = ctx.add_value_local(var.id, var.iter + [p4specast.Opt()], value_sub)
             return ctx
@@ -1099,7 +1099,7 @@ def assign_exp(ctx, exp, value):
     #       ctx vars
             for var in exp.varlist:
                 value_sub_inner = ctx.find_value_local(var.id, var.iter)
-                typ = p4specast.IterT(var.typ, p4specast.Opt())
+                typ = var.typ.opt_of()
                 value_sub = objects.OptV(value_sub_inner, typ)
                 ctx = ctx.add_value_local(var.id, var.iter + [p4specast.Opt()], value_sub)
             return ctx

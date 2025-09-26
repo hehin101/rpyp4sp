@@ -180,7 +180,7 @@ def lists_partition_(ctx, targs, values_input):
     values_left = values[:len_num]
     values_right = values[len_num:]
 
-    list_typ = p4specast.IterT(typ, p4specast.List())
+    list_typ = typ.list_of()
     value_left = objects.ListV.make(values_left, list_typ)
     value_right = objects.ListV.make(values_right, list_typ)
     tuple_typ = p4specast.TupleT([list_typ, list_typ])
@@ -197,7 +197,7 @@ def lists_assoc_(ctx, targs, values_input):
         if tup._get_list(0).eq(value):
             res_value = tup._get_list(1)
             break
-    return objects.OptV(res_value, p4specast.IterT(typ_value, p4specast.Opt()))
+    return objects.OptV(res_value, typ_value.opt_of())
 
 # ________________________________________________________________
 # sets
@@ -264,7 +264,7 @@ def sets_unions_set(ctx, targs, values_input):
     if not sets_l:
         return objects.CaseV.make1(
             objects.ListV.make0(
-                p4specast.IterT(element_typ, p4specast.List())),
+                element_typ.list_of()),
             map_mixop,
             p4specast.VarT(set_id, targs))
     first = sets_l[0]
@@ -381,7 +381,7 @@ def maps_find_map(ctx, targs, values_input):
     key_typ, value_typ = targs
     map_value, key_value = values_input
     found_value = _find_map(map_value, key_value)
-    typ = p4specast.IterT(key_typ, p4specast.Opt())
+    typ = key_typ.opt_of()
     typ.region = p4specast.NO_REGION
     return objects.OptV(found_value, typ)
 
@@ -397,7 +397,7 @@ def maps_find_maps(ctx, targs, values_input):
         res_value = _find_map(map_value, key_value)
         if res_value is not None:
             break
-    typ = p4specast.IterT(key_typ, p4specast.Opt())
+    typ = key_typ.opt_of()
     typ.region = p4specast.NO_REGION
     return objects.OptV(res_value, typ)
 
@@ -427,7 +427,7 @@ def maps_add_map(ctx, targs, values_input):
             assert 0, 'unreachable'
     else:
         res.append(new_pair)
-    list_value = objects.ListV.make(res[:], p4specast.IterT(new_pair.typ, p4specast.List()))
+    list_value = objects.ListV.make(res[:], new_pair.typ.list_of())
     return objects.CaseV.make1(list_value, map_mixop, p4specast.VarT(map_id, targs))
 
 

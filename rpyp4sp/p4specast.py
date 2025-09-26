@@ -1,3 +1,4 @@
+from rpython.rlib import jit
 from rpython.tool.pairtype import extendabletype
 from rpyp4sp import integers
 from rpyp4sp.error import P4UnknownTypeError, P4NotImplementedError
@@ -1208,6 +1209,10 @@ NumTyp, NatT, IntT = define_enum('NumTyp', 'NatT', 'IntT')
 class Type(AstBase):
     # has a .region, but only sometimes (eg exp uses typ')
 
+    _attr_ = ['region', '_iterlist', '_iteropt']
+    _iterlist = None
+    _iteropt = None
+
     def tostring(self):
         assert 0  # abstract method
 
@@ -1238,6 +1243,23 @@ class Type(AstBase):
             raise P4UnknownTypeError("Unknown Type: %s" % what)
         ast.region = region
         return ast
+
+    @jit.elidable
+    def list_of(self):
+        if self._iterlist is not None:
+            return self._iterlist
+        self._iterlist = res = IterT(self, List.INSTANCE)
+        res.region = NO_REGION
+        return res
+
+    @jit.elidable
+    def opt_of(self):
+        if self._iteropt is not None:
+            return self._iteropt
+        self._iteropt = res = IterT(self, Opt.INSTANCE)
+        res.region = NO_REGION
+        return res
+
 
 class BoolT(Type):
     def __init__(self):
