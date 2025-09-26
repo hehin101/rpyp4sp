@@ -10,8 +10,8 @@ class P4Error(Exception):
         if self.region is None or not self.region.has_information():
             self.region = region
 
-    def traceback_add_frame(self, name, ast):
-        self.traceback.add_frame(name, ast)
+    def traceback_add_frame(self, name, region, ast):
+        self.traceback.add_frame(name, region, ast)
 
     def format(self, color=False):
         return self.msg
@@ -115,8 +115,8 @@ class Traceback(object):
     def __init__(self):
         self.frames = []
 
-    def add_frame(self, name, ast):
-        self.frames.append((name, ast.region, ast))
+    def add_frame(self, name, region, ast=None):
+        self.frames.append((name, region, ast))
 
     def _format_entry(self, name, region, file_content, color=False):
         """
@@ -143,7 +143,7 @@ class Traceback(object):
             return lines
 
         filename = region.left.file if region.left.has_information() and region.left.file else "<unknown>"
-        line_num = region.left.line if region.left.has_information() else "?"
+        line_num = str(region.left.line) if region.left.has_information() else "?"
 
         if color:
             lines.append('  File %s"%s"%s, line %s%s%s, in %s' % (

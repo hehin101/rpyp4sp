@@ -24,7 +24,7 @@ def invoke_func(ctx, calle):
     try:
         return _invoke_func(ctx, calle)
     except P4Error as e:
-        e.traceback_add_frame(calle.func.value, calle)
+        e.traceback_add_frame(calle.func.value, calle.region, calle)
         raise
 
 def _invoke_func(ctx, calle):
@@ -818,7 +818,7 @@ class __extend__(p4specast.RuleI):
         try:
             ctx = eval_rule_iter(ctx, self)
         except P4Error as e:
-            e.traceback_add_frame(self.id.value, self)
+            e.traceback_add_frame(self.id.value, self.region, self)
             raise
         return ctx, Cont()
 

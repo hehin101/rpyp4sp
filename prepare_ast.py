@@ -74,14 +74,14 @@ def main():
         print("Writing %s..." % output_file)
         with open(output_file, 'w') as f:
             json.dump(combined_data, f, separators=(',', ':'))
-        
+
         # Clean up temp file
         if os.path.exists('temp_ast.json'):
             os.remove('temp_ast.json')
-        
+
         print("Successfully created ast.json with %d files" % len(filenames))
         return 0
-        
+
     except Exception as e:
         print("Error: %s" % e)
         return 1

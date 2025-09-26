@@ -371,10 +371,6 @@ def test_format_entry_complex_example():
 
 # Tests for Traceback.format method
 
-class MockAst(object):
-    """Mock AST class for testing"""
-    def __init__(self, region):
-        self.region = region
 
 def test_traceback_format_empty():
     # Should return empty list for empty traceback
@@ -386,8 +382,7 @@ def test_traceback_format_single_entry():
     # Should format single traceback entry
     tb = Traceback()
     region = Region.line_span('test.py', 1, 1, 5)
-    ast = MockAst(region)
-    tb.add_frame("main", ast)
+    tb.add_frame("main", region)
 
     file_content = {"test.py": "error here"}
     result = tb.format(file_content)
@@ -406,16 +401,13 @@ def test_traceback_format_multiple_entries():
 
     # Add frames as exception bubbles up (innermost to outermost)
     region1 = Region.line_span('calc.py', 10, 1, 5)  # Innermost call (error occurs here)
-    ast1 = MockAst(region1)
-    tb.add_frame("calculate", ast1)
+    tb.add_frame("calculate", region1)
 
     region2 = Region.line_span('utils.py', 5, 1, 6)  # Middle call
-    ast2 = MockAst(region2)
-    tb.add_frame("helper", ast2)
+    tb.add_frame("helper", region2)
 
     region3 = Region.line_span('main.py', 1, 1, 4)  # Outermost call
-    ast3 = MockAst(region3)
-    tb.add_frame("main", ast3)
+    tb.add_frame("main", region3)
 
     file_content = {
         "main.py": "main()",
@@ -443,13 +435,11 @@ def test_traceback_format_with_unknown_regions():
     tb = Traceback()
 
     # Entry with no region
-    ast1 = MockAst(None)
-    tb.add_frame("unknown_func", ast1)
+    tb.add_frame("unknown_func", None)
 
     # Entry with valid region
     region = Region.line_span('known.py', 2, 1, 3)
-    ast2 = MockAst(region)
-    tb.add_frame("known_func", ast2)
+    tb.add_frame("known_func", region)
 
     file_content = {"known.py": "line1\nok()"}
     result = tb.format(file_content)
@@ -468,8 +458,7 @@ def test_traceback_format_no_source_available():
     tb = Traceback()
 
     region = Region.line_span('missing.py', 10, 1, 5)
-    ast = MockAst(region)
-    tb.add_frame("missing_func", ast)
+    tb.add_frame("missing_func", region)
 
     file_content = {}  # No source files available
     result = tb.format(file_content)
@@ -618,8 +607,7 @@ def test_traceback_format_with_colors():
     # Should format complete traceback with colors
     tb = Traceback()
     region = Region.line_span('test.py', 1, 2, 4)
-    ast = MockAst(region)
-    tb.add_frame("main", ast)
+    tb.add_frame("main", region)
 
     file_content = {"test.py": "func()"}
     result = tb.format(file_content, color=True)
@@ -678,8 +666,7 @@ def test_format_p4error_function():
     # Test error with traceback
     error_with_trace = P4Error("Division by zero")
     region = Region.line_span('calc.py', 10, 1, 5)
-    ast = MockAst(region)
-    error_with_trace.traceback.add_frame("divide", ast)
+    error_with_trace.traceback.add_frame("divide", region)
 
     result = format_p4error(error_with_trace, {}, color=False)
     lines = result.split('\n')
@@ -699,7 +686,7 @@ def test_format_p4error_function():
     # File line should have color codes
     assert '\033[35m"calc.py"\033[0m' in lines_colored[2]  # MAGENTA filename
     assert '\033[35m10\033[0m' in lines_colored[2]  # MAGENTA line number
-    
+
     # Test with new list format [filenames, contents]
     file_content_list = [["calc.py"], ["error content"]]
     result_list_format = format_p4error(error_with_trace, file_content_list, color=False)
