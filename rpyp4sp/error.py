@@ -1,3 +1,13 @@
+import sys
+
+def safe_slice(s, start=0, stop=sys.maxint):
+    assert start >= 0
+    assert stop >= 0
+    if stop == sys.maxint:
+        return s[start:]
+    else:
+        return s[start:stop]
+
 class P4Error(Exception):
     def __init__(self, msg, region=None):
         self.msg = msg
@@ -170,9 +180,9 @@ class Traceback(object):
                 stripped_line_length = len(stripped_line.rstrip())
                 if not (adjusted_start_col == 1 and adjusted_end_col >= stripped_line_length):
                     # Color the highlighted portion
-                    before = stripped_line[:adjusted_start_col - 1]
-                    highlighted = stripped_line[adjusted_start_col - 1:adjusted_end_col]
-                    after = stripped_line[adjusted_end_col:]
+                    before = safe_slice(stripped_line, 0, adjusted_start_col - 1)
+                    highlighted = safe_slice(stripped_line, adjusted_start_col - 1, adjusted_end_col)
+                    after = safe_slice(stripped_line, adjusted_end_col)
                     colored_line = before + ANSIColors.BOLD_RED + highlighted + ANSIColors.RESET + after
                     lines.append('    %s' % colored_line)
                 else:
