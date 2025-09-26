@@ -2,6 +2,8 @@ from rpyp4sp import p4specast, objects
 from rpyp4sp.error import P4ContextError
 
 class GlobalContext(object):
+    file_content = {}
+
     def __init__(self):
         self.tdenv = {}
         self.renv = {}
@@ -38,7 +40,8 @@ class Context(object):
         venv = venv if venv is not None else self.venv
         return Context(self.filename, self.derive, self.glbl, values_input, tdenv, fenv, venv)
 
-    def load_spec(self, spec):
+    def load_spec(self, spec, file_content):
+        self.glbl.file_content = file_content
         for definition in spec:
             if isinstance(definition, p4specast.TypD):
                 self.glbl.tdenv[definition.id.value] = (definition.tparams, definition.deftyp)

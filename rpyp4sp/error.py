@@ -238,3 +238,37 @@ class Traceback(object):
             all_lines.extend(entry_lines)
 
         return all_lines
+
+
+def format_p4error(e, file_content, color=None):
+    """
+    Format a P4Error exception with traceback information.
+
+    Args:
+        e: P4Error exception to format
+        file_content: List of [filenames, contents] or dict with filename keys and file content (str) as values
+        color: Whether to include ANSI color codes. If None, auto-detects TTY
+
+    Returns:
+        str: Formatted error message with traceback
+    """
+    if color is None:
+        color = can_colorize()
+
+    lines = []
+    # Add the error message
+    lines.append(e.format(color=color))
+
+    # Add traceback if available
+    if e.traceback.frames:
+        # Convert file_content to dict format if it's a list of [filenames, contents]
+        if isinstance(file_content, list) and len(file_content) == 2:
+            filenames, contents = file_content
+            file_content_dict = dict(zip(filenames, contents))
+        else:
+            file_content_dict = file_content
+        
+        traceback_lines = e.traceback.format(file_content_dict, color=color)
+        lines.extend(traceback_lines)
+
+    return '\n'.join(lines)

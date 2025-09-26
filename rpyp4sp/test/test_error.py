@@ -666,29 +666,13 @@ def test_format_entry_with_colors_full_line_no_highlight():
     # No caret line since it covers whole word
     assert len(result) == 2
 
-def test_format_p4error_like_target():
-    # Test the same formatting function that target file uses
-    def format_p4error(e, color=None):
-        from rpyp4sp.error import can_colorize
-        if color is None:
-            color = can_colorize()
-
-        lines = []
-        # Add the error message
-        lines.append(e.format(color=color))
-
-        # Add traceback if available
-        if e.traceback.frames:
-            # For now, use empty file content since we don't have source files available
-            file_content = {}
-            traceback_lines = e.traceback.format(file_content, color=color)
-            lines.extend(traceback_lines)
-
-        return '\n'.join(lines)
+def test_format_p4error_function():
+    # Test the format_p4error function from error.py
+    from rpyp4sp.error import format_p4error
 
     # Test basic error
     error = P4Error("Test error message")
-    result = format_p4error(error, color=False)
+    result = format_p4error(error, {}, color=False)
     assert result == "Test error message"
 
     # Test error with traceback
@@ -697,8 +681,29 @@ def test_format_p4error_like_target():
     ast = MockAst(region)
     error_with_trace.traceback.add_frame("divide", ast)
 
-    result = format_p4error(error_with_trace, color=False)
+    result = format_p4error(error_with_trace, {}, color=False)
     lines = result.split('\n')
     assert lines[0] == "Division by zero"
     assert "Traceback (most recent call last):" in lines[1]
     assert 'File "calc.py", line 10, in divide' in lines[2]
+
+    # Test auto color detection (should return False when not in TTY)
+    result_auto = format_p4error(error_with_trace, {})  # color=None, auto-detect
+    assert result_auto == result  # Should be same as color=False when not in TTY
+
+    # Test with colors enabled
+    result_colored = format_p4error(error_with_trace, {}, color=True)
+    lines_colored = result_colored.split('\n')
+    assert lines_colored[0] == "Division by zero"  # Error message unchanged
+    assert "Traceback (most recent call last):" in lines_colored[1]
+    # File line should have color codes
+    assert '\033[35m"calc.py"\033[0m' in lines_colored[2]  # MAGENTA filename
+    assert '\033[35m10\033[0m' in lines_colored[2]  # MAGENTA line number
+    
+    # Test with new list format [filenames, contents]
+    file_content_list = [["calc.py"], ["error content"]]
+    result_list_format = format_p4error(error_with_trace, file_content_list, color=False)
+    lines_list = result_list_format.split('\n')
+    assert lines_list[0] == "Division by zero"
+    assert "Traceback (most recent call last):" in lines_list[1]
+    assert 'File "calc.py", line 10, in divide' in lines_list[2]

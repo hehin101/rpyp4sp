@@ -14,17 +14,27 @@ ASTFN = os.path.join(basedir, "ast.json")
 def load():
     with open(ASTFN) as f:
         value = loads(f.read())
+    if value.is_object:
+        file_content_json = value.get_dict_value("file_content")
+        file_names_json = file_content_json.get_list_item(0)
+        file_content_json = file_content_json.get_list_item(1)
+        file_content = {}
+        for i, name in enumerate(file_names_json.value_array()):
+            file_content[name.value_string()] = file_content_json.value_array()[i].value_string()
+        value = value.get_dict_value("ast")
+    else:
+        file_content = {}
     defs = []
     for i, d in enumerate(value.value_array()):
         defs.append(p4specast.Def.fromjson(d))
-    return defs
+    return defs, file_content
 
 def make_context(loaded=[]):
     if loaded:
         return loaded[0]
-    spec = load()
+    spec, file_content = load()
     ctx = Context('dummy')
-    ctx.load_spec(spec)
+    ctx.load_spec(spec, file_content)
     loaded.append(ctx)
     return ctx
 
