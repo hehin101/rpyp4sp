@@ -1307,16 +1307,6 @@ class __extend__(p4specast.ReturnI):
 # ____________________________________________________________
 # expressions
 
-class SubExp(object):
-    def __init__(self, value):
-        self.value = value
-
-class ContinuationExp(object):
-    def __init__(self, index, exps, next):
-        self.index = index
-        self.exps = exps
-        self.next = next
-
 def eval_exp(ctx, exp):
     return exp.eval_exp(ctx)
 
@@ -1326,11 +1316,20 @@ def eval_exps(ctx, exps):
     #     let ctx, value = eval_exp ctx exp in
     #     (ctx, values @ [ value ]))
     #   (ctx, []) exps
-    values = []
-    for exp in exps:
-        ctx, value = eval_exp(ctx, exp)
-        values.append(value)
-    return ctx, values
+    n = len(exps)
+    values = [None] * n
+    i = 0
+    while True:
+        if i >= n:
+            return ctx, values
+        exp = exps[i]
+        exp, value = eval_exp(ctx, exp)
+        values[i] = value
+        i += 1
+    # for exp in exps:
+    #     ctx, value = eval_exp(ctx, exp)
+    #     values.append(value)
+    # return ctx, values
 
 class __extend__(p4specast.Exp):
     def eval_exp(self, ctx):
