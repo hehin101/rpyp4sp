@@ -186,14 +186,14 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             cls.__init__(result, *args)
             return result
         def make1(elem, *args):
-            if not classes: # no type specialization
+            if len(classes) <= 1: # no type specialization
                 return make([elem], *args)
             result = objectmodel.instantiate(classes[1])
             result._set_list(0, elem)
             cls.__init__(result, *args)
             return result
         def make2(elem1, elem2, *args):
-            if not classes: # no type specialization
+            if len(classes) <= 2: # no type specialization
                 return make([elem1, elem2], *args)
             result = objectmodel.instantiate(classes[2])
             result._set_list(0, elem1)
