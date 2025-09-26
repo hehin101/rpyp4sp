@@ -312,7 +312,10 @@ def format_ctx(ctx, entry_line, color=False):
             else:
                 lines.append("%s%s:" % (varname, iterators))
             s = value.tostring()
-            for line in s.split('\n'):
+            sublines = s.split('\n')
+            if len(sublines) > 5:
+                sublines = value.tostring(short=True).split('\n')
+            for line in sublines:
                 lines.append("    " + line)
     lines.append('')
     return lines
