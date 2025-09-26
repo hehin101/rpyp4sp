@@ -980,3 +980,30 @@ def test_terminal_links_direct_format_entry():
     # Should not contain terminal link escape sequences
     assert '\033]8;;' not in result_no_links[0]
     assert 'relative/file.watsup' in result_no_links[0]
+
+
+def test_find_nth():
+    # Test the find_nth helper function
+    from rpyp4sp.error import find_nth
+
+    # Test basic functionality
+    text = "hello\nworld\ntest\nmore"
+    assert find_nth(text, '\n', 0) == 5   # First newline
+    assert find_nth(text, '\n', 1) == 11  # Second newline
+    assert find_nth(text, '\n', 2) == 16  # Third newline
+    assert find_nth(text, '\n', 3) == -1  # Fourth newline (doesn't exist)
+
+    # Test with startpos
+    assert find_nth(text, '\n', 0, 6) == 11  # First newline after position 6
+    assert find_nth(text, '\n', 1, 6) == 16  # Second newline after position 6
+
+    # Test edge cases
+    assert find_nth("", '\n', 0) == -1        # Empty string
+    assert find_nth("no newlines", '\n', 0) == -1  # No occurrences
+    assert find_nth("one\n", '\n', 0) == 3    # Single newline
+    assert find_nth("one\n", '\n', 1) == -1   # Second newline doesn't exist
+
+    # Test with different substrings
+    assert find_nth("abcabcabc", "abc", 0) == 0  # First occurrence
+    assert find_nth("abcabcabc", "abc", 1) == 3  # Second occurrence
+    assert find_nth("abcabcabc", "abc", 2) == 6  # Third occurrence

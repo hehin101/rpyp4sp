@@ -78,6 +78,29 @@ class P4ParseError(P4Error):
     """Error during parsing operations"""
     pass
 
+def find_nth(string, substring, n, startpos=0):
+    """
+    Find the nth occurrence of substring in string.
+
+    Args:
+        string: The string to search in
+        substring: The substring to find
+        n: Which occurrence to find (0-based)
+        startpos: Starting position for search
+
+    Returns:
+        int: Position of nth occurrence, or -1 if not found
+    """
+    pos = startpos
+    for i in range(n + 1):
+        assert pos >= 0
+        pos = string.find(substring, pos)
+        if pos == -1:
+            return -1
+        if i < n:  # Don't advance past the last occurrence
+            pos += len(substring)
+    return pos
+
 def extract_line(region, file_content):
     """
     Extract the line specified by a region from file content.
@@ -100,15 +123,32 @@ def extract_line(region, file_content):
         return None
 
     content = file_content[filename]
-    lines = content.splitlines()
 
     # Convert to 0-based indexing (region uses 1-based line numbers)
     line_number = region.left.line - 1
 
-    if line_number < 0 or line_number >= len(lines):
+    if line_number < 0:
         return None
 
-    return lines[line_number]
+    # Find the start of the target line
+    if line_number == 0:
+        line_start = 0
+    else:
+        line_start = find_nth(content, '\n', line_number - 1)
+        if line_start < 0:
+            return None
+        line_start += 1  # Move past the newline
+
+    # Find the end of the target line
+    line_end = content.find('\n', line_start)
+    if line_end == -1:
+        line_end = len(content)  # Last line without trailing newline
+
+    # Check if we found a valid line
+    if line_start >= len(content):
+        return None
+
+    return safe_slice(content, line_start, line_end)
 
 
 def can_colorize():
