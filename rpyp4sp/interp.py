@@ -24,7 +24,7 @@ def invoke_func(ctx, calle):
     try:
         return _invoke_func(ctx, calle)
     except P4Error as e:
-        e.traceback_add_frame(calle.func.value, calle.region, calle)
+        e.traceback_add_frame('???', calle.region, calle)
         raise
 
 def _invoke_func(ctx, calle):
@@ -82,7 +82,11 @@ def invoke_func_def(ctx, calle):
             targ = targs[i]
             ctx_local = ctx_local.add_typdef_local(tparam, ([], p4specast.PlainT(targ)))
     ctx, values_input = eval_args(ctx, calle.args)
-    return invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=ctx_local)
+    try:
+        return invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=ctx_local)
+    except P4Error as e:
+        e.traceback_patch_last_name(func.id.value)
+        raise
 
 def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     # INCOMPLETE
@@ -160,7 +164,11 @@ def invoke_rel(ctx, id, values_input):
     #   let ctx_local = assign_exps ctx_local exps_input values_input in
     ctx_local = assign_exps(ctx_local, reld.exps, values_input)
     #   let ctx_local, sign = eval_instrs ctx_local Cont instrs in
-    ctx_local, sign = eval_instrs(ctx_local, Cont(), reld.instrs)
+    try:
+        ctx_local, sign = eval_instrs(ctx_local, Cont(), reld.instrs)
+    except P4Error as e:
+        e.traceback_patch_last_name(id.value)
+        raise
     ctx = ctx.commit(ctx_local)
     #   let ctx = Ctx.commit ctx ctx_local in
     #   match sign with
@@ -818,7 +826,7 @@ class __extend__(p4specast.RuleI):
         try:
             ctx = eval_rule_iter(ctx, self)
         except P4Error as e:
-            e.traceback_add_frame(self.id.value, self.region, self)
+            e.traceback_add_frame('???', self.region, self)
             raise
         return ctx, Cont()
 

@@ -23,6 +23,11 @@ class P4Error(Exception):
     def traceback_add_frame(self, name, region, ast):
         self.traceback.add_frame(name, region, ast)
 
+    def traceback_patch_last_name(self, name):
+        if not self.traceback.frames and self.region and self.region.has_information():
+            self.traceback_add_frame('???', self.region, None)
+        self.traceback.patch_last_name(name)
+
     def format(self, color=False):
         if color:
             return ANSIColors.MAGENTA + self.msg + ANSIColors.RESET
@@ -138,6 +143,12 @@ class Traceback(object):
         self.frames = []
 
     def add_frame(self, name, region, ast=None):
+        self.frames.append((name, region, ast))
+
+    def patch_last_name(self, name):
+        oldname, region, ast = self.frames.pop()
+        if oldname != '???':
+            name = oldname
         self.frames.append((name, region, ast))
 
     def _format_entry(self, name, region, file_content, color=False):
