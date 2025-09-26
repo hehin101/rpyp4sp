@@ -1,7 +1,7 @@
 from rpyp4sp.error import (P4Error, P4NotImplementedError, P4UnknownTypeError,
                           P4EvaluationError, P4TypeSubstitutionError, P4CastError,
                           P4BuiltinError, P4RelationError, P4ContextError, P4ParseError,
-                          extract_line, Traceback)
+                          extract_lines_region, Traceback)
 from rpyp4sp.p4specast import Region, Position, NO_REGION
 
 def test_p4error_format_basic():
@@ -134,107 +134,107 @@ def test_maybe_add_region_partial_information_right():
     error.maybe_add_region(partial_region)
     assert error.region == partial_region
 
-# Tests for extract_line helper function
+# Tests for extract_lines_region helper function
 
-def test_extract_line_none_region():
+def test_extract_lines_region_none_region():
     # Should return None for None region
     file_content = {"test.py": "line 1\nline 2\nline 3"}
-    result = extract_line(None, file_content)
+    result = extract_lines_region(None, file_content)
     assert result is None
 
-def test_extract_line_not_line_span():
+def test_extract_lines_region_not_line_span():
     # Should return None for region that is not a line_span
     # Create region with different files (not a line span)
     region = Region(Position('file1.py', 1, 1), Position('file2.py', 1, 5))
     file_content = {"file1.py": "line 1\nline 2", "file2.py": "other line"}
-    result = extract_line(region, file_content)
+    result = extract_lines_region(region, file_content)
     assert result is None
 
-def test_extract_line_not_line_span_different_lines():
-    # Should return None for region spanning different lines
+def test_extract_lines_region_not_line_span_different_lines():
+    # Should handle region spanning different lines (multi-line region)
     region = Region(Position('test.py', 1, 1), Position('test.py', 2, 5))
     file_content = {"test.py": "line 1\nline 2\nline 3"}
-    result = extract_line(region, file_content)
-    assert result is None
+    result = extract_lines_region(region, file_content)
+    assert result == "line 1\nline 2"  # Complete lines from line 1 to line 2
 
-def test_extract_line_file_not_found():
+def test_extract_lines_region_file_not_found():
     # Should return None when file is not in file_content
     region = Region.line_span('missing.py', 1, 1, 5)
     file_content = {"test.py": "line 1\nline 2\nline 3"}
-    result = extract_line(region, file_content)
+    result = extract_lines_region(region, file_content)
     assert result is None
 
-def test_extract_line_line_number_too_high():
+def test_extract_lines_region_line_number_too_high():
     # Should return None when line number exceeds file length
     region = Region.line_span('test.py', 10, 1, 5)  # line 10 doesn't exist
     file_content = {"test.py": "line 1\nline 2\nline 3"}
-    result = extract_line(region, file_content)
+    result = extract_lines_region(region, file_content)
     assert result is None
 
-def test_extract_line_line_number_zero():
+def test_extract_lines_region_line_number_zero():
     # Should return None for line number 0 (invalid)
     region = Region.line_span('test.py', 0, 1, 5)
     file_content = {"test.py": "line 1\nline 2\nline 3"}
-    result = extract_line(region, file_content)
+    result = extract_lines_region(region, file_content)
     assert result is None
 
-def test_extract_line_line_number_negative():
+def test_extract_lines_region_line_number_negative():
     # Should return None for negative line number
     region = Region.line_span('test.py', -1, 1, 5)
     file_content = {"test.py": "line 1\nline 2\nline 3"}
-    result = extract_line(region, file_content)
+    result = extract_lines_region(region, file_content)
     assert result is None
 
-def test_extract_line_valid_first_line():
+def test_extract_lines_region_valid_first_line():
     # Should return first line correctly
     region = Region.line_span('test.py', 1, 1, 5)
     file_content = {"test.py": "first line\nsecond line\nthird line"}
-    result = extract_line(region, file_content)
+    result = extract_lines_region(region, file_content)
     assert result == "first line"
 
-def test_extract_line_valid_middle_line():
+def test_extract_lines_region_valid_middle_line():
     # Should return middle line correctly
     region = Region.line_span('test.py', 2, 1, 5)
     file_content = {"test.py": "first line\nsecond line\nthird line"}
-    result = extract_line(region, file_content)
+    result = extract_lines_region(region, file_content)
     assert result == "second line"
 
-def test_extract_line_valid_last_line():
+def test_extract_lines_region_valid_last_line():
     # Should return last line correctly
     region = Region.line_span('test.py', 3, 1, 5)
     file_content = {"test.py": "first line\nsecond line\nthird line"}
-    result = extract_line(region, file_content)
+    result = extract_lines_region(region, file_content)
     assert result == "third line"
 
-def test_extract_line_single_line_file():
+def test_extract_lines_region_single_line_file():
     # Should work with single line file
     region = Region.line_span('single.py', 1, 1, 10)
     file_content = {"single.py": "only line"}
-    result = extract_line(region, file_content)
+    result = extract_lines_region(region, file_content)
     assert result == "only line"
 
-def test_extract_line_empty_file():
+def test_extract_lines_region_empty_file():
     # Should return None for empty file
     region = Region.line_span('empty.py', 1, 1, 5)
     file_content = {"empty.py": ""}
-    result = extract_line(region, file_content)
+    result = extract_lines_region(region, file_content)
     assert result is None
 
-def test_extract_line_empty_line():
+def test_extract_lines_region_empty_line():
     # Should return empty string for empty line
     region = Region.line_span('test.py', 2, 1, 1)
     file_content = {"test.py": "line 1\n\nline 3"}
-    result = extract_line(region, file_content)
+    result = extract_lines_region(region, file_content)
     assert result == ""
 
-def test_extract_line_with_whitespace():
+def test_extract_lines_region_with_whitespace():
     # Should preserve whitespace in line
     region = Region.line_span('test.py', 1, 1, 10)
     file_content = {"test.py": "  \t  line with spaces  \t  "}
-    result = extract_line(region, file_content)
+    result = extract_lines_region(region, file_content)
     assert result == "  \t  line with spaces  \t  "
 
-def test_extract_line_multiple_files():
+def test_extract_lines_region_multiple_files():
     # Should extract from correct file when multiple files exist
     region = Region.line_span('file2.py', 2, 1, 5)
     file_content = {
@@ -242,8 +242,58 @@ def test_extract_line_multiple_files():
         "file2.py": "file2 line1\nfile2 line2\nfile2 line3",
         "file3.py": "file3 line1"
     }
-    result = extract_line(region, file_content)
+    result = extract_lines_region(region, file_content)
     assert result == "file2 line2"
+
+
+def test_extract_lines_region_multi_line_same_line():
+    # Test region that spans within same line (should return complete line)
+    region = Region(Position('test.py', 1, 6), Position('test.py', 1, 10))
+    file_content = {"test.py": "hello world test"}
+    result = extract_lines_region(region, file_content)
+    assert result == "hello world test"  # Complete line, ignoring column info
+
+
+def test_extract_lines_region_multi_line_cross_lines():
+    # Test multi-line region that spans across multiple lines
+    region = Region(Position('test.py', 1, 6), Position('test.py', 3, 5))
+    file_content = {"test.py": "line1 content\nline2 content\nline3 content"}
+    result = extract_lines_region(region, file_content)
+    # Should extract complete lines from line 1 to line 3
+    expected = "line1 content\nline2 content\nline3 content"
+    assert result == expected
+
+
+def test_extract_lines_region_multi_line_start_of_line():
+    # Test multi-line region starting from beginning of line
+    region = Region(Position('test.py', 2, 1), Position('test.py', 3, 3))
+    file_content = {"test.py": "first\nsecond line\nthird"}
+    result = extract_lines_region(region, file_content)
+    assert result == "second line\nthird"  # Complete lines from line 2 to line 3
+
+
+def test_extract_lines_region_multi_line_invalid_range():
+    # Test invalid multi-line region (end before start)
+    region = Region(Position('test.py', 3, 5), Position('test.py', 1, 10))
+    file_content = {"test.py": "line1\nline2\nline3"}
+    result = extract_lines_region(region, file_content)
+    assert result is None
+
+
+def test_extract_lines_region_multi_line_column_out_of_bounds():
+    # Test multi-line region with column beyond line length (columns ignored)
+    region = Region(Position('test.py', 1, 50), Position('test.py', 2, 5))
+    file_content = {"test.py": "short\nlonger line\nthird"}
+    result = extract_lines_region(region, file_content)
+    assert result == "short\nlonger line"  # Complete lines from line 1 to line 2
+
+
+def test_extract_lines_region_multi_line_end_beyond_content():
+    # Test multi-line region where end extends beyond file content
+    region = Region(Position('test.py', 1, 1), Position('test.py', 2, 20))
+    file_content = {"test.py": "line1\nline2"}
+    result = extract_lines_region(region, file_content)
+    assert result == "line1\nline2"  # Complete lines from line 1 to line 2
 
 # Tests for Traceback._format_entry method
 

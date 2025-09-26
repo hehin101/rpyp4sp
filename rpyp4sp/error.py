@@ -101,21 +101,22 @@ def find_nth(string, substring, n, startpos=0):
             pos += len(substring)
     return pos
 
-def extract_line(region, file_content):
+def extract_lines_region(region, file_content):
     """
-    Extract the line specified by a region from file content.
+    Extract all complete lines that a region spans from file content.
+    Ignores column information and returns all lines from start_line to end_line.
 
     Args:
         region: A Region object
         file_content: Dict with filename keys and file content (str) as values
 
     Returns:
-        str: The line content if region is a line_span and file exists, None otherwise
+        str: The complete lines content for the region if file exists, None otherwise
     """
     if region is None:
         return None
 
-    if not region.is_line_span():
+    if not region.has_information():
         return None
 
     filename = region.left.file
@@ -124,31 +125,78 @@ def extract_line(region, file_content):
 
     content = file_content[filename]
 
-    # Convert to 0-based indexing (region uses 1-based line numbers)
-    line_number = region.left.line - 1
-
-    if line_number < 0:
+    # Get start and end line numbers
+    if not region.left.has_information():
         return None
 
-    # Find the start of the target line
-    if line_number == 0:
-        line_start = 0
-    else:
-        line_start = find_nth(content, '\n', line_number - 1)
-        if line_start < 0:
+    start_line = region.left.line - 1  # Convert to 0-based
+
+    # For single line regions, extract just that line
+    if region.is_line_span():
+        if start_line < 0:
             return None
-        line_start += 1  # Move past the newline
 
-    # Find the end of the target line
-    line_end = content.find('\n', line_start)
-    if line_end == -1:
-        line_end = len(content)  # Last line without trailing newline
+        # Find the start of the target line
+        if start_line == 0:
+            line_start = 0
+        else:
+            line_start = find_nth(content, '\n', start_line - 1)
+            if line_start < 0:
+                return None
+            line_start += 1  # Move past the newline
 
-    # Check if we found a valid line
-    if line_start >= len(content):
+        # Find the end of the target line
+        line_end = content.find('\n', line_start)
+        if line_end == -1:
+            line_end = len(content)  # Last line without trailing newline
+
+        # Check if we found a valid line
+        if line_start >= len(content):
+            return None
+
+        return safe_slice(content, line_start, line_end)
+
+    # Handle multi-line regions - extract all lines from start to end
+    if not region.right.has_information():
         return None
 
-    return safe_slice(content, line_start, line_end)
+    # Check that both positions are in the same file
+    if region.right.file != filename:
+        return None
+
+    end_line = region.right.line - 1  # Convert to 0-based
+
+    if start_line < 0 or end_line < start_line:
+        return None
+
+    # Find start of the first line
+    if start_line == 0:
+        first_line_start = 0
+    else:
+        first_line_start = find_nth(content, '\n', start_line - 1)
+        if first_line_start < 0:
+            return None
+        first_line_start += 1  # Move past the newline
+
+    # Find end of the target end_line by advancing through lines
+    current_pos = first_line_start
+    for line_num in range(start_line, end_line):
+        next_newline = content.find('\n', current_pos)
+        if next_newline == -1:
+            # We've reached the end of file before end_line
+            final_end = len(content)
+            break
+        current_pos = next_newline + 1  # Start of next line
+    else:
+        # We successfully found all lines, now find the end of the last line
+        final_end = content.find('\n', current_pos)
+        if final_end == -1:
+            final_end = len(content)  # Last line without trailing newline
+
+    if first_line_start >= len(content):
+        return None
+
+    return safe_slice(content, first_line_start, final_end)
 
 
 def can_colorize():
@@ -263,7 +311,7 @@ class Traceback(object):
         lines.append(self._format_file_line(name, filename, line_num, color, spec_dirname))
 
         # Try to extract and display the source line
-        source_line = extract_line(region, file_content)
+        source_line = extract_lines_region(region, file_content)
         if source_line is not None:
             stripped_line = source_line.lstrip()
             original_indent = len(source_line) - len(stripped_line)
@@ -361,7 +409,7 @@ class Traceback(object):
             else:
                 all_lines.append("  [Previous entry repeated %d times]" % repeat_count)
         if ctx:
-            last_line = extract_line(region, file_content) if region is not None else None
+            last_line = extract_lines_region(region, file_content) if region is not None else None
             all_lines.extend(format_ctx(ctx, last_line, color=color))
 
         return all_lines
