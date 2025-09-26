@@ -206,6 +206,7 @@ def eval_instr(ctx, instr):
         return instr.eval_instr(ctx)
     except P4Error as e:
         e.maybe_add_region(instr.region)
+        e.maybe_add_ctx(ctx)
         raise
 
 

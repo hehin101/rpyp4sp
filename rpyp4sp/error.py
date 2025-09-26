@@ -9,10 +9,11 @@ def safe_slice(s, start=0, stop=sys.maxint):
         return s[start:stop]
 
 class P4Error(Exception):
-    def __init__(self, msg, region=None):
+    def __init__(self, msg, region=None, ctx=None):
         self.msg = msg
         self.traceback = Traceback()
         self.region = region
+        self.ctx = ctx
 
     def maybe_add_region(self, region):
         if region is None or not region.has_information():
@@ -20,12 +21,16 @@ class P4Error(Exception):
         if self.region is None or not self.region.has_information():
             self.region = region
 
-    def traceback_add_frame(self, name, region, ast):
+    def maybe_add_ctx(self, ctx):
+        if self.ctx is None:
+            self.ctx = ctx
+
+    def traceback_add_frame(self, name, region, ast=None):
         self.traceback.add_frame(name, region, ast)
 
     def traceback_patch_last_name(self, name):
         if not self.traceback.frames and self.region and self.region.has_information():
-            self.traceback_add_frame('???', self.region, None)
+            self.traceback_add_frame('???', self.region)
         self.traceback.patch_last_name(name)
 
     def format(self, color=False):
@@ -243,7 +248,7 @@ class Traceback(object):
 
         return lines
 
-    def format(self, file_content, color=False):
+    def format(self, file_content, color=False, ctx=None):
         """
         Format the complete traceback.
 
@@ -293,9 +298,24 @@ class Traceback(object):
                 all_lines.append("  [Previous entry repeated 1 time]")
             else:
                 all_lines.append("  [Previous entry repeated %d times]" % repeat_count)
+        if ctx:
+            all_lines.extend(format_ctx(ctx, prev_entry_lines[1] if prev_entry_lines else None, color=color))
 
         return all_lines
 
+def format_ctx(ctx, entry_line, color=False):
+    lines = ["Local variables:"]
+    for (varname, iterators), value in ctx.venv.items():
+        if entry_line is None or varname in entry_line:
+            if color:
+                lines.append("%s%s%s%s:" % (ANSIColors.MAGENTA, varname, iterators, ANSIColors.RESET))
+            else:
+                lines.append("%s%s:" % (varname, iterators))
+            s = value.tostring()
+            for line in s.split('\n'):
+                lines.append("    " + line)
+    lines.append('')
+    return lines
 
 def format_p4error(e, file_content, color=None):
     """
@@ -316,14 +336,9 @@ def format_p4error(e, file_content, color=None):
 
     # Add traceback first if available
     if e.traceback.frames:
-        # Convert file_content to dict format if it's a list of [filenames, contents]
-        if isinstance(file_content, list) and len(file_content) == 2:
-            filenames, contents = file_content
-            file_content_dict = dict(zip(filenames, contents))
-        else:
-            file_content_dict = file_content
+        file_content_dict = file_content
 
-        traceback_lines = e.traceback.format(file_content_dict, color=color)
+        traceback_lines = e.traceback.format(file_content_dict, color=color, ctx=e.ctx)
         lines.extend(traceback_lines)
 
     # Add the error message at the bottom
