@@ -265,12 +265,32 @@ class Traceback(object):
         adjusted_end_col = max(adjusted_start_col, end_col - original_indent)
         return adjusted_start_col, adjusted_end_col
 
+    def _format_dedented_line(self, source_line, min_indent):
+        """
+        Helper to format a single line by removing common indentation.
+
+        Args:
+            source_line: The source line to format
+            min_indent: Minimum indentation to remove from all lines
+
+        Returns:
+            str: Formatted line with 4-space prefix and common indentation removed
+        """
+        if not source_line.strip():
+            # Empty or whitespace-only line
+            return '    '
+        else:
+            # Remove common indentation and add 4-space prefix
+            dedented = source_line[min_indent:] if len(source_line) >= min_indent else source_line.lstrip()
+            return '    %s' % dedented
+
     def _format_multiline_source(self, source_content):
         """
         Format multi-line source content with optional abbreviation.
 
         For regions with more than 5 lines, shows first 2 and last 2 lines
-        with an omission message in between.
+        with an omission message in between. Preserves relative indentation
+        by removing only the minimum common indentation.
 
         Args:
             source_content: String containing the source lines (may contain newlines)
@@ -281,25 +301,34 @@ class Traceback(object):
         lines = []
         source_lines = source_content.split('\n')
 
+        # Calculate minimum indentation across all non-empty lines
+        min_indent = -1
+        for source_line in source_lines:
+            if source_line.strip():  # Only consider non-empty lines
+                indent = len(source_line) - len(source_line.lstrip())
+                if min_indent < 0 or indent < min_indent:
+                    min_indent = indent
+
+        # If all lines are empty, use 0 indentation
+        if min_indent < 0:
+            min_indent = 0
+
         if len(source_lines) <= 5:
             # Show all lines if 5 or fewer
             for source_line in source_lines:
-                stripped_line = source_line.lstrip()
-                lines.append('    %s' % stripped_line)
+                lines.append(self._format_dedented_line(source_line, min_indent))
         else:
             # Show first 2 and last 2 lines with omission message
             for i in range(2):
                 if i < len(source_lines):
-                    stripped_line = source_lines[i].lstrip()
-                    lines.append('    %s' % stripped_line)
+                    lines.append(self._format_dedented_line(source_lines[i], min_indent))
 
             omitted_count = len(source_lines) - 4
             lines.append('    [%d lines omitted]' % omitted_count)
 
             for i in range(len(source_lines) - 2, len(source_lines)):
                 if i >= 0:
-                    stripped_line = source_lines[i].lstrip()
-                    lines.append('    %s' % stripped_line)
+                    lines.append(self._format_dedented_line(source_lines[i], min_indent))
 
         return lines
 

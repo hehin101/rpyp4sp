@@ -1092,9 +1092,9 @@ def test_format_entry_multi_line_with_indentation():
 
     expected = [
         '  File "test.py", line 1, in indent_func',
-        '    indented line one',
-        '    more indented',
-        '    back to two'
+        '    indented line one',     # Min indent (2) removed: "  indented..." -> "indented..."
+        '      more indented',       # Min indent (2) removed: "    more..." -> "  more..."
+        '    back to two'           # Min indent (2) removed: "  back..." -> "back..."
     ]
     assert result == expected
 
@@ -1191,14 +1191,27 @@ def test_format_multiline_source_many_lines():
     assert result == expected
 
 def test_format_multiline_source_with_indentation():
-    # Test indentation stripping
+    # Test relative indentation preservation
     tb = Traceback()
     source = "  indented1\n    more indented\n  indented2"
     result = tb._format_multiline_source(source)
     expected = [
-        '    indented1',
-        '    more indented',
-        '    indented2'
+        '    indented1',        # Min indent (2) removed, so "  indented1" -> "indented1"
+        '      more indented',   # Min indent (2) removed, so "    more indented" -> "  more indented"
+        '    indented2'         # Min indent (2) removed, so "  indented2" -> "indented2"
+    ]
+    assert result == expected
+
+def test_format_multiline_source_complex_indentation():
+    # Test complex indentation with relative preservation
+    tb = Traceback()
+    source = "    def func():\n        if True:\n            return 42\n    pass"
+    result = tb._format_multiline_source(source)
+    expected = [
+        '    def func():',      # Min indent (4) removed, so "    def func():" -> "def func():"
+        '        if True:',     # Min indent (4) removed, so "        if True:" -> "    if True:"
+        '            return 42', # Min indent (4) removed, so "            return 42" -> "        return 42"
+        '    pass'              # Min indent (4) removed, so "    pass" -> "pass"
     ]
     assert result == expected
 
