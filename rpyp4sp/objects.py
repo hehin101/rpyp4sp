@@ -270,13 +270,13 @@ class StructV(BaseV):
         return self
 
     def get_field(self, atom):
-        idx = jit.promote(self).map.get_field(atom.value)
+        idx = jit.promote(self.map).get_field(atom.value)
         if idx == -1:
             raise P4EvaluationError("no such field %s" % atom.value)
         return self._get_list(idx)
 
     def replace_field(self, atom, value):
-        idx = jit.promote(self).map.get_field(atom.value)
+        idx = jit.promote(self.map).get_field(atom.value)
         if idx == -1:
             raise P4EvaluationError("no such field %s" % atom.value)
         new_fields = self._get_full_list()[:]
@@ -285,7 +285,15 @@ class StructV(BaseV):
 
 
     def __repr__(self):
-        return "objects.StructV.make(%r, %r, %r, %r)" % (self._get_full_list(), self.map, self.typ, self.vid)
+        size = self._get_size_list()
+        if size == 0:
+            return "objects.StructV.make0(%r, %r, %r)" % (self.map, self.typ, self.vid)
+        elif size == 1:
+            return "objects.StructV.make1(%r, %r, %r, %r)" % (self._get_list(0), self.map, self.typ, self.vid)
+        elif size == 2:
+            return "objects.StructV.make2(%r, %r, %r, %r, %r)" % (self._get_list(0), self._get_list(1), self.map, self.typ, self.vid)
+        else:
+            return "objects.StructV.make(%r, %r, %r, %r)" % (self._get_full_list(), self.map, self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | StructV [] -> "{}"
@@ -346,7 +354,15 @@ class CaseV(BaseV):
         self.typ = typ # type: p4specast.Type | None
 
     def __repr__(self):
-        return "objects.CaseV.make(%r, %r, %r, %r)" % (self._get_full_list(), self.mixop, self.typ, self.vid)
+        size = self._get_size_list()
+        if size == 0:
+            return "objects.CaseV.make0(%r, %r, %r)" % (self.mixop, self.typ, self.vid)
+        elif size == 1:
+            return "objects.CaseV.make1(%r, %r, %r, %r)" % (self._get_list(0), self.mixop, self.typ, self.vid)
+        elif size == 2:
+            return "objects.CaseV.make2(%r, %r, %r, %r, %r)" % (self._get_list(0), self._get_list(1), self.mixop, self.typ, self.vid)
+        else:
+            return "objects.CaseV.make(%r, %r, %r, %r)" % (self._get_full_list(), self.mixop, self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | CaseV (mixop, _) when short -> string_of_mixop mixop
@@ -397,34 +413,40 @@ class CaseV(BaseV):
             return compares(self._get_full_list()[:], other._get_full_list()[:]) # TODO, could do better?
 
 
+@inline_small_list(immutable=True)
 class TupleV(BaseV):
-    _immutable_fields_ = ['elements[*]']
-
-    def __init__(self, elements, typ=None, vid=-1):
-        self.elements = elements # type: list[BaseV]
+    def __init__(self, typ=None, vid=-1):
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
 
     def compare(self, other):
         if not isinstance(other, TupleV):
             return self._base_compare(other)
-        return compares(self.elements, other.elements)
+        return compares(self._get_full_list(), other._get_full_list())
 
     def __repr__(self):
-        return "objects.TupleV(%r, %r, %r)" % (self.elements, self.typ, self.vid)
+        size = self._get_size_list()
+        if size == 0:
+            return "objects.TupleV.make0(%r, %r)" % (self.typ, self.vid)
+        elif size == 1:
+            return "objects.TupleV.make1(%r, %r, %r)" % (self._get_list(0), self.typ, self.vid)
+        elif size == 2:
+            return "objects.TupleV.make2(%r, %r, %r, %r)" % (self._get_list(0), self._get_list(1), self.typ, self.vid)
+        else:
+            return "objects.TupleV.make(%r, %r, %r)" % (self._get_full_list(), self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | TupleV values ->
         #     Format.asprintf "(%s)"
         #       (String.concat ", "
         #          (List.map (string_of_value ~short ~level:(level + 1)) values))
-        element_strs = [element.tostring(short, level + 1) for element in self.elements]
+        element_strs = [self._get_list(i).tostring(short, level + 1) for i in range(self._get_size_list())]
         return "(%s)" % ", ".join(element_strs)
 
     @staticmethod
     def fromjson(content, typ, vid):
         elements = [BaseV.fromjson(e) for e in content.get_list_item(1).value_array()]
-        return TupleV(elements, typ, vid)
+        return TupleV.make(elements, typ, vid)
 
 class OptV(BaseV):
     def __init__(self, value, typ=None, vid=-1):
@@ -465,24 +487,29 @@ class OptV(BaseV):
             value = BaseV.fromjson(content.get_list_item(1))
         return OptV(value, typ, vid)
 
+# just optimize lists of size 0, 1, arbitrary
+@inline_small_list(immutable=True, sizemax=2)
 class ListV(BaseV):
-    _immutable_fields_ = ['elements[*]']
-
-    def __init__(self, elements, typ=None, vid=-1):
-        self.elements = elements # type: list[BaseV]
+    def __init__(self, typ=None, vid=-1):
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
 
     def get_list(self):
-        return self.elements
+        return self._get_full_list()
 
     def compare(self, other):
         if not isinstance(other, ListV):
             return self._base_compare(other)
-        return compares(self.elements, other.elements)
+        return compares(self._get_full_list(), other._get_full_list())
 
     def __repr__(self):
-        return "objects.ListV(%r, %r, %r)" % (self.elements, self.typ, self.vid)
+        size = self._get_size_list()
+        if size == 0:
+            return "objects.ListV.make0(%r, %r)" % (self.typ, self.vid)
+        elif size == 1:
+            return "objects.ListV.make1(%r, %r, %r)" % (self._get_list(0), self.typ, self.vid)
+        else:
+            return "objects.ListV.make(%r, %r, %r)" % (self._get_full_list(), self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | ListV [] -> "[]"
@@ -495,13 +522,14 @@ class ListV(BaseV):
         #               let indent = if idx = 0 then "" else indent (level + 1) in
         #               indent ^ string_of_value ~short ~level:(level + 2) value)
         #             values))
-        if not self.elements:
+        if not self._get_size_list():
             return "[]"
         if short:
-            return "[ .../%d ]" % len(self.elements)
+            return "[ .../%d ]" % self._get_size_list()
 
         parts = []
-        for idx, element in enumerate(self.elements):
+        for idx in range(self._get_size_list()):
+            element = self._get_list(idx)
             if idx == 0:
                 indent_str = ""
             else:
@@ -514,7 +542,7 @@ class ListV(BaseV):
     @staticmethod
     def fromjson(content, typ, vid):
         elements = [BaseV.fromjson(e) for e in content.get_list_item(1).value_array()]
-        return ListV(elements, typ, vid)
+        return ListV.make(elements, typ, vid)
 
 
 class FuncV(BaseV):
