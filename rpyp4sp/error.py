@@ -122,21 +122,31 @@ class Traceback(object):
         # Try to extract and display the source line
         source_line = extract_line(region, file_content)
         if source_line is not None:
-            lines.append('    %s' % source_line)
+            # Regularize indentation - strip leading whitespace and add 4 spaces
+            stripped_line = source_line.lstrip()
+            lines.append('    %s' % stripped_line)
 
             # Add caret indicator if it's a line span with column information
             if region.is_line_span() and region.left.has_information() and region.right.has_information():
                 start_col = region.left.column
                 end_col = region.right.column
 
+                # Adjust column positions based on how much whitespace was stripped
+                original_indent = len(source_line) - len(stripped_line)
+                adjusted_start_col = max(1, start_col - original_indent)
+                adjusted_end_col = max(adjusted_start_col, end_col - original_indent)
+
                 # Create caret line with appropriate spacing and carets
-                if start_col > 0 and end_col >= start_col:
-                    caret_line = '    ' + ' ' * (start_col - 1)
-                    if end_col > start_col:
-                        caret_line += '^' * (end_col - start_col + 1)
-                    else:
-                        caret_line += '^'
-                    lines.append(caret_line)
+                if start_col > 0 and end_col >= start_col and adjusted_start_col > 0 and adjusted_end_col >= adjusted_start_col:
+                    # Skip carets if they would cover the entire non-empty line
+                    stripped_line_length = len(stripped_line.rstrip())  # Remove trailing whitespace for length check
+                    if not (adjusted_start_col == 1 and adjusted_end_col >= stripped_line_length):
+                        caret_line = '    ' + ' ' * (adjusted_start_col - 1)
+                        if adjusted_end_col > adjusted_start_col:
+                            caret_line += '^' * (adjusted_end_col - adjusted_start_col + 1)
+                        else:
+                            caret_line += '^'
+                        lines.append(caret_line)
 
         return lines
 
