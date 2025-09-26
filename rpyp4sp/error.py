@@ -100,15 +100,25 @@ def extract_line(region, file_content):
 
 
 def can_colorize():
-    """
-    Check if stderr (fd 2) is a TTY and can display colors.
-
-    Returns:
-        bool: True if stderr is a TTY, False otherwise
-    """
     import os
+
+    # Check environment variables that disable colors
+    if os.environ.get('NO_COLOR'):
+        return False
+    if os.environ.get('ANSI_COLORS_DISABLED'):
+        return False
+    if os.environ.get('FORCE_COLOR') == '0':
+        return False
+    if os.environ.get('TERM') == 'dumb':
+        return False
+
+    # Force color if explicitly requested
+    if os.environ.get('FORCE_COLOR') == '1':
+        return True
+
+    # Default: check if stdout is a TTY
     try:
-        return os.isatty(2)  # fd 2 is stderr
+        return os.isatty(1)
     except (AttributeError, OSError):
         return False
 
@@ -238,14 +248,38 @@ class Traceback(object):
         reversed_frames = self.frames[:]
         reversed_frames.reverse()
 
-        # Format all entries
+        # Format all entries with run-length encoding for repeated entries
         all_lines = []
         if reversed_frames:
             all_lines.append("Traceback (most recent call last):")
 
+        prev_entry_lines = None
+        repeat_count = 0
+
         for name, region, ast in reversed_frames:
             entry_lines = self._format_entry(name, region, file_content, color=color)
-            all_lines.extend(entry_lines)
+
+            if prev_entry_lines is not None and entry_lines == prev_entry_lines:
+                repeat_count += 1
+            else:
+                # If we have accumulated repeats, add the repeat message
+                if repeat_count > 0:
+                    if repeat_count == 1:
+                        all_lines.append("  [Previous entry repeated 1 time]")
+                    else:
+                        all_lines.append("  [Previous entry repeated %d times]" % repeat_count)
+                    repeat_count = 0
+
+                # Add the current entry
+                all_lines.extend(entry_lines)
+                prev_entry_lines = entry_lines
+
+        # Handle any remaining repeats at the end
+        if repeat_count > 0:
+            if repeat_count == 1:
+                all_lines.append("  [Previous entry repeated 1 time]")
+            else:
+                all_lines.append("  [Previous entry repeated %d times]" % repeat_count)
 
         return all_lines
 
@@ -266,10 +300,8 @@ def format_p4error(e, file_content, color=None):
         color = can_colorize()
 
     lines = []
-    # Add the error message
-    lines.append(e.format(color=color))
 
-    # Add traceback if available
+    # Add traceback first if available
     if e.traceback.frames:
         # Convert file_content to dict format if it's a list of [filenames, contents]
         if isinstance(file_content, list) and len(file_content) == 2:
@@ -277,8 +309,11 @@ def format_p4error(e, file_content, color=None):
             file_content_dict = dict(zip(filenames, contents))
         else:
             file_content_dict = file_content
-        
+
         traceback_lines = e.traceback.format(file_content_dict, color=color)
         lines.extend(traceback_lines)
+
+    # Add the error message at the bottom
+    lines.append(e.format(color=color))
 
     return '\n'.join(lines)

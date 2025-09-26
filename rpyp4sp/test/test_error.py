@@ -670,9 +670,9 @@ def test_format_p4error_function():
 
     result = format_p4error(error_with_trace, {}, color=False)
     lines = result.split('\n')
-    assert lines[0] == "Division by zero"
-    assert "Traceback (most recent call last):" in lines[1]
-    assert 'File "calc.py", line 10, in divide' in lines[2]
+    assert "Traceback (most recent call last):" in lines[0]
+    assert 'File "calc.py", line 10, in divide' in lines[1]
+    assert lines[-1] == "Division by zero"  # Error message at bottom
 
     # Test auto color detection (should return False when not in TTY)
     result_auto = format_p4error(error_with_trace, {})  # color=None, auto-detect
@@ -681,16 +681,131 @@ def test_format_p4error_function():
     # Test with colors enabled
     result_colored = format_p4error(error_with_trace, {}, color=True)
     lines_colored = result_colored.split('\n')
-    assert lines_colored[0] == "Division by zero"  # Error message unchanged
-    assert "Traceback (most recent call last):" in lines_colored[1]
+    assert "Traceback (most recent call last):" in lines_colored[0]
     # File line should have color codes
-    assert '\033[35m"calc.py"\033[0m' in lines_colored[2]  # MAGENTA filename
-    assert '\033[35m10\033[0m' in lines_colored[2]  # MAGENTA line number
+    assert '\033[35m"calc.py"\033[0m' in lines_colored[1]  # MAGENTA filename
+    assert '\033[35m10\033[0m' in lines_colored[1]  # MAGENTA line number
+    assert lines_colored[-1] == "Division by zero"  # Error message at bottom
 
     # Test with new list format [filenames, contents]
     file_content_list = [["calc.py"], ["error content"]]
     result_list_format = format_p4error(error_with_trace, file_content_list, color=False)
     lines_list = result_list_format.split('\n')
-    assert lines_list[0] == "Division by zero"
-    assert "Traceback (most recent call last):" in lines_list[1]
-    assert 'File "calc.py", line 10, in divide' in lines_list[2]
+    assert "Traceback (most recent call last):" in lines_list[0]
+    assert 'File "calc.py", line 10, in divide' in lines_list[1]
+    assert lines_list[-1] == "Division by zero"
+
+
+def test_traceback_run_length_encoding_no_repeats():
+    # Test normal case with no repeated entries
+    tb = Traceback()
+    region1 = Region.line_span('test1.py', 1, 1, 5)
+    region2 = Region.line_span('test2.py', 2, 1, 5)
+    tb.add_frame("func1", region1)
+    tb.add_frame("func2", region2)
+
+    result = tb.format({}, color=False)
+
+    # Should have normal traceback with no repeat messages
+    assert "Traceback (most recent call last):" in result
+    assert "repeated" not in '\n'.join(result)
+
+
+def test_traceback_run_length_encoding_single_repeat():
+    # Test case with one repeated entry
+    tb = Traceback()
+    region = Region.line_span('test.py', 1, 1, 5)
+    tb.add_frame("func", region)
+    tb.add_frame("func", region)  # Same function and region
+    tb.add_frame("other", None)
+
+    result = tb.format({"test.py": "func()"}, color=False)
+
+    expected = [
+        "Traceback (most recent call last):",
+        '  File "<unknown>", line ?, in other',
+        '  File "test.py", line 1, in func',
+        '    func()',
+        '    ^^^^^',
+        "  [Previous entry repeated 1 time]"
+    ]
+    assert result == expected
+
+
+def test_traceback_run_length_encoding_multiple_repeats():
+    # Test case with multiple repeated entries
+    tb = Traceback()
+    region = Region.line_span('test.py', 1, 1, 5)
+    tb.add_frame("func", region)
+    tb.add_frame("func", region)
+    tb.add_frame("func", region)
+    tb.add_frame("func", region)  # 4 total, so 3 repeats
+
+    result = tb.format({"test.py": "func()"}, color=False)
+
+    expected = [
+        "Traceback (most recent call last):",
+        '  File "test.py", line 1, in func',
+        '    func()',
+        '    ^^^^^',
+        "  [Previous entry repeated 3 times]"
+    ]
+    assert result == expected
+
+
+def test_traceback_run_length_encoding_repeats_at_end():
+    # Test case where repeated entries are at the end
+    tb = Traceback()
+    region1 = Region.line_span('test1.py', 1, 1, 5)
+    region2 = Region.line_span('test2.py', 2, 1, 5)
+    tb.add_frame("func1", region1)
+    tb.add_frame("func2", region2)
+    tb.add_frame("func2", region2)  # Repeat at end
+
+    result = tb.format({"test1.py": "func1()", "test2.py": "func2()"}, color=False)
+
+    expected = [
+        "Traceback (most recent call last):",
+        '  File "test2.py", line 2, in func2',
+        "  [Previous entry repeated 1 time]",
+        '  File "test1.py", line 1, in func1',
+        '    func1()',
+        '    ^^^^^'
+    ]
+    assert result == expected
+
+
+def test_traceback_run_length_encoding_different_source_not_repeated():
+    # Test that entries with same function name but different source are not considered repeats
+    tb = Traceback()
+    region1 = Region.line_span('test.py', 1, 1, 5)
+    region2 = Region.line_span('test.py', 2, 1, 5)
+    tb.add_frame("func", region1)
+    tb.add_frame("func", region2)  # Same function, different line
+
+    result = tb.format({"test.py": "func1()\nfunc2()"}, color=False)
+
+    # Should not show repeat message since the source lines are different
+    assert "repeated" not in '\n'.join(result)
+    assert len([line for line in result if "func" in line and "File" in line]) == 2
+
+
+def test_format_p4error_with_repeated_frames():
+    # Test format_p4error with run-length encoded traceback
+    from rpyp4sp.error import format_p4error
+
+    error = P4Error("Recursive error")
+    region = Region.line_span('recursive.py', 5, 1, 10)
+
+    # Add same frame multiple times
+    error.traceback.add_frame("recursive_func", region)
+    error.traceback.add_frame("recursive_func", region)
+    error.traceback.add_frame("recursive_func", region)
+
+    result = format_p4error(error, {"recursive.py": "recursive()"}, color=False)
+    lines = result.split('\n')
+
+    # Traceback should be first, error message last
+    assert lines[0] == "Traceback (most recent call last):"
+    assert "repeated 2 times" in '\n'.join(lines)
+    assert lines[-1] == "Recursive error"
