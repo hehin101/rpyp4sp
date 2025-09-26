@@ -6,7 +6,7 @@ from rpython.rlib.nonconst import NonConstant
 from rpython.rlib import objectmodel
 
 from rpyp4sp import p4specast, objects, builtin, context, integers, rpyjson, interp
-from rpyp4sp.error import P4Error
+from rpyp4sp.error import P4Error, can_colorize
 from rpyp4sp.test.test_interp import make_context
 from rpython.rlib import rsignal
 
@@ -40,6 +40,25 @@ def parse_args(argv, shortname, longname="", want_arg=True, many=False):
 
 def parse_flag(argv, flagname, longname=""):
     return bool(parse_args(argv, flagname, longname=longname, want_arg=False))
+
+
+def format_p4error(e, color=None):
+    """Format a P4Error exception with traceback information"""
+    if color is None:
+        color = can_colorize()
+
+    lines = []
+    # Add the error message
+    lines.append(e.format(color=color))
+
+    # Add traceback if available
+    if e.traceback.frames:
+        # For now, use empty file content since we don't have source files available
+        file_content = {}
+        traceback_lines = e.traceback.format(file_content, color=color)
+        lines.extend(traceback_lines)
+
+    return '\n'.join(lines)
 
 def command_run_test_jsonl(argv):
     ctx = make_context()
@@ -86,7 +105,8 @@ def command_run_test_jsonl(argv):
                 except P4Error as e:
                     #import pdb; pdb.xpm()
                     error += 1
-                    print("Function test exception:", name, e.__class__.__name__, e.msg)
+                    print("Function test exception:", name)
+                    print(format_p4error(e))
                     continue
                 except KeyError as e:
                     #import pdb; pdb.xpm()
@@ -118,7 +138,8 @@ def command_run_test_jsonl(argv):
                 except P4Error as e:
                     #import pdb; pdb.xpm()
                     error += 1
-                    print("Relation test exception:", name, e.__class__.__name__, e.msg)
+                    print("Relation test exception:", name)
+                    print(format_p4error(e))
                     continue
                 except KeyError as e:
                     #import pdb; pdb.xpm()
@@ -141,7 +162,8 @@ def command_run_test_jsonl(argv):
                 except P4Error as e:
                     #import pdb; pdb.xpm()
                     error += 1
-                    print("Builtin test exception:", name, e.__class__.__name__, e.msg)
+                    print("Builtin test exception:", name)
+                    print(format_p4error(e))
                     continue
                 except KeyError as e:
                     #import pdb; pdb.xpm()
@@ -179,7 +201,8 @@ def command_run_p4(argv):
         try:
             resctx, values = interp.invoke_rel(ctx, p4specast.Id("Program_ok", p4specast.NO_REGION), [value])
         except P4Error as e:
-            print("Function test exception:", e, e.msg)
+            print("P4 execution exception:")
+            print(format_p4error(e))
         except KeyError as e:
             print("KeyError")
         t3 = time.time()
