@@ -810,3 +810,47 @@ def test_format_p4error_with_repeated_frames():
     assert lines[0] == "Traceback (most recent call last):"
     assert "repeated 2 times" in '\n'.join(lines)
     assert lines[-1] == "Recursive error"
+
+
+def test_should_skip_highlighting():
+    # Test the _should_skip_highlighting helper method
+    tb = Traceback()
+
+    # Test case 1: Should skip when highlighting covers entire line
+    # Line: "func()" (6 chars), highlight from col 1 to 6 or beyond
+    stripped_line1 = "func()"
+    assert tb._should_skip_highlighting(1, 6, stripped_line1) == True
+    assert tb._should_skip_highlighting(1, 7, stripped_line1) == True  # Beyond end
+
+    # Test case 2: Should not skip when highlighting is partial
+    # Line: "func()" (6 chars), highlight from col 2 to 4 (partial)
+    assert tb._should_skip_highlighting(2, 4, stripped_line1) == False
+    assert tb._should_skip_highlighting(1, 3, stripped_line1) == False  # Start at 1 but not full
+
+    # Test case 3: Should skip when line has trailing whitespace
+    # Line: "func()   " (9 chars with trailing spaces), but rstrip() gives 6 chars
+    stripped_line_with_trailing = "func()   "
+    assert tb._should_skip_highlighting(1, 6, stripped_line_with_trailing) == True
+    assert tb._should_skip_highlighting(1, 9, stripped_line_with_trailing) == True
+
+    # Test case 4: Should not skip partial highlighting with trailing whitespace
+    assert tb._should_skip_highlighting(2, 5, stripped_line_with_trailing) == False
+
+    # Test case 5: Edge case - empty line
+    empty_line = ""
+    assert tb._should_skip_highlighting(1, 1, empty_line) == True
+
+    # Test case 6: Edge case - whitespace-only line
+    whitespace_line = "   "
+    assert tb._should_skip_highlighting(1, 3, whitespace_line) == True
+    assert tb._should_skip_highlighting(1, 1, whitespace_line) == True  # rstrip() gives 0 length
+
+    # Test case 7: Should not skip when start column is not 1
+    long_line = "some longer function call"
+    assert tb._should_skip_highlighting(5, 25, long_line) == False  # Start not at 1
+
+    # Test case 8: Complex case with indented content (already stripped)
+    stripped_code = "return value + 1"
+    assert tb._should_skip_highlighting(1, 16, stripped_code) == True  # Full line
+    assert tb._should_skip_highlighting(1, 6, stripped_code) == False  # Just "return"
+    assert tb._should_skip_highlighting(8, 13, stripped_code) == False  # Just "value"

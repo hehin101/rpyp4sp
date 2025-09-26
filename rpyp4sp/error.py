@@ -156,6 +156,26 @@ class Traceback(object):
             name = oldname
         self.frames.append((name, region, ast))
 
+    def _format_file_line(self, name, filename, line_num, color):
+        """Helper to format the file/line/function header line."""
+        if color:
+            return '  File %s"%s"%s, line %s%s%s, in %s' % (
+                ANSIColors.MAGENTA, filename, ANSIColors.RESET,
+                ANSIColors.MAGENTA, line_num, ANSIColors.RESET, name)
+        else:
+            return '  File "%s", line %s, in %s' % (filename, line_num, name)
+
+    def _should_skip_highlighting(self, adjusted_start_col, adjusted_end_col, stripped_line):
+        """Helper to determine if highlighting should be skipped for full-line coverage."""
+        stripped_line_length = len(stripped_line.rstrip())
+        return adjusted_start_col == 1 and adjusted_end_col >= stripped_line_length
+
+    def _adjust_column_positions(self, start_col, end_col, original_indent):
+        """Helper to adjust column positions after stripping indentation."""
+        adjusted_start_col = max(1, start_col - original_indent)
+        adjusted_end_col = max(adjusted_start_col, end_col - original_indent)
+        return adjusted_start_col, adjusted_end_col
+
     def _format_entry(self, name, region, file_content, color=False):
         """
         Format a single traceback entry.
@@ -171,80 +191,58 @@ class Traceback(object):
         """
         lines = []
 
+        # Handle missing region information
         if region is None or not region.has_information():
-            if color:
-                lines.append('  File %s"%s"%s, line %s%s%s, in %s' % (
-                    ANSIColors.MAGENTA, "<unknown>", ANSIColors.RESET,
-                    ANSIColors.MAGENTA, "?", ANSIColors.RESET, name))
-            else:
-                lines.append('  File "<unknown>", line ?, in %s' % name)
+            lines.append(self._format_file_line(name, "<unknown>", "?", color))
             return lines
 
+        # Extract filename and line number
         filename = region.left.file if region.left.has_information() and region.left.file else "<unknown>"
         line_num = str(region.left.line) if region.left.has_information() else "?"
-
-        if color:
-            lines.append('  File %s"%s"%s, line %s%s%s, in %s' % (
-                ANSIColors.MAGENTA, filename, ANSIColors.RESET,
-                ANSIColors.MAGENTA, line_num, ANSIColors.RESET, name))
-        else:
-            lines.append('  File "%s", line %s, in %s' % (filename, line_num, name))
+        lines.append(self._format_file_line(name, filename, line_num, color))
 
         # Try to extract and display the source line
         source_line = extract_line(region, file_content)
         if source_line is not None:
-            # Regularize indentation - strip leading whitespace and add 4 spaces
             stripped_line = source_line.lstrip()
+            original_indent = len(source_line) - len(stripped_line)
 
-            # Color the source line if color is enabled and we have region info
-            if color and region.is_line_span() and region.left.has_information() and region.right.has_information():
+            # Handle source line coloring and caret indicators
+            if (region.is_line_span() and region.left.has_information() and
+                region.right.has_information()):
+
                 start_col = region.left.column
                 end_col = region.right.column
-                original_indent = len(source_line) - len(stripped_line)
-                adjusted_start_col = max(1, start_col - original_indent)
-                adjusted_end_col = max(adjusted_start_col, end_col - original_indent)
+                adjusted_start_col, adjusted_end_col = self._adjust_column_positions(
+                    start_col, end_col, original_indent)
 
-                # Only color if it doesn't cover the entire non-empty line
-                stripped_line_length = len(stripped_line.rstrip())
-                if not (adjusted_start_col == 1 and adjusted_end_col >= stripped_line_length):
-                    # Color the highlighted portion
+                skip_highlighting = self._should_skip_highlighting(adjusted_start_col, adjusted_end_col, stripped_line)
+
+                # Source line with optional color highlighting
+                if color and not skip_highlighting:
                     before = safe_slice(stripped_line, 0, adjusted_start_col - 1)
                     highlighted = safe_slice(stripped_line, adjusted_start_col - 1, adjusted_end_col)
                     after = safe_slice(stripped_line, adjusted_end_col)
                     colored_line = before + ANSIColors.BOLD_RED + highlighted + ANSIColors.RESET + after
                     lines.append('    %s' % colored_line)
                 else:
-                    # Full line coverage - no coloring
                     lines.append('    %s' % stripped_line)
+
+                # Add caret indicator if valid column range and not skipping
+                if (start_col > 0 and end_col >= start_col and
+                    adjusted_start_col > 0 and adjusted_end_col >= adjusted_start_col and
+                    not skip_highlighting):
+
+                    caret_line = '    ' + ' ' * (adjusted_start_col - 1)
+                    carets = '^' * (adjusted_end_col - adjusted_start_col + 1) if adjusted_end_col > adjusted_start_col else '^'
+
+                    if color:
+                        caret_line += ANSIColors.BOLD_RED + carets + ANSIColors.RESET
+                    else:
+                        caret_line += carets
+                    lines.append(caret_line)
             else:
                 lines.append('    %s' % stripped_line)
-
-            # Add caret indicator if it's a line span with column information
-            if region.is_line_span() and region.left.has_information() and region.right.has_information():
-                start_col = region.left.column
-                end_col = region.right.column
-
-                # Adjust column positions based on how much whitespace was stripped
-                original_indent = len(source_line) - len(stripped_line)
-                adjusted_start_col = max(1, start_col - original_indent)
-                adjusted_end_col = max(adjusted_start_col, end_col - original_indent)
-
-                # Create caret line with appropriate spacing and carets
-                if start_col > 0 and end_col >= start_col and adjusted_start_col > 0 and adjusted_end_col >= adjusted_start_col:
-                    # Skip carets if they would cover the entire non-empty line
-                    stripped_line_length = len(stripped_line.rstrip())  # Remove trailing whitespace for length check
-                    if not (adjusted_start_col == 1 and adjusted_end_col >= stripped_line_length):
-                        caret_line = '    ' + ' ' * (adjusted_start_col - 1)
-                        if adjusted_end_col > adjusted_start_col:
-                            carets = '^' * (adjusted_end_col - adjusted_start_col + 1)
-                        else:
-                            carets = '^'
-
-                        if color:
-                            caret_line += ANSIColors.BOLD_RED + carets + ANSIColors.RESET
-                        else:
-                            caret_line += carets
-                        lines.append(caret_line)
 
         return lines
 
