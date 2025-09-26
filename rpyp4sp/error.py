@@ -56,9 +56,114 @@ class P4ParseError(P4Error):
     """Error during parsing operations"""
     pass
 
+def extract_line(region, file_content):
+    """
+    Extract the line specified by a region from file content.
+
+    Args:
+        region: A Region object
+        file_content: Dict with filename keys and file content (str) as values
+
+    Returns:
+        str: The line content if region is a line_span and file exists, None otherwise
+    """
+    if region is None:
+        return None
+
+    if not region.is_line_span():
+        return None
+
+    filename = region.left.file
+    if filename not in file_content:
+        return None
+
+    content = file_content[filename]
+    lines = content.splitlines()
+
+    # Convert to 0-based indexing (region uses 1-based line numbers)
+    line_number = region.left.line - 1
+
+    if line_number < 0 or line_number >= len(lines):
+        return None
+
+    return lines[line_number]
+
+
 class Traceback(object):
     def __init__(self):
         self.frames = []
 
     def add_frame(self, name, ast):
         self.frames.append((name, ast.region, ast))
+
+    def _format_entry(self, name, region, file_content):
+        """
+        Format a single traceback entry.
+
+        Args:
+            name: Function/context name
+            region: Region object
+            file_content: Dict with filename keys and file content (str) as values
+
+        Returns:
+            list of str: Lines representing the formatted traceback entry
+        """
+        lines = []
+
+        if region is None or not region.has_information():
+            lines.append('  File "<unknown>", line ?, in %s' % name)
+            return lines
+
+        filename = region.left.file if region.left.has_information() and region.left.file else "<unknown>"
+        line_num = region.left.line if region.left.has_information() else "?"
+
+        lines.append('  File "%s", line %s, in %s' % (filename, line_num, name))
+
+        # Try to extract and display the source line
+        source_line = extract_line(region, file_content)
+        if source_line is not None:
+            lines.append('    %s' % source_line)
+
+            # Add caret indicator if it's a line span with column information
+            if region.is_line_span() and region.left.has_information() and region.right.has_information():
+                start_col = region.left.column
+                end_col = region.right.column
+
+                # Create caret line with appropriate spacing and carets
+                if start_col > 0 and end_col >= start_col:
+                    caret_line = '    ' + ' ' * (start_col - 1)
+                    if end_col > start_col:
+                        caret_line += '^' * (end_col - start_col + 1)
+                    else:
+                        caret_line += '^'
+                    lines.append(caret_line)
+
+        return lines
+
+    def format(self, file_content):
+        """
+        Format the complete traceback.
+
+        Args:
+            file_content: Dict with filename keys and file content (str) as values
+
+        Returns:
+            list of str: Lines representing the formatted traceback
+        """
+        if not self.frames:
+            return []
+
+        # Reverse the frames to show most recent call last
+        reversed_frames = self.frames[:]
+        reversed_frames.reverse()
+
+        # Format all entries
+        all_lines = []
+        if reversed_frames:
+            all_lines.append("Traceback (most recent call last):")
+
+        for name, region, ast in reversed_frames:
+            entry_lines = self._format_entry(name, region, file_content)
+            all_lines.extend(entry_lines)
+
+        return all_lines
