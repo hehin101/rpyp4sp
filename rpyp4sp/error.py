@@ -156,11 +156,18 @@ class Traceback(object):
             name = oldname
         self.frames.append((name, region, ast))
 
-    def _format_file_line(self, name, filename, line_num, color):
+    def _format_file_line(self, name, filename, line_num, color, spec_dirname=None):
         """Helper to format the file/line/function header line."""
         if color:
+            formatted_filename = filename
+            if spec_dirname is not None and filename != "<unknown>":
+                # Create terminal link with file:// scheme
+                import os
+                absolute_path = spec_dirname + os.path.sep + filename
+                formatted_filename = '\033]8;;file://%s\033\\%s\033]8;;\033\\' % (absolute_path, filename)
+
             return '  File %s"%s"%s, line %s%s%s, in %s%s%s' % (
-                ANSIColors.MAGENTA, filename, ANSIColors.RESET,
+                ANSIColors.MAGENTA, formatted_filename, ANSIColors.RESET,
                 ANSIColors.MAGENTA, line_num, ANSIColors.RESET,
                 ANSIColors.MAGENTA, name, ANSIColors.RESET)
         else:
@@ -187,7 +194,7 @@ class Traceback(object):
         adjusted_end_col = max(adjusted_start_col, end_col - original_indent)
         return adjusted_start_col, adjusted_end_col
 
-    def _format_entry(self, name, region, file_content, color=False):
+    def _format_entry(self, name, region, file_content, color=False, spec_dirname=None):
         """
         Format a single traceback entry.
 
@@ -196,6 +203,7 @@ class Traceback(object):
             region: Region object
             file_content: Dict with filename keys and file content (str) as values
             color: Whether to include ANSI color codes
+            spec_dirname: Absolute path to join with relative file paths
 
         Returns:
             list of str: Lines representing the formatted traceback entry
@@ -204,13 +212,13 @@ class Traceback(object):
 
         # Handle missing region information
         if region is None or not region.has_information():
-            lines.append(self._format_file_line(name, "<unknown>", "?", color))
+            lines.append(self._format_file_line(name, "<unknown>", "?", color, spec_dirname))
             return lines
 
         # Extract filename and line number
         filename = region.left.file if region.left.has_information() and region.left.file else "<unknown>"
         line_num = str(region.left.line) if region.left.has_information() else "?"
-        lines.append(self._format_file_line(name, filename, line_num, color))
+        lines.append(self._format_file_line(name, filename, line_num, color, spec_dirname))
 
         # Try to extract and display the source line
         source_line = extract_line(region, file_content)
@@ -257,13 +265,15 @@ class Traceback(object):
 
         return lines
 
-    def format(self, file_content, color=False, ctx=None):
+    def format(self, file_content, color=False, ctx=None, spec_dirname=None):
         """
         Format the complete traceback.
 
         Args:
             file_content: Dict with filename keys and file content (str) as values
             color: Whether to include ANSI color codes
+            ctx: Context for local variables
+            spec_dirname: Absolute path to join with relative file paths
 
         Returns:
             list of str: Lines representing the formatted traceback
@@ -284,7 +294,7 @@ class Traceback(object):
         repeat_count = 0
 
         for name, region, ast in reversed_frames:
-            entry_lines = self._format_entry(name, region, file_content, color=color)
+            entry_lines = self._format_entry(name, region, file_content, color=color, spec_dirname=spec_dirname)
 
             if prev_entry_lines is not None and entry_lines == prev_entry_lines:
                 repeat_count += 1
@@ -329,7 +339,7 @@ def format_ctx(ctx, entry_line, color=False):
     lines.append('')
     return lines
 
-def format_p4error(e, file_content, color=None):
+def format_p4error(e, file_content, color=None, spec_dirname=None):
     """
     Format a P4Error exception with traceback information.
 
@@ -337,6 +347,7 @@ def format_p4error(e, file_content, color=None):
         e: P4Error exception to format
         file_content: List of [filenames, contents] or dict with filename keys and file content (str) as values
         color: Whether to include ANSI color codes. If None, auto-detects TTY
+        spec_dirname: Absolute path to join with relative file paths
 
     Returns:
         str: Formatted error message with traceback
@@ -350,7 +361,7 @@ def format_p4error(e, file_content, color=None):
     if e.traceback.frames:
         file_content_dict = file_content
 
-        traceback_lines = e.traceback.format(file_content_dict, color=color, ctx=e.ctx)
+        traceback_lines = e.traceback.format(file_content_dict, color=color, ctx=e.ctx, spec_dirname=spec_dirname)
         lines.extend(traceback_lines)
 
     # Add the error message at the bottom

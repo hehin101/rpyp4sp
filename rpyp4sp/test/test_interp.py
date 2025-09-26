@@ -15,6 +15,7 @@ def load():
     with open(ASTFN) as f:
         value = loads(f.read())
     if value.is_object:
+        spec_dirname = value.get_dict_value("spec_dirname").value_string()
         file_content_json = value.get_dict_value("file_content")
         file_names_json = file_content_json.get_list_item(0)
         file_content_json = file_content_json.get_list_item(1)
@@ -27,14 +28,14 @@ def load():
     defs = []
     for i, d in enumerate(value.value_array()):
         defs.append(p4specast.Def.fromjson(d))
-    return defs, file_content
+    return defs, file_content, spec_dirname
 
 def make_context(loaded=[]):
     if loaded:
         return loaded[0]
-    spec, file_content = load()
+    spec, file_content, spec_dirname = load()
     ctx = Context('dummy')
-    ctx.load_spec(spec, file_content)
+    ctx.load_spec(spec, file_content, spec_dirname)
     loaded.append(ctx)
     return ctx
 

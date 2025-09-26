@@ -64,7 +64,7 @@ def main():
 
         # Step 4: Combine into final structure
         print("Combining AST and file content...")
-        spec_dirname = os.path.abspath('spec')
+        spec_dirname = os.path.dirname(os.path.abspath('spec'))
         combined_data = {
             'ast': ast_data,
             'file_content': [filenames, file_contents],

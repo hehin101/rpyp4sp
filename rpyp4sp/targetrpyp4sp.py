@@ -185,7 +185,7 @@ def command_run_p4(argv):
             resctx, values = interp.invoke_rel(ctx, p4specast.Id("Program_ok", p4specast.NO_REGION), [value])
         except P4Error as e:
             print("P4 execution exception:")
-            print(format_p4error(e, ctx.glbl.file_content))
+            print(format_p4error(e, ctx.glbl.file_content, spec_dirname=ctx.glbl.spec_dirname))
         except KeyError as e:
             print("KeyError")
         t3 = time.time()

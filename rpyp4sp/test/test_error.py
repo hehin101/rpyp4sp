@@ -870,3 +870,113 @@ def test_should_skip_highlighting():
     # Should not skip if line doesn't start with "-- "
     regular_line = "if condition then"
     assert tb._should_skip_highlighting(3, 17, regular_line) == False  # No "-- " prefix
+
+
+def test_format_p4error_with_spec_dirname():
+    # Test format_p4error with spec_dirname parameter
+    from rpyp4sp.error import format_p4error
+
+    error = P4Error("File path error")
+    region = Region.line_span('spec/test.watsup', 5, 1, 10)
+    error.traceback.add_frame("test_func", region)
+
+    file_content = {"spec/test.watsup": "test content here"}
+
+    # Test without spec_dirname (should work as before)
+    result_no_dirname = format_p4error(error, file_content, color=False)
+    lines = result_no_dirname.split('\n')
+    assert 'File "spec/test.watsup", line 5, in test_func' in lines[1]
+
+    # Test with spec_dirname (should still show relative path in output)
+    spec_dirname = "/abs/path/to/project"
+    result_with_dirname = format_p4error(error, file_content, color=False, spec_dirname=spec_dirname)
+    lines = result_with_dirname.split('\n')
+    assert 'File "spec/test.watsup", line 5, in test_func' in lines[1]  # Display should still show relative path
+
+    # Both results should be identical since the spec_dirname is passed through but doesn't change display
+    assert result_no_dirname == result_with_dirname
+
+
+def test_traceback_format_with_spec_dirname():
+    # Test Traceback.format with spec_dirname parameter
+    tb = Traceback()
+    region = Region.line_span('relative/path.watsup', 10, 5, 15)
+    tb.add_frame("test_function", region)
+
+    file_content = {"relative/path.watsup": "some code content"}
+
+    # Test without spec_dirname
+    result_no_dirname = tb.format(file_content, color=False)
+    assert 'File "relative/path.watsup", line 10, in test_function' in result_no_dirname[1]
+
+    # Test with spec_dirname
+    spec_dirname = "/project/root"
+    result_with_dirname = tb.format(file_content, color=False, spec_dirname=spec_dirname)
+    assert 'File "relative/path.watsup", line 10, in test_function' in result_with_dirname[1]
+
+    # Results should be identical (spec_dirname is for internal use, doesn't change display)
+    assert result_no_dirname == result_with_dirname
+
+
+def test_terminal_links_with_spec_dirname():
+    # Test that terminal links are created when color=True and spec_dirname is provided
+    from rpyp4sp.error import format_p4error
+
+    error = P4Error("Link test error")
+    region = Region.line_span('spec/test.watsup', 5, 1, 10)
+    error.traceback.add_frame("link_func", region)
+
+    file_content = {"spec/test.watsup": "test content"}
+    spec_dirname = "/project/root"
+
+    # Test with color=True and spec_dirname (should create terminal links)
+    result_with_links = format_p4error(error, file_content, color=True, spec_dirname=spec_dirname)
+    lines = result_with_links.split('\n')
+
+    # Should contain terminal link escape sequences
+    assert '\033]8;;file:///project/root/spec/test.watsup\033\\' in lines[1]  # Link start
+    assert '\033]8;;\033\\' in lines[1]  # Link end
+    # Should still display the relative filename
+    assert 'spec/test.watsup' in lines[1]
+
+    # Test with color=False (should not create terminal links)
+    result_no_links = format_p4error(error, file_content, color=False, spec_dirname=spec_dirname)
+    lines_no_links = result_no_links.split('\n')
+
+    # Should not contain terminal link escape sequences
+    assert '\033]8;;' not in lines_no_links[1]
+    assert 'File "spec/test.watsup", line 5, in link_func' in lines_no_links[1]
+
+
+def test_terminal_links_unknown_filename():
+    # Test that terminal links are not created for <unknown> filenames
+    tb = Traceback()
+
+    # Test with unknown region
+    result = tb._format_entry("unknown_func", None, {}, color=True, spec_dirname="/project")
+
+    # Should not contain terminal link escape sequences for <unknown>
+    assert '\033]8;;' not in result[0]
+    assert '<unknown>' in result[0]
+
+
+def test_terminal_links_direct_format_entry():
+    # Test _format_entry directly with terminal links
+    tb = Traceback()
+    region = Region.line_span('relative/file.watsup', 10, 1, 5)
+    file_content = {"relative/file.watsup": "code here"}
+
+    # Test with spec_dirname and color
+    result_with_links = tb._format_entry("test_func", region, file_content,
+                                       color=True, spec_dirname="/abs/path")
+
+    # Should contain terminal link
+    assert '\033]8;;file:///abs/path/relative/file.watsup\033\\' in result_with_links[0]
+    assert 'relative/file.watsup' in result_with_links[0]  # Display name
+
+    # Test without spec_dirname
+    result_no_links = tb._format_entry("test_func", region, file_content, color=True)
+
+    # Should not contain terminal link escape sequences
+    assert '\033]8;;' not in result_no_links[0]
+    assert 'relative/file.watsup' in result_no_links[0]
