@@ -151,6 +151,8 @@ class Traceback(object):
         self.frames.append((name, region, ast))
 
     def patch_last_name(self, name):
+        if not self.frames:
+            return
         oldname, region, ast = self.frames.pop()
         if oldname != '???':
             name = oldname
@@ -292,6 +294,7 @@ class Traceback(object):
 
         prev_entry_lines = None
         repeat_count = 0
+        region = None
 
         for name, region, ast in reversed_frames:
             entry_lines = self._format_entry(name, region, file_content, color=color, spec_dirname=spec_dirname)
@@ -318,7 +321,8 @@ class Traceback(object):
             else:
                 all_lines.append("  [Previous entry repeated %d times]" % repeat_count)
         if ctx:
-            all_lines.extend(format_ctx(ctx, prev_entry_lines[1] if prev_entry_lines else None, color=color))
+            last_line = extract_line(region, file_content) if region is not None else None
+            all_lines.extend(format_ctx(ctx, last_line, color=color))
 
         return all_lines
 

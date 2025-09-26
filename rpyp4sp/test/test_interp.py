@@ -25,6 +25,7 @@ def load():
         value = value.get_dict_value("ast")
     else:
         file_content = {}
+        spec_dirname = None
     defs = []
     for i, d in enumerate(value.value_array()):
         defs.append(p4specast.Def.fromjson(d))
