@@ -142,6 +142,9 @@ class Region(AstBase):
                 self.left.file == self.right.file and
                 self.left.line == self.right.line)
 
+    def has_information(self):
+        return self.left.has_information() or self.right.has_information()
+
     def __repr__(self):
         if self.left.has_information() or self.right.has_information():
             if self.left.file == self.right.file and self.left.line == self.right.line:

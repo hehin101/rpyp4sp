@@ -1,6 +1,24 @@
 class P4Error(Exception):
-    def __init__(self, msg):
+    def __init__(self, msg, region=None):
         self.msg = msg
+        self.traceback = Traceback()
+        self.region = region
+
+    def maybe_add_region(self, region):
+        if region is None or not region.has_information():
+            return
+        if self.region is None or not self.region.has_information():
+            self.region = region
+
+    def traceback_add_frame(self, name, ast):
+        self.traceback.add_frame(name, ast)
+
+    def format(self):
+        return self.msg
+
+    def __repr__(self):
+        return "%s(%r)" % (self.__class__.__name__, self.msg)
+
 
 class P4NotImplementedError(P4Error):
     """Error for features that are not yet implemented"""
@@ -37,3 +55,10 @@ class P4ContextError(P4Error):
 class P4ParseError(P4Error):
     """Error during parsing operations"""
     pass
+
+class Traceback(object):
+    def __init__(self):
+        self.frames = []
+
+    def add_frame(self, name, ast):
+        self.frames.append((name, ast.region, ast))

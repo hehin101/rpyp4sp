@@ -2,7 +2,7 @@ from __future__ import print_function
 from rpython.rlib import objectmodel, jit
 from rpyp4sp import p4specast, objects, builtin, context, integers
 from rpyp4sp.error import (P4EvaluationError, P4CastError, P4NotImplementedError, 
-                           P4RelationError)
+                           P4RelationError, P4Error)
 
 class Sign(object):
     # abstract base
@@ -21,6 +21,13 @@ class Ret(Sign):
 
 
 def invoke_func(ctx, calle):
+    try:
+        return _invoke_func(ctx, calle)
+    except P4Error as e:
+        e.traceback_add_frame(calle.func.value, calle)
+        raise
+
+def _invoke_func(ctx, calle):
     # if Builtin.is_builtin id then invoke_func_builtin ctx id targs args
     if builtin.is_builtin(calle.func.value):
         return invoke_func_builtin(ctx, calle)
@@ -187,7 +194,12 @@ def invoke_rel(ctx, id, values_input):
 # instructions
 
 def eval_instr(ctx, instr):
-    return instr.eval_instr(ctx)
+    try:
+        return instr.eval_instr(ctx)
+    except P4Error as e:
+        e.maybe_add_region(instr.region)
+        raise
+
 
 def eval_instrs(ctx, sign, instrs):
     #     eval_instrs (ctx : Ctx.t) (sign : Sign.t) (instrs : instr list) :
@@ -803,7 +815,11 @@ def eval_rule_iter(ctx, instr):
 class __extend__(p4specast.RuleI):
     def eval_instr(self, ctx):
         # let ctx = eval_rule_iter ctx id notexp iterexps in
-        ctx = eval_rule_iter(ctx, self)
+        try:
+            ctx = eval_rule_iter(ctx, self)
+        except P4Error as e:
+            e.traceback_add_frame(self.id.value, self)
+            raise
         return ctx, Cont()
 
 
