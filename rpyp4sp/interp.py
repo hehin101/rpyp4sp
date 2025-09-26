@@ -1472,7 +1472,9 @@ class __extend__(p4specast.ConsE):
         ctx, value_t = eval_exp(ctx, exp_t)
         assert isinstance(value_t, objects.ListV)
         values_t = value_t.get_list()
-        value_res = objects.ListV([value_h] + values_t, self.typ)
+        lst = values_t[:]
+        lst.insert(0, value_h)
+        value_res = objects.ListV(lst, self.typ)
         return ctx, value_res
 
 def eval_cmp_num(cmpop, value_l, value_r, typ):
