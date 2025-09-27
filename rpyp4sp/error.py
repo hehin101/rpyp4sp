@@ -483,18 +483,53 @@ class Traceback(object):
 
 def format_ctx(ctx, entry_line, color=False):
     lines = [bold_if_color("Local variables:", color)]
+
+    # Filter variables that appear in the entry line (or show all if no entry line)
+    relevant_vars = []
     for (varname, iterators), value in ctx.venv.items():
         if entry_line is None or varname in entry_line:
-            if color:
-                lines.append("%s%s%s%s:" % (ANSIColors.MAGENTA, varname, iterators, ANSIColors.RESET))
-            else:
-                lines.append("%s%s:" % (varname, iterators))
-            s = value.tostring()
-            sublines = s.split('\n')
-            if len(sublines) > 5:
-                sublines = value.tostring(short=True).split('\n')
-            for line in sublines:
-                lines.append("    " + line)
+            relevant_vars.append(((varname, iterators), value))
+
+    # Sort variables by their position in entry_line (leftmost first)
+    # Using insertion sort for RPython compatibility
+    if entry_line is not None:
+        # Insertion sort implementation
+        for i in range(1, len(relevant_vars)):
+            current_item = relevant_vars[i]
+            current_varname = current_item[0][0]  # Extract varname from ((varname, iterators), value)
+            current_pos = entry_line.find(current_varname)
+            if current_pos < 0:
+                current_pos = len(entry_line)  # Put unfound variables at the end
+
+            j = i - 1
+            # Move elements that have a position greater than current_pos to the right
+            while j >= 0:
+                prev_item = relevant_vars[j]
+                prev_varname = prev_item[0][0]
+                prev_pos = entry_line.find(prev_varname)
+                if prev_pos < 0:
+                    prev_pos = len(entry_line)
+
+                if prev_pos <= current_pos:
+                    break
+
+                relevant_vars[j + 1] = relevant_vars[j]
+                j -= 1
+
+            relevant_vars[j + 1] = current_item
+
+    # Format the sorted variables
+    for (varname, iterators), value in relevant_vars:
+        if color:
+            lines.append("%s%s%s%s:" % (ANSIColors.MAGENTA, varname, iterators, ANSIColors.RESET))
+        else:
+            lines.append("%s%s:" % (varname, iterators))
+        s = value.tostring()
+        sublines = s.split('\n')
+        if len(sublines) > 5:
+            sublines = value.tostring(short=True).split('\n')
+        for line in sublines:
+            lines.append("    " + line)
     lines.append('')
     return lines
 
