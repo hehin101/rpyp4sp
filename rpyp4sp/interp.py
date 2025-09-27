@@ -114,7 +114,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     #     (ctx, value_output)
         return ctx, sign.value
     # | _ -> error id.at "function was not matched"
-    raise P4EvaluationError("TODO invoke_func_def_attempt_clauses")
+    raise P4EvaluationError("function was not matched: %s" % (func.id.value))
 
 def eval_arg(ctx, arg):
     # match arg.it with
