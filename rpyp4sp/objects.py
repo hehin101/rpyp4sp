@@ -368,7 +368,7 @@ class CaseV(BaseV):
         # | CaseV (mixop, _) when short -> string_of_mixop mixop
         # | CaseV (mixop, values) -> "(" ^ string_of_notval (mixop, values) ^ ")"
         if short:
-            return str(self.mixop)
+            return self.mixop.tostring()
 
         # Construct notation: mixop with values interspersed
         mixop_phrases = self.mixop.phrases
