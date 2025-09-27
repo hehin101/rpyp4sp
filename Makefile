@@ -32,6 +32,11 @@ _pypy_binary/bin/python:  ## Download a PyPy binary
 	./_pypy_binary/bin/python -m ensurepip
 	./_pypy_binary/bin/python -mpip install "hypothesis<4.40" junit_xml coverage==5.5 "pdbpp==0.10.3"
 
+.PHONY: ast.json
+ast.json: _pypy_binary/bin/python ## regenerate the AST json file
+	_pypy_binary/bin/python prepare_ast.py
+
+
 .PHONY: run-error-tests
 run-error-tests:  ## Run integration tests for error output
 	./targetrpyp4sp-c run-p4-json --no-times `cat integrationtests/errorfiles` > integrationtests/erroroutput.actual

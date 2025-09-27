@@ -53,9 +53,7 @@ jobs:
 
       - name: make ast.json
         run: |
-          cd p4-spectec
-          ./p4spectec json-ast spec/*.watsup  > ../ast.json
-          cd ..
+          make ast.json
           ls -l ast.json
           pwd
           echo realpath ast.json
