@@ -47,16 +47,23 @@ run-error-tests:  ## Run integration tests for error output
 		exit 1; \
 	fi
 	FORCE_COLOR=1 ./targetrpyp4sp-c run-p4-json --no-times `cat integrationtests/errorfiles` > integrationtests/erroroutput_color.actual
-	@if diff --color=auto -u integrationtests/erroroutput_color.expected integrationtests/erroroutput_color.actual; then \
+	@# Normalize absolute paths in both files for comparison
+	@sed 's|file://[^\\]*spec/|file://SPEC_DIR/|g' integrationtests/erroroutput_color.expected > integrationtests/erroroutput_color.expected.normalized
+	@sed 's|file://[^\\]*spec/|file://SPEC_DIR/|g' integrationtests/erroroutput_color.actual > integrationtests/erroroutput_color.actual.normalized
+	@if diff --color=auto -u integrationtests/erroroutput_color.expected.normalized integrationtests/erroroutput_color.actual.normalized; then \
 		echo "\033[32mError output tests (with color) PASSED\033[0m"; \
 	else \
 		echo "\033[31mError output tests (with color) FAILED - differences found above\033[0m"; \
 		exit 1; \
 	fi
+	@rm -f integrationtests/erroroutput_color.expected.normalized integrationtests/erroroutput_color.actual.normalized
 
 .PHONY: update-error-tests-expectations
 update-error-tests-expectations:  ## Update expected output files for error tests
 	./targetrpyp4sp-c run-p4-json --no-times `cat integrationtests/errorfiles` > integrationtests/erroroutput.expected
-	FORCE_COLOR=1 ./targetrpyp4sp-c run-p4-json --no-times `cat integrationtests/errorfiles` > integrationtests/erroroutput_color.expected
+	FORCE_COLOR=1 ./targetrpyp4sp-c run-p4-json --no-times `cat integrationtests/errorfiles` > integrationtests/erroroutput_color.expected.raw
+	@# Normalize absolute paths in the color expected file
+	@sed 's|file://[^\\]*spec/|file://SPEC_DIR/|g' integrationtests/erroroutput_color.expected.raw > integrationtests/erroroutput_color.expected
+	@rm -f integrationtests/erroroutput_color.expected.raw
 	@echo "\033[33mUpdated error test expectations\033[0m"
 
