@@ -180,6 +180,22 @@ def extract_lines_region(region, file_content):
     return safe_slice(content, line_start, line_end)
 
 
+def bold_if_color(text, color):
+    """
+    Helper to make text bold if color is enabled.
+
+    Args:
+        text: The text to potentially make bold
+        color: Whether to apply color formatting
+
+    Returns:
+        str: Text with bold formatting if color is True, otherwise plain text
+    """
+    if color:
+        return ANSIColors.BOLD + text + ANSIColors.RESET
+    else:
+        return text
+
 def can_colorize():
     import os
 
@@ -207,6 +223,7 @@ def can_colorize():
 class ANSIColors(object):
     """ANSI color constants for terminal output"""
     RESET = '\033[0m'
+    BOLD = '\033[1m'
     BOLD_RED = '\033[1;31m'
     BOLD_MAGENTA = '\033[1;35m'
     MAGENTA = '\033[35m'
@@ -226,6 +243,7 @@ class Traceback(object):
         if oldname != '???':
             name = oldname
         self.frames.append((name, region, ast))
+
 
     def _format_file_line(self, name, filename, line_num, color, spec_dirname=None):
         """Helper to format the file/line/function header line."""
@@ -427,7 +445,7 @@ class Traceback(object):
         # Format all entries with run-length encoding for repeated entries
         all_lines = []
         if reversed_frames:
-            all_lines.append("Traceback (most recent call last):")
+            all_lines.append(bold_if_color("Traceback (most recent call last):", color))
 
         prev_entry_lines = None
         repeat_count = 0
@@ -464,7 +482,7 @@ class Traceback(object):
         return all_lines
 
 def format_ctx(ctx, entry_line, color=False):
-    lines = ["Local variables:"]
+    lines = [bold_if_color("Local variables:", color)]
     for (varname, iterators), value in ctx.venv.items():
         if entry_line is None or varname in entry_line:
             if color:
@@ -506,6 +524,7 @@ def format_p4error(e, file_content, color=None, spec_dirname=None):
         lines.extend(traceback_lines)
 
     # Add the error message at the bottom
+    lines.append(bold_if_color("Error:", color))
     lines.append(e.format(color=color))
 
     return '\n'.join(lines)

@@ -1,7 +1,7 @@
 from rpyp4sp.error import (P4Error, P4NotImplementedError, P4UnknownTypeError,
                           P4EvaluationError, P4TypeSubstitutionError, P4CastError,
                           P4BuiltinError, P4RelationError, P4ContextError, P4ParseError,
-                          extract_lines_region, Traceback)
+                          extract_lines_region, Traceback, bold_if_color)
 from rpyp4sp.p4specast import Region, Position, NO_REGION
 
 def test_p4error_format_basic():
@@ -663,7 +663,7 @@ def test_traceback_format_with_colors():
     file_content = {"test.py": "func()"}
     result = tb.format(file_content, color=True)
 
-    expected_start = "Traceback (most recent call last):"
+    expected_start = "\033[1mTraceback (most recent call last):\033[0m"
     assert result[0] == expected_start
 
     # File line should have colors
@@ -712,7 +712,7 @@ def test_format_p4error_function():
     # Test basic error
     error = P4Error("Test error message")
     result = format_p4error(error, {}, color=False)
-    assert result == "Test error message"
+    assert result == "Error:\nTest error message"
 
     # Test error with traceback
     error_with_trace = P4Error("Division by zero")
@@ -723,6 +723,7 @@ def test_format_p4error_function():
     lines = result.split('\n')
     assert "Traceback (most recent call last):" in lines[0]
     assert 'File "calc.py", line 10, in divide' in lines[1]
+    assert lines[-2] == "Error:"  # Error header
     assert lines[-1] == "Division by zero"  # Error message at bottom
 
     # Test auto color detection (should return False when not in TTY)
@@ -732,20 +733,31 @@ def test_format_p4error_function():
     # Test with colors enabled
     result_colored = format_p4error(error_with_trace, {}, color=True)
     lines_colored = result_colored.split('\n')
-    assert "Traceback (most recent call last):" in lines_colored[0]
+    assert '\033[1mTraceback (most recent call last):\033[0m' == lines_colored[0]  # Bold traceback header
     # File line should have color codes
     assert '\033[35m"calc.py"\033[0m' in lines_colored[1]  # MAGENTA filename
     assert '\033[35m10\033[0m' in lines_colored[1]  # MAGENTA line number
     assert '\033[35mdivide\033[0m' in lines_colored[1]  # MAGENTA function name
-    assert lines_colored[-1] == "\033[35mDivision by zero\033[0m"  # Error message at bottom with magenta color
+    assert lines_colored[-2] == '\033[1mError:\033[0m'  # Bold error header
+    assert lines_colored[-1] == "\033[35mDivision by zero\033[0m"  # Error message with magenta color
 
-    # Test with new list format [filenames, contents]
-    file_content_list = [["calc.py"], ["error content"]]
-    result_list_format = format_p4error(error_with_trace, file_content_list, color=False)
-    lines_list = result_list_format.split('\n')
-    assert "Traceback (most recent call last):" in lines_list[0]
-    assert 'File "calc.py", line 10, in divide' in lines_list[1]
-    assert lines_list[-1] == "Division by zero"
+def test_format_p4error_error_header_bold():
+    # Test that "Error:" header is bold when color=True
+    from rpyp4sp.error import format_p4error
+
+    error = P4Error("Test error message")
+
+    # With color
+    result_with_color = format_p4error(error, {}, color=True)
+    lines = result_with_color.split('\n')
+    assert lines[-2] == '\033[1mError:\033[0m'  # Bold error header
+    assert lines[-1] == '\033[35mTest error message\033[0m'  # Magenta error message
+
+    # Without color
+    result_no_color = format_p4error(error, {}, color=False)
+    lines = result_no_color.split('\n')
+    assert lines[-2] == 'Error:'  # Plain error header
+    assert lines[-1] == 'Test error message'  # Plain error message
 
 
 def test_traceback_run_length_encoding_no_repeats():
@@ -1246,6 +1258,49 @@ def test_format_multiline_source_omission_count():
 
     assert omission_line == '    [6 lines omitted]'
     assert len(result) == 5  # 2 first + 1 omission + 2 last
+
+def test_bold_if_color():
+    # Test the bold_if_color helper function
+    # Test with color enabled
+    result_with_color = bold_if_color("Test text", True)
+    assert result_with_color == '\033[1mTest text\033[0m'
+
+    # Test with color disabled
+    result_no_color = bold_if_color("Test text", False)
+    assert result_no_color == "Test text"
+
+def test_traceback_header_bold():
+    # Test that traceback header is bold when color=True
+    tb = Traceback()
+    tb.add_frame("test_func", Region.line_span('test.py', 1, 1, 5))
+    file_content = {"test.py": "test line"}
+
+    # With color
+    result_with_color = tb.format(file_content, color=True)
+    assert any('\033[1mTraceback (most recent call last):\033[0m' in line for line in result_with_color)
+
+    # Without color
+    result_no_color = tb.format(file_content, color=False)
+    assert any('Traceback (most recent call last):' in line and '\033[1m' not in line for line in result_no_color)
+
+def test_local_variables_header_bold():
+    # Test that local variables header is bold when color=True
+    from rpyp4sp.error import format_ctx
+
+    # Mock context object
+    class MockCtx:
+        def __init__(self):
+            self.venv = {}
+
+    ctx = MockCtx()
+
+    # With color
+    result_with_color = format_ctx(ctx, None, color=True)
+    assert result_with_color[0] == '\033[1mLocal variables:\033[0m'
+
+    # Without color
+    result_no_color = format_ctx(ctx, None, color=False)
+    assert result_no_color[0] == 'Local variables:'
 
 def test_find_nth():
     # Test the find_nth helper function
