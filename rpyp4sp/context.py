@@ -2,6 +2,9 @@ from rpyp4sp import p4specast, objects
 from rpyp4sp.error import P4ContextError
 
 class GlobalContext(object):
+    file_content = {}
+    spec_dirname = None
+
     def __init__(self):
         self.tdenv = {}
         self.renv = {}
@@ -38,7 +41,9 @@ class Context(object):
         venv = venv if venv is not None else self.venv
         return Context(self.filename, self.derive, self.glbl, values_input, tdenv, fenv, venv)
 
-    def load_spec(self, spec):
+    def load_spec(self, spec, file_content, spec_dirname):
+        self.glbl.file_content = file_content
+        self.glbl.spec_dirname = spec_dirname
         for definition in spec:
             if isinstance(definition, p4specast.TypD):
                 self.glbl.tdenv[definition.id.value] = (definition.tparams, definition.deftyp)
@@ -53,7 +58,7 @@ class Context(object):
 
     def localize_inputs(self, values_input):
         return self.copy_and_change(values_input=values_input)
-    
+
     def localize_venv(self, venv):
         return self.copy_and_change(venv=venv)
 

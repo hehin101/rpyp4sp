@@ -1,0 +1,1530 @@
+from rpyp4sp.error import (P4Error, P4NotImplementedError, P4UnknownTypeError,
+                          P4EvaluationError, P4TypeSubstitutionError, P4CastError,
+                          P4BuiltinError, P4RelationError, P4ContextError, P4ParseError,
+                          extract_lines_region, Traceback, bold_if_color)
+from rpyp4sp.p4specast import Region, Position, NO_REGION
+
+def test_p4error_format_basic():
+    error = P4Error("basic error message")
+    assert error.format() == "basic error message"
+
+def test_p4error_format_empty():
+    error = P4Error("")
+    assert error.format() == ""
+
+def test_p4error_format_with_region():
+    # Region should not affect the basic format output
+    error = P4Error("error with region", region=None)
+    assert error.format() == "error with region"
+
+def test_p4notimplementederror_format():
+    error = P4NotImplementedError("not implemented feature")
+    assert error.format() == "not implemented feature"
+
+def test_p4unknowntypeerror_format():
+    error = P4UnknownTypeError("unknown type encountered")
+    assert error.format() == "unknown type encountered"
+
+def test_p4evaluationerror_format():
+    error = P4EvaluationError("evaluation failed")
+    assert error.format() == "evaluation failed"
+
+def test_p4typesubstitutionerror_format():
+    error = P4TypeSubstitutionError("substitution error")
+    assert error.format() == "substitution error"
+
+def test_p4casterror_format():
+    error = P4CastError("cast operation failed")
+    assert error.format() == "cast operation failed"
+
+def test_p4builtinerror_format():
+    error = P4BuiltinError("builtin function error")
+    assert error.format() == "builtin function error"
+
+def test_p4relationerror_format():
+    error = P4RelationError("relation not matched")
+    assert error.format() == "relation not matched"
+
+def test_p4contexterror_format():
+    error = P4ContextError("context operation failed")
+    assert error.format() == "context operation failed"
+
+def test_p4parseerror_format():
+    error = P4ParseError("parse error occurred")
+    assert error.format() == "parse error occurred"
+
+def test_p4error_format_with_special_characters():
+    error = P4Error("error with 'quotes' and \"double quotes\" and newlines\nand tabs\t")
+    assert error.format() == "error with 'quotes' and \"double quotes\" and newlines\nand tabs\t"
+
+
+# Tests for P4Error.maybe_add_region method
+
+def test_maybe_add_region_none():
+    # Should not add None region
+    error = P4Error("test message")
+    original_region = error.region
+    error.maybe_add_region(None)
+    assert error.region == original_region
+
+def test_maybe_add_region_no_information():
+    # Should not add region without information (NO_REGION)
+    error = P4Error("test message")
+    original_region = error.region
+    error.maybe_add_region(NO_REGION)
+    assert error.region == original_region
+
+def test_maybe_add_region_no_information_empty_positions():
+    # Should not add region with empty positions (no information)
+    error = P4Error("test message")
+    original_region = error.region
+    empty_region = Region(Position('', 0, 0), Position('', 0, 0))
+    error.maybe_add_region(empty_region)
+    assert error.region == original_region
+
+def test_maybe_add_region_valid_to_none():
+    # Should add valid region when current region is None
+    error = P4Error("test message")
+    assert error.region is None
+
+    valid_region = Region.line_span('test.py', 10, 5, 15)
+    error.maybe_add_region(valid_region)
+    assert error.region == valid_region
+
+def test_maybe_add_region_valid_to_no_region():
+    # Should add valid region when current region is NO_REGION (no information)
+    error = P4Error("test message", region=NO_REGION)
+
+    valid_region = Region.line_span('test.py', 10, 5, 15)
+    error.maybe_add_region(valid_region)
+    assert error.region == valid_region
+
+def test_maybe_add_region_valid_to_empty_region():
+    # Should add valid region when current region has no information
+    error = P4Error("test message", region=Region(Position('', 0, 0), Position('', 0, 0)))
+
+    valid_region = Region.line_span('test.py', 10, 5, 15)
+    error.maybe_add_region(valid_region)
+    assert error.region == valid_region
+
+def test_maybe_add_region_keep_existing_valid():
+    # Should NOT replace existing valid region
+    existing_region = Region.line_span('existing.py', 5, 1, 10)
+    error = P4Error("test message", region=existing_region)
+
+    new_region = Region.line_span('new.py', 15, 1, 20)
+    error.maybe_add_region(new_region)
+
+    # Should keep the original region
+    assert error.region == existing_region
+
+def test_maybe_add_region_partial_information_left():
+    # Should add region with partial information (left position has info)
+    error = P4Error("test message")
+
+    partial_region = Region(Position('test.py', 10, 5), Position('', 0, 0))
+    error.maybe_add_region(partial_region)
+    assert error.region == partial_region
+
+def test_maybe_add_region_partial_information_right():
+    # Should add region with partial information (right position has info)
+    error = P4Error("test message")
+
+    partial_region = Region(Position('', 0, 0), Position('test.py', 10, 5))
+    error.maybe_add_region(partial_region)
+    assert error.region == partial_region
+
+# Tests for extract_lines_region helper function
+
+def test_extract_lines_region_none_region():
+    # Should return None for None region
+    file_content = {"test.py": "line 1\nline 2\nline 3"}
+    result = extract_lines_region(None, file_content)
+    assert result is None
+
+def test_extract_lines_region_not_line_span():
+    # Should return None for region that is not a line_span
+    # Create region with different files (not a line span)
+    region = Region(Position('file1.py', 1, 1), Position('file2.py', 1, 5))
+    file_content = {"file1.py": "line 1\nline 2", "file2.py": "other line"}
+    result = extract_lines_region(region, file_content)
+    assert result is None
+
+def test_extract_lines_region_not_line_span_different_lines():
+    # Should handle region spanning different lines (multi-line region)
+    region = Region(Position('test.py', 1, 1), Position('test.py', 2, 5))
+    file_content = {"test.py": "line 1\nline 2\nline 3"}
+    result = extract_lines_region(region, file_content)
+    assert result == "line 1\nline 2"  # Complete lines from line 1 to line 2
+
+def test_extract_lines_region_file_not_found():
+    # Should return None when file is not in file_content
+    region = Region.line_span('missing.py', 1, 1, 5)
+    file_content = {"test.py": "line 1\nline 2\nline 3"}
+    result = extract_lines_region(region, file_content)
+    assert result is None
+
+def test_extract_lines_region_line_number_too_high():
+    # Should return None when line number exceeds file length
+    region = Region.line_span('test.py', 10, 1, 5)  # line 10 doesn't exist
+    file_content = {"test.py": "line 1\nline 2\nline 3"}
+    result = extract_lines_region(region, file_content)
+    assert result is None
+
+def test_extract_lines_region_line_number_zero():
+    # Should return None for line number 0 (invalid)
+    region = Region.line_span('test.py', 0, 1, 5)
+    file_content = {"test.py": "line 1\nline 2\nline 3"}
+    result = extract_lines_region(region, file_content)
+    assert result is None
+
+def test_extract_lines_region_line_number_negative():
+    # Should return None for negative line number
+    region = Region.line_span('test.py', -1, 1, 5)
+    file_content = {"test.py": "line 1\nline 2\nline 3"}
+    result = extract_lines_region(region, file_content)
+    assert result is None
+
+def test_extract_lines_region_valid_first_line():
+    # Should return first line correctly
+    region = Region.line_span('test.py', 1, 1, 5)
+    file_content = {"test.py": "first line\nsecond line\nthird line"}
+    result = extract_lines_region(region, file_content)
+    assert result == "first line"
+
+def test_extract_lines_region_valid_middle_line():
+    # Should return middle line correctly
+    region = Region.line_span('test.py', 2, 1, 5)
+    file_content = {"test.py": "first line\nsecond line\nthird line"}
+    result = extract_lines_region(region, file_content)
+    assert result == "second line"
+
+def test_extract_lines_region_valid_last_line():
+    # Should return last line correctly
+    region = Region.line_span('test.py', 3, 1, 5)
+    file_content = {"test.py": "first line\nsecond line\nthird line"}
+    result = extract_lines_region(region, file_content)
+    assert result == "third line"
+
+def test_extract_lines_region_single_line_file():
+    # Should work with single line file
+    region = Region.line_span('single.py', 1, 1, 10)
+    file_content = {"single.py": "only line"}
+    result = extract_lines_region(region, file_content)
+    assert result == "only line"
+
+def test_extract_lines_region_empty_file():
+    # Should return None for empty file
+    region = Region.line_span('empty.py', 1, 1, 5)
+    file_content = {"empty.py": ""}
+    result = extract_lines_region(region, file_content)
+    assert result is None
+
+def test_extract_lines_region_empty_line():
+    # Should return empty string for empty line
+    region = Region.line_span('test.py', 2, 1, 1)
+    file_content = {"test.py": "line 1\n\nline 3"}
+    result = extract_lines_region(region, file_content)
+    assert result == ""
+
+def test_extract_lines_region_with_whitespace():
+    # Should preserve whitespace in line
+    region = Region.line_span('test.py', 1, 1, 10)
+    file_content = {"test.py": "  \t  line with spaces  \t  "}
+    result = extract_lines_region(region, file_content)
+    assert result == "  \t  line with spaces  \t  "
+
+def test_extract_lines_region_multiple_files():
+    # Should extract from correct file when multiple files exist
+    region = Region.line_span('file2.py', 2, 1, 5)
+    file_content = {
+        "file1.py": "file1 line1\nfile1 line2",
+        "file2.py": "file2 line1\nfile2 line2\nfile2 line3",
+        "file3.py": "file3 line1"
+    }
+    result = extract_lines_region(region, file_content)
+    assert result == "file2 line2"
+
+
+def test_extract_lines_region_multi_line_same_line():
+    # Test region that spans within same line (should return complete line)
+    region = Region(Position('test.py', 1, 6), Position('test.py', 1, 10))
+    file_content = {"test.py": "hello world test"}
+    result = extract_lines_region(region, file_content)
+    assert result == "hello world test"  # Complete line, ignoring column info
+
+
+def test_extract_lines_region_multi_line_cross_lines():
+    # Test multi-line region that spans across multiple lines
+    region = Region(Position('test.py', 1, 6), Position('test.py', 3, 5))
+    file_content = {"test.py": "line1 content\nline2 content\nline3 content"}
+    result = extract_lines_region(region, file_content)
+    # Should extract complete lines from line 1 to line 3
+    expected = "line1 content\nline2 content\nline3 content"
+    assert result == expected
+
+
+def test_extract_lines_region_multi_line_start_of_line():
+    # Test multi-line region starting from beginning of line
+    region = Region(Position('test.py', 2, 1), Position('test.py', 3, 3))
+    file_content = {"test.py": "first\nsecond line\nthird"}
+    result = extract_lines_region(region, file_content)
+    assert result == "second line\nthird"  # Complete lines from line 2 to line 3
+
+
+def test_extract_lines_region_multi_line_invalid_range():
+    # Test invalid multi-line region (end before start)
+    region = Region(Position('test.py', 3, 5), Position('test.py', 1, 10))
+    file_content = {"test.py": "line1\nline2\nline3"}
+    result = extract_lines_region(region, file_content)
+    assert result is None
+
+
+def test_extract_lines_region_multi_line_column_out_of_bounds():
+    # Test multi-line region with column beyond line length (columns ignored)
+    region = Region(Position('test.py', 1, 50), Position('test.py', 2, 5))
+    file_content = {"test.py": "short\nlonger line\nthird"}
+    result = extract_lines_region(region, file_content)
+    assert result == "short\nlonger line"  # Complete lines from line 1 to line 2
+
+
+def test_extract_lines_region_multi_line_end_beyond_content():
+    # Test multi-line region where end extends beyond file content
+    region = Region(Position('test.py', 1, 1), Position('test.py', 2, 20))
+    file_content = {"test.py": "line1\nline2"}
+    result = extract_lines_region(region, file_content)
+    assert result == "line1\nline2"  # Complete lines from line 1 to line 2
+
+# Tests for Traceback._format_entry method
+
+def test_format_entry_none_region():
+    # Should handle None region
+    tb = Traceback()
+    result = tb._format_entry("test_function", None, {})
+    expected = ['  File "<unknown>", line ?, in test_function']
+    assert result == expected
+
+def test_format_entry_no_information():
+    # Should handle region with no information
+    tb = Traceback()
+    region = NO_REGION
+    result = tb._format_entry("test_function", region, {})
+    expected = ['  File "<unknown>", line ?, in test_function']
+    assert result == expected
+
+def test_format_entry_partial_information_no_file():
+    # Should handle region with partial information (no file)
+    tb = Traceback()
+    region = Region(Position('', 5, 10), Position('', 5, 15))
+    result = tb._format_entry("test_function", region, {})
+    expected = ['  File "<unknown>", line 5, in test_function']
+    assert result == expected
+
+def test_format_entry_no_source_available():
+    # Should format entry when source line is not available
+    tb = Traceback()
+    region = Region.line_span('missing.py', 10, 1, 5)
+    file_content = {"other.py": "some content"}
+    result = tb._format_entry("test_function", region, file_content)
+    expected = ['  File "missing.py", line 10, in test_function']
+    assert result == expected
+
+def test_format_entry_with_source_no_caret():
+    # Should format entry with source line but no caret (not line_span)
+    tb = Traceback()
+    region = Region(Position('test.py', 2, 0), Position('other.py', 3, 5))  # Not line_span
+    file_content = {"test.py": "line 1\nline 2\nline 3"}
+    result = tb._format_entry("test_function", region, file_content)
+    expected = ['  File "test.py", line 2, in test_function']
+    assert result == expected
+
+def test_format_entry_with_source_and_single_caret():
+    # Should format entry with source line and single character caret
+    tb = Traceback()
+    region = Region.line_span('test.py', 2, 5, 5)  # Single character at column 5
+    file_content = {"test.py": "line 1\ntest line here\nline 3"}
+    result = tb._format_entry("test_function", region, file_content)
+    expected = [
+        '  File "test.py", line 2, in test_function',
+        '    test line here',
+        '    ----^'
+    ]
+    # Check the structure (exact spacing might vary)
+    assert len(result) == 3
+    assert result[0] == '  File "test.py", line 2, in test_function'
+    assert result[1] == '    test line here'
+    assert '^' in result[2]
+
+def test_format_entry_with_source_and_multi_caret():
+    # Should format entry with source line and multi-character caret
+    tb = Traceback()
+    region = Region.line_span('test.py', 1, 6, 10)  # Characters 6-10
+    file_content = {"test.py": "hello world test"}
+    result = tb._format_entry("test_function", region, file_content)
+    expected_structure = [
+        '  File "test.py", line 1, in test_function',
+        '    hello world test',
+        '    -----^^^^^'  # 5 carets for columns 6-10
+    ]
+
+    assert len(result) == 3
+    assert result[0] == '  File "test.py", line 1, in test_function'
+    assert result[1] == '    hello world test'
+    assert '^^^^^' in result[2]  # Should have 5 carets
+
+def test_format_entry_with_whitespace_source():
+    # Should handle source lines with whitespace correctly (indentation stripped)
+    tb = Traceback()
+    region = Region.line_span('test.py', 1, 6, 10)  # Adjusted for stripped indentation
+    file_content = {"test.py": "  \t  error here  \t  "}
+    result = tb._format_entry("test_function", region, file_content)
+
+    assert len(result) == 3
+    assert result[0] == '  File "test.py", line 1, in test_function'
+    assert result[1] == '    ' + "error here  \t  "  # Leading whitespace stripped
+    assert '^^^^^' in result[2]  # 5 carets for "error"
+
+def test_format_entry_caret_at_start():
+    # Should handle caret at start of line (column 1)
+    tb = Traceback()
+    region = Region.line_span('test.py', 1, 1, 3)
+    file_content = {"test.py": "error message"}
+    result = tb._format_entry("test_function", region, file_content)
+
+    assert len(result) == 3
+    assert result[0] == '  File "test.py", line 1, in test_function'
+    assert result[1] == '    error message'
+    assert result[2] == '    ^^^'  # Should start immediately, no leading spaces
+
+def test_format_entry_invalid_column_range():
+    # Should handle invalid column ranges gracefully (start_col <= 0 or end_col < start_col)
+    tb = Traceback()
+    region = Region.line_span('test.py', 1, 0, 5)  # Invalid start column
+    file_content = {"test.py": "test line"}
+    result = tb._format_entry("test_function", region, file_content)
+
+    # Should not include caret line for invalid columns
+    assert len(result) == 2
+    assert result[0] == '  File "test.py", line 1, in test_function'
+    assert result[1] == '    test line'
+
+def test_format_entry_complex_example():
+    # Test a more complex realistic example
+    tb = Traceback()
+    region = Region.line_span('/home/user/project/main.py', 2, 12, 17)  # Line 2, columns 12-17
+    file_content = {"/home/user/project/main.py": "def func():\n    result = calculate_something() + process_data()\n    return result"}
+    result = tb._format_entry("calculate_something", region, file_content)
+
+    assert len(result) == 3
+    assert result[0] == '  File "/home/user/project/main.py", line 2, in calculate_something'
+    assert 'result = calculate_something() + process_data()' in result[1]
+    assert '^^^^^^' in result[2]  # 6 carets for columns 12-17
+
+# Tests for Traceback.format method
+
+
+def test_traceback_format_empty():
+    # Should return empty list for empty traceback
+    tb = Traceback()
+    result = tb.format({})
+    assert result == []
+
+def test_traceback_format_single_entry():
+    # Should format single traceback entry
+    tb = Traceback()
+    region = Region.line_span('test.py', 1, 1, 5)
+    tb.add_frame("main", region)
+
+    file_content = {"test.py": "error here"}
+    result = tb.format(file_content)
+
+    expected = [
+        "Traceback (most recent call last):",
+        '  File "test.py", line 1, in main',
+        '    error here',
+        '    ^^^^^'
+    ]
+    assert result == expected
+
+def test_traceback_format_multiple_entries():
+    # Should format multiple entries in reverse order
+    tb = Traceback()
+
+    # Add frames as exception bubbles up (innermost to outermost)
+    region1 = Region.line_span('calc.py', 10, 1, 5)  # Innermost call (error occurs here)
+    tb.add_frame("calculate", region1)
+
+    region2 = Region.line_span('utils.py', 5, 1, 6)  # Middle call
+    tb.add_frame("helper", region2)
+
+    region3 = Region.line_span('main.py', 1, 1, 4)  # Outermost call
+    tb.add_frame("main", region3)
+
+    file_content = {
+        "main.py": "main()",
+        "utils.py": "def helper():\n\n\n\ncall()",
+        "calc.py": "def calc():\n\n\n\n\n\n\n\n\nerror"
+    }
+
+    result = tb.format(file_content)
+
+    # Should be in reverse order (most recent call last)
+    expected = [
+        "Traceback (most recent call last):",
+        '  File "main.py", line 1, in main',
+        '    main()',   # carets shown - doesn't cover whole line (cols 1-4 of 6)
+        '    ^^^^',
+        '  File "utils.py", line 5, in helper',
+        '    call()',   # carets omitted - covers whole line (cols 1-6 of 6)
+        '  File "calc.py", line 10, in calculate',
+        '    error'     # carets omitted - covers whole line (cols 1-5 of 5)
+    ]
+    assert result == expected
+
+def test_traceback_format_with_unknown_regions():
+    # Should handle entries with no region information
+    tb = Traceback()
+
+    # Entry with no region
+    tb.add_frame("unknown_func", None)
+
+    # Entry with valid region
+    region = Region.line_span('known.py', 2, 1, 3)
+    tb.add_frame("known_func", region)
+
+    file_content = {"known.py": "line1\nok()"}
+    result = tb.format(file_content)
+
+    expected = [
+        "Traceback (most recent call last):",
+        '  File "known.py", line 2, in known_func',
+        '    ok()',
+        '    ^^^',
+        '  File "<unknown>", line ?, in unknown_func'
+    ]
+    assert result == expected
+
+def test_traceback_format_no_source_available():
+    # Should work even when source files are not available
+    tb = Traceback()
+
+    region = Region.line_span('missing.py', 10, 1, 5)
+    tb.add_frame("missing_func", region)
+
+    file_content = {}  # No source files available
+    result = tb.format(file_content)
+
+    expected = [
+        "Traceback (most recent call last):",
+        '  File "missing.py", line 10, in missing_func'
+    ]
+    assert result == expected
+
+def test_format_entry_indentation_regularization():
+    # Should regularize deeply indented code to start with 4 spaces
+    tb = Traceback()
+    region = Region.line_span('deep.py', 1, 9, 12)  # Columns 9-12 (4 chars)
+    file_content = {"deep.py": "        func()"}  # 8 spaces of indentation
+
+    result = tb._format_entry("nested_func", region, file_content)
+
+    expected = [
+        '  File "deep.py", line 1, in nested_func',
+        '    func()',  # Regularized to 4 spaces
+        '    ^^^^'    # Adjusted caret position (columns 9-12 -> 1-4 after stripping 8 spaces)
+    ]
+    assert result == expected
+
+
+def test_format_entry_no_indentation():
+    # Should work with code that has no indentation
+    tb = Traceback()
+    region = Region.line_span('root.py', 1, 1, 5)
+    file_content = {"root.py": "print()"}
+
+    result = tb._format_entry("root_func", region, file_content)
+
+    expected = [
+        '  File "root.py", line 1, in root_func',
+        '    print()',  # Still gets 4 spaces prefix
+        '    ^^^^^'     # Original caret position preserved
+    ]
+    assert result == expected
+
+def test_format_entry_whole_line_caret_omitted():
+    # Should omit carets when they would cover the entire non-empty line
+    tb = Traceback()
+    region = Region.line_span('whole.py', 1, 1, 5)  # Covers entire "error" word
+    file_content = {"whole.py": "error"}
+
+    result = tb._format_entry("whole_func", region, file_content)
+
+    expected = [
+        '  File "whole.py", line 1, in whole_func',
+        '    error'  # No caret line since it would cover the whole word
+    ]
+    assert result == expected
+
+def test_format_entry_whole_line_with_trailing_space_caret_omitted():
+    # Should omit carets when they would cover entire non-empty content (ignoring trailing spaces)
+    tb = Traceback()
+    region = Region.line_span('trail.py', 1, 1, 5)  # Covers "error" part
+    file_content = {"trail.py": "error   "}  # Trailing spaces
+
+    result = tb._format_entry("trail_func", region, file_content)
+
+    expected = [
+        '  File "trail.py", line 1, in trail_func',
+        '    error   '  # No caret line since it would cover the whole non-empty content
+    ]
+    assert result == expected
+
+def test_format_entry_partial_line_caret_included():
+    # Should include carets when they don't cover the entire line
+    tb = Traceback()
+    region = Region.line_span('partial.py', 1, 1, 3)  # Only covers "err" of "error"
+    file_content = {"partial.py": "error"}
+
+    result = tb._format_entry("partial_func", region, file_content)
+
+    expected = [
+        '  File "partial.py", line 1, in partial_func',
+        '    error',
+        '    ^^^'  # Carets included since they don't cover the whole word
+    ]
+    assert result == expected
+
+def test_format_entry_indented_whole_line_caret_omitted():
+    # Should omit carets for whole line even after indentation adjustment
+    tb = Traceback()
+    region = Region.line_span('indent.py', 1, 5, 9)  # Covers "func" after 4 spaces
+    file_content = {"indent.py": "    func"}
+
+    result = tb._format_entry("indent_func", region, file_content)
+
+    expected = [
+        '  File "indent.py", line 1, in indent_func',
+        '    func'  # No caret line since adjusted region covers the whole stripped content
+    ]
+    assert result == expected
+
+def test_format_entry_with_colors():
+    # Should include ANSI color codes when color=True
+    tb = Traceback()
+    region = Region.line_span('test.py', 1, 1, 5)
+    file_content = {"test.py": "error"}
+
+    result = tb._format_entry("test_func", region, file_content, color=True)
+
+    # Check for color codes in file line
+    assert '\033[35m"test.py"\033[0m' in result[0]  # MAGENTA filename
+    assert '\033[35m1\033[0m' in result[0]          # MAGENTA line number
+    assert '\033[35mtest_func\033[0m' in result[0]  # MAGENTA function name
+
+    # Source line should be plain (no colors on source code itself)
+    assert result[1] == '    error'
+
+    # No caret line since it covers whole word
+    assert len(result) == 2
+
+def test_format_entry_with_colors_and_carets():
+    # Should colorize carets and source code when color=True and carets are shown
+    tb = Traceback()
+    region = Region.line_span('test.py', 1, 1, 3)  # Partial coverage
+    file_content = {"test.py": "error_message"}
+
+    result = tb._format_entry("test_func", region, file_content, color=True)
+
+    # Check for color codes in file line
+    assert '\033[35m"test.py"\033[0m' in result[0]
+
+    # Source line should have the highlighted portion colored
+    assert result[1] == '    \033[1;31merr\033[0mor_message'  # "err" highlighted in red
+
+    # Caret line should have red carets
+    assert result[2] == '    \033[1;31m^^^\033[0m'  # BOLD_RED carets
+
+def test_format_entry_with_colors_unknown_region():
+    # Should colorize unknown file info when color=True
+    tb = Traceback()
+    result = tb._format_entry("unknown_func", None, {}, color=True)
+
+    # Check for color codes in unknown file line
+    assert '\033[35m"<unknown>"\033[0m' in result[0]  # MAGENTA filename
+    assert '\033[35m?\033[0m' in result[0]            # MAGENTA line number
+    assert '\033[35munknown_func\033[0m' in result[0]  # MAGENTA function name
+
+def test_traceback_format_with_colors():
+    # Should format complete traceback with colors
+    tb = Traceback()
+    region = Region.line_span('test.py', 1, 2, 4)
+    tb.add_frame("main", region)
+
+    file_content = {"test.py": "func()"}
+    result = tb.format(file_content, color=True)
+
+    expected_start = "\033[1mTraceback (most recent call last):\033[0m"
+    assert result[0] == expected_start
+
+    # File line should have colors
+    assert '\033[35m"test.py"\033[0m' in result[1]
+    assert '\033[35m1\033[0m' in result[1]
+
+    # Source line should have highlighted portion
+    assert result[2] == '    f\033[1;31munc\033[0m()'  # "unc" highlighted in red
+
+    # Caret line should be colored
+    assert '\033[1;31m^^^\033[0m' in result[3]
+
+def test_p4error_format_with_colors():
+    # Should work with color parameter and show message in magenta
+    error = P4Error("Test error message")
+    result = error.format(color=True)
+    assert result == "\033[35mTest error message\033[0m"  # Color shows message in magenta
+
+def test_can_colorize():
+    # Should return a boolean indicating if stderr is a TTY
+    from rpyp4sp.error import can_colorize
+    result = can_colorize()
+    assert isinstance(result, bool)  # Should return either True or False
+
+def test_format_entry_with_colors_full_line_no_highlight():
+    # Should NOT color source code when it covers the entire line
+    tb = Traceback()
+    region = Region.line_span('test.py', 1, 1, 5)  # Covers entire "error" word
+    file_content = {"test.py": "error"}
+
+    result = tb._format_entry("test_func", region, file_content, color=True)
+
+    # Check for color codes in file line
+    assert '\033[35m"test.py"\033[0m' in result[0]
+
+    # Source line should be plain (no highlighting since it covers whole word)
+    assert result[1] == '    error'
+
+    # No caret line since it covers whole word
+    assert len(result) == 2
+
+def test_format_p4error_function():
+    # Test the format_p4error function from error.py
+    from rpyp4sp.error import format_p4error
+
+    # Test basic error
+    error = P4Error("Test error message")
+    result = format_p4error(error, {}, color=False)
+    assert result == "Error:\nTest error message"
+
+    # Test error with traceback
+    error_with_trace = P4Error("Division by zero")
+    region = Region.line_span('calc.py', 10, 1, 5)
+    error_with_trace.traceback.add_frame("divide", region)
+
+    result = format_p4error(error_with_trace, {}, color=False)
+    lines = result.split('\n')
+    assert "Traceback (most recent call last):" in lines[0]
+    assert 'File "calc.py", line 10, in divide' in lines[1]
+    assert lines[-2] == "Error:"  # Error header
+    assert lines[-1] == "Division by zero"  # Error message at bottom
+
+    # Test auto color detection (should return False when not in TTY)
+    result_auto = format_p4error(error_with_trace, {})  # color=None, auto-detect
+    assert result_auto == result  # Should be same as color=False when not in TTY
+
+    # Test with colors enabled
+    result_colored = format_p4error(error_with_trace, {}, color=True)
+    lines_colored = result_colored.split('\n')
+    assert '\033[1mTraceback (most recent call last):\033[0m' == lines_colored[0]  # Bold traceback header
+    # File line should have color codes
+    assert '\033[35m"calc.py"\033[0m' in lines_colored[1]  # MAGENTA filename
+    assert '\033[35m10\033[0m' in lines_colored[1]  # MAGENTA line number
+    assert '\033[35mdivide\033[0m' in lines_colored[1]  # MAGENTA function name
+    assert lines_colored[-2] == '\033[1mError:\033[0m'  # Bold error header
+    assert lines_colored[-1] == "\033[35mDivision by zero\033[0m"  # Error message with magenta color
+
+def test_format_p4error_error_header_bold():
+    # Test that "Error:" header is bold when color=True
+    from rpyp4sp.error import format_p4error
+
+    error = P4Error("Test error message")
+
+    # With color
+    result_with_color = format_p4error(error, {}, color=True)
+    lines = result_with_color.split('\n')
+    assert lines[-2] == '\033[1mError:\033[0m'  # Bold error header
+    assert lines[-1] == '\033[35mTest error message\033[0m'  # Magenta error message
+
+    # Without color
+    result_no_color = format_p4error(error, {}, color=False)
+    lines = result_no_color.split('\n')
+    assert lines[-2] == 'Error:'  # Plain error header
+    assert lines[-1] == 'Test error message'  # Plain error message
+
+
+def test_traceback_run_length_encoding_no_repeats():
+    # Test normal case with no repeated entries
+    tb = Traceback()
+    region1 = Region.line_span('test1.py', 1, 1, 5)
+    region2 = Region.line_span('test2.py', 2, 1, 5)
+    tb.add_frame("func1", region1)
+    tb.add_frame("func2", region2)
+
+    result = tb.format({}, color=False)
+
+    # Should have normal traceback with no repeat messages
+    assert "Traceback (most recent call last):" in result
+    assert "repeated" not in '\n'.join(result)
+
+
+def test_traceback_run_length_encoding_single_repeat():
+    # Test case with one repeated entry
+    tb = Traceback()
+    region = Region.line_span('test.py', 1, 1, 5)
+    tb.add_frame("func", region)
+    tb.add_frame("func", region)  # Same function and region
+    tb.add_frame("other", None)
+
+    result = tb.format({"test.py": "func()"}, color=False)
+
+    expected = [
+        "Traceback (most recent call last):",
+        '  File "<unknown>", line ?, in other',
+        '  File "test.py", line 1, in func',
+        '    func()',
+        '    ^^^^^',
+        "  [Previous entry repeated 1 time]"
+    ]
+    assert result == expected
+
+
+def test_traceback_run_length_encoding_multiple_repeats():
+    # Test case with multiple repeated entries
+    tb = Traceback()
+    region = Region.line_span('test.py', 1, 1, 5)
+    tb.add_frame("func", region)
+    tb.add_frame("func", region)
+    tb.add_frame("func", region)
+    tb.add_frame("func", region)  # 4 total, so 3 repeats
+
+    result = tb.format({"test.py": "func()"}, color=False)
+
+    expected = [
+        "Traceback (most recent call last):",
+        '  File "test.py", line 1, in func',
+        '    func()',
+        '    ^^^^^',
+        "  [Previous entry repeated 3 times]"
+    ]
+    assert result == expected
+
+
+def test_traceback_run_length_encoding_repeats_at_end():
+    # Test case where repeated entries are at the end
+    tb = Traceback()
+    region1 = Region.line_span('test1.py', 1, 1, 5)
+    region2 = Region.line_span('test2.py', 2, 1, 5)
+    tb.add_frame("func1", region1)
+    tb.add_frame("func2", region2)
+    tb.add_frame("func2", region2)  # Repeat at end
+
+    result = tb.format({"test1.py": "func1()", "test2.py": "func2()"}, color=False)
+
+    expected = [
+        "Traceback (most recent call last):",
+        '  File "test2.py", line 2, in func2',
+        "  [Previous entry repeated 1 time]",
+        '  File "test1.py", line 1, in func1',
+        '    func1()',
+        '    ^^^^^'
+    ]
+    assert result == expected
+
+
+def test_traceback_run_length_encoding_different_source_not_repeated():
+    # Test that entries with same function name but different source are not considered repeats
+    tb = Traceback()
+    region1 = Region.line_span('test.py', 1, 1, 5)
+    region2 = Region.line_span('test.py', 2, 1, 5)
+    tb.add_frame("func", region1)
+    tb.add_frame("func", region2)  # Same function, different line
+
+    result = tb.format({"test.py": "func1()\nfunc2()"}, color=False)
+
+    # Should not show repeat message since the source lines are different
+    assert "repeated" not in '\n'.join(result)
+    assert len([line for line in result if "func" in line and "File" in line]) == 2
+
+
+def test_format_p4error_with_repeated_frames():
+    # Test format_p4error with run-length encoded traceback
+    from rpyp4sp.error import format_p4error
+
+    error = P4Error("Recursive error")
+    region = Region.line_span('recursive.py', 5, 1, 10)
+
+    # Add same frame multiple times
+    error.traceback.add_frame("recursive_func", region)
+    error.traceback.add_frame("recursive_func", region)
+    error.traceback.add_frame("recursive_func", region)
+
+    result = format_p4error(error, {"recursive.py": "recursive()"}, color=False)
+    lines = result.split('\n')
+
+    # Traceback should be first, error message last
+    assert lines[0] == "Traceback (most recent call last):"
+    assert "repeated 2 times" in '\n'.join(lines)
+    assert lines[-1] == "Recursive error"
+
+
+def test_should_skip_highlighting():
+    # Test the _should_skip_highlighting helper method
+    tb = Traceback()
+
+    # Test case 1: Should skip when highlighting covers entire line
+    # Line: "func()" (6 chars), highlight from col 1 to 6 or beyond
+    stripped_line1 = "func()"
+    assert tb._should_skip_highlighting(1, 6, stripped_line1) == True
+    assert tb._should_skip_highlighting(1, 7, stripped_line1) == True  # Beyond end
+
+    # Test case 2: Should not skip when highlighting is partial
+    # Line: "func()" (6 chars), highlight from col 2 to 4 (partial)
+    assert tb._should_skip_highlighting(2, 4, stripped_line1) == False
+    assert tb._should_skip_highlighting(1, 3, stripped_line1) == False  # Start at 1 but not full
+
+    # Test case 3: Should skip when line has trailing whitespace
+    # Line: "func()   " (9 chars with trailing spaces), but rstrip() gives 6 chars
+    stripped_line_with_trailing = "func()   "
+    assert tb._should_skip_highlighting(1, 6, stripped_line_with_trailing) == True
+    assert tb._should_skip_highlighting(1, 9, stripped_line_with_trailing) == True
+
+    # Test case 4: Should not skip partial highlighting with trailing whitespace
+    assert tb._should_skip_highlighting(2, 5, stripped_line_with_trailing) == False
+
+    # Test case 5: Edge case - empty line
+    empty_line = ""
+    assert tb._should_skip_highlighting(1, 1, empty_line) == True
+
+    # Test case 6: Edge case - whitespace-only line
+    whitespace_line = "   "
+    assert tb._should_skip_highlighting(1, 3, whitespace_line) == True
+    assert tb._should_skip_highlighting(1, 1, whitespace_line) == True  # rstrip() gives 0 length
+
+    # Test case 7: Should not skip when start column is not 1
+    long_line = "some longer function call"
+    assert tb._should_skip_highlighting(5, 25, long_line) == False  # Start not at 1
+
+    # Test case 8: Complex case with indented content (already stripped)
+    stripped_code = "return value + 1"
+    assert tb._should_skip_highlighting(1, 16, stripped_code) == True  # Full line
+    assert tb._should_skip_highlighting(1, 6, stripped_code) == False  # Just "return"
+    assert tb._should_skip_highlighting(8, 13, stripped_code) == False  # Just "value"
+
+    # Test case 9: Special handling for "-- " prefix (language-specific quirk)
+    comment_line = "-- some comment here"
+    assert tb._should_skip_highlighting(3, 20, comment_line) == True  # Skip "-- " prefix
+    assert tb._should_skip_highlighting(3, 21, comment_line) == True  # Skip "-- " prefix, extends beyond end
+    assert tb._should_skip_highlighting(1, 20, comment_line) == True  # Full line including "--"
+
+    # Should not skip if highlighting doesn't start at column 3 after "--"
+    assert tb._should_skip_highlighting(4, 20, comment_line) == False  # Start after "-- "
+    assert tb._should_skip_highlighting(1, 15, comment_line) == False  # Partial, includes "--"
+    assert tb._should_skip_highlighting(3, 15, comment_line) == False  # Start at 3 but doesn't cover full line
+
+    # Should not skip if line doesn't start with "-- "
+    regular_line = "if condition then"
+    assert tb._should_skip_highlighting(3, 17, regular_line) == False  # No "-- " prefix
+
+
+def test_format_p4error_with_spec_dirname():
+    # Test format_p4error with spec_dirname parameter
+    from rpyp4sp.error import format_p4error
+
+    error = P4Error("File path error")
+    region = Region.line_span('spec/test.watsup', 5, 1, 10)
+    error.traceback.add_frame("test_func", region)
+
+    file_content = {"spec/test.watsup": "test content here"}
+
+    # Test without spec_dirname (should work as before)
+    result_no_dirname = format_p4error(error, file_content, color=False)
+    lines = result_no_dirname.split('\n')
+    assert 'File "spec/test.watsup", line 5, in test_func' in lines[1]
+
+    # Test with spec_dirname (should still show relative path in output)
+    spec_dirname = "/abs/path/to/project"
+    result_with_dirname = format_p4error(error, file_content, color=False, spec_dirname=spec_dirname)
+    lines = result_with_dirname.split('\n')
+    assert 'File "spec/test.watsup", line 5, in test_func' in lines[1]  # Display should still show relative path
+
+    # Both results should be identical since the spec_dirname is passed through but doesn't change display
+    assert result_no_dirname == result_with_dirname
+
+
+def test_traceback_format_with_spec_dirname():
+    # Test Traceback.format with spec_dirname parameter
+    tb = Traceback()
+    region = Region.line_span('relative/path.watsup', 10, 5, 15)
+    tb.add_frame("test_function", region)
+
+    file_content = {"relative/path.watsup": "some code content"}
+
+    # Test without spec_dirname
+    result_no_dirname = tb.format(file_content, color=False)
+    assert 'File "relative/path.watsup", line 10, in test_function' in result_no_dirname[1]
+
+    # Test with spec_dirname
+    spec_dirname = "/project/root"
+    result_with_dirname = tb.format(file_content, color=False, spec_dirname=spec_dirname)
+    assert 'File "relative/path.watsup", line 10, in test_function' in result_with_dirname[1]
+
+    # Results should be identical (spec_dirname is for internal use, doesn't change display)
+    assert result_no_dirname == result_with_dirname
+
+
+def test_terminal_links_with_spec_dirname():
+    # Test that terminal links are created when color=True and spec_dirname is provided
+    from rpyp4sp.error import format_p4error
+
+    error = P4Error("Link test error")
+    region = Region.line_span('spec/test.watsup', 5, 1, 10)
+    error.traceback.add_frame("link_func", region)
+
+    file_content = {"spec/test.watsup": "test content"}
+    spec_dirname = "/project/root"
+
+    # Test with color=True and spec_dirname (should create terminal links)
+    result_with_links = format_p4error(error, file_content, color=True, spec_dirname=spec_dirname)
+    lines = result_with_links.split('\n')
+
+    # Should contain terminal link escape sequences
+    assert '\033]8;;file:///project/root/spec/test.watsup\033\\' in lines[1]  # Link start
+    assert '\033]8;;\033\\' in lines[1]  # Link end
+    # Should still display the relative filename
+    assert 'spec/test.watsup' in lines[1]
+
+    # Test with color=False (should not create terminal links)
+    result_no_links = format_p4error(error, file_content, color=False, spec_dirname=spec_dirname)
+    lines_no_links = result_no_links.split('\n')
+
+    # Should not contain terminal link escape sequences
+    assert '\033]8;;' not in lines_no_links[1]
+    assert 'File "spec/test.watsup", line 5, in link_func' in lines_no_links[1]
+
+
+def test_terminal_links_unknown_filename():
+    # Test that terminal links are not created for <unknown> filenames
+    tb = Traceback()
+
+    # Test with unknown region
+    result = tb._format_entry("unknown_func", None, {}, color=True, spec_dirname="/project")
+
+    # Should not contain terminal link escape sequences for <unknown>
+    assert '\033]8;;' not in result[0]
+    assert '<unknown>' in result[0]
+
+
+def test_terminal_links_direct_format_entry():
+    # Test _format_entry directly with terminal links
+    tb = Traceback()
+    region = Region.line_span('relative/file.watsup', 10, 1, 5)
+    file_content = {"relative/file.watsup": "code here"}
+
+    # Test with spec_dirname and color
+    result_with_links = tb._format_entry("test_func", region, file_content,
+                                       color=True, spec_dirname="/abs/path")
+
+    # Should contain terminal link
+    assert '\033]8;;file:///abs/path/relative/file.watsup\033\\' in result_with_links[0]
+    assert 'relative/file.watsup' in result_with_links[0]  # Display name
+
+    # Test without spec_dirname
+    result_no_links = tb._format_entry("test_func", region, file_content, color=True)
+
+    # Should not contain terminal link escape sequences
+    assert '\033]8;;' not in result_no_links[0]
+    assert 'relative/file.watsup' in result_no_links[0]
+
+
+# Tests for multi-line region formatting in _format_entry
+
+def test_format_entry_multi_line_small():
+    # Test multi-line region with 3 lines (should show all)
+    tb = Traceback()
+    region = Region(Position('test.py', 1, 1), Position('test.py', 3, 5))
+    file_content = {"test.py": "line one\nline two\nline three"}
+    result = tb._format_entry("multi_func", region, file_content)
+
+    expected = [
+        '  File "test.py", line 1, in multi_func',
+        '    line one',
+        '    line two',
+        '    line three'
+    ]
+    assert result == expected
+
+def test_format_entry_multi_line_exactly_five():
+    # Test multi-line region with exactly 5 lines (should show all)
+    tb = Traceback()
+    region = Region(Position('test.py', 1, 1), Position('test.py', 5, 10))
+    file_content = {"test.py": "line1\nline2\nline3\nline4\nline5"}
+    result = tb._format_entry("five_func", region, file_content)
+
+    expected = [
+        '  File "test.py", line 1, in five_func',
+        '    line1',
+        '    line2',
+        '    line3',
+        '    line4',
+        '    line5'
+    ]
+    assert result == expected
+
+def test_format_entry_multi_line_large():
+    # Test multi-line region with more than 5 lines (should truncate)
+    tb = Traceback()
+    region = Region(Position('test.py', 1, 1), Position('test.py', 8, 5))
+    file_content = {"test.py": "first\nsecond\nthird\nfourth\nfifth\nsixth\nseventh\neighth"}
+    result = tb._format_entry("large_func", region, file_content)
+
+    expected = [
+        '  File "test.py", line 1, in large_func',
+        '    first',
+        '    second',
+        '    [4 lines omitted]',
+        '    seventh',
+        '    eighth'
+    ]
+    assert result == expected
+
+def test_format_entry_multi_line_with_indentation():
+    # Test multi-line region preserves indentation stripping
+    tb = Traceback()
+    region = Region(Position('test.py', 1, 1), Position('test.py', 3, 5))
+    file_content = {"test.py": "  indented line one\n    more indented\n  back to two"}
+    result = tb._format_entry("indent_func", region, file_content)
+
+    expected = [
+        '  File "test.py", line 1, in indent_func',
+        '    indented line one',     # Min indent (2) removed: "  indented..." -> "indented..."
+        '      more indented',       # Min indent (2) removed: "    more..." -> "  more..."
+        '    back to two'           # Min indent (2) removed: "  back..." -> "back..."
+    ]
+    assert result == expected
+
+def test_format_entry_multi_line_six_lines():
+    # Test with exactly 6 lines to ensure proper omission calculation
+    tb = Traceback()
+    region = Region(Position('test.py', 1, 1), Position('test.py', 6, 1))
+    file_content = {"test.py": "line1\nline2\nline3\nline4\nline5\nline6"}
+    result = tb._format_entry("six_func", region, file_content)
+
+    expected = [
+        '  File "test.py", line 1, in six_func',
+        '    line1',
+        '    line2',
+        '    [2 lines omitted]',
+        '    line5',
+        '    line6'
+    ]
+    assert result == expected
+
+def test_format_entry_single_line_vs_multi_line():
+    # Test that line_span still uses old behavior with carets
+    tb = Traceback()
+    # Single line region (line_span)
+    single_region = Region.line_span('test.py', 1, 5, 10)
+    # Multi-line region (not line_span)
+    multi_region = Region(Position('test.py', 1, 5), Position('test.py', 2, 10))
+    file_content = {"test.py": "hello world test\nsecond line here"}
+
+    single_result = tb._format_entry("single_func", single_region, file_content)
+    multi_result = tb._format_entry("multi_func", multi_region, file_content)
+
+    # Single line should have carets
+    assert any('^' in line for line in single_result)
+    # Multi line should not have carets
+    assert not any('^' in line for line in multi_result)
+    # Multi line should show both lines
+    assert 'hello world test' in str(multi_result)
+    assert 'second line here' in str(multi_result)
+
+# Tests for _format_multiline_source helper method
+
+def test_format_multiline_source_single_line():
+    # Test single line (edge case)
+    tb = Traceback()
+    result = tb._format_multiline_source("single line")
+    expected = ['    single line']
+    assert result == expected
+
+def test_format_multiline_source_two_lines():
+    # Test two lines
+    tb = Traceback()
+    result = tb._format_multiline_source("first line\nsecond line")
+    expected = ['    first line', '    second line']
+    assert result == expected
+
+def test_format_multiline_source_exactly_five_lines():
+    # Test exactly 5 lines (boundary case)
+    tb = Traceback()
+    source = "line1\nline2\nline3\nline4\nline5"
+    result = tb._format_multiline_source(source)
+    expected = [
+        '    line1', '    line2', '    line3', '    line4', '    line5'
+    ]
+    assert result == expected
+
+def test_format_multiline_source_six_lines():
+    # Test 6 lines (should truncate)
+    tb = Traceback()
+    source = "line1\nline2\nline3\nline4\nline5\nline6"
+    result = tb._format_multiline_source(source)
+    expected = [
+        '    line1',
+        '    line2',
+        '    [2 lines omitted]',
+        '    line5',
+        '    line6'
+    ]
+    assert result == expected
+
+def test_format_multiline_source_many_lines():
+    # Test many lines
+    tb = Traceback()
+    lines = ["line%d" % i for i in range(1, 11)]  # line1 through line10
+    source = '\n'.join(lines)
+    result = tb._format_multiline_source(source)
+    expected = [
+        '    line1',
+        '    line2',
+        '    [6 lines omitted]',
+        '    line9',
+        '    line10'
+    ]
+    assert result == expected
+
+def test_format_multiline_source_with_indentation():
+    # Test relative indentation preservation
+    tb = Traceback()
+    source = "  indented1\n    more indented\n  indented2"
+    result = tb._format_multiline_source(source)
+    expected = [
+        '    indented1',        # Min indent (2) removed, so "  indented1" -> "indented1"
+        '      more indented',   # Min indent (2) removed, so "    more indented" -> "  more indented"
+        '    indented2'         # Min indent (2) removed, so "  indented2" -> "indented2"
+    ]
+    assert result == expected
+
+def test_format_multiline_source_complex_indentation():
+    # Test complex indentation with relative preservation
+    tb = Traceback()
+    source = "    def func():\n        if True:\n            return 42\n    pass"
+    result = tb._format_multiline_source(source)
+    expected = [
+        '    def func():',      # Min indent (4) removed, so "    def func():" -> "def func():"
+        '        if True:',     # Min indent (4) removed, so "        if True:" -> "    if True:"
+        '            return 42', # Min indent (4) removed, so "            return 42" -> "        return 42"
+        '    pass'              # Min indent (4) removed, so "    pass" -> "pass"
+    ]
+    assert result == expected
+
+def test_format_multiline_source_with_empty_lines():
+    # Test empty lines handling
+    tb = Traceback()
+    source = "line1\n\nline3\n\nline5"
+    result = tb._format_multiline_source(source)
+    expected = [
+        '    line1',
+        '    ',
+        '    line3',
+        '    ',
+        '    line5'
+    ]
+    assert result == expected
+
+def test_format_multiline_source_omission_count():
+    # Test correct omission count calculation
+    tb = Traceback()
+    # Create 10 lines: should show first 2, omit 6, show last 2
+    lines = ["line%d" % i for i in range(1, 11)]
+    source = '\n'.join(lines)
+    result = tb._format_multiline_source(source)
+
+    # Check the omission message
+    omission_line = None
+    for line in result:
+        if 'omitted' in line:
+            omission_line = line
+            break
+
+    assert omission_line == '    [6 lines omitted]'
+    assert len(result) == 5  # 2 first + 1 omission + 2 last
+
+def test_bold_if_color():
+    # Test the bold_if_color helper function
+    # Test with color enabled
+    result_with_color = bold_if_color("Test text", True)
+    assert result_with_color == '\033[1mTest text\033[0m'
+
+    # Test with color disabled
+    result_no_color = bold_if_color("Test text", False)
+    assert result_no_color == "Test text"
+
+def test_traceback_header_bold():
+    # Test that traceback header is bold when color=True
+    tb = Traceback()
+    tb.add_frame("test_func", Region.line_span('test.py', 1, 1, 5))
+    file_content = {"test.py": "test line"}
+
+    # With color
+    result_with_color = tb.format(file_content, color=True)
+    assert any('\033[1mTraceback (most recent call last):\033[0m' in line for line in result_with_color)
+
+    # Without color
+    result_no_color = tb.format(file_content, color=False)
+    assert any('Traceback (most recent call last):' in line and '\033[1m' not in line for line in result_no_color)
+
+def test_local_variables_header_bold():
+    # Test that local variables header is bold when color=True
+    from rpyp4sp.error import format_ctx
+
+    # Mock context object
+    class MockCtx:
+        def __init__(self):
+            self.venv = {}
+
+    ctx = MockCtx()
+
+    # With color
+    result_with_color = format_ctx(ctx, None, color=True)
+    assert result_with_color[0] == '\033[1mLocal variables:\033[0m'
+
+    # Without color
+    result_no_color = format_ctx(ctx, None, color=False)
+    assert result_no_color[0] == 'Local variables:'
+
+def test_format_ctx_variable_sorting():
+    # Test that variables are sorted by their position in the entry line
+    from rpyp4sp.error import format_ctx
+
+    # Mock value class
+    class MockValue:
+        def __init__(self, value):
+            self.value = value
+
+        def tostring(self, short=False):
+            return str(self.value)
+
+    # Mock context with variables in arbitrary order
+    class MockCtx:
+        def __init__(self):
+            self.venv = {
+                ('gamma', ''): MockValue('third'),
+                ('alpha', ''): MockValue('first'),
+                ('beta', ''): MockValue('second'),
+                ('delta', ''): MockValue('fourth')
+            }
+
+    ctx = MockCtx()
+    entry_line = "alpha + beta * gamma - delta"
+
+    result = format_ctx(ctx, entry_line, color=False)
+
+    # Should be: header, alpha, beta, gamma, delta, empty line
+    expected = [
+        'Local variables:',
+        'alpha:',
+        '    first',
+        'beta:',
+        '    second',
+        'gamma:',
+        '    third',
+        'delta:',
+        '    fourth',
+        ''
+    ]
+    assert result == expected
+
+def test_format_ctx_no_entry_line():
+    # Test that when entry_line is None, all variables are shown (order may vary)
+    from rpyp4sp.error import format_ctx
+
+    class MockValue:
+        def __init__(self, value):
+            self.value = value
+
+        def tostring(self, short=False):
+            return str(self.value)
+
+    class MockCtx:
+        def __init__(self):
+            self.venv = {
+                ('var1', ''): MockValue('value1'),
+                ('var2', ''): MockValue('value2')
+            }
+
+    ctx = MockCtx()
+    result = format_ctx(ctx, None, color=False)
+
+    # Should contain both variables (order not guaranteed when entry_line is None)
+    assert len(result) == 6  # header + 2*(var + value) + empty line
+    assert 'Local variables:' in result
+    assert 'var1:' in result
+    assert 'var2:' in result
+    assert '    value1' in result
+    assert '    value2' in result
+
+def test_format_ctx_variable_filtering():
+    # Test that only variables mentioned in entry_line are shown
+    from rpyp4sp.error import format_ctx
+
+    class MockValue:
+        def __init__(self, value):
+            self.value = value
+
+        def tostring(self, short=False):
+            return str(self.value)
+
+    class MockCtx:
+        def __init__(self):
+            self.venv = {
+                ('used_var', ''): MockValue('shown'),
+                ('unused_var', ''): MockValue('hidden'),
+                ('also_used', ''): MockValue('also_shown')
+            }
+
+    ctx = MockCtx()
+    entry_line = "used_var + also_used"  # doesn't mention unused_var
+
+    result = format_ctx(ctx, entry_line, color=False)
+
+    # Should only show used_var and also_used, sorted by position
+    expected = [
+        'Local variables:',
+        'used_var:',
+        '    shown',
+        'also_used:',
+        '    also_shown',
+        ''
+    ]
+    assert result == expected
+
+def test_format_ctx_iterators():
+    # Test that iterators are properly included in variable names
+    from rpyp4sp.error import format_ctx
+
+    class MockValue:
+        def __init__(self, value):
+            self.value = value
+
+        def tostring(self, short=False):
+            return str(self.value)
+
+    class MockCtx:
+        def __init__(self):
+            self.venv = {
+                ('x', '[0]'): MockValue('first_element'),
+                ('y', ''): MockValue('simple_var')
+            }
+
+    ctx = MockCtx()
+    entry_line = "x[0] + y"
+
+    result = format_ctx(ctx, entry_line, color=False)
+
+    expected = [
+        'Local variables:',
+        'x[0]:',
+        '    first_element',
+        'y:',
+        '    simple_var',
+        ''
+    ]
+    assert result == expected
+
+def test_format_ctx_multiline_values():
+    # Test handling of multiline values
+    from rpyp4sp.error import format_ctx
+
+    class MockValue:
+        def __init__(self, value):
+            self.value = value
+
+        def tostring(self, short=False):
+            return self.value
+
+    class MockCtx:
+        def __init__(self):
+            self.venv = {
+                ('multi', ''): MockValue('line1\nline2\nline3')
+            }
+
+    ctx = MockCtx()
+    entry_line = "multi"
+
+    result = format_ctx(ctx, entry_line, color=False)
+
+    expected = [
+        'Local variables:',
+        'multi:',
+        '    line1',
+        '    line2',
+        '    line3',
+        ''
+    ]
+    assert result == expected
+
+def test_format_ctx_color_formatting():
+    # Test color formatting of variable names
+    from rpyp4sp.error import format_ctx
+
+    class MockValue:
+        def __init__(self, value):
+            self.value = value
+
+        def tostring(self, short=False):
+            return str(self.value)
+
+    class MockCtx:
+        def __init__(self):
+            self.venv = {
+                ('colored_var', '[i]'): MockValue('test_value')
+            }
+
+    ctx = MockCtx()
+    entry_line = "colored_var"
+
+    result = format_ctx(ctx, entry_line, color=True)
+
+    expected = [
+        '\033[1mLocal variables:\033[0m',
+        '\033[35mcolored_var[i]\033[0m:',
+        '    test_value',
+        ''
+    ]
+    assert result == expected
+
+def test_find_nth():
+    # Test the find_nth helper function
+    from rpyp4sp.error import find_nth
+
+    # Test basic functionality
+    text = "hello\nworld\ntest\nmore"
+    assert find_nth(text, '\n', 0) == 5   # First newline
+    assert find_nth(text, '\n', 1) == 11  # Second newline
+    assert find_nth(text, '\n', 2) == 16  # Third newline
+    assert find_nth(text, '\n', 3) == -1  # Fourth newline (doesn't exist)
+
+    # Test with startpos
+    assert find_nth(text, '\n', 0, 6) == 11  # First newline after position 6
+    assert find_nth(text, '\n', 1, 6) == 16  # Second newline after position 6
+
+    # Test edge cases
+    assert find_nth("", '\n', 0) == -1        # Empty string
+    assert find_nth("no newlines", '\n', 0) == -1  # No occurrences
+    assert find_nth("one\n", '\n', 0) == 3    # Single newline
+    assert find_nth("one\n", '\n', 1) == -1   # Second newline doesn't exist
+
+    # Test with different substrings
+    assert find_nth("abcabcabc", "abc", 0) == 0  # First occurrence
+    assert find_nth("abcabcabc", "abc", 1) == 3  # Second occurrence
+    assert find_nth("abcabcabc", "abc", 2) == 6  # Third occurrence

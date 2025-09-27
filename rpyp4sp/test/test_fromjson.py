@@ -24,6 +24,8 @@ def test_full_ast_rpython():
     fn = os.path.join(basedir, "ast.json")
     with open(fn) as f:
         value = loads(f.read())
+    if value.is_object:
+        value = value.get_dict_value("ast")
     defs = {}
     for i, d in enumerate(value.value_array()):
         defs[i] = p4specast.Def.fromjson(d)

@@ -3,5 +3,6 @@
 .cache
 *.pyc
 ast.json
+integrationtests/*.actual
 
 .vscode/
