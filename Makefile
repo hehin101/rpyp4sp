@@ -32,3 +32,26 @@ _pypy_binary/bin/python:  ## Download a PyPy binary
 	./_pypy_binary/bin/python -m ensurepip
 	./_pypy_binary/bin/python -mpip install "hypothesis<4.40" junit_xml coverage==5.5 "pdbpp==0.10.3"
 
+.PHONY: run-error-tests
+run-error-tests:  ## Run integration tests for error output
+	./targetrpyp4sp-c run-p4-json --no-times `cat integrationtests/errorfiles` > integrationtests/erroroutput.actual
+	@if diff --color=auto -u integrationtests/erroroutput.expected integrationtests/erroroutput.actual; then \
+		echo "\033[32mError output tests (no color) PASSED\033[0m"; \
+	else \
+		echo "\033[31mError output tests (no color) FAILED - differences found above\033[0m"; \
+		exit 1; \
+	fi
+	FORCE_COLOR=1 ./targetrpyp4sp-c run-p4-json --no-times `cat integrationtests/errorfiles` > integrationtests/erroroutput_color.actual
+	@if diff --color=auto -u integrationtests/erroroutput_color.expected integrationtests/erroroutput_color.actual; then \
+		echo "\033[32mError output tests (with color) PASSED\033[0m"; \
+	else \
+		echo "\033[31mError output tests (with color) FAILED - differences found above\033[0m"; \
+		exit 1; \
+	fi
+
+.PHONY: update-error-tests-expectations
+update-error-tests-expectations:  ## Update expected output files for error tests
+	./targetrpyp4sp-c run-p4-json --no-times `cat integrationtests/errorfiles` > integrationtests/erroroutput.expected
+	FORCE_COLOR=1 ./targetrpyp4sp-c run-p4-json --no-times `cat integrationtests/errorfiles` > integrationtests/erroroutput_color.expected
+	@echo "\033[33mUpdated error test expectations\033[0m"
+

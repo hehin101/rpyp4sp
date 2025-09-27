@@ -163,6 +163,7 @@ def command_run_test_jsonl(argv):
 
 def command_run_p4(argv):
     ctx = make_context()
+    print_times = not parse_flag(argv, "--no-times")
     load_times = []
     run_times = []
     passed = 0
@@ -178,7 +179,8 @@ def command_run_p4(argv):
         valuejson = rpyjson.loads(content)
         value = objects.BaseV.fromjson(valuejson)
         t2 = time.time()
-        print("program loaded in %ss" % (t2 - t1))
+        if print_times:
+            print("program loaded in %ss" % (t2 - t1))
         load_times.append(t2 - t1)
         resctx = None
         try:
@@ -189,11 +191,11 @@ def command_run_p4(argv):
         except KeyError as e:
             print("KeyError")
         t3 = time.time()
-        print("executed in %ss" % (t3 - t2))
+        if print_times:
+            print("executed in %ss" % (t3 - t2))
         run_times.append(t3 - t2)
         if resctx is None:
             errors += 1
-            print("relation was not matched, or error")
         else:
             passed += 1
             print("well-typed")
@@ -209,9 +211,12 @@ def command_run_p4(argv):
         for x in l:
             res += x
         return res
-    print("load time; total:", fsum(load_times), "avg:", fsum(load_times) / len(load_times))
-    print("run time; total:", fsum(run_times), "avg:", fsum(run_times) / len(run_times))
-    print("total time:", fsum(load_times) + fsum(run_times))
+    if print_times:
+        print("load time; total:", fsum(load_times), "avg:", fsum(load_times) / len(load_times))
+    if print_times:
+        print("run time; total:", fsum(run_times), "avg:", fsum(run_times) / len(run_times))
+    if print_times:
+        print("total time:", fsum(load_times) + fsum(run_times))
     return 0
 
 def print_csv_line(*args):
