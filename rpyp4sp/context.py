@@ -2,6 +2,9 @@ from rpyp4sp import p4specast, objects, smalllist
 from rpyp4sp.error import P4ContextError
 
 class GlobalContext(object):
+    file_content = {}
+    spec_dirname = None
+
     def __init__(self):
         self.tdenv = {}
         self.renv = {}
@@ -176,7 +179,9 @@ class Context(object):
     def copy_and_change_append_venv(self, value, venv_keys):
         return self._append_list(value, self.filename, self.derive, self.glbl, self.tdenv, self.fenv, venv_keys)
 
-    def load_spec(self, spec):
+    def load_spec(self, spec, file_content, spec_dirname):
+        self.glbl.file_content = file_content
+        self.glbl.spec_dirname = spec_dirname
         for definition in spec:
             if isinstance(definition, p4specast.TypD):
                 self.glbl.tdenv[definition.id.value] = (definition.tparams, definition.deftyp)
@@ -364,6 +369,12 @@ class Context(object):
                 l.append(", %r: %r" % (var_name + var_iter, value))
         l.append(">")
         return "".join(l)
+
+    def venv_items(self):
+        res = []
+        for key, index in self.venv_keys.keys.items():
+            res.append((key, self._get_list(index)))
+        return res
 
 
 def transpose(value_matrix):

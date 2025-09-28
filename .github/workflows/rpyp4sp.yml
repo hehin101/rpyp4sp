@@ -53,9 +53,7 @@ jobs:
 
       - name: make ast.json
         run: |
-          cd p4-spectec
-          ./p4spectec json-ast spec/*.watsup  > ../ast.json
-          cd ..
+          make ast.json
           ls -l ast.json
           pwd
           echo realpath ast.json
@@ -86,3 +84,7 @@ jobs:
         run: |
           ./targetrpyp4sp-c run-p4-json p4-spectec/p4c/testdata/p4_16_samples/*.p4.json | tee out
           grep "PASSED: 11[0-9][0-9]" out
+
+      - name: run error integration tests
+        run: |
+          make run-error-tests

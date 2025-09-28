@@ -2,7 +2,7 @@ from __future__ import print_function
 from rpython.rlib import objectmodel, jit
 from rpyp4sp import p4specast, objects, builtin, context, integers
 from rpyp4sp.error import (P4EvaluationError, P4CastError, P4NotImplementedError, 
-                           P4RelationError)
+                           P4RelationError, P4Error)
 
 class Sign(object):
     # abstract base
@@ -21,6 +21,13 @@ class Ret(Sign):
 
 
 def invoke_func(ctx, calle):
+    try:
+        return _invoke_func(ctx, calle)
+    except P4Error as e:
+        e.traceback_add_frame('???', calle.region, calle)
+        raise
+
+def _invoke_func(ctx, calle):
     # if Builtin.is_builtin id then invoke_func_builtin ctx id targs args
     if builtin.is_builtin(calle.func.value):
         return invoke_func_builtin(ctx, calle)
@@ -75,7 +82,11 @@ def invoke_func_def(ctx, calle):
             targ = targs[i]
             ctx_local = ctx_local.add_typdef_local(tparam, ([], p4specast.PlainT(targ)))
     ctx, values_input = eval_args(ctx, calle.args)
-    return invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=ctx_local)
+    try:
+        return invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=ctx_local)
+    except P4Error as e:
+        e.traceback_patch_last_name(func.id.value)
+        raise
 
 def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     # INCOMPLETE
@@ -102,7 +113,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     #     (ctx, value_output)
         return ctx, sign.value
     # | _ -> error id.at "function was not matched"
-    raise P4EvaluationError("TODO invoke_func_def_attempt_clauses")
+    raise P4EvaluationError("function was not matched: %s" % (func.id.value))
 
 def eval_arg(ctx, arg):
     # match arg.it with
@@ -151,7 +162,11 @@ def invoke_rel(ctx, id, values_input):
     #   let ctx_local = assign_exps ctx_local exps_input values_input in
     ctx_local = assign_exps(ctx_local, reld.exps, values_input)
     #   let ctx_local, sign = eval_instrs ctx_local Cont instrs in
-    ctx_local, sign = eval_instrs(ctx_local, Cont(), reld.instrs)
+    try:
+        ctx_local, sign = eval_instrs(ctx_local, Cont(), reld.instrs)
+    except P4Error as e:
+        e.traceback_patch_last_name(id.value)
+        raise
     ctx = ctx.commit(ctx_local)
     #   let ctx = Ctx.commit ctx ctx_local in
     #   match sign with
@@ -185,7 +200,13 @@ def invoke_rel(ctx, id, values_input):
 # instructions
 
 def eval_instr(ctx, instr):
-    return instr.eval_instr(ctx)
+    try:
+        return instr.eval_instr(ctx)
+    except P4Error as e:
+        e.maybe_add_region(instr.region)
+        e.maybe_add_ctx(ctx)
+        raise
+
 
 def eval_instrs(ctx, sign, instrs):
     #     eval_instrs (ctx : Ctx.t) (sign : Sign.t) (instrs : instr list) :
@@ -801,7 +822,11 @@ def eval_rule_iter(ctx, instr):
 class __extend__(p4specast.RuleI):
     def eval_instr(self, ctx):
         # let ctx = eval_rule_iter ctx id notexp iterexps in
-        ctx = eval_rule_iter(ctx, self)
+        try:
+            ctx = eval_rule_iter(ctx, self)
+        except P4Error as e:
+            e.traceback_add_frame('???', self.region, self)
+            raise
         return ctx, Cont()
 
 

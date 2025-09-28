@@ -1,0 +1,3459 @@
+p4-spectec/p4c/testdata/p4_16_samples/action_profile-bmv2.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 54 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 605, in TableProperty_ok
+    -- TableKeys_ok: TC TBLC_0 |- tableKey* : TBLC_1 tableKeyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 81, in TableKeys_ok
+    -- TableKey_ok: TC TBLC_0 |- tableKey_h : TBLC_1 tableKeyIR_h
+Local variables:
+TC:
+    { .../3 }
+tableKey*:
+    [ ((ExprAccE (NameE (CURRENT 'meta')) 'hash1') 'selector') ]
+tableKey_h:
+    ((ExprAccE (NameE (CURRENT 'meta')) 'hash1') 'selector')
+
+Error:
+relation was not matched: TableKey_ok
+p4-spectec/p4c/testdata/p4_16_samples/action_profile_max_group_size_annotation.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 54 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 605, in TableProperty_ok
+    -- TableKeys_ok: TC TBLC_0 |- tableKey* : TBLC_1 tableKeyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 81, in TableKeys_ok
+    -- TableKey_ok: TC TBLC_0 |- tableKey_h : TBLC_1 tableKeyIR_h
+Local variables:
+TC:
+    { .../3 }
+tableKey*:
+    [ ((ExprAccE (NameE (CURRENT 'meta')) 'hash1') 'selector') ]
+tableKey_h:
+    ((ExprAccE (NameE (CURRENT 'meta')) 'hash1') 'selector')
+
+Error:
+relation was not matched: TableKey_ok
+p4-spectec/p4c/testdata/p4_16_samples/action_profile_sum_of_members_annotation.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 54 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 3 times]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 605, in TableProperty_ok
+    -- TableKeys_ok: TC TBLC_0 |- tableKey* : TBLC_1 tableKeyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 81, in TableKeys_ok
+    -- TableKey_ok: TC TBLC_0 |- tableKey_h : TBLC_1 tableKeyIR_h
+Local variables:
+TC:
+    { .../3 }
+tableKey*:
+    [ ((ExprAccE (NameE (CURRENT 'meta')) 'hash1') 'selector') ]
+tableKey_h:
+    ((ExprAccE (NameE (CURRENT 'meta')) 'hash1') 'selector')
+
+Error:
+relation was not matched: TableKey_ok
+p4-spectec/p4c/testdata/p4_16_samples/action_selector_shared-bmv2.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 54 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 605, in TableProperty_ok
+    -- TableKeys_ok: TC TBLC_0 |- tableKey* : TBLC_1 tableKeyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 81, in TableKeys_ok
+    -- TableKey_ok: TC TBLC_0 |- tableKey_h : TBLC_1 tableKeyIR_h
+Local variables:
+TC:
+    { .../3 }
+tableKey*:
+    [ ((ExprAccE (NameE (CURRENT 'meta')) 'hash1') 'selector') ]
+tableKey_h:
+    ((ExprAccE (NameE (CURRENT 'meta')) 'hash1') 'selector')
+
+Error:
+relation was not matched: TableKey_ok
+p4-spectec/p4c/testdata/p4_16_samples/action-two-params.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 57 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 707, in TableProperties_ok
+    -- TableProperties_ok: TC TBLC_1 |- tableProperty_t* : TBLC_2 tablePropertyIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 626, in TableProperty_ok
+    -- TableEntries_ok: TC TBLC_2 |- tableEntry* : TBLC_3 tableEntryIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 591, in TableEntries_ok
+    -- TableEntry_ok: TC TBLC_0 |- tableEntry_h : TBLC_1 tableEntryIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 568, in TableEntry_ok
+    -- TableEntry_keysets_ok: TC TBLC_0 |- keysetExpression* : TBLS keysetExpressionIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 423, in TableEntry_keysets_ok
+    -- TableEntry_keysets_ok':
+        TC TBLC NOLPM |- TBLC.KEYS keysetExpression*
+                       : TBLS keysetExpressionIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 375, in TableEntry_keysets_ok'
+    -- TableEntry_keyset_ok:
+        TC TBLC |- matchKey_h keysetExpression_h
+                 : TBLS_1 keysetExpressionIR_h
+Local variables:
+TC:
+    { .../3 }
+TBLC:
+    { .../5 }
+matchKey*:
+    [ ((DefT 'IPv4Address' (FBitT 32)), 'exact') ]
+matchKey_h:
+    ((DefT 'IPv4Address' (FBitT 32)), 'exact')
+keysetExpression*:
+    [ (ExprK (SeqE [ (BinE (BinE (BinE (NumE (FBIT 8 32)) (CONCAT) (NumE (FBIT 8 2))) (CONCAT) (NumE (FBIT 8 4))) (CONCAT) (NumE (FBIT 8 32))) ])) ]
+keysetExpression_h:
+    (ExprK (SeqE [ (BinE (BinE (BinE (NumE (FBIT 8 32)) (CONCAT) (NumE (FBIT 8 2))) (CONCAT) (NumE (FBIT 8 4))) (CONCAT) (NumE (FBIT 8 32))) ]))
+
+Error:
+relation was not matched: TableEntry_keyset_ok
+p4-spectec/p4c/testdata/p4_16_samples/constant_folding.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 552, in Decl_ok
+    -- Block_ok: TC_5 CONT |- controlBody : _ _ controlBodyIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 408, in BlockElementStmts_ok
+    -- BlockElementStmts_ok: TC_1 f_1 |- blockElementStatement_t*
+                                       : TC_2 f_2 blockElementStatementIR_t*
+  [Previous entry repeated 10 times]
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 32, in Stmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 22, in AssignmentStmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+Local variables:
+TC:
+    { .../3 }
+expression:
+    (BinE (NumE (FBIT 32 5)) (DIV) (NumE (INT 3)))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/default-control-argument.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 6 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 299, in Decl_ok
+    -- InstanceDecl_ok:
+        GLOBAL TC_0 |- instantiation : TC_1 instantiationIR
+  File "spec/5.11-typing-declaration.watsup", line 81, in InstanceDecl_ok
+    -- Inst_ok:
+        p TC_0 NAMED |- constructorTypeIR eps tid_impl* argumentIR* id_default*
+                      : typeIR_object typeArgumentIR_inferred* argumentIR_cast*
+  File "spec/5.15.3-typing-constructor-call.watsup", line 91, in Inst_ok
+    -- if inference = $infer(tid_infer*, parameterTypeIR_aligned*, argumentIR*)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.15.2-typing-call-inference.watsup", line 50, in infer
+    = $infer'(constraint_init, parameterTypeIR, argumentIR))*
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.15.2-typing-call-inference.watsup", line 60, in infer'
+    = $gen_constraint_type(constraint, typeIR_param, typeIR_arg)
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.15.2-typing-call-inference.watsup", line 127, in gen_constraint_type
+    -- if constraint_1 = $gen_constraint_type(
+                            constraint_0,
+                            typeIR_specialized_param,
+                            typeIR_specialized_arg
+                          )
+  File "spec/5.15.2-typing-call-inference.watsup", line 222, in gen_constraint_type
+    -- if (direction typeIR_arg _ _ = parameterTypeIR_arg)*
+          ^^^^^^^^^^
+Local variables:
+direction*:
+    [ (INOUT),
+      (INOUT),
+      (IN) ]
+typeIR_arg*:
+    [ (SpecT (PolyTD (StructT 'hdr_t' []) [] []) []),
+      (SpecT (PolyTD (StructT 'meta_t' []) [] []) []) ]
+parameterTypeIR_arg*:
+    [ ((INOUT) (SpecT (PolyTD (StructT 'hdr_t' []) [] []) []) 'hdr' None),
+      ((INOUT) (SpecT (PolyTD (StructT 'meta_t' []) [] []) []) 'meta' None) ]
+
+Error:
+cannot transpose a matrix of value batches
+p4-spectec/p4c/testdata/p4_16_samples/default-package-argument.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 3 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 936, in Decl_ok
+    -- ConstructorParameters_ok: BLOCK TC_2 |- constructorParameter*
+                                             : constructorParameterIR* tid_impl*
+  File "spec/5.09-typing-parameter.watsup", line 67, in ConstructorParameters_ok
+    -- Parameters_ok: p TC |- constructorParameter*
+                            : constructorParameterIR* tid_fresh*
+  File "spec/5.09-typing-parameter.watsup", line 45, in Parameters_ok
+    -- Parameter_ok: p TC |- parameter_h : parameterIR_h tid_fresh_h*
+  File "spec/5.09-typing-parameter.watsup", line 23, in Parameter_ok
+    -- Expr_ok: p TC |- expression_init : typedExpressionIR_init
+  File "spec/5.06.2-typing-expression.watsup", line 1079, in Expr_ok
+    -- Inst_ok:
+        p TC ANON |- constructorTypeIR eps tid_impl* argumentIR* id_default*
+                   : typeIR_object typeArgumentIR_inferred* argumentIR_cast*
+Local variables:
+p:
+    (BLOCK)
+TC:
+    { .../3 }
+constructorTypeIR:
+    (ConstructorT [] (SpecT (PolyTD (ControlT [ ((INOUT) (SpecT (PolyTD (StructT 'empty_t' []) [] []) []) 'hdr' None),
+              ((INOUT) (SpecT (PolyTD (StructT 'empty_t' []) [] []) []) 'meta' None),
+              ((IN) (SpecT (PolyTD (StructT 'intrinsic_metadata_t' [ ((FBitT 8) 'f0'),
+                          ((FBitT 8) 'f1') ]) [] []) []) 'imeta' None) ]) [] []) []))
+tid_impl*:
+    []
+argument*:
+    []
+argumentIR*:
+    []
+id_default*:
+    []
+
+Error:
+relation was not matched: Inst_ok
+p4-spectec/p4c/testdata/p4_16_samples/enumCast.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 13 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 503, in Decl_ok
+    -- ParserStates_ok: TC_5 |- parserState* : parserStateIR*
+  File "spec/5.13.2-typing-parser-state.watsup", line 56, in ParserStates_ok
+    -- (ParserState_ok: TC name_state_impl* |- parserState : parserStateIR)*
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.13.2-typing-parser-state.watsup", line 29, in ParserState_ok
+    -- ParserStmts_ok: TC_1 |- parserStatement* : TC_2 parserStatementIR*
+  File "spec/5.13.1-typing-parser-statement.watsup", line 295, in ParserStmts_ok
+    -- ParserStmts_ok: TC_1 |- parserStatement_t*
+                             : TC_2 parserStatementIR_t*
+  [Previous entry repeated 5 times]
+  File "spec/5.13.1-typing-parser-statement.watsup", line 293, in ParserStmts_ok
+    -- ParserStmt_ok: TC_0 |- parserStatement_h
+                            : TC_1 parserStatementIR_h
+  File "spec/5.13.1-typing-parser-statement.watsup", line 242, in ParserStmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 22, in AssignmentStmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+Local variables:
+TC:
+    { .../3 }
+expression:
+    (BinE (NameE (CURRENT 'a')) (EQ) (NameE (CURRENT 'b')))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/factory1.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 12 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 299, in Decl_ok
+    -- InstanceDecl_ok:
+        GLOBAL TC_0 |- instantiation : TC_1 instantiationIR
+  File "spec/5.11-typing-declaration.watsup", line 76, in InstanceDecl_ok
+    -- (Argument_ok: p TC_0 |- argument : argumentIR)*
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.07.2-typing-argument.watsup", line 11, in Argument_ok
+    -- Expr_ok: p TC |- expression : typedExpressionIR
+  File "spec/5.06.2-typing-expression.watsup", line 1074, in Expr_ok
+    -- (Argument_ok: p TC |- argument : argumentIR)*
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.07.2-typing-argument.watsup", line 11, in Argument_ok
+    -- Expr_ok: p TC |- expression : typedExpressionIR
+  File "spec/5.06.2-typing-expression.watsup", line 1029, in Expr_ok
+    -- Call_ok:
+        p TC |- routineTypeIR typeArgumentIR* tid_infer* argumentIR* id_default*
+              : typeIR_ret typeArgumentIR_inferred* argumentIR_cast*
+Local variables:
+p:
+    (GLOBAL)
+TC:
+    { .../3 }
+routineTypeIR:
+    (ExternFuncT [ ((NO) (NameT 'FRESH__267') 'a' None),
+        ((NO) (NameT 'FRESH__266') 'b' None) ] (SpecT (PolyTD (ExternT 'widget' ({ [] })) [] []) []))
+typeArgument*:
+    []
+typeArgumentIR*:
+    []
+tid_infer*:
+    [ 'FRESH__266',
+      'FRESH__267' ]
+argument*:
+    [ (ExprA (NumE (FBIT 16 0))),
+      (ExprA (NumE (FBIT 8 0))) ]
+argumentIR*:
+    [ (ExprA ((NumE (FBIT 16 0)) (( (FBitT 16) (LCTK) )))),
+      (ExprA ((NumE (FBIT 8 0)) (( (FBitT 8) (LCTK) )))) ]
+id_default*:
+    []
+
+Error:
+relation was not matched: Call_ok
+p4-spectec/p4c/testdata/p4_16_samples/factory2.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 12 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 299, in Decl_ok
+    -- InstanceDecl_ok:
+        GLOBAL TC_0 |- instantiation : TC_1 instantiationIR
+  File "spec/5.11-typing-declaration.watsup", line 76, in InstanceDecl_ok
+    -- (Argument_ok: p TC_0 |- argument : argumentIR)*
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.07.2-typing-argument.watsup", line 11, in Argument_ok
+    -- Expr_ok: p TC |- expression : typedExpressionIR
+  File "spec/5.06.2-typing-expression.watsup", line 1074, in Expr_ok
+    -- (Argument_ok: p TC |- argument : argumentIR)*
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.07.2-typing-argument.watsup", line 11, in Argument_ok
+    -- Expr_ok: p TC |- expression : typedExpressionIR
+  File "spec/5.06.2-typing-expression.watsup", line 1029, in Expr_ok
+    -- Call_ok:
+        p TC |- routineTypeIR typeArgumentIR* tid_infer* argumentIR* id_default*
+              : typeIR_ret typeArgumentIR_inferred* argumentIR_cast*
+Local variables:
+p:
+    (GLOBAL)
+TC:
+    { .../3 }
+routineTypeIR:
+    (ExternFuncT [ ((NO) (NameT 'FRESH__269') 'a' None),
+        ((NO) (NameT 'FRESH__268') 'b' None) ] (SpecT (PolyTD (ExternT 'widget' ({ [] })) [ 'FRESH__270' ] []) [ (NameT 'FRESH__268') ]))
+typeArgument*:
+    []
+typeArgumentIR*:
+    []
+tid_infer*:
+    [ 'FRESH__268',
+      'FRESH__269' ]
+argument*:
+    [ (ExprA (NumE (FBIT 16 0))),
+      (ExprA (NumE (FBIT 8 0))) ]
+argumentIR*:
+    [ (ExprA ((NumE (FBIT 16 0)) (( (FBitT 16) (LCTK) )))),
+      (ExprA ((NumE (FBIT 8 0)) (( (FBitT 8) (LCTK) )))) ]
+id_default*:
+    []
+
+Error:
+relation was not matched: Call_ok
+p4-spectec/p4c/testdata/p4_16_samples/functors6.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 7 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+Local variables:
+declaration*:
+    [ (ParserD 'p1' [ 'T' ] [ ((IN) (NameT (CURRENT 'T')) 'a' None) ] [] [] [ ('start' [ (VarD (NameT (CURRENT 'T')) 'w' Some((NameE (CURRENT 'a')))) ] Some((TransS (NameE 'accept')))) ]),
+      (ParserTypeD 'simple' [] [ ((IN) (FBitT (NumE (INT 2))) 'a' None) ]),
+      (PackageTypeD 'm' [] [ ((NO) (NameT (CURRENT 'simple')) 'n' None) ]),
+      (InstD (NameT (CURRENT 'm')) [ (ExprA (InstE (NameT (CURRENT 'p1')) [])) ] 'main' None) ]
+declaration_h:
+    (ParserD 'p1' [ 'T' ] [ ((IN) (NameT (CURRENT 'T')) 'a' None) ] [] [] [ ('start' [ (VarD (NameT (CURRENT 'T')) 'w' Some((NameE (CURRENT 'a')))) ] Some((TransS (NameE 'accept')))) ])
+
+Error:
+relation was not matched: Decl_ok
+p4-spectec/p4c/testdata/p4_16_samples/functors7.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 7 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+Local variables:
+declaration*:
+    [ (ParserD 'p1' [ 'T' ] [ ((IN) (NameT (CURRENT 'T')) 'a' None) ] [] [] [ ('start' [ (VarD (NameT (CURRENT 'T')) 'w' Some((NameE (CURRENT 'a')))) ] Some((TransS (NameE 'accept')))) ]),
+      (ParserTypeD 'simple' [] [ ((IN) (FBitT (NumE (INT 2))) 'a' None) ]),
+      (PackageTypeD 'm' [] [ ((NO) (NameT (CURRENT 'simple')) 'n' None) ]),
+      (InstD (NameT (CURRENT 'm')) [ (ExprA (InstE (SpecT (CURRENT 'p1') [ (FBitT (NumE (INT 2))) ]) [])) ] 'main' None) ]
+declaration_h:
+    (ParserD 'p1' [ 'T' ] [ ((IN) (NameT (CURRENT 'T')) 'a' None) ] [] [] [ ('start' [ (VarD (NameT (CURRENT 'T')) 'w' Some((NameE (CURRENT 'a')))) ] Some((TransS (NameE 'accept')))) ])
+
+Error:
+relation was not matched: Decl_ok
+p4-spectec/p4c/testdata/p4_16_samples/functors8.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 8 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+Local variables:
+declaration*:
+    [ (ParserD 'p1' [ 'T' ] [ ((OUT) (NameT (CURRENT 'T')) 'a' None) ] [] [ (InstD (SpecT (CURRENT 'e') [ (NameT (CURRENT 'T')) ]) [] 'ei' None) ] [ ('start' [ (AssignS (NameL (CURRENT 'a')) (CallE (ExprAccE (NameE (CURRENT 'ei')) 'get') [] [])) ] Some((TransS (NameE 'accept')))) ]),
+      (ParserTypeD 'simple' [] [ ((OUT) (FBitT (NumE (INT 2))) 'a' None) ]),
+      (PackageTypeD 'm' [] [ ((NO) (NameT (CURRENT 'simple')) 'n' None) ]),
+      (InstD (NameT (CURRENT 'm')) [ (ExprA (InstE (NameT (CURRENT 'p1')) [])) ] 'main' None) ]
+declaration_h:
+    (ParserD 'p1' [ 'T' ] [ ((OUT) (NameT (CURRENT 'T')) 'a' None) ] [] [ (InstD (SpecT (CURRENT 'e') [ (NameT (CURRENT 'T')) ]) [] 'ei' None) ] [ ('start' [ (AssignS (NameL (CURRENT 'a')) (CallE (ExprAccE (NameE (CURRENT 'ei')) 'get') [] [])) ] Some((TransS (NameE 'accept')))) ])
+
+Error:
+relation was not matched: Decl_ok
+p4-spectec/p4c/testdata/p4_16_samples/functors9.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 8 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+Local variables:
+declaration*:
+    [ (ParserD 'p1' [ 'T' ] [ ((IN) (NameT (CURRENT 'T')) 'a' None) ] [] [ (InstD (SpecT (CURRENT 'e') [ (NameT (CURRENT 'T')) ]) [] 'ei' None) ] [ ('start' [ (VarD (NameT (CURRENT 'T')) 'w' Some((CallE (ExprAccE (NameE (CURRENT 'ei')) 'get') [] []))) ] Some((TransS (NameE 'accept')))) ]),
+      (ParserTypeD 'simple' [] [ ((IN) (FBitT (NumE (INT 2))) 'a' None) ]),
+      (PackageTypeD 'm' [] [ ((NO) (NameT (CURRENT 'simple')) 'n' None) ]),
+      (InstD (NameT (CURRENT 'm')) [ (ExprA (InstE (SpecT (CURRENT 'p1') [ (FBitT (NumE (INT 2))) ]) [])) ] 'main' None) ]
+declaration_h:
+    (ParserD 'p1' [ 'T' ] [ ((IN) (NameT (CURRENT 'T')) 'a' None) ] [] [ (InstD (SpecT (CURRENT 'e') [ (NameT (CURRENT 'T')) ]) [] 'ei' None) ] [ ('start' [ (VarD (NameT (CURRENT 'T')) 'w' Some((CallE (ExprAccE (NameE (CURRENT 'ei')) 'get') [] []))) ] Some((TransS (NameE 'accept')))) ])
+
+Error:
+relation was not matched: Decl_ok
+p4-spectec/p4c/testdata/p4_16_samples/gauntlet_optional-bmv2.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 13 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 552, in Decl_ok
+    -- Block_ok: TC_5 CONT |- controlBody : _ _ controlBodyIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 32, in Stmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 22, in AssignmentStmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+  File "spec/5.06.2-typing-expression.watsup", line 1024, in Expr_ok
+    -- RoutineType_ok:
+        p TC |- routineTargetIR typeArgumentIR* argumentIR*
+             : routineTypeIR tid_inserted* id_default*
+Local variables:
+p:
+    (LOCAL)
+TC:
+    { .../3 }
+routineTarget:
+    (ExprAccE (NameE (CURRENT 'ipv4_checksum')) 'update')
+routineTargetIR:
+    `MethodT%%`
+typeArgument*:
+    []
+typeArgumentIR*:
+    []
+argument*:
+    [ (ExprA (SeqE [ (ExprAccE (ExprAccE (NameE (CURRENT 'h')) 'eth_hdr') 'dst_addr'),
+              (ExprAccE (ExprAccE (NameE (CURRENT 'h')) 'eth_hdr') 'src_addr'),
+              (ExprAccE (ExprAccE (NameE (CURRENT 'h')) 'eth_hdr') 'eth_type') ])) ]
+argumentIR*:
+    [ .../1 ]
+
+Error:
+relation was not matched: RoutineType_ok
+p4-spectec/p4c/testdata/p4_16_samples/gauntlet_various_ops-bmv2.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 62 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 552, in Decl_ok
+    -- Block_ok: TC_5 CONT |- controlBody : _ _ controlBodyIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 408, in BlockElementStmts_ok
+    -- BlockElementStmts_ok: TC_1 f_1 |- blockElementStatement_t*
+                                       : TC_2 f_2 blockElementStatementIR_t*
+  [Previous entry repeated 5 times]
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 32, in Stmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 22, in AssignmentStmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+Local variables:
+TC:
+    { .../3 }
+expression:
+    (BinE (NumE (FBIT 4 1)) (MOD) (NumE (FBIT 4 8)))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/generic1.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+Local variables:
+declaration*:
+    [ .../5 ]
+declaration_h:
+    (ControlD 'c' [ 'T' ] [] [ ((NO) (NameT (CURRENT 'T')) 'size' None) ] [ (InstD (SpecT (CURRENT 'Generic') [ (NameT (CURRENT 'T')) ]) [ (ExprA (NameE (CURRENT 'size'))) ] 'x' None) ] (BlockS [ (VarD (FBitT (NumE (INT 32))) 'a' Some((CallE (ExprAccE (NameE (CURRENT 'x')) 'get') [ (FBitT (NumE (INT 32))) ] []))),
+          (VarD (FBitT (NumE (INT 5))) 'b' Some((CallE (ExprAccE (NameE (CURRENT 'x')) 'get1') [] [ (ExprA (NumE (FBIT 10 0))),
+                    (ExprA (NumE (FBIT 5 0))) ]))),
+          (CallS (NameL (CURRENT 'f')) [] [ (ExprA (NameE (CURRENT 'b'))) ]) ]))
+
+Error:
+relation was not matched: Decl_ok
+p4-spectec/p4c/testdata/p4_16_samples/generic.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+Local variables:
+declaration*:
+    [ .../3 ]
+declaration_h:
+    (ControlD 'q' [ 'S' ] [ ((IN) (NameT (CURRENT 'S')) 'dt' None) ] [] [] (BlockS [ (CallS (NameL (CURRENT 'f')) [ (FBitT (NumE (INT 32))) ] [ (ExprA (NumE (FBIT 32 0))) ]),
+          (CallS (NameL (CURRENT 'f')) [] [ (ExprA (NumE (FBIT 32 0))) ]),
+          (CallS (NameL (CURRENT 'f')) [ (NameT (CURRENT 'S')) ] [ (ExprA (NameE (CURRENT 'dt'))) ]) ]))
+
+Error:
+relation was not matched: Decl_ok
+p4-spectec/p4c/testdata/p4_16_samples/hashext3.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 5 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 552, in Decl_ok
+    -- Block_ok: TC_5 CONT |- controlBody : _ _ controlBodyIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 32, in Stmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 22, in AssignmentStmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+  File "spec/5.06.2-typing-expression.watsup", line 1018, in Expr_ok
+    -- RoutineTarget_ok: p TC |- routineTarget : routineTargetIR
+  File "spec/5.15.4-typing-routine-call.watsup", line 29, in RoutineTarget_ok
+    -- Expr_ok: p TC |- expression_base : typedExpressionIR_base
+  File "spec/5.06.2-typing-expression.watsup", line 1104, in Expr_ok
+    -- Inst_ok:
+        p TC ANON |- constructorTypeIR typeArgumentIR* tid_infer* argumentIR* id_default*
+                   : typeIR_object typeArgumentIR_inferred* argumentIR_cast*
+  File "spec/5.15.3-typing-constructor-call.watsup", line 106, in Inst_ok
+    -- Call_convention_ok:
+        p TC NOACTION |- parameterTypeIR_aligned_inferred* argumentIR*
+                       : argumentIR_cast*
+  File "spec/5.15.1-typing-call-convention.watsup", line 170, in Call_convention_ok
+    -- Call_convention_argument_ok:
+        p TC actctxt |- parameterTypeIR_h argumentIR_h
+                      : argumentIR_h_cast
+  File "spec/5.15.1-typing-call-convention.watsup", line 134, in Call_convention_argument_ok
+    -- Call_convention_expr_ok:
+        p TC actctxt |- parameterTypeIR typedExpressionIR
+                      : typedExpressionIR_cast
+Local variables:
+p:
+    (LOCAL)
+TC:
+    { .../3 }
+actctxt:
+    (NOACTION)
+parameterTypeIR:
+    ((NO) (EnumT 'HashAlgorithm_t' [ 'IDENTITY',
+          'RANDOM' ]) 'algo' None)
+typedExpressionIR:
+    ((CallE (FuncT (CURRENT 'random_hash')) [] [ (ExprA ((BoolE false) (( (BoolT) (LCTK) )))),
+          (ExprA ((BoolE false) (( (BoolT) (LCTK) )))) ]) (( (EnumT 'HashAlgorithm_t' [ 'IDENTITY',
+            'RANDOM' ]) (DYN) )))
+
+Error:
+relation was not matched: Call_convention_expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue1304.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 63 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 299, in Decl_ok
+    -- InstanceDecl_ok:
+        GLOBAL TC_0 |- instantiation : TC_1 instantiationIR
+  File "spec/5.11-typing-declaration.watsup", line 99, in InstanceDecl_ok
+    -- ConstructorType_ok:
+        p TC_0 |- prefixedName typeArgumentIR* argumentIR*
+               : constructorTypeIR tid_inserted* id_default*
+Local variables:
+p:
+    (GLOBAL)
+TC_0:
+    { .../3 }
+prefixedName:
+    (CURRENT 'Switch')
+type:
+    (SpecT (CURRENT 'Switch') [ (NameT (CURRENT 'my_packet')),
+        (NameT (CURRENT 'my_metadata')),
+        (AnyT),
+        (AnyT) ])
+typeArgument*:
+    [ (NameT (CURRENT 'my_packet')),
+      (NameT (CURRENT 'my_metadata')),
+      (AnyT),
+      (AnyT) ]
+typeArgumentIR*:
+    [ .../4 ]
+argument*:
+    [ (ExprA (NameE (CURRENT 'p0'))) ]
+argumentIR*:
+    [ .../1 ]
+
+Error:
+relation was not matched: ConstructorType_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue1334.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 9 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 945, in Decl_ok
+    -- if TC_3 = $add_type(GLOBAL, TC_0, name, polyTypeDefIR_package)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Local variables:
+TC_0:
+    { .../3 }
+name:
+    'top'
+polyTypeDefIR_package:
+    (PolyTD (PackageT 'top' [ (SpecT (PolyTD (ControlT []) [] []) []),
+          (SpecT (PolyTD (ControlT []) [] []) []) ]) [] [])
+
+Error:
+function was not matched: add_type
+p4-spectec/p4c/testdata/p4_16_samples/issue1560-bmv2.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 61 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 4 times]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 707, in TableProperties_ok
+    -- TableProperties_ok: TC TBLC_1 |- tableProperty_t* : TBLC_2 tablePropertyIR_t*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 605, in TableProperty_ok
+    -- TableKeys_ok: TC TBLC_0 |- tableKey* : TBLC_1 tableKeyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 82, in TableKeys_ok
+    -- TableKeys_ok: TC TBLC_1 |- tableKey_t* : TBLC_2 tableKeyIR_t*
+  File "spec/5.14.1-typing-control-table.watsup", line 81, in TableKeys_ok
+    -- TableKey_ok: TC TBLC_0 |- tableKey_h : TBLC_1 tableKeyIR_h
+Local variables:
+TC:
+    { .../3 }
+tableKey*:
+    [ ((ExprAccE (NameE (CURRENT 'meta')) 'hash1') 'selector') ]
+tableKey_h:
+    ((ExprAccE (NameE (CURRENT 'meta')) 'hash1') 'selector')
+
+Error:
+relation was not matched: TableKey_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue1879-bmv2.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 63 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 503, in Decl_ok
+    -- ParserStates_ok: TC_5 |- parserState* : parserStateIR*
+  File "spec/5.13.2-typing-parser-state.watsup", line 56, in ParserStates_ok
+    -- (ParserState_ok: TC name_state_impl* |- parserState : parserStateIR)*
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.13.2-typing-parser-state.watsup", line 29, in ParserState_ok
+    -- ParserStmts_ok: TC_1 |- parserStatement* : TC_2 parserStatementIR*
+  File "spec/5.13.1-typing-parser-statement.watsup", line 293, in ParserStmts_ok
+    -- ParserStmt_ok: TC_0 |- parserStatement_h
+                            : TC_1 parserStatementIR_h
+  File "spec/5.13.1-typing-parser-statement.watsup", line 229, in ParserStmt_ok
+    -- VariableDecl_ok:
+        LOCAL TC_0 |- variableDeclaration
+                    : TC_1 variableDeclarationIR
+  File "spec/5.11-typing-declaration.watsup", line 58, in VariableDecl_ok
+    -- Expr_ok: p TC_0 |- expression_init : typedExpressionIR_init
+  File "spec/5.06.2-typing-expression.watsup", line 221, in Expr_ok
+    -- Expr_ok: p TC |- expression_l : typedExpressionIR_l
+  File "spec/5.06.2-typing-expression.watsup", line 149, in Expr_ok
+    -- Expr_ok: p TC |- expression_r : typedExpressionIR_r
+Local variables:
+p:
+    (LOCAL)
+TC:
+    { .../3 }
+expression_r:
+    (BinE (ExprAccE (NameE (CURRENT 'meta')) 'addrLen') (MOD) (NumE (INT 64)))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue1914-1.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 10 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+Local variables:
+declaration*:
+    [ .../17 ]
+declaration_h:
+    (ControlD 'EmptyVerifyChecksum' [ 'H',
+        'M' ] [ ((INOUT) (NameT (CURRENT 'H')) 'hdr' None),
+        ((INOUT) (NameT (CURRENT 'M')) 'meta' None) ] [] [] (BlockS []))
+
+Error:
+relation was not matched: Decl_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue1914.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 10 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+Local variables:
+declaration*:
+    [ .../17 ]
+declaration_h:
+    (ControlD 'EmptyVerifyChecksum' [ 'H',
+        'M' ] [ ((INOUT) (NameT (CURRENT 'H')) 'hdr' None),
+        ((INOUT) (NameT (CURRENT 'M')) 'meta' None) ] [] [] (BlockS []))
+
+Error:
+relation was not matched: Decl_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue2019-1.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 3 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+Local variables:
+declaration*:
+    [ (ControlD 'EmptyV' [ 'H' ] [ ((INOUT) (NameT (CURRENT 'H')) 'hdr' None) ] [] [] (BlockS [])),
+      (PackageTypeD 'S' [ 'H1' ] [ ((NO) (SpecT (CURRENT 'C') [ (NameT (CURRENT 'H1')) ]) 's' None),
+            ((NO) (SpecT (CURRENT 'V') [ (NameT (CURRENT 'H1')) ]) 'vr' Some((InstE (SpecT (CURRENT 'EmptyV') [ (NameT (CURRENT 'H1')) ]) []))) ]),
+      (InstD (SpecT (CURRENT 'S') [ (NameT (CURRENT 'E')) ]) [ (ExprA (InstE (NameT (CURRENT 'Some')) [])) ] 'main' None) ]
+declaration_h:
+    (ControlD 'EmptyV' [ 'H' ] [ ((INOUT) (NameT (CURRENT 'H')) 'hdr' None) ] [] [] (BlockS []))
+
+Error:
+relation was not matched: Decl_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue2019.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+Local variables:
+declaration*:
+    [ (ControlD 'EmptyV' [ 'H' ] [ ((INOUT) (NameT (CURRENT 'H')) 'hdr' None) ] [] [] (BlockS [])),
+      (StructD 'E' [] []),
+      (PackageTypeD 'S' [ 'H1' ] [ ((NO) (SpecT (CURRENT 'V') [ (NameT (CURRENT 'H1')) ]) 'vr' Some((InstE (SpecT (CURRENT 'EmptyV') [ (NameT (CURRENT 'H1')) ]) []))) ]),
+      (InstD (SpecT (CURRENT 'S') [ (NameT (CURRENT 'E')) ]) [] 'main' None) ]
+declaration_h:
+    (ControlD 'EmptyV' [ 'H' ] [ ((INOUT) (NameT (CURRENT 'H')) 'hdr' None) ] [] [] (BlockS []))
+
+Error:
+relation was not matched: Decl_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue2037.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 707, in TableProperties_ok
+    -- TableProperties_ok: TC TBLC_1 |- tableProperty_t* : TBLC_2 tablePropertyIR_t*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 634, in TableProperty_ok
+    -- TableDefaultAction_ok: TC TBLC |- initializer : tableActionReferenceIR
+Local variables:
+TC:
+    { .../3 }
+initializer:
+    (NameE (CURRENT 'a'))
+
+Error:
+relation was not matched: TableDefaultAction_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue2105.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 12 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 299, in Decl_ok
+    -- InstanceDecl_ok:
+        GLOBAL TC_0 |- instantiation : TC_1 instantiationIR
+  File "spec/5.11-typing-declaration.watsup", line 104, in InstanceDecl_ok
+    -- Inst_ok:
+        p TC_0 NAMED |- constructorTypeIR typeArgumentIR* tid_infer*argumentIR* id_default*
+                      : typeIR_object typeArgumentIR_inferred* argumentIR_cast*
+Local variables:
+p:
+    (GLOBAL)
+TC_0:
+    { .../3 }
+constructorTypeIR:
+    (ConstructorT [ ((NO) (SpecT (PolyTD (ControlT []) [ 'FRESH__901' ] []) [ (NameT 'FRESH__900') ]) 'e' None) ] (SpecT (PolyTD (PackageT 'top' [ (SpecT (PolyTD (ControlT []) [ 'FRESH__903' ] []) [ (NameT 'FRESH__902') ]) ]) [ 'FRESH__902' ] []) [ (NameT 'FRESH__900') ]))
+type:
+    (SpecT (CURRENT 'top') [ (AnyT) ])
+typeArgument*:
+    [ (AnyT) ]
+typeArgumentIR*:
+    [ (NameT 'FRESH__900') ]
+tid_infer*:
+    [ 'FRESH__900' ]
+argument*:
+    [ (ExprA (InstE (NameT (CURRENT 'c')) [])) ]
+argumentIR*:
+    [ (ExprA ((InstE (CURRENT 'c') [] []) (( (SpecT (PolyTD (ControlT []) [] []) []) (CTK) )))) ]
+id_default*:
+    []
+
+Error:
+relation was not matched: Inst_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue2190.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 54 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 552, in Decl_ok
+    -- Block_ok: TC_5 CONT |- controlBody : _ _ controlBodyIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 32, in Stmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 22, in AssignmentStmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+  File "spec/5.06.2-typing-expression.watsup", line 298, in Expr_ok
+    -- Expr_ok: p TC |- expression_l : typedExpressionIR_l
+Local variables:
+p:
+    (LOCAL)
+TC:
+    { .../3 }
+expression_l:
+    (BinE (ExprAccE (ExprAccE (NameE (CURRENT 'h')) 'h') 'b') (DIV) (NumE (FBIT 8 2)))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue2265.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+Local variables:
+declaration*:
+    [ (ControlD 'c' [ 'T' ] [ ((INOUT) (NameT (CURRENT 'T')) 'data' None) ] [] [] (BlockS [ (VarD (NameT (CURRENT 'T')) 'tmp' None),
+              (AssignS (NameL (CURRENT 'data')) (NameE (CURRENT 'tmp'))) ])) ]
+declaration_h:
+    (ControlD 'c' [ 'T' ] [ ((INOUT) (NameT (CURRENT 'T')) 'data' None) ] [] [] (BlockS [ (VarD (NameT (CURRENT 'T')) 'tmp' None),
+          (AssignS (NameL (CURRENT 'data')) (NameE (CURRENT 'tmp'))) ]))
+
+Error:
+relation was not matched: Decl_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue2273-1.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 11 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 21, in ControlLocalDecl_ok
+    -- InstanceDecl_ok:
+        BLOCK TC_0 |- instantiation
+                    : TC_1 instantiationIR
+  File "spec/5.11-typing-declaration.watsup", line 277, in InstanceDecl_ok
+    -- Decls_object_ok:
+        p TC_1 (`{ eps }) (`{ eps }) |- objectDeclaration*
+                                      : frame_init rdenv_init objectDeclarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 182, in Decls_object_ok
+    -- Decl_object_ok:
+        p TC frame_0 rdenv_0 |- objectDeclaration_h
+                              : frame_1 rdenv_1 objectDeclarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 143, in Decl_object_ok
+    -- Block_ok: TC_5 CONT |- blockStatement : _ f blockStatementIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 32, in Stmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 22, in AssignmentStmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+  File "spec/5.06.2-typing-expression.watsup", line 696, in Expr_ok
+    -- Expr_ok: p TC |- expression_base : typedExpressionIR_base
+  [Previous entry repeated 1 time]
+Local variables:
+p:
+    (LOCAL)
+TC:
+    { .../3 }
+expression_base:
+    (NameE (CURRENT 'hdr'))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue2279_4.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 552, in Decl_ok
+    -- Block_ok: TC_5 CONT |- controlBody : _ _ controlBodyIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 408, in BlockElementStmts_ok
+    -- BlockElementStmts_ok: TC_1 f_1 |- blockElementStatement_t*
+                                       : TC_2 f_2 blockElementStatementIR_t*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 170, in Stmt_ok
+    -- ConditionalStmt_ok:
+        TC f |- conditionalStatement : f_post conditionalStatementIR
+  File "spec/5.10-typing-statement.watsup", line 151, in ConditionalStmt_ok
+    -- Stmt_ok:
+        TC f |- statement_then : TC_then f_then statementIR_then
+  File "spec/5.10-typing-statement.watsup", line 136, in Stmt_ok
+    -- Block_ok: TC_0 f_0 |- blockStatement
+                           : TC_1 f_1 blockStatementIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 32, in Stmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 22, in AssignmentStmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+  File "spec/5.06.2-typing-expression.watsup", line 148, in Expr_ok
+    -- Expr_ok: p TC |- expression_l : typedExpressionIR_l
+Local variables:
+p:
+    (LOCAL)
+TC:
+    { .../3 }
+expression_l:
+    (BinE (ExprAccE (ExprAccE (NameE (CURRENT 'hdr')) 'eth_hdr') 'eth_type') (DIV) (NumE (INT 2)))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue2287-bmv2.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 58 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 552, in Decl_ok
+    -- Block_ok: TC_5 CONT |- controlBody : _ _ controlBodyIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 408, in BlockElementStmts_ok
+    -- BlockElementStmts_ok: TC_1 f_1 |- blockElementStatement_t*
+                                       : TC_2 f_2 blockElementStatementIR_t*
+  [Previous entry repeated 3 times]
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 32, in Stmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 22, in AssignmentStmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+Local variables:
+TC:
+    { .../3 }
+expression:
+    (BinE (NumE (FBIT 8 0)) (DIV) (CallE (NameE (CURRENT 'function_with_side_effect')) [] [ (ExprA (ExprAccE (ExprAccE (NameE (CURRENT 'h')) 'h') 'c')) ]))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue2444.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 3 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 30, in Decl_ok
+    -- ConstantDecl_ok:
+        GLOBAL TC_0 |- constantDeclaration : TC_1 constantDeclarationIR
+Local variables:
+TC_0:
+    { .../3 }
+constantDeclaration:
+    (ConstD (IntT) 'z1' (NumE (FBIT 2 1)))
+
+Error:
+relation was not matched: ConstantDecl_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue2492.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 12 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 299, in Decl_ok
+    -- InstanceDecl_ok:
+        GLOBAL TC_0 |- instantiation : TC_1 instantiationIR
+  File "spec/5.11-typing-declaration.watsup", line 78, in InstanceDecl_ok
+    -- ConstructorType_ok: p TC_0 |- prefixedName eps argumentIR*
+                                   : constructorTypeIR tid_impl* id_default*
+Local variables:
+p:
+    (GLOBAL)
+TC_0:
+    { .../3 }
+prefixedName:
+    (CURRENT 'top')
+argument*:
+    [ (ExprA (InstE (NameT (CURRENT 'ingress')) [])) ]
+argumentIR*:
+    [ (ExprA ((InstE (CURRENT 'ingress') [] []) (( (SpecT (PolyTD (ControlT [ ((INOUT) (SpecT (PolyTD (StructT 'headers' [ ((SpecT (PolyTD (HeaderT 'data_t' [ ((FBitT 16) 'h1') ]) [] []) []) 'data') ]) [] []) []) 'hdr' None) ]) [] []) []) (CTK) )))) ]
+
+Error:
+relation was not matched: ConstructorType_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue2630.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 5 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 299, in Decl_ok
+    -- InstanceDecl_ok:
+        GLOBAL TC_0 |- instantiation : TC_1 instantiationIR
+  File "spec/5.11-typing-declaration.watsup", line 78, in InstanceDecl_ok
+    -- ConstructorType_ok: p TC_0 |- prefixedName eps argumentIR*
+                                   : constructorTypeIR tid_impl* id_default*
+Local variables:
+p:
+    (GLOBAL)
+TC_0:
+    { .../3 }
+prefixedName:
+    (CURRENT 'Switch')
+argument*:
+    [ (ExprA (NameE (CURRENT 'pipe'))) ]
+argumentIR*:
+    [ (ExprA ((NameE (CURRENT 'pipe')) (( (SpecT (PolyTD (PackageT 'Pipeline' [ (SpecT (PolyTD (ControlT [ ((INOUT) (NameT 'FRESH__1047') 'h' None) ]) [ 'FRESH__1047' ] []) [ (NameT 'FRESH__1046') ]) ]) [ 'FRESH__1046' ] []) [ (SpecT (PolyTD (StructT 'header_t' []) [] []) []) ]) (CTK) )))) ]
+
+Error:
+relation was not matched: ConstructorType_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue2664-bmv2.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 59 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 552, in Decl_ok
+    -- Block_ok: TC_5 CONT |- controlBody : _ _ controlBodyIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 32, in Stmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 22, in AssignmentStmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+  File "spec/5.06.2-typing-expression.watsup", line 1024, in Expr_ok
+    -- RoutineType_ok:
+        p TC |- routineTargetIR typeArgumentIR* argumentIR*
+             : routineTypeIR tid_inserted* id_default*
+Local variables:
+p:
+    (LOCAL)
+TC:
+    { .../3 }
+routineTarget:
+    (ExprAccE (NameE (CURRENT 'ipv4_checksum')) 'update')
+routineTargetIR:
+    `MethodT%%`
+typeArgument*:
+    []
+typeArgumentIR*:
+    []
+argument*:
+    [ (ExprA (SeqE [ (ExprAccE (ExprAccE (NameE (CURRENT 'h')) 'eth_hdr') 'dst_addr'),
+              (ExprAccE (ExprAccE (NameE (CURRENT 'h')) 'eth_hdr') 'src_addr'),
+              (ExprAccE (ExprAccE (NameE (CURRENT 'h')) 'eth_hdr') 'eth_type') ])) ]
+argumentIR*:
+    [ .../1 ]
+
+Error:
+relation was not matched: RoutineType_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue2810.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 12 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 552, in Decl_ok
+    -- Block_ok: TC_5 CONT |- controlBody : _ _ controlBodyIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 60, in Stmt_ok
+    -- CallStmt_ok:
+        TC |- callStatement : callStatementIR
+  File "spec/5.10-typing-statement.watsup", line 50, in CallStmt_ok
+    -- RoutineType_ok:
+        LOCAL TC |- routineTargetIR typeArgumentIR* argumentIR*
+                  : routineTypeIR tid_inserted* id_default*
+Local variables:
+TC:
+    { .../3 }
+routineTargetIR:
+    (FuncT (CURRENT 'HwSplFunc'))
+typeArgument*:
+    []
+typeArgumentIR*:
+    []
+argument*:
+    [ (ExprA (ExprAccE (NameE (CURRENT 'hdr')) 'mac')) ]
+argumentIR*:
+    [ (ExprA ((ExprAccE ((NameE (CURRENT 'hdr')) (( (SpecT (PolyTD (StructT 'parsed_header_t' [ ((SpecT (PolyTD (HeaderT 'eth_t' [ ((FBitT 48) 'sa'),
+                                      ((FBitT 48) 'da'),
+                                      ((FBitT 16) 'type') ]) [] []) []) 'mac') ]) [] []) []) (DYN) ))) 'mac') (( (SpecT (PolyTD (HeaderT 'eth_t' [ ((FBitT 48) 'sa'),
+                      ((FBitT 48) 'da'),
+                      ((FBitT 16) 'type') ]) [] []) []) (DYN) )))) ]
+
+Error:
+relation was not matched: RoutineType_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue297-bmv2.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 54 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 605, in TableProperty_ok
+    -- TableKeys_ok: TC TBLC_0 |- tableKey* : TBLC_1 tableKeyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 81, in TableKeys_ok
+    -- TableKey_ok: TC TBLC_0 |- tableKey_h : TBLC_1 tableKeyIR_h
+Local variables:
+TC:
+    { .../3 }
+tableKey*:
+    [ ((ExprAccE (NameE (CURRENT 'meta')) 'hash1') 'selector') ]
+tableKey_h:
+    ((ExprAccE (NameE (CURRENT 'meta')) 'hash1') 'selector')
+
+Error:
+relation was not matched: TableKey_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue3051.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 552, in Decl_ok
+    -- Block_ok: TC_5 CONT |- controlBody : _ _ controlBodyIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 60, in Stmt_ok
+    -- CallStmt_ok:
+        TC |- callStatement : callStatementIR
+  File "spec/5.10-typing-statement.watsup", line 50, in CallStmt_ok
+    -- RoutineType_ok:
+        LOCAL TC |- routineTargetIR typeArgumentIR* argumentIR*
+                  : routineTypeIR tid_inserted* id_default*
+Local variables:
+TC:
+    { .../3 }
+routineTargetIR:
+    (MethodT ((NameE (CURRENT 'c')) (( (SpecT (PolyTD (ControlT [ ((INOUT) (BoolT) 'b' None) ]) [] []) []) (CTK) ))) 'apply')
+typeArgument*:
+    []
+typeArgumentIR*:
+    []
+argument*:
+    []
+argumentIR*:
+    []
+
+Error:
+relation was not matched: RoutineType_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue3091-1.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 30, in Decl_ok
+    -- ConstantDecl_ok:
+        GLOBAL TC_0 |- constantDeclaration : TC_1 constantDeclarationIR
+Local variables:
+TC_0:
+    { .../3 }
+constantDeclaration:
+    (ConstD (TupleT [ (MatchKindT) ]) 'exact_once' (SeqE [ (NameE (CURRENT 'exact')) ]))
+
+Error:
+relation was not matched: ConstantDecl_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue3091.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 61 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+Local variables:
+declaration*:
+    [ .../7 ]
+declaration_h:
+    (TypeDefD (PlainT (TupleT [ (MatchKindT) ])) 'mk1_t')
+
+Error:
+relation was not matched: Decl_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue3238.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 320, in Decl_ok
+    -- Block_ok: TC_3 CONT |- blockStatement : _ f blockStatementIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 387, in BlockElementStmt_ok
+    -- VariableDecl_ok:
+        LOCAL TC_0 |- variableDeclaration : TC_1 variableDeclarationIR
+Local variables:
+TC_0:
+    { .../3 }
+variableDeclaration:
+    (VarD (TupleT [ (IntT) ]) 't' Some((SeqE [ (NameE (CURRENT 't1')) ])))
+
+Error:
+relation was not matched: VariableDecl_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue3283.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 30, in Decl_ok
+    -- ConstantDecl_ok:
+        GLOBAL TC_0 |- constantDeclaration : TC_1 constantDeclarationIR
+  File "spec/5.11-typing-declaration.watsup", line 15, in ConstantDecl_ok
+    -- Expr_ok: p TC_0 |- expression_value : typedExpressionIR_value
+Local variables:
+p:
+    (GLOBAL)
+TC_0:
+    { .../3 }
+expression_value:
+    (ArrAccE (SeqE [ (NumE (FBIT 1 1)),
+          (NumE (FBIT 1 1)) ]) (NumE (INT 0)))
+type:
+    (IntT)
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue3291-1.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 320, in Decl_ok
+    -- Block_ok: TC_3 CONT |- blockStatement : _ f blockStatementIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 408, in BlockElementStmts_ok
+    -- BlockElementStmts_ok: TC_1 f_1 |- blockElementStatement_t*
+                                       : TC_2 f_2 blockElementStatementIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 117, in Stmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+Local variables:
+expression:
+    (BinE (ExprAccE (NameE (CURRENT 'v')) 'f') (EQ) (NameE (CURRENT 'a')))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue3333.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 503, in Decl_ok
+    -- ParserStates_ok: TC_5 |- parserState* : parserStateIR*
+  File "spec/5.13.2-typing-parser-state.watsup", line 56, in ParserStates_ok
+    -- (ParserState_ok: TC name_state_impl* |- parserState : parserStateIR)*
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.13.2-typing-parser-state.watsup", line 31, in ParserState_ok
+    -- ParserTransition_ok: TC_2 name_state* |- transitionStatement
+                                              : transitionStatementIR
+  File "spec/5.13.1-typing-parser-statement.watsup", line 205, in ParserTransition_ok
+    -- (SelectCase_ok: TC_0 name_state* typeIR_key* |- selectCase : selectCaseIR)*
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.13.1-typing-parser-statement.watsup", line 191, in SelectCase_ok
+    -- SelectCase_keysets_ok:
+        TC typeIR_key* |- keysetExpression* : keysetExpressionIR*
+  File "spec/5.13.1-typing-parser-statement.watsup", line 178, in SelectCase_keysets_ok
+    -- (SelectCase_keyset_ok:
+        TC typeIR_key |- keysetExpression : keysetExpressionIR)*
+Local variables:
+TC:
+    { .../3 }
+keysetExpression*:
+    [ (RangeK (NumE (INT 1)) (NumE (INT 22))) ]
+
+Error:
+relation was not matched: SelectCase_keyset_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue3379-1.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 945, in Decl_ok
+    -- if TC_3 = $add_type(GLOBAL, TC_0, name, polyTypeDefIR_package)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Local variables:
+TC_0:
+    { .../3 }
+name:
+    'mypackaget'
+polyTypeDefIR_package:
+    (PolyTD (PackageT 'mypackaget' [ (SpecT (PolyTD (ParserT [ ((IN) (NameT 't') 'tt' None) ]) [ 't' ] []) [ (NameT 't') ]),
+          (SpecT (PolyTD (ParserT [ ((IN) (NameT 't') 'tt' None) ]) [ 't' ] []) [ (NameT 't') ]) ]) [ 't' ] [])
+
+Error:
+function was not matched: add_type
+p4-spectec/p4c/testdata/p4_16_samples/issue3379.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 3 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 945, in Decl_ok
+    -- if TC_3 = $add_type(GLOBAL, TC_0, name, polyTypeDefIR_package)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Local variables:
+TC_0:
+    { .../3 }
+name:
+    'mypackaget'
+polyTypeDefIR_package:
+    (PolyTD (PackageT 'mypackaget' [ (SpecT (PolyTD (ParserT [ ((IN) (NameT 't') 'tt' None) ]) [ 't' ] []) [ (DefT 't' (FBitT 1)) ]),
+          (SpecT (PolyTD (ParserT [ ((IN) (NameT 't') 'tt' None) ]) [ 't' ] []) [ (DefT 't' (FBitT 1)) ]) ]) [] [])
+
+Error:
+function was not matched: add_type
+p4-spectec/p4c/testdata/p4_16_samples/issue344.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+Local variables:
+declaration*:
+    [ (ControlD 'C' [ 'H' ] [] [] [] (BlockS [])),
+      (ControlTypeD 'cproto' [] []),
+      (PackageTypeD 'top' [] [ ((NO) (NameT (CURRENT 'cproto')) '_c' None) ]),
+      (InstD (NameT (CURRENT 'top')) [ (ExprA (InstE (SpecT (CURRENT 'C') [ (AnyT) ]) [])) ] 'c' None) ]
+declaration_h:
+    (ControlD 'C' [ 'H' ] [] [] [] (BlockS []))
+
+Error:
+relation was not matched: Decl_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue3531.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 52 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 30, in Decl_ok
+    -- ConstantDecl_ok:
+        GLOBAL TC_0 |- constantDeclaration : TC_1 constantDeclarationIR
+  File "spec/5.11-typing-declaration.watsup", line 15, in ConstantDecl_ok
+    -- Expr_ok: p TC_0 |- expression_value : typedExpressionIR_value
+  File "spec/5.06.2-typing-expression.watsup", line 1029, in Expr_ok
+    -- Call_ok:
+        p TC |- routineTypeIR typeArgumentIR* tid_infer* argumentIR* id_default*
+              : typeIR_ret typeArgumentIR_inferred* argumentIR_cast*
+Local variables:
+p:
+    (GLOBAL)
+TC:
+    { .../3 }
+routineTypeIR:
+    (ExternFuncT [ ((NO) (BoolT) 'check' None),
+        ((NO) (StrT) 'message' None) ] (BoolT))
+typeArgument*:
+    []
+typeArgumentIR*:
+    []
+tid_infer*:
+    []
+argument*:
+    [ (ExprA (BinE (NumE (INT 20180101)) (GE) (NumE (INT 20160101)))),
+      (ExprA (StrE 'V1 model version is not >= 20160101')) ]
+argumentIR*:
+    [ (ExprA ((BinE ((NumE (INT 20180101)) (( (IntT) (LCTK) ))) (GE) ((NumE (INT 20160101)) (( (IntT) (LCTK) )))) (( (BoolT) (LCTK) )))),
+      (ExprA ((StrE 'V1 model version is not >= 20160101') (( (StrT) (LCTK) )))) ]
+id_default*:
+    []
+
+Error:
+relation was not matched: Call_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue3671.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 707, in TableProperties_ok
+    -- TableProperties_ok: TC TBLC_1 |- tableProperty_t* : TBLC_2 tablePropertyIR_t*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 634, in TableProperty_ok
+    -- TableDefaultAction_ok: TC TBLC |- initializer : tableActionReferenceIR
+Local variables:
+TC:
+    { .../3 }
+initializer:
+    (CallE (NameE (CURRENT 'a1')) [] [ (ExprA (RecordE [ ('f1' (CallE (NameE (CURRENT 'ext')) [] [])),
+                ('f0' (CallE (NameE (CURRENT 'ext')) [] [])) ])) ])
+
+Error:
+relation was not matched: TableDefaultAction_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue3699.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 4 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 315, in Decl_ok
+    -- Parameters_ok: LOCAL TC_1 |- parameter* : parameterIR* tid_impl*
+  File "spec/5.09-typing-parameter.watsup", line 45, in Parameters_ok
+    -- Parameter_ok: p TC |- parameter_h : parameterIR_h tid_fresh_h*
+  File "spec/5.09-typing-parameter.watsup", line 11, in Parameter_ok
+    -- Type_ok: p TC |- type : typeIR tid_fresh*
+Local variables:
+p:
+    (LOCAL)
+TC:
+    { .../3 }
+type:
+    (HeaderStackT (NameT (CURRENT 'h')) (TernE (BinE (NameE (CURRENT 'value')) (EQ) (NameE (CURRENT 'max'))) (NumE (INT 1)) (UnE (UMINUS) (NumE (INT 1)))))
+
+Error:
+relation was not matched: Type_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue4057.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 60 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 552, in Decl_ok
+    -- Block_ok: TC_5 CONT |- controlBody : _ _ controlBodyIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 32, in Stmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 20, in AssignmentStmt_ok
+    -- Lvalue_ok: LOCAL TC |- lvalue : typedLvalueIR
+  File "spec/5.08-typing-lvalue.watsup", line 19, in Lvalue_ok
+    -- Lvalue_ok: p TC |- lvalue_base : typedLvalueIR_base
+  File "spec/5.08-typing-lvalue.watsup", line 76, in Lvalue_ok
+    -- Lvalue_ok: p TC |- lvalue_base : typedLvalueIR_base
+Local variables:
+p:
+    (LOCAL)
+TC:
+    { .../3 }
+lvalue:
+    (ArrAccL (ArrAccL (LvalueAccL (LvalueAccL (NameL (CURRENT 'm')) 's') 'n') (NumE (INT 0))) (NumE (INT 0)))
+lvalue_base:
+    (ArrAccL (LvalueAccL (LvalueAccL (NameL (CURRENT 'm')) 's') 'n') (NumE (INT 0)))
+
+Error:
+relation was not matched: Lvalue_ok
+p4-spectec/p4c/testdata/p4_16_samples/issue4932.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 503, in Decl_ok
+    -- ParserStates_ok: TC_5 |- parserState* : parserStateIR*
+  File "spec/5.13.2-typing-parser-state.watsup", line 56, in ParserStates_ok
+    -- (ParserState_ok: TC name_state_impl* |- parserState : parserStateIR)*
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.13.2-typing-parser-state.watsup", line 29, in ParserState_ok
+    -- ParserStmts_ok: TC_1 |- parserStatement* : TC_2 parserStatementIR*
+  File "spec/5.13.1-typing-parser-statement.watsup", line 293, in ParserStmts_ok
+    -- ParserStmt_ok: TC_0 |- parserStatement_h
+                            : TC_1 parserStatementIR_h
+  File "spec/5.13.1-typing-parser-statement.watsup", line 249, in ParserStmt_ok
+    -- CallStmt_ok: TC |- callStatement : callStatementIR
+  File "spec/5.10-typing-statement.watsup", line 48, in CallStmt_ok
+    -- (Argument_ok: LOCAL TC |- argument : argumentIR)*
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.07.2-typing-argument.watsup", line 11, in Argument_ok
+    -- Expr_ok: p TC |- expression : typedExpressionIR
+Local variables:
+p:
+    (LOCAL)
+TC:
+    { .../3 }
+expression:
+    (BinE (StrE 'Log message') (CONCAT) (StrE ' text'))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/list3.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 8 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 466, in Decl_ok
+    -- ExternConstructors_ok: TC_6 name |- methodPrototype_constructor*
+                                         : TC_7 methodPrototypeIR_constructor*
+  File "spec/5.12-typing-extern-method.watsup", line 130, in ExternConstructors_ok
+    -- ExternConstructor_ok: TC_0 tid_extern |- methodPrototype_h
+                                              : TC_1 methodPrototypeIR_h
+  File "spec/5.12-typing-extern-method.watsup", line 95, in ExternConstructor_ok
+    -- ConstructorParameters_ok: BLOCK TC_0 |- constructorParameter*
+                                             : constructorParameterIR* tid_impl*
+  File "spec/5.09-typing-parameter.watsup", line 67, in ConstructorParameters_ok
+    -- Parameters_ok: p TC |- constructorParameter*
+                            : constructorParameterIR* tid_fresh*
+  File "spec/5.09-typing-parameter.watsup", line 45, in Parameters_ok
+    -- Parameter_ok: p TC |- parameter_h : parameterIR_h tid_fresh_h*
+Local variables:
+p:
+    (BLOCK)
+TC:
+    { .../3 }
+parameter*:
+    [ ((NO) (ListT (TupleT [ (NameT (CURRENT 'EntryPriority_t')),
+                (TupleT [ (NameT (CURRENT 'K')),
+                      (NameT (CURRENT 'K')) ]),
+                (NameT (CURRENT 'V')) ])) 'data' None) ]
+parameter_h:
+    ((NO) (ListT (TupleT [ (NameT (CURRENT 'EntryPriority_t')),
+            (TupleT [ (NameT (CURRENT 'K')),
+                  (NameT (CURRENT 'K')) ]),
+            (NameT (CURRENT 'V')) ])) 'data' None)
+
+Error:
+relation was not matched: Parameter_ok
+p4-spectec/p4c/testdata/p4_16_samples/list4.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 8 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 466, in Decl_ok
+    -- ExternConstructors_ok: TC_6 name |- methodPrototype_constructor*
+                                         : TC_7 methodPrototypeIR_constructor*
+  File "spec/5.12-typing-extern-method.watsup", line 130, in ExternConstructors_ok
+    -- ExternConstructor_ok: TC_0 tid_extern |- methodPrototype_h
+                                              : TC_1 methodPrototypeIR_h
+  File "spec/5.12-typing-extern-method.watsup", line 95, in ExternConstructor_ok
+    -- ConstructorParameters_ok: BLOCK TC_0 |- constructorParameter*
+                                             : constructorParameterIR* tid_impl*
+  File "spec/5.09-typing-parameter.watsup", line 67, in ConstructorParameters_ok
+    -- Parameters_ok: p TC |- constructorParameter*
+                            : constructorParameterIR* tid_fresh*
+  File "spec/5.09-typing-parameter.watsup", line 45, in Parameters_ok
+    -- Parameter_ok: p TC |- parameter_h : parameterIR_h tid_fresh_h*
+Local variables:
+p:
+    (BLOCK)
+TC:
+    { .../3 }
+parameter*:
+    [ ((NO) (ListT (TupleT [ (NameT (CURRENT 'EntryPriority_t')),
+                (TupleT [ (NameT (CURRENT 'K')),
+                      (NameT (CURRENT 'K')) ]),
+                (NameT (CURRENT 'V')) ])) 'data' None) ]
+parameter_h:
+    ((NO) (ListT (TupleT [ (NameT (CURRENT 'EntryPriority_t')),
+            (TupleT [ (NameT (CURRENT 'K')),
+                  (NameT (CURRENT 'K')) ]),
+            (NameT (CURRENT 'V')) ])) 'data' None)
+
+Error:
+relation was not matched: Parameter_ok
+p4-spectec/p4c/testdata/p4_16_samples/minsize.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 552, in Decl_ok
+    -- Block_ok: TC_5 CONT |- controlBody : _ _ controlBodyIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 408, in BlockElementStmts_ok
+    -- BlockElementStmts_ok: TC_1 f_1 |- blockElementStatement_t*
+                                       : TC_2 f_2 blockElementStatementIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 32, in Stmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 22, in AssignmentStmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+  File "spec/5.06.2-typing-expression.watsup", line 149, in Expr_ok
+    -- Expr_ok: p TC |- expression_r : typedExpressionIR_r
+  File "spec/5.06.2-typing-expression.watsup", line 1018, in Expr_ok
+    -- RoutineTarget_ok: p TC |- routineTarget : routineTargetIR
+  File "spec/5.15.4-typing-routine-call.watsup", line 29, in RoutineTarget_ok
+    -- Expr_ok: p TC |- expression_base : typedExpressionIR_base
+Local variables:
+p:
+    (LOCAL)
+TC:
+    { .../3 }
+expression_base:
+    (ArrAccE (NameE (CURRENT 'h')) (NumE (INT 0)))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/named-arg1.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 14 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 299, in Decl_ok
+    -- InstanceDecl_ok:
+        GLOBAL TC_0 |- instantiation : TC_1 instantiationIR
+  File "spec/5.11-typing-declaration.watsup", line 78, in InstanceDecl_ok
+    -- ConstructorType_ok: p TC_0 |- prefixedName eps argumentIR*
+                                   : constructorTypeIR tid_impl* id_default*
+Local variables:
+p:
+    (GLOBAL)
+TC_0:
+    { .../3 }
+prefixedName:
+    (CURRENT 'top')
+argument*:
+    [ (NameA '_e' (InstE (NameT (CURRENT 'c')) [])),
+      (NameA '_p' (InstE (NameT (CURRENT 'par')) [])) ]
+argumentIR*:
+    [ (NameA '_e' ((InstE (CURRENT 'c') [] []) (( (SpecT (PolyTD (ControlT [ ((OUT) (BoolT) 'b' None) ]) [] []) []) (CTK) )))),
+      (NameA '_p' ((InstE (CURRENT 'par') [] []) (( (SpecT (PolyTD (ParserT [ ((OUT) (BoolT) 'b' None) ]) [] []) []) (CTK) )))) ]
+
+Error:
+relation was not matched: ConstructorType_ok
+p4-spectec/p4c/testdata/p4_16_samples/op_bin.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 18 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 707, in TableProperties_ok
+    -- TableProperties_ok: TC TBLC_1 |- tableProperty_t* : TBLC_2 tablePropertyIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 626, in TableProperty_ok
+    -- TableEntries_ok: TC TBLC_2 |- tableEntry* : TBLC_3 tableEntryIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 591, in TableEntries_ok
+    -- TableEntry_ok: TC TBLC_0 |- tableEntry_h : TBLC_1 tableEntryIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 568, in TableEntry_ok
+    -- TableEntry_keysets_ok: TC TBLC_0 |- keysetExpression* : TBLS keysetExpressionIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 423, in TableEntry_keysets_ok
+    -- TableEntry_keysets_ok':
+        TC TBLC NOLPM |- TBLC.KEYS keysetExpression*
+                       : TBLS keysetExpressionIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 375, in TableEntry_keysets_ok'
+    -- TableEntry_keyset_ok:
+        TC TBLC |- matchKey_h keysetExpression_h
+                 : TBLS_1 keysetExpressionIR_h
+Local variables:
+TC:
+    { .../3 }
+TBLC:
+    { .../5 }
+matchKey*:
+    [ ((FBitT 128), 'exact') ]
+matchKey_h:
+    ((FBitT 128), 'exact')
+keysetExpression*:
+    [ (ExprK (SeqE [ (BinE (BinE (BinE (BinE (BinE (BinE (BinE (BinE (BinE (BinE (BinE (BinE (BinE (BinE (BinE (NumE (FBIT 8 32)) (CONCAT) (NumE (FBIT 8 2))) (CONCAT) (NumE (FBIT 8 4))) (CONCAT) (NumE (FBIT 8 32))) (CONCAT) (NumE (FBIT 8 3))) (CONCAT) (NumE (FBIT 8 128))) (CONCAT) (NumE (FBIT 8 222))) (CONCAT) (NumE (FBIT 8 173))) (CONCAT) (NumE (FBIT 8 190))) (CONCAT) (NumE (FBIT 8 239))) (CONCAT) (NumE (FBIT 8 240))) (CONCAT) (NumE (FBIT 8 13))) (CONCAT) (NumE (FBIT 8 13))) (CONCAT) (NumE (FBIT 8 9))) (CONCAT) (NumE (FBIT 8 0))) (CONCAT) (NumE (FBIT 8 1))) ])) ]
+keysetExpression_h:
+    (ExprK (SeqE [ (BinE (BinE (BinE (BinE (BinE (BinE (BinE (BinE (BinE (BinE (BinE (BinE (BinE (BinE (BinE (NumE (FBIT 8 32)) (CONCAT) (NumE (FBIT 8 2))) (CONCAT) (NumE (FBIT 8 4))) (CONCAT) (NumE (FBIT 8 32))) (CONCAT) (NumE (FBIT 8 3))) (CONCAT) (NumE (FBIT 8 128))) (CONCAT) (NumE (FBIT 8 222))) (CONCAT) (NumE (FBIT 8 173))) (CONCAT) (NumE (FBIT 8 190))) (CONCAT) (NumE (FBIT 8 239))) (CONCAT) (NumE (FBIT 8 240))) (CONCAT) (NumE (FBIT 8 13))) (CONCAT) (NumE (FBIT 8 13))) (CONCAT) (NumE (FBIT 8 9))) (CONCAT) (NumE (FBIT 8 0))) (CONCAT) (NumE (FBIT 8 1))) ]))
+
+Error:
+relation was not matched: TableEntry_keyset_ok
+p4-spectec/p4c/testdata/p4_16_samples/pipe.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 7 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 384, in Decl_ok
+    -- if TC_1 = $add_vars(GLOBAL, TC_0, name*, (NO MatchKindT LCTK value_match_kind)*)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.02.1-context.watsup", line 204, in add_vars
+    -- if TC' = $add_var(p, TC, id_h, varTypeIR_h)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Local variables:
+TC:
+    { .../3 }
+p:
+    (GLOBAL)
+id*:
+    [ 'ternary',
+      'exact' ]
+id_h:
+    'ternary'
+varTypeIR*:
+    [ ((NO) (MatchKindT) (LCTK) Some((MatchKindV 'ternary'))),
+      ((NO) (MatchKindT) (LCTK) Some((MatchKindV 'exact'))) ]
+varTypeIR_h:
+    ((NO) (MatchKindT) (LCTK) Some((MatchKindV 'ternary')))
+
+Error:
+function was not matched: add_var
+p4-spectec/p4c/testdata/p4_16_samples/pna-action-selector-1.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 131 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 3 times]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 605, in TableProperty_ok
+    -- TableKeys_ok: TC TBLC_0 |- tableKey* : TBLC_1 tableKeyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 82, in TableKeys_ok
+    -- TableKeys_ok: TC TBLC_1 |- tableKey_t* : TBLC_2 tableKeyIR_t*
+  File "spec/5.14.1-typing-control-table.watsup", line 81, in TableKeys_ok
+    -- TableKey_ok: TC TBLC_0 |- tableKey_h : TBLC_1 tableKeyIR_h
+Local variables:
+TC:
+    { .../3 }
+tableKey*:
+    [ ((ExprAccE (NameE (CURRENT 'user_meta')) 'data') 'selector') ]
+tableKey_h:
+    ((ExprAccE (NameE (CURRENT 'user_meta')) 'data') 'selector')
+
+Error:
+relation was not matched: TableKey_ok
+p4-spectec/p4c/testdata/p4_16_samples/pna-action-selector.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 131 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 605, in TableProperty_ok
+    -- TableKeys_ok: TC TBLC_0 |- tableKey* : TBLC_1 tableKeyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 82, in TableKeys_ok
+    -- TableKeys_ok: TC TBLC_1 |- tableKey_t* : TBLC_2 tableKeyIR_t*
+  File "spec/5.14.1-typing-control-table.watsup", line 81, in TableKeys_ok
+    -- TableKey_ok: TC TBLC_0 |- tableKey_h : TBLC_1 tableKeyIR_h
+Local variables:
+TC:
+    { .../3 }
+tableKey*:
+    [ ((ExprAccE (NameE (CURRENT 'user_meta')) 'data') 'selector') ]
+tableKey_h:
+    ((ExprAccE (NameE (CURRENT 'user_meta')) 'data') 'selector')
+
+Error:
+relation was not matched: TableKey_ok
+p4-spectec/p4c/testdata/p4_16_samples/pna-dpdk-direct-counter.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 137 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 39, in ControlLocalDecl_ok
+    -- ActionDecl_ok:
+        BLOCK TC_0 |- actionDeclaration
+                    : TC_1 actionDeclarationIR
+  File "spec/5.11-typing-declaration.watsup", line 348, in ActionDecl_ok
+    -- Block_ok: TC_2 CONT |- blockStatement : _ _ blockStatementIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 170, in Stmt_ok
+    -- ConditionalStmt_ok:
+        TC f |- conditionalStatement : f_post conditionalStatementIR
+  File "spec/5.10-typing-statement.watsup", line 151, in ConditionalStmt_ok
+    -- Stmt_ok:
+        TC f |- statement_then : TC_then f_then statementIR_then
+  File "spec/5.10-typing-statement.watsup", line 60, in Stmt_ok
+    -- CallStmt_ok:
+        TC |- callStatement : callStatementIR
+  File "spec/5.10-typing-statement.watsup", line 50, in CallStmt_ok
+    -- RoutineType_ok:
+        LOCAL TC |- routineTargetIR typeArgumentIR* argumentIR*
+                  : routineTypeIR tid_inserted* id_default*
+Local variables:
+TC:
+    { .../3 }
+routineTargetIR:
+    (MethodT ((NameE (CURRENT 'per_prefix_pkt_count')) (( (SpecT (PolyTD (ExternT 'DirectCounter' ({ [ (('count' [ ('increment' false) ]) -> (PolyTD (ExternMethodT [ ((IN) (FBitT 32) 'increment' None) ] (VoidT)) [] [])) ] })) [ 'FRESH__1504' ] []) [ (DefT 'PacketCounter_t' (FBitT 32)) ]) (CTK) ))) 'count')
+typeArgument*:
+    []
+typeArgumentIR*:
+    []
+argument*:
+    []
+argumentIR*:
+    []
+
+Error:
+relation was not matched: RoutineType_ok
+p4-spectec/p4c/testdata/p4_16_samples/precedence-lt.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 552, in Decl_ok
+    -- Block_ok: TC_5 CONT |- controlBody : _ _ controlBodyIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 170, in Stmt_ok
+    -- ConditionalStmt_ok:
+        TC f |- conditionalStatement : f_post conditionalStatementIR
+  File "spec/5.10-typing-statement.watsup", line 146, in ConditionalStmt_ok
+    -- Expr_ok: LOCAL TC |- expression_cond : typedExpressionIR_cond
+Local variables:
+TC:
+    { .../3 }
+expression_cond:
+    (BinE (NumE (INT 4)) (PLUS) (BinE (ExprAccE (NameE (CURRENT 'd')) 'f') (LT) (NumE (INT 10))))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/precedence.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 3 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 360, in Decl_ok
+    -- ActionDecl_ok:
+        GLOBAL TC_0 |- actionDeclaration : TC_1 actionDeclarationIR
+  File "spec/5.11-typing-declaration.watsup", line 348, in ActionDecl_ok
+    -- Block_ok: TC_2 CONT |- blockStatement : _ _ blockStatementIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 408, in BlockElementStmts_ok
+    -- BlockElementStmts_ok: TC_1 f_1 |- blockElementStatement_t*
+                                       : TC_2 f_2 blockElementStatementIR_t*
+  [Previous entry repeated 15 times]
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 32, in Stmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 22, in AssignmentStmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+  File "spec/5.06.2-typing-expression.watsup", line 149, in Expr_ok
+    -- Expr_ok: p TC |- expression_r : typedExpressionIR_r
+Local variables:
+p:
+    (LOCAL)
+TC:
+    { .../3 }
+expression_r:
+    (BinE (NameE (CURRENT 'c')) (DIV) (NameE (CURRENT 'd')))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/psa-action-selector1.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 108 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 605, in TableProperty_ok
+    -- TableKeys_ok: TC TBLC_0 |- tableKey* : TBLC_1 tableKeyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 82, in TableKeys_ok
+    -- TableKeys_ok: TC TBLC_1 |- tableKey_t* : TBLC_2 tableKeyIR_t*
+  File "spec/5.14.1-typing-control-table.watsup", line 81, in TableKeys_ok
+    -- TableKey_ok: TC TBLC_0 |- tableKey_h : TBLC_1 tableKeyIR_h
+Local variables:
+TC:
+    { .../3 }
+tableKey*:
+    [ ((ExprAccE (NameE (CURRENT 'b')) 'data') 'selector') ]
+tableKey_h:
+    ((ExprAccE (NameE (CURRENT 'b')) 'data') 'selector')
+
+Error:
+relation was not matched: TableKey_ok
+p4-spectec/p4c/testdata/p4_16_samples/psa-action-selector2.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 108 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 605, in TableProperty_ok
+    -- TableKeys_ok: TC TBLC_0 |- tableKey* : TBLC_1 tableKeyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 82, in TableKeys_ok
+    -- TableKeys_ok: TC TBLC_1 |- tableKey_t* : TBLC_2 tableKeyIR_t*
+  File "spec/5.14.1-typing-control-table.watsup", line 81, in TableKeys_ok
+    -- TableKey_ok: TC TBLC_0 |- tableKey_h : TBLC_1 tableKeyIR_h
+Local variables:
+TC:
+    { .../3 }
+tableKey*:
+    [ ((ExprAccE (NameE (CURRENT 'b')) 'data1') 'selector'),
+      ((ExprAccE (NameE (CURRENT 'b')) 'data2') 'selector') ]
+tableKey_h:
+    ((ExprAccE (NameE (CURRENT 'b')) 'data1') 'selector')
+
+Error:
+relation was not matched: TableKey_ok
+p4-spectec/p4c/testdata/p4_16_samples/psa-action-selector3.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 108 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 605, in TableProperty_ok
+    -- TableKeys_ok: TC TBLC_0 |- tableKey* : TBLC_1 tableKeyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 82, in TableKeys_ok
+    -- TableKeys_ok: TC TBLC_1 |- tableKey_t* : TBLC_2 tableKeyIR_t*
+  File "spec/5.14.1-typing-control-table.watsup", line 81, in TableKeys_ok
+    -- TableKey_ok: TC TBLC_0 |- tableKey_h : TBLC_1 tableKeyIR_h
+Local variables:
+TC:
+    { .../3 }
+tableKey*:
+    [ ((ExprAccE (NameE (CURRENT 'b')) 'data1') 'selector'),
+      ((ExprAccE (NameE (CURRENT 'b')) 'data2') 'selector') ]
+tableKey_h:
+    ((ExprAccE (NameE (CURRENT 'b')) 'data1') 'selector')
+
+Error:
+relation was not matched: TableKey_ok
+p4-spectec/p4c/testdata/p4_16_samples/psa-action-selector4.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 108 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 605, in TableProperty_ok
+    -- TableKeys_ok: TC TBLC_0 |- tableKey* : TBLC_1 tableKeyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 82, in TableKeys_ok
+    -- TableKeys_ok: TC TBLC_1 |- tableKey_t* : TBLC_2 tableKeyIR_t*
+  File "spec/5.14.1-typing-control-table.watsup", line 81, in TableKeys_ok
+    -- TableKey_ok: TC TBLC_0 |- tableKey_h : TBLC_1 tableKeyIR_h
+Local variables:
+TC:
+    { .../3 }
+tableKey*:
+    [ ((ExprAccE (NameE (CURRENT 'b')) 'data') 'selector') ]
+tableKey_h:
+    ((ExprAccE (NameE (CURRENT 'b')) 'data') 'selector')
+
+Error:
+relation was not matched: TableKey_ok
+p4-spectec/p4c/testdata/p4_16_samples/psa-action-selector5.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 108 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 605, in TableProperty_ok
+    -- TableKeys_ok: TC TBLC_0 |- tableKey* : TBLC_1 tableKeyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 82, in TableKeys_ok
+    -- TableKeys_ok: TC TBLC_1 |- tableKey_t* : TBLC_2 tableKeyIR_t*
+  File "spec/5.14.1-typing-control-table.watsup", line 81, in TableKeys_ok
+    -- TableKey_ok: TC TBLC_0 |- tableKey_h : TBLC_1 tableKeyIR_h
+Local variables:
+TC:
+    { .../3 }
+tableKey*:
+    [ ((ExprAccE (NameE (CURRENT 'b')) 'data') 'selector') ]
+tableKey_h:
+    ((ExprAccE (NameE (CURRENT 'b')) 'data') 'selector')
+
+Error:
+relation was not matched: TableKey_ok
+p4-spectec/p4c/testdata/p4_16_samples/psa-action-selector6.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 108 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 3 times]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 605, in TableProperty_ok
+    -- TableKeys_ok: TC TBLC_0 |- tableKey* : TBLC_1 tableKeyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 82, in TableKeys_ok
+    -- TableKeys_ok: TC TBLC_1 |- tableKey_t* : TBLC_2 tableKeyIR_t*
+  File "spec/5.14.1-typing-control-table.watsup", line 81, in TableKeys_ok
+    -- TableKey_ok: TC TBLC_0 |- tableKey_h : TBLC_1 tableKeyIR_h
+Local variables:
+TC:
+    { .../3 }
+tableKey*:
+    [ ((ExprAccE (NameE (CURRENT 'b')) 'data') 'selector') ]
+tableKey_h:
+    ((ExprAccE (NameE (CURRENT 'b')) 'data') 'selector')
+
+Error:
+relation was not matched: TableKey_ok
+p4-spectec/p4c/testdata/p4_16_samples/psa-bool-ternary-const-entry-bmv2.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 110 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 605, in TableProperty_ok
+    -- TableKeys_ok: TC TBLC_0 |- tableKey* : TBLC_1 tableKeyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 81, in TableKeys_ok
+    -- TableKey_ok: TC TBLC_0 |- tableKey_h : TBLC_1 tableKeyIR_h
+Local variables:
+TC:
+    { .../3 }
+tableKey*:
+    [ ((CallE (ExprAccE (ExprAccE (NameE (CURRENT 'hdr')) 'ethernet') 'isValid') [] []) 'ternary') ]
+tableKey_h:
+    ((CallE (ExprAccE (ExprAccE (NameE (CURRENT 'hdr')) 'ethernet') 'isValid') [] []) 'ternary')
+
+Error:
+relation was not matched: TableKey_ok
+p4-spectec/p4c/testdata/p4_16_samples/psa-dpdk-binary-operations-1.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 111 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 39, in ControlLocalDecl_ok
+    -- ActionDecl_ok:
+        BLOCK TC_0 |- actionDeclaration
+                    : TC_1 actionDeclarationIR
+  File "spec/5.11-typing-declaration.watsup", line 348, in ActionDecl_ok
+    -- Block_ok: TC_2 CONT |- blockStatement : _ _ blockStatementIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 32, in Stmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 22, in AssignmentStmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+Local variables:
+TC:
+    { .../3 }
+expression:
+    (BinE (NumE (FBIT 32 1)) (SHL) (ExprAccE (NameE (CURRENT 'c')) 'ingress_port'))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/psa-dpdk-binary-operations.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 111 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 39, in ControlLocalDecl_ok
+    -- ActionDecl_ok:
+        BLOCK TC_0 |- actionDeclaration
+                    : TC_1 actionDeclarationIR
+  File "spec/5.11-typing-declaration.watsup", line 348, in ActionDecl_ok
+    -- Block_ok: TC_2 CONT |- blockStatement : _ _ blockStatementIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 32, in Stmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 22, in AssignmentStmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+Local variables:
+TC:
+    { .../3 }
+expression:
+    (BinE (NumE (FBIT 32 1)) (SHL) (ExprAccE (NameE (CURRENT 'c')) 'ingress_port'))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/psa-dpdk-header-union-typedef.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 115 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 39, in ControlLocalDecl_ok
+    -- ActionDecl_ok:
+        BLOCK TC_0 |- actionDeclaration
+                    : TC_1 actionDeclarationIR
+  File "spec/5.11-typing-declaration.watsup", line 348, in ActionDecl_ok
+    -- Block_ok: TC_2 CONT |- blockStatement : _ _ blockStatementIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 32, in Stmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 22, in AssignmentStmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+Local variables:
+TC:
+    { .../3 }
+expression:
+    (BinE (NumE (FBIT 32 1)) (SHL) (ExprAccE (NameE (CURRENT 'c')) 'ingress_port'))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/pvs-nested-struct.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 55 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 498, in Decl_ok
+    -- ParserLocalDecls_ok: TC_3 |- parserLocalDeclaration*
+                                  : TC_4 parserLocalDeclarationIR*
+  File "spec/5.13.3-typing-parser-declaration.watsup", line 67, in ParserLocalDecls_ok
+    -- ParserLocalDecl_ok: TC_0 |- parserLocalDeclaration_h
+                                 : TC_1 parserLocalDeclarationIR_h
+Local variables:
+parserLocalDeclaration*:
+    [ (ValueSetD (NameT (CURRENT 'value_set_t')) (NumE (INT 4)) 'pvs') ]
+parserLocalDeclaration_h:
+    (ValueSetD (NameT (CURRENT 'value_set_t')) (NumE (INT 4)) 'pvs')
+
+Error:
+relation was not matched: ParserLocalDecl_ok
+p4-spectec/p4c/testdata/p4_16_samples/pvs.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 8 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 503, in Decl_ok
+    -- ParserStates_ok: TC_5 |- parserState* : parserStateIR*
+  File "spec/5.13.2-typing-parser-state.watsup", line 56, in ParserStates_ok
+    -- (ParserState_ok: TC name_state_impl* |- parserState : parserStateIR)*
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.13.2-typing-parser-state.watsup", line 31, in ParserState_ok
+    -- ParserTransition_ok: TC_2 name_state* |- transitionStatement
+                                              : transitionStatementIR
+  File "spec/5.13.1-typing-parser-statement.watsup", line 205, in ParserTransition_ok
+    -- (SelectCase_ok: TC_0 name_state* typeIR_key* |- selectCase : selectCaseIR)*
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.13.1-typing-parser-statement.watsup", line 191, in SelectCase_ok
+    -- SelectCase_keysets_ok:
+        TC typeIR_key* |- keysetExpression* : keysetExpressionIR*
+Local variables:
+TC:
+    { .../3 }
+typeIR_key*:
+    [ (FBitT 32),
+      (FBitT 2) ]
+keysetExpression*:
+    [ (ExprK (NameE (CURRENT 'vs'))) ]
+
+Error:
+relation was not matched: SelectCase_keysets_ok
+p4-spectec/p4c/testdata/p4_16_samples/pvs-struct-1-bmv2.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 54 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 498, in Decl_ok
+    -- ParserLocalDecls_ok: TC_3 |- parserLocalDeclaration*
+                                  : TC_4 parserLocalDeclarationIR*
+  File "spec/5.13.3-typing-parser-declaration.watsup", line 67, in ParserLocalDecls_ok
+    -- ParserLocalDecl_ok: TC_0 |- parserLocalDeclaration_h
+                                 : TC_1 parserLocalDeclarationIR_h
+Local variables:
+parserLocalDeclaration*:
+    [ (ValueSetD (NameT (CURRENT 'value_set_t')) (NumE (INT 4)) 'pvs') ]
+parserLocalDeclaration_h:
+    (ValueSetD (NameT (CURRENT 'value_set_t')) (NumE (INT 4)) 'pvs')
+
+Error:
+relation was not matched: ParserLocalDecl_ok
+p4-spectec/p4c/testdata/p4_16_samples/pvs-struct-2-bmv2.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 54 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 498, in Decl_ok
+    -- ParserLocalDecls_ok: TC_3 |- parserLocalDeclaration*
+                                  : TC_4 parserLocalDeclarationIR*
+  File "spec/5.13.3-typing-parser-declaration.watsup", line 67, in ParserLocalDecls_ok
+    -- ParserLocalDecl_ok: TC_0 |- parserLocalDeclaration_h
+                                 : TC_1 parserLocalDeclarationIR_h
+Local variables:
+parserLocalDeclaration*:
+    [ (ValueSetD (NameT (CURRENT 'value_set_t')) (NumE (INT 4)) 'pvs') ]
+parserLocalDeclaration_h:
+    (ValueSetD (NameT (CURRENT 'value_set_t')) (NumE (INT 4)) 'pvs')
+
+Error:
+relation was not matched: ParserLocalDecl_ok
+p4-spectec/p4c/testdata/p4_16_samples/pvs-struct-3-bmv2.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 54 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 498, in Decl_ok
+    -- ParserLocalDecls_ok: TC_3 |- parserLocalDeclaration*
+                                  : TC_4 parserLocalDeclarationIR*
+  File "spec/5.13.3-typing-parser-declaration.watsup", line 67, in ParserLocalDecls_ok
+    -- ParserLocalDecl_ok: TC_0 |- parserLocalDeclaration_h
+                                 : TC_1 parserLocalDeclarationIR_h
+Local variables:
+parserLocalDeclaration*:
+    [ (ValueSetD (NameT (CURRENT 'value_set_t')) (NumE (INT 4)) 'pvs') ]
+parserLocalDeclaration_h:
+    (ValueSetD (NameT (CURRENT 'value_set_t')) (NumE (INT 4)) 'pvs')
+
+Error:
+relation was not matched: ParserLocalDecl_ok
+p4-spectec/p4c/testdata/p4_16_samples/shadow3.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 30, in ControlLocalDecl_ok
+    -- VariableDecl_ok:
+        BLOCK TC_0 |- variableDeclaration
+                    : TC_1 variableDeclarationIR
+  File "spec/5.11-typing-declaration.watsup", line 64, in VariableDecl_ok
+    -- if TC_1 = $add_var(p, TC_0, name, INOUT typeIR DYN eps)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Local variables:
+p:
+    (BLOCK)
+TC_0:
+    { .../3 }
+name:
+    'p'
+type:
+    (FBitT (NumE (INT 8)))
+typeIR:
+    (FBitT 8)
+
+Error:
+function was not matched: add_var
+p4-spectec/p4c/testdata/p4_16_samples/shadow-after-use.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 7 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 55, in ControlLocalDecl_ok
+    -- if TC_3 = $add_var(BLOCK, TC_2, name, NO typeIR_table DYN eps)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Local variables:
+TC_2:
+    { .../3 }
+name:
+    'x'
+typeIR_table:
+    (TableT 'x' (TableStructT 'apply_result(x)' [ ((BoolT) 'hit'),
+          ((BoolT) 'miss'),
+          ((TableEnumT 'action_list(x)' [ 'incx',
+                  'nop' ]) 'action_run') ]))
+
+Error:
+function was not matched: add_var
+p4-spectec/p4c/testdata/p4_16_samples/spec-ex25.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 707, in TableProperties_ok
+    -- TableProperties_ok: TC TBLC_1 |- tableProperty_t* : TBLC_2 tablePropertyIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 626, in TableProperty_ok
+    -- TableEntries_ok: TC TBLC_2 |- tableEntry* : TBLC_3 tableEntryIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 592, in TableEntries_ok
+    -- TableEntries_ok: TC TBLC_1 |- tableEntry_t* : TBLC_2 tableEntryIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.14.1-typing-control-table.watsup", line 591, in TableEntries_ok
+    -- TableEntry_ok: TC TBLC_0 |- tableEntry_h : TBLC_1 tableEntryIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 568, in TableEntry_ok
+    -- TableEntry_keysets_ok: TC TBLC_0 |- keysetExpression* : TBLS keysetExpressionIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 423, in TableEntry_keysets_ok
+    -- TableEntry_keysets_ok':
+        TC TBLC NOLPM |- TBLC.KEYS keysetExpression*
+                       : TBLS keysetExpressionIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 375, in TableEntry_keysets_ok'
+    -- TableEntry_keyset_ok:
+        TC TBLC |- matchKey_h keysetExpression_h
+                 : TBLS_1 keysetExpressionIR_h
+Local variables:
+TC:
+    { .../3 }
+TBLC:
+    { .../5 }
+matchKey*:
+    [ ((FBitT 32), 'exact') ]
+matchKey_h:
+    ((FBitT 32), 'exact')
+keysetExpression*:
+    [ (MaskK (NumE (FBIT 32 184549376)) (NumE (FBIT 32 4278190080))) ]
+keysetExpression_h:
+    (MaskK (NumE (FBIT 32 184549376)) (NumE (FBIT 32 4278190080)))
+
+Error:
+relation was not matched: TableEntry_keyset_ok
+p4-spectec/p4c/testdata/p4_16_samples/spec-issue1068.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+Local variables:
+declaration*:
+    [ (ParserD 'MyParser' [ 't' ] [ ((NO) (NameT (CURRENT 't')) 'tt' None) ] [] [] [ ('start' [] Some((TransS (NameE 'accept')))) ]),
+      (ParserD 'MyParser1' [] [] [] [] [ ('start' [ (InstS (SpecT (CURRENT 'MyParser') [ (FBitT (NumE (INT 1))) ]) [ (ExprA (NumE (INT 1))) ]) ] Some((TransS (NameE 'accept')))) ]) ]
+declaration_h:
+    (ParserD 'MyParser' [ 't' ] [ ((NO) (NameT (CURRENT 't')) 'tt' None) ] [] [] [ ('start' [] Some((TransS (NameE 'accept')))) ])
+
+Error:
+relation was not matched: Decl_ok
+p4-spectec/p4c/testdata/p4_16_samples/spec-issue1297-string-cat.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 9 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 552, in Decl_ok
+    -- Block_ok: TC_5 CONT |- controlBody : _ _ controlBodyIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 408, in BlockElementStmts_ok
+    -- BlockElementStmts_ok: TC_1 f_1 |- blockElementStatement_t*
+                                       : TC_2 f_2 blockElementStatementIR_t*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 60, in Stmt_ok
+    -- CallStmt_ok:
+        TC |- callStatement : callStatementIR
+  File "spec/5.10-typing-statement.watsup", line 48, in CallStmt_ok
+    -- (Argument_ok: LOCAL TC |- argument : argumentIR)*
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "spec/5.07.2-typing-argument.watsup", line 11, in Argument_ok
+    -- Expr_ok: p TC |- expression : typedExpressionIR
+  File "spec/5.06.2-typing-expression.watsup", line 476, in Expr_ok
+    -- Expr_ok: p TC |- expression_l : typedExpressionIR_l
+  [Previous entry repeated 1 time]
+Local variables:
+p:
+    (LOCAL)
+TC:
+    { .../3 }
+expression_l:
+    (BinE (StrE 'concat') (CONCAT) (StrE ' '))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/strength.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 552, in Decl_ok
+    -- Block_ok: TC_5 CONT |- controlBody : _ _ controlBodyIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 408, in BlockElementStmts_ok
+    -- BlockElementStmts_ok: TC_1 f_1 |- blockElementStatement_t*
+                                       : TC_2 f_2 blockElementStatementIR_t*
+  [Previous entry repeated 20 times]
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 32, in Stmt_ok
+    -- AssignmentStmt_ok:
+        TC |- assignmentStatement : assignmentStatementIR
+  File "spec/5.10-typing-statement.watsup", line 22, in AssignmentStmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+Local variables:
+TC:
+    { .../3 }
+expression:
+    (BinE (NameE (CURRENT 'y')) (DIV) (NumE (INT 2)))
+
+Error:
+relation was not matched: Expr_ok
+p4-spectec/p4c/testdata/p4_16_samples/table-entries-no-arg-actions.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 9 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 707, in TableProperties_ok
+    -- TableProperties_ok: TC TBLC_1 |- tableProperty_t* : TBLC_2 tablePropertyIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 626, in TableProperty_ok
+    -- TableEntries_ok: TC TBLC_2 |- tableEntry* : TBLC_3 tableEntryIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 591, in TableEntries_ok
+    -- TableEntry_ok: TC TBLC_0 |- tableEntry_h : TBLC_1 tableEntryIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 568, in TableEntry_ok
+    -- TableEntry_keysets_ok: TC TBLC_0 |- keysetExpression* : TBLS keysetExpressionIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 423, in TableEntry_keysets_ok
+    -- TableEntry_keysets_ok':
+        TC TBLC NOLPM |- TBLC.KEYS keysetExpression*
+                       : TBLS keysetExpressionIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 375, in TableEntry_keysets_ok'
+    -- TableEntry_keyset_ok:
+        TC TBLC |- matchKey_h keysetExpression_h
+                 : TBLS_1 keysetExpressionIR_h
+Local variables:
+TC:
+    { .../3 }
+TBLC:
+    { .../5 }
+matchKey*:
+    [ ((FBitT 2), 'exact') ]
+matchKey_h:
+    ((FBitT 2), 'exact')
+keysetExpression*:
+    [ (ExprK (SeqE [ (NumE (INT 0)) ])) ]
+keysetExpression_h:
+    (ExprK (SeqE [ (NumE (INT 0)) ]))
+
+Error:
+relation was not matched: TableEntry_keyset_ok
+p4-spectec/p4c/testdata/p4_16_samples/table-entries-ser-enum-bmv2.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 60 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  [Previous entry repeated 1 time]
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 52, in ControlLocalDecl_ok
+    -- Table_ok: TC_1 |- tableProperty* : TBLC tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 763, in Table_ok
+    -- TableProperties_ok: TC TBLC_0 |- tableProperty* : TBLC_1 tablePropertyIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 707, in TableProperties_ok
+    -- TableProperties_ok: TC TBLC_1 |- tableProperty_t* : TBLC_2 tablePropertyIR_t*
+  [Previous entry repeated 2 times]
+  File "spec/5.14.1-typing-control-table.watsup", line 706, in TableProperties_ok
+    -- TableProperty_ok: TC TBLC_0 |- tableProperty_h : TBLC_1 tablePropertyIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 626, in TableProperty_ok
+    -- TableEntries_ok: TC TBLC_2 |- tableEntry* : TBLC_3 tableEntryIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 592, in TableEntries_ok
+    -- TableEntries_ok: TC TBLC_1 |- tableEntry_t* : TBLC_2 tableEntryIR_t*
+  File "spec/5.14.1-typing-control-table.watsup", line 591, in TableEntries_ok
+    -- TableEntry_ok: TC TBLC_0 |- tableEntry_h : TBLC_1 tableEntryIR_h
+  File "spec/5.14.1-typing-control-table.watsup", line 568, in TableEntry_ok
+    -- TableEntry_keysets_ok: TC TBLC_0 |- keysetExpression* : TBLS keysetExpressionIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 423, in TableEntry_keysets_ok
+    -- TableEntry_keysets_ok':
+        TC TBLC NOLPM |- TBLC.KEYS keysetExpression*
+                       : TBLS keysetExpressionIR*
+  File "spec/5.14.1-typing-control-table.watsup", line 379, in TableEntry_keysets_ok'
+    -- TableEntry_keysets_ok':
+        TC TBLC TBLS_2 |- matchKey_t* keysetExpression_t*
+                        : TBLS_3 keysetExpressionIR_t*
+  File "spec/5.14.1-typing-control-table.watsup", line 375, in TableEntry_keysets_ok'
+    -- TableEntry_keyset_ok:
+        TC TBLC |- matchKey_h keysetExpression_h
+                 : TBLS_1 keysetExpressionIR_h
+Local variables:
+TC:
+    { .../3 }
+TBLC:
+    { .../5 }
+matchKey*:
+    [ ((SEnumT 'MyEnum2B' (FBitT 16) [ ('MBR1' (FBitV 16 10)),
+              ('MBR2' (FBitV 16 43776)) ]), 'ternary') ]
+matchKey_h:
+    ((SEnumT 'MyEnum2B' (FBitT 16) [ ('MBR1' (FBitV 16 10)),
+          ('MBR2' (FBitV 16 43776)) ]), 'ternary')
+keysetExpression*:
+    [ (MaskK (TypeAccE (CURRENT 'MyEnum2B') 'MBR2') (NumE (INT 65280))) ]
+keysetExpression_h:
+    (MaskK (TypeAccE (CURRENT 'MyEnum2B') 'MBR2') (NumE (INT 65280)))
+
+Error:
+relation was not matched: TableEntry_keyset_ok
+p4-spectec/p4c/testdata/p4_16_samples/v1model-p4runtime-enumint-types1.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 88 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 498, in Decl_ok
+    -- ParserLocalDecls_ok: TC_3 |- parserLocalDeclaration*
+                                  : TC_4 parserLocalDeclarationIR*
+  File "spec/5.13.3-typing-parser-declaration.watsup", line 69, in ParserLocalDecls_ok
+    -- ParserLocalDecls_ok: TC_1 |- parserLocalDeclaration_t*
+                                  : TC_2 parserLocalDeclarationIR_t*
+  File "spec/5.13.3-typing-parser-declaration.watsup", line 67, in ParserLocalDecls_ok
+    -- ParserLocalDecl_ok: TC_0 |- parserLocalDeclaration_h
+                                 : TC_1 parserLocalDeclarationIR_h
+Local variables:
+parserLocalDeclaration*:
+    [ (ValueSetD (NameT (CURRENT 'valueset1_t')) (NumE (INT 4)) 'valueset1') ]
+parserLocalDeclaration_h:
+    (ValueSetD (NameT (CURRENT 'valueset1_t')) (NumE (INT 4)) 'valueset1')
+
+Error:
+relation was not matched: ParserLocalDecl_ok
+p4-spectec/p4c/testdata/p4_16_samples/v1model-p4runtime-most-types1.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 88 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 498, in Decl_ok
+    -- ParserLocalDecls_ok: TC_3 |- parserLocalDeclaration*
+                                  : TC_4 parserLocalDeclarationIR*
+  File "spec/5.13.3-typing-parser-declaration.watsup", line 69, in ParserLocalDecls_ok
+    -- ParserLocalDecls_ok: TC_1 |- parserLocalDeclaration_t*
+                                  : TC_2 parserLocalDeclarationIR_t*
+  File "spec/5.13.3-typing-parser-declaration.watsup", line 67, in ParserLocalDecls_ok
+    -- ParserLocalDecl_ok: TC_0 |- parserLocalDeclaration_h
+                                 : TC_1 parserLocalDeclarationIR_h
+Local variables:
+parserLocalDeclaration*:
+    [ (ValueSetD (NameT (CURRENT 'valueset1_t')) (NumE (INT 4)) 'valueset1') ]
+parserLocalDeclaration_h:
+    (ValueSetD (NameT (CURRENT 'valueset1_t')) (NumE (INT 4)) 'valueset1')
+
+Error:
+relation was not matched: ParserLocalDecl_ok
+p4-spectec/p4c/testdata/p4_16_samples/virtual3.p4.json
+P4 execution exception:
+Traceback (most recent call last):
+  File "spec/5.11-typing-declaration.watsup", line 980, in Program_ok
+    -- Decls_ok: TC_0 |- declaration* : TC_1 declarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 971, in Decls_ok
+    -- Decls_ok: TC_1 |- declaration_t* : TC_2 declarationIR_t*
+  [Previous entry repeated 8 times]
+  File "spec/5.11-typing-declaration.watsup", line 970, in Decls_ok
+    -- Decl_ok: TC_0 |- declaration_h : TC_1 declarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 547, in Decl_ok
+    -- ControlLocalDecls_ok: TC_3 |- controlLocalDeclaration*
+                                   : TC_4 controlLocalDeclarationIR*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 74, in ControlLocalDecls_ok
+    -- ControlLocalDecls_ok: TC_1 |- controlLocalDeclaration_t*
+                                   : TC_2 controlLocalDeclarationIR_t*
+  File "spec/5.14.2-typing-control-declaration.watsup", line 72, in ControlLocalDecls_ok
+    -- ControlLocalDecl_ok: TC_0 |- controlLocalDeclaration_h
+                                  : TC_1 controlLocalDeclarationIR_h
+  File "spec/5.14.2-typing-control-declaration.watsup", line 21, in ControlLocalDecl_ok
+    -- InstanceDecl_ok:
+        BLOCK TC_0 |- instantiation
+                    : TC_1 instantiationIR
+  File "spec/5.11-typing-declaration.watsup", line 232, in InstanceDecl_ok
+    -- Decls_object_ok:
+        p TC_1 (`{ eps }) (`{ eps }) |- objectDeclaration*
+                                      : frame_init rdenv_init objectDeclarationIR*
+  File "spec/5.11-typing-declaration.watsup", line 182, in Decls_object_ok
+    -- Decl_object_ok:
+        p TC frame_0 rdenv_0 |- objectDeclaration_h
+                              : frame_1 rdenv_1 objectDeclarationIR_h
+  File "spec/5.11-typing-declaration.watsup", line 143, in Decl_object_ok
+    -- Block_ok: TC_5 CONT |- blockStatement : _ f blockStatementIR
+  File "spec/5.10-typing-statement.watsup", line 422, in Block_ok
+    -- BlockElementStmts_ok: TC_1 f |- blockElementStatement*
+                                     : TC_2 f_post blockElementStatementIR*
+  File "spec/5.10-typing-statement.watsup", line 406, in BlockElementStmts_ok
+    -- BlockElementStmt_ok: TC_0 f_0 |- blockElementStatement_h
+                                      : TC_1 f_1 blockElementStatementIR_h
+  File "spec/5.10-typing-statement.watsup", line 394, in BlockElementStmt_ok
+    -- Stmt_ok: TC_0 f |- statement : TC_1 f_post statementIR
+  File "spec/5.10-typing-statement.watsup", line 117, in Stmt_ok
+    -- Expr_ok: LOCAL TC |- expression : typedExpressionIR
+  File "spec/5.06.2-typing-expression.watsup", line 149, in Expr_ok
+    -- Expr_ok: p TC |- expression_r : typedExpressionIR_r
+Local variables:
+p:
+    (LOCAL)
+TC:
+    { .../3 }
+expression_r:
+    (NameE (CURRENT 'local'))
+
+Error:
+relation was not matched: Expr_ok
+PASSED: 0
+ERRORS: 93

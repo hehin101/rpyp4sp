@@ -6,40 +6,9 @@ from rpython.rlib.nonconst import NonConstant
 from rpython.rlib import objectmodel
 
 from rpyp4sp import p4specast, objects, builtin, context, integers, rpyjson, interp
-from rpyp4sp.error import P4Error
+from rpyp4sp.error import P4Error, format_p4error
 from rpyp4sp.test.test_interp import make_context
 from rpython.rlib import rsignal
-
-@objectmodel.specialize.arg(4)
-def parse_args(argv, shortname, longname="", want_arg=True, many=False):
-    # crappy argument handling
-    reslist = []
-    if many:
-        assert want_arg
-    i = 0
-    while i < len(argv):
-        if argv[i] == shortname or argv[i] == longname:
-            if not want_arg:
-                res = argv[i]
-                del argv[i]
-                return res
-            if len(argv) == i + 1:
-                print("missing argument after " + argv[i])
-                raise ValueError
-            arg = argv[i + 1]
-            del argv[i : i + 2]
-            if many:
-                reslist.append(arg)
-            else:
-                return arg
-            continue
-        i += 1
-    if many:
-        return reslist
-
-
-def parse_flag(argv, flagname, longname=""):
-    return bool(parse_args(argv, flagname, longname=longname, want_arg=False))
 
 @objectmodel.specialize.arg(4)
 def parse_args(argv, shortname, longname="", want_arg=True, many=False):
@@ -117,7 +86,8 @@ def command_run_test_jsonl(argv):
                 except P4Error as e:
                     #import pdb; pdb.xpm()
                     error += 1
-                    print("Function test exception:", name, e.__class__.__name__, e.msg)
+                    print("Function test exception:", name)
+                    print(format_p4error(e, ctx.glbl.file_content))
                     continue
                 except KeyError as e:
                     #import pdb; pdb.xpm()
@@ -149,7 +119,8 @@ def command_run_test_jsonl(argv):
                 except P4Error as e:
                     #import pdb; pdb.xpm()
                     error += 1
-                    print("Relation test exception:", name, e.__class__.__name__, e.msg)
+                    print("Relation test exception:", name)
+                    print(format_p4error(e, ctx.glbl.file_content))
                     continue
                 except KeyError as e:
                     #import pdb; pdb.xpm()
@@ -172,7 +143,8 @@ def command_run_test_jsonl(argv):
                 except P4Error as e:
                     #import pdb; pdb.xpm()
                     error += 1
-                    print("Builtin test exception:", name, e.__class__.__name__, e.msg)
+                    print("Builtin test exception:", name)
+                    print(format_p4error(e, ctx.glbl.file_content))
                     continue
                 except KeyError as e:
                     #import pdb; pdb.xpm()
@@ -189,6 +161,7 @@ def command_run_test_jsonl(argv):
 
 def command_run_p4(argv):
     ctx = make_context()
+    print_times = not parse_flag(argv, "--no-times")
     load_times = []
     run_times = []
     passed = 0
@@ -204,21 +177,23 @@ def command_run_p4(argv):
         valuejson = rpyjson.loads(content)
         value = objects.BaseV.fromjson(valuejson)
         t2 = time.time()
-        print("program loaded in %ss" % (t2 - t1))
+        if print_times:
+            print("program loaded in %ss" % (t2 - t1))
         load_times.append(t2 - t1)
         resctx = None
         try:
             resctx, values = interp.invoke_rel(ctx, p4specast.Id("Program_ok", p4specast.NO_REGION), [value])
         except P4Error as e:
-            print("Function test exception:", e, e.msg)
+            print("P4 execution exception:")
+            print(format_p4error(e, ctx.glbl.file_content, spec_dirname=ctx.glbl.spec_dirname))
         except KeyError as e:
             print("KeyError")
         t3 = time.time()
-        print("executed in %ss" % (t3 - t2))
+        if print_times:
+            print("executed in %ss" % (t3 - t2))
         run_times.append(t3 - t2)
         if resctx is None:
             errors += 1
-            print("relation was not matched, or error")
         else:
             passed += 1
             print("well-typed")
@@ -234,9 +209,12 @@ def command_run_p4(argv):
         for x in l:
             res += x
         return res
-    print("load time; total:", fsum(load_times), "avg:", fsum(load_times) / len(load_times))
-    print("run time; total:", fsum(run_times), "avg:", fsum(run_times) / len(run_times))
-    print("total time:", fsum(load_times) + fsum(run_times))
+    if print_times:
+        print("load time; total:", fsum(load_times), "avg:", fsum(load_times) / len(load_times))
+    if print_times:
+        print("run time; total:", fsum(run_times), "avg:", fsum(run_times) / len(run_times))
+    if print_times:
+        print("total time:", fsum(load_times) + fsum(run_times))
     return 0
 
 def print_csv_line(*args):
