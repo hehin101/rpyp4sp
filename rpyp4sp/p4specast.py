@@ -1,3 +1,4 @@
+from __future__ import print_function
 from rpython.rlib import jit
 from rpython.tool.pairtype import extendabletype
 from rpyp4sp import integers
@@ -1618,7 +1619,7 @@ class IfI(InstrWithIters):
             exp=Exp.fromjson(content.get_list_item(1)),
             iters=[IterExp.fromjson(ite) for ite in content.get_list_item(2).value_array()],
             instrs=[Instr.fromjson(instr) for instr in content.get_list_item(3).value_array()],
-            phantom=content.get_list_item(4)
+            phantom=Phantom.fromjson(content.get_list_item(4)),
         )
 
     def __repr__(self):
@@ -1715,7 +1716,7 @@ class CaseI(Instr):
         return CaseI(
             exp=Exp.fromjson(content.get_list_item(1)),
             cases=[Case.fromjson(case) for case in content.get_list_item(2).value_array()],
-            phantom=content.get_list_item(3)
+            phantom=Phantom.fromjson(content.get_list_item(3)),
         )
 
     def __repr__(self):
@@ -1939,7 +1940,7 @@ class HoldH(HoldCase):
     def fromjson(content):
         return HoldH(
             hold_instrs=[Instr.fromjson(instr) for instr in content.get_list_item(1).value_array()],
-            phantom=content.get_list_item(2)
+            phantom=Phantom.fromjson(content.get_list_item(2)),
         )
 
     def tostring(self, level=0):
@@ -1972,7 +1973,7 @@ class NotHoldH(HoldCase):
     def fromjson(content):
         return NotHoldH(
             nothold_instrs=[Instr.fromjson(instr) for instr in content.get_list_item(1).value_array()],
-            phantom=content.get_list_item(2)
+            phantom=Phantom.fromjson(content.get_list_item(2)),
         )
 
     def tostring(self, level=0):
@@ -2382,6 +2383,208 @@ class DotP(Path):
 
     def __repr__(self):
         return "p4specast.DotP(%r, %r)" % (self.path, self.atom)
+
+# and pid = int
+# and phantom = pid * pathcond list
+
+class Phantom(AstBase):
+    def __init__(self, pid, pathconds):
+        self.pid = pid # type: int
+        self.pathconds = pathconds # type: list[PathCond]
+        print(pid, self.tostring_of_pathconds())
+
+    def tostring(self):
+        # and string_of_pid pid = Format.asprintf "Phantom#%d" pid
+
+        # and string_of_phantom phantom =
+        #   let pid, _ = phantom in
+        #   string_of_pid pid
+        return "Phantom#%d" % self.pid
+
+    def tostring_of_pathconds(self):
+        #  and string_of_pathconds pathconds =
+        #   List.map string_of_pathcond pathconds |> String.concat " /\\ "
+       return " /\\ ".join([pc.tostring() for pc in self.pathconds])
+
+    @staticmethod
+    def fromjson(content):
+        if content.is_null:
+            return None
+        return Phantom(
+            pid=content.get_list_item(0).value_int(),
+            pathconds=[PathCond.fromjson(pc) for pc in content.get_list_item(1).value_array()]
+        )
+
+    def __repr__(self):
+        return "p4specast.Phantom(%r, %r)" % (self.pid, self.pathconds)
+
+
+
+# and pathcond =
+#   | ForallC of pathcond * iterexp list
+#   | ExistsC of pathcond * iterexp list
+#   | PlainC of exp
+#   | HoldC of id * notexp
+#   | NotHoldC of id * notexp
+
+# and string_of_pathcond pathcond =
+#   match pathcond with
+#   | ForallC (pathcond, iterexps) ->
+#       Format.asprintf "(forall %s)%s"
+#         (string_of_pathcond pathcond)
+#         (string_of_iterexps iterexps)
+#   | ExistsC (pathcond, iterexps) ->
+#       Format.asprintf "(exists %s)%s"
+#         (string_of_pathcond pathcond)
+#         (string_of_iterexps iterexps)
+#   | PlainC exp -> "(" ^ string_of_exp exp ^ ")"
+#   | HoldC (relid, notexp) ->
+#       Format.asprintf "(%s: %s holds)" (string_of_relid relid)
+#         (string_of_notexp notexp)
+#   | NotHoldC (relid, notexp) ->
+#       Format.asprintf "(%s: %s does not hold)" (string_of_relid relid)
+#         (string_of_notexp notexp)
+
+
+class PathCond(AstBase):
+    @staticmethod
+    def fromjson(value):
+        kind = value.get_list_item(0).value_string()
+        if kind == 'ForallC':
+            return ForallC.fromjson(value)
+        elif kind == 'ExistsC':
+            return ExistsC.fromjson(value)
+        elif kind == 'PlainC':
+            return PlainC.fromjson(value)
+        elif kind == 'HoldC':
+            return HoldC.fromjson(value)
+        elif kind == 'NotHoldC':
+            return NotHoldC.fromjson(value)
+        else:
+            raise P4UnknownTypeError("Unknown PathCond: %s" % kind)
+
+    def tostring(self):
+        assert 0  # abstract method
+
+
+class ForallC(PathCond):
+    def __init__(self, pathcond, iters):
+        self.pathcond = pathcond # type: PathCond
+        self.iters = iters # type: list[IterExp]
+
+    def tostring(self):
+        # | ForallC (pathcond, iterexps) ->
+        #     Format.asprintf "(forall %s)%s"
+        #       (string_of_pathcond pathcond)
+        #       (string_of_iterexps iterexps)
+        return "(forall %s)%s" % (
+            self.pathcond.tostring(),
+            string_of_iterexps(self.iters)
+        )
+
+    @staticmethod
+    def fromjson(content):
+        return ForallC(
+            pathcond=PathCond.fromjson(content.get_list_item(1)),
+            iters=[IterExp.fromjson(ite) for ite in content.get_list_item(2).value_array()]
+        )
+
+    def __repr__(self):
+        return "p4specast.ForallC(%r, %r)" % (self.pathcond, self.iters)
+
+
+class ExistsC(PathCond):
+    def __init__(self, pathcond, iters):
+        self.pathcond = pathcond # type: PathCond
+        self.iters = iters # type: list[IterExp]
+
+    def tostring(self):
+        # | ExistsC (pathcond, iterexps) ->
+        #     Format.asprintf "(exists %s)%s"
+        #       (string_of_pathcond pathcond)
+        #       (string_of_iterexps iterexps)
+        return "(exists %s)%s" % (
+            self.pathcond.tostring(),
+            string_of_iterexps(self.iters)
+        )
+
+    @staticmethod
+    def fromjson(content):
+        return ExistsC(
+            pathcond=PathCond.fromjson(content.get_list_item(1)),
+            iters=[IterExp.fromjson(ite) for ite in content.get_list_item(2).value_array()]
+        )
+
+    def __repr__(self):
+        return "p4specast.ExistsC(%r, %r)" % (self.pathcond, self.iters)
+
+
+class PlainC(PathCond):
+    def __init__(self, exp):
+        self.exp = exp # type: Exp
+
+    def tostring(self):
+        # | PlainC exp -> "(" ^ string_of_exp exp ^ ")"
+        return "(%s)" % self.exp.tostring()
+
+    @staticmethod
+    def fromjson(content):
+        return PlainC(
+            exp=Exp.fromjson(content.get_list_item(1))
+        )
+
+    def __repr__(self):
+        return "p4specast.PlainC(%r)" % (self.exp,)
+
+
+class HoldC(PathCond):
+    def __init__(self, id, notexp):
+        self.id = id # type: Id
+        self.notexp = notexp # type: NotExp
+
+    def tostring(self):
+        # | HoldC (relid, notexp) ->
+        #     Format.asprintf "(%s: %s holds)" (string_of_relid relid)
+        #       (string_of_notexp notexp)
+        return "(%s: %s holds)" % (
+            self.id.value,
+            self.notexp.tostring()
+        )
+
+    @staticmethod
+    def fromjson(content):
+        return HoldC(
+            id=Id.fromjson(content.get_list_item(1)),
+            notexp=NotExp.fromjson(content.get_list_item(2))
+        )
+
+    def __repr__(self):
+        return "p4specast.HoldC(%r, %r)" % (self.id, self.notexp)
+
+class NotHoldC(PathCond):
+    def __init__(self, id, notexp):
+        self.id = id # type: Id
+        self.notexp = notexp # type: NotExp
+
+    def tostring(self):
+        # | NotHoldC (relid, notexp) ->
+        #     Format.asprintf "(%s: %s does not hold)" (string_of_relid relid)
+        #       (string_of_notexp notexp)
+        return "(%s: %s does not hold)" % (
+            self.id.value,
+            self.notexp.tostring()
+        )
+
+    @staticmethod
+    def fromjson(content):
+        return NotHoldC(
+            id=Id.fromjson(content.get_list_item(1)),
+            notexp=NotExp.fromjson(content.get_list_item(2))
+        )
+
+    def __repr__(self):
+        return "p4specast.NotHoldC(%r, %r)" % (self.id, self.notexp)
+
 
 # type Mixop.t = Atom.t phrase list list
 
