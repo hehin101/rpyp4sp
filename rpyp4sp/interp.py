@@ -1318,20 +1318,17 @@ class __extend__(p4specast.ReturnI):
 # expressions
 
 class ContinueExps(Exception):
-    def __init__(self, ctx, exp):
-        self.ctx = ctx
-        self.exp = exp
+    def __init__(self, index, exps, next):
+        self.index = index
+        self.exps = exps
+        self.next = next
 
-def tailcall_eval_exp(ctx, exp):
-    raise ContinueExps(ctx, exp)
+class SubExpressions(Exception):
+    def __init__(self, exps):
+        self.exps = exps
 
 def eval_exp(ctx, exp):
-    # return exp.eval_exp(ctx)
-    while True:
-        try:
-            return exp.eval_exp(ctx)
-        except ContinueExps as e:
-            ctx, exp = e.ctx, e.exp
+    return exp.eval_exp(ctx)
 
 def eval_exps(ctx, exps):
     # List.fold_left
@@ -1339,20 +1336,17 @@ def eval_exps(ctx, exps):
     #     let ctx, value = eval_exp ctx exp in
     #     (ctx, values @ [ value ]))
     #   (ctx, []) exps
-    n = len(exps)
-    values = [None] * n
-    i = 0
-    while True:
-        if i >= n:
-            return ctx, values
-        exp = exps[i]
-        exp, value = eval_exp(ctx, exp)
-        values[i] = value
-        i += 1
-    # for exp in exps:
-    #     ctx, value = eval_exp(ctx, exp)
-    #     values.append(value)
-    # return ctx, values
+    contexp = ContinueExps(0, exps, None)
+    values = [None] * len(exps)
+    while contexp is not None:
+        exps = contexp.exps
+        index = contexp.index
+        contexp = contexp.next
+        for i in range(index, len(exps)):
+            exp = exps[i]
+            ctx, value = eval_exp(ctx, exp)
+            values[i] = value
+    return ctx, values
 
 class __extend__(p4specast.Exp):
     def eval_exp(self, ctx):
@@ -2042,17 +2036,24 @@ def eval_iter_exp_list(note, ctx, exp, vars):
     # let ctxs_sub = Ctx.sub_list ctx vars in
     ctxs_sub = ctx.sub_list(vars)
     # let ctx, values =
-    values = []
-    for ctx_sub in ctxs_sub:
-        #   List.fold_left
-        #     (fun (ctx, values) ctx_sub ->
-        #       let ctx_sub, value = eval_exp ctx_sub exp in
+    n = len(ctxs_sub)
+    values = [None] * n
+    for i in range(n):
+        ctx_sub = ctxs_sub[i]
         ctx_sub, value = eval_exp(ctx_sub, exp)
-        #       let ctx = Ctx.commit ctx ctx_sub in
         ctx = ctx.commit(ctx_sub)
-        #       (ctx, values @ [ value ]))
-        #     (ctx, []) ctxs_sub
-        values.append(value)
+        values[i] = value
+
+    # for ctx_sub in ctxs_sub:
+    #     #   List.fold_left
+    #     #     (fun (ctx, values) ctx_sub ->
+    #     #       let ctx_sub, value = eval_exp ctx_sub exp in
+    #     ctx_sub, value = eval_exp(ctx_sub, exp)
+    #     #       let ctx = Ctx.commit ctx ctx_sub in
+    #     ctx = ctx.commit(ctx_sub)
+    #     #       (ctx, values @ [ value ]))
+    #     #     (ctx, []) ctxs_sub
+    #     values.append(value)
     # in
     # let value_res =
     #   let vid = Value.fresh () in
