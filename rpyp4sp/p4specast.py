@@ -1607,10 +1607,10 @@ class IfI(InstrWithIters):
         iterexps_str = string_of_iterexps(self.iters)
         instrs_str = string_of_instrs(self.instrs, level + 1)
 
-        if self.phantom.is_null:  # None case
+        if self.phantom is None:  # None case
             return "%sIf (%s)%s, then\n\n%s" % (order, self.exp.tostring(), iterexps_str, instrs_str)
         else:  # Some phantom case
-            phantom_str = "TODO_phantom"  # TODO: implement string_of_phantom
+            phantom_str = self.phantom.tostring()
             return "%sIf (%s)%s, then\n\n%s\n\n%sElse %s" % (order, self.exp.tostring(), iterexps_str, instrs_str, order, phantom_str)
 
     @staticmethod
@@ -1708,7 +1708,7 @@ class CaseI(Instr):
         if self.phantom.is_null:  # None case
             return "%sCase analysis on %s\n\n%s" % (order, self.exp.tostring(), cases_str)
         else:  # Some phantom case
-            phantom_str = "TODO_phantom"  # TODO: implement string_of_phantom
+            phantom_str = self.phantom.tostring()
             return "%sCase analysis on %s\n\n%s\n\n%sElse %s" % (order, self.exp.tostring(), cases_str, order, phantom_str)
 
     @staticmethod
@@ -1958,7 +1958,7 @@ class HoldH(HoldCase):
         if self.phantom.is_null:  # None case
             return "%sHolds:\n\n%s" % (indent, hold_str)
         else:  # Some phantom case
-            phantom_str = "TODO_phantom"  # TODO: implement string_of_phantom
+            phantom_str = self.phantom.tostring()
             return "%sHolds:\n\n%s\n\n%sElse %s" % (indent, hold_str, indent, phantom_str)
 
     def __repr__(self):
@@ -1991,7 +1991,7 @@ class NotHoldH(HoldCase):
         if self.phantom.is_null:  # None case
             return "%sDoes not hold:\n\n%s" % (indent, nothold_str)
         else:  # Some phantom case
-            phantom_str = "TODO_phantom"  # TODO: implement string_of_phantom
+            phantom_str = self.phantom.tostring()
             return "%sDoes not hold:\n\n%s\n\n%sElse %s" % (indent, nothold_str, indent, phantom_str)
 
 
