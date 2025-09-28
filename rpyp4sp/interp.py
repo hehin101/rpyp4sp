@@ -147,11 +147,21 @@ def eval_args(ctx, args):
     #     let ctx, value = eval_arg ctx arg in
     #     (ctx, values @ [ value ]))
     #   (ctx, []) args
-    values = []
-    for arg in args:
+    # values = []
+    n = len(args)
+    values = [None] * n
+    i = 0
+    while True:
+        if i >= n:
+            return ctx, values
+        arg = args[i]
         ctx, value = eval_arg(ctx, arg)
-        values.append(value)
-    return ctx, values
+        values[i] = value
+        i += 1
+    # for arg in args:
+    #     ctx, value = eval_arg(ctx, arg)
+    #     values.append(value)
+    # return ctx, values
 
 # ____________________________________________________________
 # relations
