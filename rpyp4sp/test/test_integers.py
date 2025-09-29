@@ -154,3 +154,10 @@ def test_invert_hypothesis(a):
     expected_invert = ~v1
     assert result_invert == expected_invert
 
+
+@given(wrapped_ints)
+def test_fromstr_str_roundtrip(a):
+    b = Integer.fromstr(a.str())
+    assert a.eq(b)
+    c = Integer.fromstr(str(a.tolong()))
+    assert a.eq(c)
