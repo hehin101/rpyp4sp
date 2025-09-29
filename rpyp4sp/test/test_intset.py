@@ -71,6 +71,19 @@ def test_union():
     assert 6 not in s3
 
 
+def test_union_with_empty():
+    s = ImmutableIntSet().add(1).add(2).add(3)
+    empty = ImmutableIntSet()
+
+    # Union with empty should return same object
+    result1 = s.union(empty)
+    assert result1 is s
+
+    # Empty union with non-empty should return same object
+    result2 = empty.union(s)
+    assert result2 is s
+
+
 def test_intersection():
     s1 = ImmutableIntSet().add(1).add(2).add(3).add(4)
     s2 = ImmutableIntSet().add(3).add(4).add(5).add(6)
@@ -84,6 +97,19 @@ def test_intersection():
     assert 6 not in s3
 
 
+def test_intersection_with_empty():
+    s = ImmutableIntSet().add(1).add(2).add(3)
+    empty = ImmutableIntSet()
+
+    # Intersection with empty should return the EMPTY singleton
+    result1 = s.intersection(empty)
+    assert result1 is ImmutableIntSet.EMPTY
+
+    # Empty intersection with non-empty should return the EMPTY singleton
+    result2 = empty.intersection(s)
+    assert result2 is ImmutableIntSet.EMPTY
+
+
 def test_difference():
     s1 = ImmutableIntSet().add(1).add(2).add(3).add(4)
     s2 = ImmutableIntSet().add(3).add(4).add(5).add(6)
@@ -95,6 +121,19 @@ def test_difference():
     assert 4 not in s3
     assert 5 not in s3
     assert 6 not in s3
+
+
+def test_difference_with_empty():
+    s = ImmutableIntSet().add(1).add(2).add(3)
+    empty = ImmutableIntSet()
+
+    # Difference with empty should return same object
+    result1 = s.difference(empty)
+    assert result1 is s
+
+    # Empty difference with non-empty should return the EMPTY singleton
+    result2 = empty.difference(s)
+    assert result2 is ImmutableIntSet.EMPTY
 
 
 def test_equality():

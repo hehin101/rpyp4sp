@@ -41,18 +41,28 @@ class ImmutableIntSet(object):
     @jit.elidable
     def union(self, other):
         assert isinstance(other, ImmutableIntSet)
+        if other.is_empty():
+            return self
+        if self.is_empty():
+            return other
         new_bits = self._bits.or_(other._bits)
         return ImmutableIntSet(new_bits)
 
     @jit.elidable
     def intersection(self, other):
         assert isinstance(other, ImmutableIntSet)
+        if self.is_empty() or other.is_empty():
+            return ImmutableIntSet.EMPTY
         new_bits = self._bits.and_(other._bits)
         return ImmutableIntSet(new_bits)
 
     @jit.elidable
     def difference(self, other):
         assert isinstance(other, ImmutableIntSet)
+        if self.is_empty():
+            return ImmutableIntSet.EMPTY
+        if other.is_empty():
+            return self
         inverted_other = other._bits.invert()
         new_bits = self._bits.and_(inverted_other)
         return ImmutableIntSet(new_bits)
@@ -94,3 +104,8 @@ class ImmutableIntSet(object):
         for item in items:
             result = result.add(item)
         return result
+
+    def __repr__(self):
+        return "ImmutableIntSet.from_list(%r)" % (self.to_list())
+
+ImmutableIntSet.EMPTY = ImmutableIntSet()
