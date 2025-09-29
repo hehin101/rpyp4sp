@@ -30,45 +30,80 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
     @staticmethod
     make(listcontent, *args): makes a new instance with the list's content set to listcontent
     """
+    assert sizemin == 0
     def wrapper(cls):
 
         _immutable_ = getattr(cls, "_immutable_", False)
+        empty_list = []
 
-        def make_class(size):
-            attrs = ["_%s_%s" % (attrname, i) for i in range(size)]
+        def make_class0():
+            # construct the base class, the other specific-size-classes inherit from it
+            attrs = ["_%s_%s" % (attrname, i) for i in range(sizemax - 1)]
             unrolling_enumerate_attrs = unrolling_iterable(enumerate(attrs))
 
             def _get_size_list(self):
-                return size
+                return self._size_list
+
             def _get_list(self, i):
                 for j, attr in unrolling_enumerate_attrs:
                     if j == i:
+                        if not isinstance(self, classes[j + 1]):
+                            break
                         result = getattr(self, attr)
                         if nonull:
                             debug.check_annotation(result, _not_null)
                         return result
                 raise IndexError
-            if size == 0 and immutable:
-                empty = []
-                def _get_full_list(self):
-                    return empty
-            else:
-                def _get_full_list(self):
-                    res = [None] * size
-                    for i, attr in unrolling_enumerate_attrs:
-                        elem = getattr(self, attr)
-                        if nonull:
-                            debug.check_annotation(elem, _not_null)
-                        res[i] = getattr(self, attr)
-                    return res
+            def _get_full_list(self):
+                return empty_list
             def _set_list(self, i, val):
                 if nonull:
                     assert val is not None
                 for j, attr in unrolling_enumerate_attrs:
                     if j == i:
+                        if not isinstance(self, classes[j + 1]):
+                            break
                         setattr(self, attr, val)
                         return
                 raise IndexError
+            def _append_list0(self, value, *args):
+                return self.make1(value, *args)
+            def _init(self, elems, *args):
+                assert len(elems) == 0
+                cls.__init__(self, *args)
+
+            # Methods for the new class being built
+            methods = {
+                gettername     : _get_list,
+                listsizename   : _get_size_list,
+                listgettername : _get_full_list,
+                settername     : _set_list,
+                "_append_list" : _append_list0,
+                "_get_full_list_copy": _get_full_list,
+                "__init__"     : _init,
+                "_size_list"   : 0,
+            }
+
+            newcls = type(cls)("%sSize0" % (cls.__name__, ), (cls, ), methods)
+            if "_attrs_" in cls.__dict__:
+                setattr(newcls, "_attrs_", [])
+
+            return newcls
+
+        def make_class(size, base):
+            attrs = ["_%s_%s" % (attrname, i) for i in range(size)]
+            unrolling_enumerate_attrs = unrolling_iterable(enumerate(attrs))
+
+            def _get_full_list(self):
+                if size == 0:
+                    return empty_list
+                res = ()
+                for i, attr in unrolling_enumerate_attrs:
+                    elem = getattr(self, attr)
+                    if nonull:
+                        debug.check_annotation(elem, _not_null)
+                    res += (getattr(self, attr), )
+                return list(res)
             def _init(self, elems, *args):
                 assert len(elems) == size
                 for i, attr in unrolling_enumerate_attrs:
@@ -80,12 +115,12 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
 
             def _append_list(self, value, *args):
                 if size + 1 >= len(classes):
-                    reslist = [None] * (size + 1)
+                    restup = ()
                     for i, attr in unrolling_enumerate_attrs:
                         oldvalue = getattr(self, attr)
-                        reslist[i] = oldvalue
-                    reslist[size] = value
-                    return cls_arbitrary(reslist, *args)
+                        restup += (oldvalue, )
+                    restup += (value, )
+                    return cls_arbitrary(list(restup), *args)
                 else:
                     res = objectmodel.instantiate(classes[size + 1])
                     for i, attr in unrolling_enumerate_attrs:
@@ -99,16 +134,14 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
 
             # Methods for the new class being built
             methods = {
-                gettername     : _get_list,
-                listsizename   : _get_size_list,
                 listgettername : _get_full_list,
-                settername     : _set_list,
                 "_append_list" : _append_list,
                 "_get_full_list_copy": _get_full_list,
                 "__init__"     : _init,
+                "_size_list"   : size,
             }
 
-            newcls = type(cls)("%sSize%s" % (cls.__name__, size), (cls, ), methods)
+            newcls = type(cls)("%sSize%s" % (cls.__name__, size), (base, ), methods)
 
             if immutable:
                 setattr(newcls, "_immutable_fields_", attrs)
@@ -118,7 +151,13 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
 
             return newcls
 
-        classes = [make_class(i) for i in range(sizemin, sizemax)]
+        classes = []
+        for i in range(sizemin, sizemax):
+            if i == 0:
+                prev = make_class0()
+            else:
+                prev = make_class(i, prev)
+            classes.append(prev)
 
         # Build the arbitrary sized variant
         def _get_arbitrary(self, i):
@@ -182,14 +221,14 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             cls.__init__(result, *args)
             return result
         def make1(elem, *args):
-            if not classes: # no type specialization
+            if len(classes) <= 1: # no type specialization
                 return make([elem], *args)
             result = objectmodel.instantiate(classes[1])
             result._set_list(0, elem)
             cls.__init__(result, *args)
             return result
         def make2(elem1, elem2, *args):
-            if not classes: # no type specialization
+            if len(classes) <= 2: # no type specialization
                 return make([elem1, elem2], *args)
             result = objectmodel.instantiate(classes[2])
             result._set_list(0, elem1)

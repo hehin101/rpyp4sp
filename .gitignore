@@ -5,6 +5,6 @@
 /pypy/
 /pypy_binary/
 *.pyc
-
 ast.json
-targetrpyp4sp-c
+integrationtests/*.actual
+targetrpyp4sp-c*

@@ -197,7 +197,7 @@ def lists_partition_(ctx, targs, values_input):
     values_left = values[:len_num]
     values_right = values[len_num:]
 
-    list_typ = p4specast.IterT(typ, p4specast.List())
+    list_typ = typ.list_of()
     value_left = objects.ListV.make(values_left, list_typ)
     value_right = objects.ListV.make(values_right, list_typ)
     tuple_typ = p4specast.TupleT([list_typ, list_typ])
@@ -214,7 +214,7 @@ def lists_assoc_(ctx, targs, values_input):
         if tup._get_list(0).eq(value):
             res_value = tup._get_list(1)
             break
-    return objects.OptV(res_value, p4specast.IterT(typ_value, p4specast.Opt()))
+    return objects.OptV(res_value, typ_value.opt_of())
 
 # ________________________________________________________________
 # sets
@@ -285,9 +285,8 @@ def sets_unions_set(ctx, targs, values_input):
     element_typ, = targs
     if not sets_l:
         return objects.CaseV.make1(
-            objects.ListV.make(
-                [],
-                p4specast.IterT(element_typ, p4specast.List())),
+            objects.ListV.make0(
+                element_typ.list_of()),
             map_mixop,
             p4specast.VarT(set_id, targs))
     first = sets_l[0]
@@ -407,7 +406,7 @@ def maps_find_map(ctx, targs, values_input):
     key_typ, value_typ = targs
     map_value, key_value = values_input
     found_value = find_map(map_value, key_value)
-    typ = p4specast.IterT(key_typ, p4specast.Opt())
+    typ = key_typ.opt_of()
     typ.region = p4specast.NO_REGION
     return objects.OptV(found_value, typ)
 
@@ -420,7 +419,7 @@ def maps_find_maps(ctx, targs, values_input):
     assert isinstance(list_maps_value, objects.ListV)
     res_value = None
     res_value = _maps_find_map(list_maps_value, key_value)
-    typ = p4specast.IterT(key_typ, p4specast.Opt())
+    typ = key_typ.opt_of()
     typ.region = p4specast.NO_REGION
     return objects.OptV(res_value, typ)
 

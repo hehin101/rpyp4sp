@@ -273,13 +273,13 @@ class StructV(BaseV):
         return self
 
     def get_field(self, atom):
-        idx = jit.promote(self).map.get_field(atom.value)
+        idx = jit.promote(self.map).get_field(atom.value)
         if idx == -1:
             raise P4EvaluationError("no such field %s" % atom.value)
         return self._get_list(idx)
 
     def replace_field(self, atom, value):
-        idx = jit.promote(self).map.get_field(atom.value)
+        idx = jit.promote(self.map).get_field(atom.value)
         if idx == -1:
             raise P4EvaluationError("no such field %s" % atom.value)
         new_fields = self._get_full_list()[:]
@@ -288,7 +288,15 @@ class StructV(BaseV):
 
 
     def __repr__(self):
-        return "objects.StructV.make(%r, %r, %r, %r)" % (self._get_full_list(), self.map, self.typ, self.vid)
+        size = self._get_size_list()
+        if size == 0:
+            return "objects.StructV.make0(%r, %r, %r)" % (self.map, self.typ, self.vid)
+        elif size == 1:
+            return "objects.StructV.make1(%r, %r, %r, %r)" % (self._get_list(0), self.map, self.typ, self.vid)
+        elif size == 2:
+            return "objects.StructV.make2(%r, %r, %r, %r, %r)" % (self._get_list(0), self._get_list(1), self.map, self.typ, self.vid)
+        else:
+            return "objects.StructV.make(%r, %r, %r, %r)" % (self._get_full_list(), self.map, self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | StructV [] -> "{}"
@@ -349,13 +357,21 @@ class CaseV(BaseV):
         self.typ = typ # type: p4specast.Type | None
 
     def __repr__(self):
-        return "objects.CaseV.make(%r, %r, %r, %r)" % (self._get_full_list(), self.mixop, self.typ, self.vid)
+        size = self._get_size_list()
+        if size == 0:
+            return "objects.CaseV.make0(%r, %r, %r)" % (self.mixop, self.typ, self.vid)
+        elif size == 1:
+            return "objects.CaseV.make1(%r, %r, %r, %r)" % (self._get_list(0), self.mixop, self.typ, self.vid)
+        elif size == 2:
+            return "objects.CaseV.make2(%r, %r, %r, %r, %r)" % (self._get_list(0), self._get_list(1), self.mixop, self.typ, self.vid)
+        else:
+            return "objects.CaseV.make(%r, %r, %r, %r)" % (self._get_full_list(), self.mixop, self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | CaseV (mixop, _) when short -> string_of_mixop mixop
         # | CaseV (mixop, values) -> "(" ^ string_of_notval (mixop, values) ^ ")"
         if short:
-            return str(self.mixop)
+            return self.mixop.tostring()
 
         # Construct notation: mixop with values interspersed
         mixop_phrases = self.mixop.phrases
@@ -399,10 +415,10 @@ class CaseV(BaseV):
         else:
             return compares(self._get_full_list(), other._get_full_list())
 
+
 @inline_small_list(immutable=True)
 class TupleV(BaseV):
     _immutable_fields_ = []
-
     def __init__(self, typ=None, vid=-1):
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
@@ -413,17 +429,25 @@ class TupleV(BaseV):
     def compare(self, other):
         if not isinstance(other, TupleV):
             return self._base_compare(other)
-        return compares(self.get_tuple(), other.get_tuple())
+        return compares(self._get_full_list(), other._get_full_list())
 
     def __repr__(self):
-        return "objects.TupleV.make(%r, %r, %r)" % (self.get_tuple(), self.typ, self.vid)
+        size = self._get_size_list()
+        if size == 0:
+            return "objects.TupleV.make0(%r, %r)" % (self.typ, self.vid)
+        elif size == 1:
+            return "objects.TupleV.make1(%r, %r, %r)" % (self._get_list(0), self.typ, self.vid)
+        elif size == 2:
+            return "objects.TupleV.make2(%r, %r, %r, %r)" % (self._get_list(0), self._get_list(1), self.typ, self.vid)
+        else:
+            return "objects.TupleV.make(%r, %r, %r)" % (self._get_full_list(), self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | TupleV values ->
         #     Format.asprintf "(%s)"
         #       (String.concat ", "
         #          (List.map (string_of_value ~short ~level:(level + 1)) values))
-        element_strs = [element.tostring(short, level + 1) for element in self.get_tuple()]
+        element_strs = [self._get_list(i).tostring(short, level + 1) for i in range(self._get_size_list())]
         return "(%s)" % ", ".join(element_strs)
 
     @staticmethod
@@ -470,12 +494,11 @@ class OptV(BaseV):
             value = BaseV.fromjson(content.get_list_item(1))
         return OptV(value, typ, vid)
 
+# just optimize lists of size 0, 1, arbitrary
 @inline_small_list(immutable=True, sizemax=2)
 class ListV(BaseV):
     _immutable_fields_ = []
-
     def __init__(self, typ=None, vid=-1):
-        assert not isinstance(typ, list)
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
 
@@ -485,10 +508,16 @@ class ListV(BaseV):
     def compare(self, other):
         if not isinstance(other, ListV):
             return self._base_compare(other)
-        return compares(self.get_list(), other.get_list())
+        return compares(self._get_full_list(), other._get_full_list())
 
     def __repr__(self):
-        return "objects.ListV.make(%r, %r, %r)" % (self.get_list(), self.typ, self.vid)
+        size = self._get_size_list()
+        if size == 0:
+            return "objects.ListV.make0(%r, %r)" % (self.typ, self.vid)
+        elif size == 1:
+            return "objects.ListV.make1(%r, %r, %r)" % (self._get_list(0), self.typ, self.vid)
+        else:
+            return "objects.ListV.make(%r, %r, %r)" % (self._get_full_list(), self.typ, self.vid)
 
     def tostring(self, short=False, level=0):
         # | ListV [] -> "[]"
@@ -507,7 +536,8 @@ class ListV(BaseV):
             return "[ .../%d ]" % self._get_size_list()
 
         parts = []
-        for idx, element in enumerate(self.get_list()):
+        for idx in range(self._get_size_list()):
+            element = self._get_list(idx)
             if idx == 0:
                 indent_str = ""
             else:

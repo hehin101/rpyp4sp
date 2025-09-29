@@ -54,6 +54,13 @@ class Ret(Sign):
 
 
 def invoke_func(ctx, calle):
+    try:
+        return _invoke_func(ctx, calle)
+    except P4Error as e:
+        e.traceback_add_frame('???', calle.region, calle)
+        raise
+
+def _invoke_func(ctx, calle):
     # if Builtin.is_builtin id then invoke_func_builtin ctx id targs args
     if builtin.is_builtin(calle.func.value):
         return invoke_func_builtin(ctx, calle)
@@ -118,7 +125,11 @@ def invoke_func_def(ctx, calle):
             targ = targs[i]
             ctx_local = ctx_local.add_typdef_local(tparam, ([], p4specast.PlainT(targ)))
     ctx, values_input = eval_args(ctx, calle.args)
-    return invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=ctx_local)
+    try:
+        return invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=ctx_local)
+    except P4Error as e:
+        e.traceback_patch_last_name(func.id.value)
+        raise
 
 def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     # INCOMPLETE
@@ -146,7 +157,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     #     (ctx, value_output)
         return ctx, sign.value
     # | _ -> error id.at "function was not matched"
-    raise P4EvaluationError("TODO invoke_func_def_attempt_clauses")
+    raise P4EvaluationError("function was not matched: %s" % (func.id.value))
 
 def eval_arg(ctx, arg):
     # match arg.it with
@@ -205,7 +216,11 @@ def invoke_rel(ctx, id, values_input):
     ctx_local = assign_exps(ctx_local, reld.exps, values_input)
     #   let ctx_local, sign = eval_instrs ctx_local Cont instrs in
     invoke_rel_jit_driver.jit_merge_point(name=id.value, reld=reld)
-    ctx_local, sign = eval_instrs(ctx_local, Cont(), reld.instrs)
+    try:
+        ctx_local, sign = eval_instrs(ctx_local, Cont(), reld.instrs)
+    except P4Error as e:
+        e.traceback_patch_last_name(id.value)
+        raise
     ctx = ctx.commit(ctx_local)
     #   let ctx = Ctx.commit ctx ctx_local in
     #   match sign with
@@ -242,14 +257,13 @@ def invoke_rel(ctx, id, values_input):
 def instr_tostring(instr):
     return "instr: " + instr.tostring().split("\n")[0]
 
-
 def eval_instr(ctx, instr):
     #jit.jit_debug(instr_tostring(instr))
     try:
         return instr.eval_instr(ctx)
     except P4Error as e:
-        if e.region is None:
-            e.region = instr.region
+        e.maybe_add_region(instr.region)
+        e.maybe_add_ctx(ctx)
         raise
 
 @jit.unroll_safe
@@ -366,7 +380,7 @@ def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
     #         (ctx, cond, value_cond))
         elif isinstance(iter_h, p4specast.List):
             ctx, cond, values_cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexps_t)
-            typ = p4specast.IterT(p4specast.BoolT.INSTANCE, p4specast.List())
+            typ = p4specast.BoolT.INSTANCE.list_of()
             value_cond = objects.ListV.make(values_cond, typ)
             return ctx, cond, value_cond
     # | iterexp_h :: iterexps_t -> (
@@ -420,7 +434,7 @@ def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
         #           vars_h;
         #         (ctx, cond, value_cond))
         ctx, cond, values_cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexps_t)
-        typ = p4specast.IterT(p4specast.BoolT.INSTANCE, p4specast.List())
+        typ = p4specast.BoolT.INSTANCE.list_of()
         value_cond = objects.ListV.make(values_cond, typ)
         # for (id, _typ, iters) in vars_h:
         #     value_sub = ctx.find_value_local(id, iters + [p4specast.List])
@@ -908,7 +922,11 @@ def eval_rule_iter(ctx, instr):
 class __extend__(p4specast.RuleI):
     def eval_instr(self, ctx):
         # let ctx = eval_rule_iter ctx id notexp iterexps in
-        ctx = eval_rule_iter(ctx, self)
+        try:
+            ctx = eval_rule_iter(ctx, self)
+        except P4Error as e:
+            e.traceback_add_frame('???', self.region, self)
+            raise
         return ctx, Cont()
 
 
@@ -1009,7 +1027,7 @@ def eval_hold_cond_iter_tick(ctx, id, notexp, iterexps):
     #            let vid = Value.fresh () in
     #            let typ = Il.Ast.IterT (Il.Ast.BoolT $ no_region, Il.Ast.List) in
     #            Il.Ast.(ListV values_cond $$$ { vid; typ })
-        value_cond = objects.ListV.make(values_cond, p4specast.IterT(p4specast.BoolT.INSTANCE, p4specast.List()))
+        value_cond = objects.ListV.make(values_cond, p4specast.BoolT.INSTANCE.list_of())
     #          in
     #          Ctx.add_node ctx value_cond;
     #          List.iter
@@ -1191,7 +1209,7 @@ def assign_exp(ctx, exp, value):
     #         Ctx.add_value Local ctx (id, iters @ [ Il.Ast.Opt ]) value_sub)
     #       ctx vars
             for var in exp.varlist:
-                typ = p4specast.IterT(var.typ, p4specast.Opt())
+                typ = var.typ.opt_of()
                 value_sub = objects.OptV(None, typ)
                 ctx = ctx.add_value_local(var.id, var.iter.append_opt(), value_sub)
             return ctx
@@ -1215,7 +1233,7 @@ def assign_exp(ctx, exp, value):
     #       ctx vars
             for var in exp.varlist:
                 value_sub_inner = ctx.find_value_local(var.id, var.iter)
-                typ = p4specast.IterT(var.typ, p4specast.Opt())
+                typ = var.typ.opt_of()
                 value_sub = objects.OptV(value_sub_inner, typ)
                 ctx = ctx.add_value_local(var.id, var.iter.append_opt(), value_sub)
             return ctx
@@ -1248,7 +1266,7 @@ def assign_exp(ctx, exp, value):
             return ctx
         elif len(values) == 1:
             value_elem, = values
-            ctx_local = ctx.localize_venv(venv_keys=context.ENV_KEYS_ROOT, venv_values=[])
+            ctx_local = ctx.localize_venv(venv_keys=context.EnvKeys.EMPTY, venv_values=[])
             ctx_local = assign_exp(ctx_local, exp.exp, value_elem)
             for var in exp.varlist:
                 # collect elementwise values from each ctx in ctxs
@@ -1258,7 +1276,7 @@ def assign_exp(ctx, exp, value):
                 ctx = ctx.add_value_local(var.id, var.iter.append_list(), value_sub)
             return ctx
         else:
-            ctx_local = ctx.localize_venv(venv_keys=context.ENV_KEYS_ROOT, venv_values=[])
+            ctx_local = ctx.localize_venv(venv_keys=context.EnvKeys.EMPTY, venv_values=[])
             values = _assign_exp_iter_cases(ctx_local, exp, values)
             #     in
             #     (* Per iterated variable, collect its elementwise value,
@@ -1875,8 +1893,7 @@ class __extend__(p4specast.StrE):
         #       Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
         #     ctx.local.values_input;
         # (ctx, value_res)
-        value_res = objects.StructV.make(values, map, self.typ)
-        return ctx, value_res
+        return ctx, objects.StructV.make(values, map, self.typ)
 
 class __extend__(p4specast.CaseE):
     def eval_exp(self, ctx):
@@ -2122,7 +2139,6 @@ def eval_iter_exp_list(note, ctx, exp, vars):
     #   let typ = note in
     #   Il.Ast.(ListV values $$$ { vid; typ })
     # in
-
     # Ctx.add_node ctx value_res;
     # List.iter
     #   (fun (id, _typ, iters) ->

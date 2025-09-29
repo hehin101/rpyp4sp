@@ -4,7 +4,12 @@ from rpyp4sp import p4specast, objects, smalllist
 from rpyp4sp.error import P4ContextError
 
 class GlobalContext(object):
+    file_content = {}
+    spec_dirname = None
+
     def __init__(self):
+        self.filename = None
+        self.derive = False
         self.tdenv = {}
         self.renv = {}
         self.fenv = {}
@@ -60,7 +65,7 @@ class EnvKeys(object):
             return res
 
     def __repr__(self):
-        l = ["context.ENV_KEYS_ROOT"]
+        l = ["context.EnvKeys.EMPTY"]
         for var_name, var_iter in self.keys:
             l.append(".add_key(%r, %r)" % (var_name, var_iter))
         return "".join(l)
@@ -75,32 +80,31 @@ class EnvKeys(object):
         l.append(">")
         return "".join(l)
 
-ENV_KEYS_ROOT = EnvKeys({})
+EnvKeys.EMPTY = EnvKeys({})
 
+@smalllist.inline_small_list(immutable=True)
 class TDenvDict(object):
-    def __init__(self, keys=ENV_KEYS_ROOT, typdefs=None):
+    def __init__(self, keys=EnvKeys.EMPTY):
         self._keys = keys # type: EnvKeys
-        self._typdefs = [] if typdefs is None else typdefs # type: list[p4specast.DefTyp]
 
     def get(self, id_value):
         # type: (str) -> p4specast.DefTyp
         pos = jit.promote(self._keys).get_pos(id_value, '')
         if pos < 0:
             raise P4ContextError('id_value %s does not exist' % (id_value))
-        return self._typdefs[pos]
+        return self._get_list(pos)
 
     def set(self, id_value, typdef):
         # type: (str, p4specast.DefTyp) -> TDenvDict
         pos = jit.promote(self._keys).get_pos(id_value, '')
-        jit.promote(len(self._typdefs))
+        jit.promote(self._get_size_list())
         if pos < 0:
             keys = self._keys.add_key(id_value, '')
-            typdefs = self._typdefs + [typdef]
-            return TDenvDict(keys, typdefs)
+            return self._append_list(typdef, keys)
         else:
-            typdefs = self._typdefs[:]
+            typdefs = self._get_full_list_copy()
             typdefs[pos] = typdef
-            return TDenvDict(self._keys, typdefs)
+            return TDenvDict.make(typdefs, self._keys)
 
     def has_key(self, id_value):
         # type: (str) -> bool
@@ -111,7 +115,7 @@ class TDenvDict(object):
         # type: () -> list[tuple[str, tuple[list, p4specast.DefTyp]]]
         bindings = []
         for ((id_value, _), pos) in self._keys.keys.items():
-            bindings.append((id_value, self._typdefs[pos]))
+            bindings.append((id_value, self._get_list(pos)))
         return bindings
 
     def __repr__(self):
@@ -135,30 +139,31 @@ class TDenvDict(object):
         return "".join(l)
 TDenvDict.EMPTY = TDenvDict()
 
+TDenvDict.EMPTY = TDenvDict.make0()
+
+@smalllist.inline_small_list(immutable=True)
 class FenvDict(object):
-    def __init__(self, keys=ENV_KEYS_ROOT, funcs=None):
+    def __init__(self, keys=EnvKeys.EMPTY):
         self._keys = keys # type: EnvKeys
-        self._funcs = [] if funcs is None else funcs # type: list[p4specast.DecD]
 
     def get(self, id_value):
         # type: (str) -> p4specast.DecD
         pos = jit.promote(self._keys).get_pos(id_value, '')
         if pos < 0:
             raise P4ContextError('id_value %s does not exist' % (id_value))
-        return self._funcs[pos]
+        return self._get_list(pos)
 
     def set(self, id_value, func):
         # type: (str, p4specast.DecD) -> FenvDict
-        jit.promote(len(self._funcs))
+        jit.promote(self._get_size_list())
         pos = jit.promote(self._keys).get_pos(id_value, '')
         if pos < 0:
             keys = self._keys.add_key(id_value, '')
-            funcs = self._funcs + [func]
-            return FenvDict(keys, funcs)
+            return self._append_list(func, keys)
         else:
-            funcs = self._funcs[:]
+            funcs = self._get_full_list_copy()
             funcs[pos] = func
-            return FenvDict(self._keys, funcs)
+            return FenvDict.make(funcs, self._keys)
 
     def has_key(self, id_value):
         # type: (str) -> bool
@@ -170,7 +175,7 @@ class FenvDict(object):
         l = ["context.FenvDict.EMPTY"]
         for id_value, _ in self._keys.keys:
             pos = self._keys.get_pos(id_value, '')
-            func = self._funcs[pos]
+            func = self._get_list(pos)
             l.append(".set(%r, %r)" % (id_value, func))
         return "".join(l)
 
@@ -187,30 +192,32 @@ class FenvDict(object):
         return "".join(l)
 FenvDict.EMPTY = FenvDict()
 
+FenvDict.EMPTY = FenvDict.make0()
+
 @smalllist.inline_small_list(immutable=True)
 class Context(object):
-    _immutable_fields_ = ['filename', 'derive', 'glbl', 'values_input[*]',
+    _immutable_fields_ = ['glbl', 'values_input[*]',
                           'tdenv', 'fenv', 'venv_keys']
-    def __init__(self, filename, derive=False, glbl=None, tdenv=None, fenv=None, venv_keys=None):
-        self.filename = filename
+    def __init__(self, glbl=None, tdenv=None, fenv=None, venv_keys=None):
         self.glbl = GlobalContext() if glbl is None else glbl
         # the local context is inlined
-        self.derive = derive
-        self.tdenv = tdenv if tdenv is not None else TDenvDict()
-        self.fenv = fenv if fenv is not None else FenvDict()
-        self.venv_keys = venv_keys if venv_keys is not None else ENV_KEYS_ROOT # type: EnvKeys
+        self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY # type: TDenvDict
+        self.fenv = fenv if fenv is not None else FenvDict.EMPTY # type: FenvDict
+        self.venv_keys = venv_keys if venv_keys is not None else EnvKeys.EMPTY # type: EnvKeys
 
     def copy_and_change(self, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
         tdenv = tdenv if tdenv is not None else self.tdenv
         fenv = fenv if fenv is not None else self.fenv
         venv_keys = venv_keys if venv_keys is not None else self.venv_keys
         venv_values = venv_values if venv_values is not None else self._get_full_list()
-        return Context.make(venv_values, self.filename, self.derive, self.glbl, tdenv, fenv, venv_keys)
+        return Context.make(venv_values, self.glbl, tdenv, fenv, venv_keys)
 
     def copy_and_change_append_venv(self, value, venv_keys):
-        return self._append_list(value, self.filename, self.derive, self.glbl, self.tdenv, self.fenv, venv_keys)
+        return self._append_list(value, self.glbl, self.tdenv, self.fenv, venv_keys)
 
-    def load_spec(self, spec):
+    def load_spec(self, spec, file_content, spec_dirname, filename, derive=False):
+        self.glbl.file_content = file_content
+        self.glbl.spec_dirname = spec_dirname
         for definition in spec:
             if isinstance(definition, p4specast.TypD):
                 self.glbl.tdenv[definition.id.value] = (definition.tparams, definition.deftyp)
@@ -219,9 +226,11 @@ class Context(object):
             else:
                 assert isinstance(definition, p4specast.DecD)
                 self.glbl.fenv[definition.id.value] = definition
+        self.glbl.filename = filename
+        self.derive = derive
 
     def localize(self):
-        return self.copy_and_change(tdenv=TDenvDict.EMPTY, fenv=FenvDict.EMPTY, venv_keys=ENV_KEYS_ROOT, venv_values=[])
+        return self.copy_and_change(tdenv=TDenvDict.EMPTY, fenv=FenvDict.EMPTY, venv_keys=EnvKeys.EMPTY, venv_values=[])
 
     def localize_venv(self, venv_keys, venv_values):
         # type: (EnvKeys, list[objects.BaseV]) -> Context
@@ -393,6 +402,11 @@ class Context(object):
         l.append(">")
         return "".join(l)
 
+    def venv_items(self):
+        res = []
+        for key, index in self.venv_keys.keys.items():
+            res.append((key, self._get_list(index)))
+        return res
 
 class SubListIter(object):
     def __init__(self, ctx, varlist, length, values_batch):

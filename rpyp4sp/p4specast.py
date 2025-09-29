@@ -146,6 +146,9 @@ class Region(AstBase):
                 self.left.file == self.right.file and
                 self.left.line == self.right.line)
 
+    def has_information(self):
+        return self.left.has_information() or self.right.has_information()
+
     def __repr__(self):
         if self.left.has_information() or self.right.has_information():
             if self.left.file == self.right.file and self.left.line == self.right.line:
@@ -1345,6 +1348,10 @@ class Type(AstBase):
     _attrs_ = ['region']
     # has a .region, but only sometimes (eg exp uses typ')
 
+    _attr_ = ['region', '_iterlist', '_iteropt']
+    _iterlist = None
+    _iteropt = None
+
     def tostring(self):
         assert 0  # abstract method
 
@@ -1375,6 +1382,23 @@ class Type(AstBase):
             raise P4UnknownTypeError("Unknown Type: %s" % what)
         ast.region = region
         return ast
+
+    @jit.elidable
+    def list_of(self):
+        if self._iterlist is not None:
+            return self._iterlist
+        self._iterlist = res = IterT(self, List.INSTANCE)
+        res.region = NO_REGION
+        return res
+
+    @jit.elidable
+    def opt_of(self):
+        if self._iteropt is not None:
+            return self._iteropt
+        self._iteropt = res = IterT(self, Opt.INSTANCE)
+        res.region = NO_REGION
+        return res
+
 
 class BoolT(Type):
     def __init__(self):
