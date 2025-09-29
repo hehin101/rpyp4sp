@@ -92,17 +92,15 @@ class TestFuzzMainLoop(object):
             ctx = MockContext()
             value = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
             
-            coverage_hash, crashed, timed_out, error_msg = fuzz.run_test_case(
-                ctx, value, config
-            )
+            result = fuzz.run_test_case(ctx, value, config)
         finally:
             # Restore original function
             fuzz.interp.invoke_rel = original_invoke_rel
         
-        assert coverage_hash == "testcov123"  # Mock coverage string
-        assert not crashed
-        assert not timed_out
-        assert error_msg is None
+        assert result.coverage_hash == "testcov123"  # Mock coverage string
+        assert not result.crashed
+        assert not result.timed_out
+        assert result.error_msg is None
     
     def test_run_test_case_crash(self):
         """Test handling of crashing test case."""
@@ -124,17 +122,15 @@ class TestFuzzMainLoop(object):
             ctx = MockContext()
             value = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
             
-            coverage_hash, crashed, timed_out, error_msg = fuzz.run_test_case(
-                ctx, value, config
-            )
+            result = fuzz.run_test_case(ctx, value, config)
         finally:
             # Restore original function
             fuzz.interp.invoke_rel = original_invoke_rel
         
-        assert coverage_hash.startswith('exception')
-        assert crashed
-        assert not timed_out
-        assert "Test P4 error" in error_msg
+        assert result.coverage_hash.startswith('exception')
+        assert result.crashed
+        assert not result.timed_out
+        assert "Test P4 error" in result.error_msg
     
     def test_load_seeds_empty(self):
         """Test loading seeds with empty seed list."""
