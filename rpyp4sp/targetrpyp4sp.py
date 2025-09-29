@@ -284,6 +284,12 @@ def command_bench_p4(argv):
     return 0
 
 
+def progress_checker(_):
+    p = rsignal.pypysig_getaddr_occurred()
+    if p.c_value < 0:
+        raise KeyboardInterrupt
+
+
 def command_fuzz(argv):
     """Greybox fuzzing command using the integrated fuzzer."""
     
@@ -360,7 +366,7 @@ def command_fuzz(argv):
         print("Press Ctrl+C to stop fuzzing and view results")
         print("")
         
-        stats = fuzz.fuzz_main_loop(config, seed_files, ctx, rng)
+        stats = fuzz.fuzz_main_loop(config, seed_files, ctx, rng, progress_checker)
         
         print("\n=== Final Results ===")
         print("Fuzzing completed successfully!")

@@ -156,7 +156,7 @@ def load_seeds(seed_files, ctx):
     return seeds
 
 
-def fuzz_main_loop(config, seed_files, ctx, rng):
+def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
     """Main greybox fuzzing loop.
     
     Args:
@@ -200,6 +200,8 @@ def fuzz_main_loop(config, seed_files, ctx, rng):
     # Main fuzzing loop
     try:
         for iteration in range(config.max_iterations):
+            if progress_checker is not None:
+                progress_checker(iteration)
             stats.iterations = iteration + 1
             
             # Periodic status updates
@@ -272,13 +274,13 @@ def fuzz_main_loop(config, seed_files, ctx, rng):
                     
     except KeyboardInterrupt:
         print("\nFuzzing interrupted by user")
-    
-    # Final statistics
-    print("\n=== Fuzzing Complete ===")
-    final_corpus_stats = fuzz_corpus.get_stats()
-    print("Final corpus: %d cases" % final_corpus_stats.total_cases)
-    print("Coverage diversity: %d unique hashes" % final_corpus_stats.unique_coverage)
-    stats.print_stats()
+    finally:
+        # Final statistics
+        print("\n=== Fuzzing Complete ===")
+        final_corpus_stats = fuzz_corpus.get_stats()
+        print("Final corpus: %d cases" % final_corpus_stats.total_cases)
+        print("Coverage diversity: %d unique hashes" % final_corpus_stats.unique_coverage)
+        stats.print_stats()
     
     return stats
 
