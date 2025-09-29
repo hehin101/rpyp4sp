@@ -59,14 +59,14 @@ class TDenvDict(object):
         self._keys = keys # type: EnvKeys
 
     def get(self, id_value):
-        # type: (str) -> p4specast.DefTyp
+        # type: (str) -> tuple[list, p4specast.DefTyp]
         pos = self._keys.get_pos(id_value, '')
         if pos < 0:
             raise P4ContextError('id_value %s does not exist' % (id_value))
         return self._get_list(pos)
 
     def set(self, id_value, typdef):
-        # type: (str, p4specast.DefTyp) -> TDenvDict
+        # type: (str, tuple[list, p4specast.DefTyp]) -> TDenvDict
         pos = self._keys.get_pos(id_value, '')
         if pos < 0:
             keys = self._keys.add_key(id_value, '')
