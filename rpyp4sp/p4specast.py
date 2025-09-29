@@ -1233,6 +1233,7 @@ class Type(AstBase):
     # has a .region, but only sometimes (eg exp uses typ')
 
     _attr_ = ['region', '_iterlist', '_iteropt']
+    region = None
     _iterlist = None
     _iteropt = None
 
@@ -1242,7 +1243,7 @@ class Type(AstBase):
     def tojson(self):
         from rpyp4sp import rpyjson
         content = self._tojson_content()
-        if not hasattr(self, 'region') or self.region is None:
+        if self.region is None:
             return rpyjson.JsonArray(content)
         else:
             root_map = rpyjson.ROOT_MAP.get_next("at").get_next("it")

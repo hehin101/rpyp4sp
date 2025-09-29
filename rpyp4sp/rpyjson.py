@@ -3,6 +3,9 @@ from rpython.rlib.rarithmetic import intmask
 from rpython.tool.pairtype import extendabletype
 
 import sys
+
+# Hexadecimal digits for explicit formatting
+HEX = '0123456789abcdef'
 from rpython.rlib.rstring import StringBuilder
 from rpyp4sp.error import P4ParseError, P4NotImplementedError
 from rpython.rlib.objectmodel import specialize, always_inline, r_dict
@@ -216,7 +219,12 @@ class JsonString(JsonPrimitive):
                 strfragments.append('\\t')
             elif ord(char) < 32:
                 # Control characters must be escaped as \uXXXX
-                strfragments.append('\\u%04x' % ord(char))
+                c = ord(char)
+                strfragments.append('\\u')
+                strfragments.append(HEX[c >> 12])
+                strfragments.append(HEX[(c >> 8) & 0x0f])
+                strfragments.append(HEX[(c >> 4) & 0x0f])
+                strfragments.append(HEX[c & 0x0f])
             else:
                 strfragments.append(char)
         strfragments.append('"')

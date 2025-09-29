@@ -34,4 +34,8 @@ class Coverage(object):
     def __repr__(self):
         return "Coverage(%r, %r)" % (self.pidset_hit, self.pidset_miss)
 
+    def tostr(self):
+        return hex(self.pidset_hit._bits.hash())[2:] + hex(self.pidset_miss._bits.hash())[2:]
+
+
 Coverage.EMPTY = Coverage(ImmutableIntSet.EMPTY, ImmutableIntSet.EMPTY)

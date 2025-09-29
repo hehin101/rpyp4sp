@@ -5,7 +5,7 @@ import os, time
 from rpython.rlib.nonconst import NonConstant
 from rpython.rlib import objectmodel
 
-from rpyp4sp import p4specast, objects, builtin, context, integers, rpyjson, interp
+from rpyp4sp import p4specast, objects, builtin, context, integers, rpyjson, interp, fuzz, corpus, mutatevalues
 from rpyp4sp.error import P4Error, format_p4error
 from rpyp4sp.test.test_interp import make_context
 from rpython.rlib import rsignal
@@ -40,6 +40,7 @@ def parse_args(argv, shortname, longname="", want_arg=True, many=False):
 
 def parse_flag(argv, flagname, longname=""):
     return bool(parse_args(argv, flagname, longname=longname, want_arg=False))
+
 
 
 
@@ -282,9 +283,103 @@ def command_bench_p4(argv):
             print_csv_line(fn, "run", str(i), str(t2 - t1), res, comment, str(t2), argv[0])
     return 0
 
+
+def command_fuzz(argv):
+    """Greybox fuzzing command using the integrated fuzzer."""
+    
+    # Check for help request
+    if "--help" in argv or "-h" in argv:
+        print("usage: fuzz [--corpus-dir DIR] [--max-iterations N] [--mutation-budget N] [--corpus-max-size N] [--random-seed N] [seed-files...]")
+        print("  --corpus-dir DIR        Directory to store corpus files (default: ./fuzz_corpus)")
+        print("  --max-iterations N      Maximum fuzzing iterations (default: 10000)")
+        print("  --mutation-budget N     Maximum mutations per iteration (default: 50)")
+        print("  --corpus-max-size N     Maximum corpus size before minimization (default: 1000)")
+        print("  --random-seed N         Random seed for reproducibility (default: 42)")
+        print("  seed-files...           JSON files containing seed test cases")
+        return 0
+    
+    # Parse arguments using RPython's custom parser
+    corpus_dir = parse_args(argv, "--corpus-dir")
+    if not corpus_dir:
+        corpus_dir = "./fuzz_corpus"
+    
+    max_iterations_str = parse_args(argv, "--max-iterations")
+    if max_iterations_str:
+        max_iterations = int(max_iterations_str)
+    else:
+        max_iterations = 10000
+    
+    mutation_budget_str = parse_args(argv, "--mutation-budget")
+    if mutation_budget_str:
+        mutation_budget = int(mutation_budget_str)
+    else:
+        mutation_budget = 50
+    
+    corpus_max_size_str = parse_args(argv, "--corpus-max-size")
+    if corpus_max_size_str:
+        corpus_max_size = int(corpus_max_size_str)
+    else:
+        corpus_max_size = 1000
+    
+    random_seed_str = parse_args(argv, "--random-seed")
+    if random_seed_str:
+        random_seed = int(random_seed_str)
+    else:
+        random_seed = 42
+    
+    # Remaining arguments are seed files
+    seed_files = argv[1:]
+    
+    print("=== P4 Greybox Fuzzer ===")
+    print("Corpus directory: %s" % corpus_dir)
+    print("Max iterations: %d" % max_iterations)
+    print("Mutation budget: %d" % mutation_budget)
+    print("Seed files: %s" % (str(seed_files) if seed_files else "None"))
+    print("Random seed: %d" % random_seed)
+    print("")
+    
+    # Create fuzzing configuration
+    config = fuzz.FuzzConfig(
+        corpus_dir=corpus_dir,
+        max_iterations=max_iterations,
+        mutation_budget=mutation_budget,
+        corpus_max_size=corpus_max_size
+    )
+    
+    # Initialize random number generator (RPython compatible)
+    rng = fuzz.FuzzRng(random_seed)
+    
+    try:
+        # Create real interpreter context
+        print("Initializing interpreter context...")
+        ctx = make_context()
+        print("Real interpreter context initialized successfully")
+        
+        # Run fuzzing
+        print("Starting fuzzing session...")
+        print("Press Ctrl+C to stop fuzzing and view results")
+        print("")
+        
+        stats = fuzz.fuzz_main_loop(config, seed_files, ctx, rng)
+        
+        print("\n=== Final Results ===")
+        print("Fuzzing completed successfully!")
+        return 0
+        
+    except P4Error as e:
+        print("\n=== Fuzzing P4 Error ===")
+        print("P4 Error: %s" % str(e.msg))
+        return 1
+        
+    except Exception as e:
+        print("\n=== Fuzzing Error ===")
+        print("Error: %s" % str(e))
+        return 1
+
+
 def main(argv):
-    if len(argv) < 3:
-        print("usage: %s run-test-jsonl/run-p4-json/bench-p4-json <fns>" % argv[0])
+    if len(argv) < 2:
+        print("usage: %s run-test-jsonl/run-p4-json/bench-p4-json/fuzz <args>" % argv[0])
         return 1
     if objectmodel.we_are_translated():
         rsignal.pypysig_setflag(rsignal.SIGINT)
@@ -295,10 +390,12 @@ def main(argv):
     del argv[1]
     if cmd == 'run-test-jsonl':
         return command_run_test_jsonl(argv)
-    if cmd == 'run-p4-json':
+    elif cmd == 'run-p4-json':
         return command_run_p4(argv)
-    if cmd == 'bench-p4-json':
+    elif cmd == 'bench-p4-json':
         return command_bench_p4(argv)
+    elif cmd == 'fuzz':
+        return command_fuzz(argv)
     else:
         print("unknown command", cmd)
         return 2
