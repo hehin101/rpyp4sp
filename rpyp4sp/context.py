@@ -1,4 +1,5 @@
 from rpyp4sp import p4specast, objects
+from rpyp4sp.cover import Coverage
 from rpyp4sp.error import P4ContextError
 
 class GlobalContext(object):
@@ -24,7 +25,7 @@ def iterlist_to_key(l):
     return ''.join(key)
 
 class Context(object):
-    def __init__(self, filename, derive=False, glbl=None, values_input=None, tdenv=None, fenv=None, venv=None):
+    def __init__(self, filename, derive=False, glbl=None, values_input=None, tdenv=None, fenv=None, venv=None, cover=None):
         self.filename = filename
         self.glbl = GlobalContext() if glbl is None else glbl
         # the local context is inlined
@@ -33,13 +34,16 @@ class Context(object):
         self.tdenv = tdenv if tdenv is not None else {}
         self.fenv = fenv if fenv is not None else {}
         self.venv = venv if venv is not None else {}
+        self._cover = cover if cover is not None else Coverage.EMPTY
+        assert isinstance(self._cover, Coverage)
 
-    def copy_and_change(self, values_input=None, tdenv=None, fenv=None, venv=None):
+    def copy_and_change(self, values_input=None, tdenv=None, fenv=None, venv=None, cover=None):
         values_input = values_input if values_input is not None else self.values_input
         tdenv = tdenv if tdenv is not None else self.tdenv
         fenv = fenv if fenv is not None else self.fenv
         venv = venv if venv is not None else self.venv
-        return Context(self.filename, self.derive, self.glbl, values_input, tdenv, fenv, venv)
+        cover = cover if cover is not None else self._cover
+        return Context(self.filename, self.derive, self.glbl, values_input, tdenv, fenv, venv, cover)
 
     def load_spec(self, spec, file_content, spec_dirname):
         self.glbl.file_content = file_content
@@ -98,8 +102,15 @@ class Context(object):
         return func
 
     def commit(self, sub_ctx):
-        # TODO: later add cover
-        return self
+        return self.copy_and_change(cover=self._cover.union(sub_ctx._cover))
+
+    def cover(self, is_hit, phantom, value):
+        if phantom is None:
+            return self
+        new_cover = self._cover.cover(is_hit, phantom, value)
+        if new_cover is self._cover:
+            return self
+        return self.copy_and_change(cover=new_cover)
 
     def sub_opt(self, vars):
         #   (* First collect the values that are to be iterated over *)

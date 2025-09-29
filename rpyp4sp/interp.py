@@ -103,6 +103,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     # let ctx_local, sign = eval_instrs ctx_local Cont instrs in
     ctx_local, sign = eval_instrs(ctx_local, Cont(), func.instrs)
     # let ctx = Ctx.commit ctx ctx_local in
+    ctx = ctx.commit(ctx_local)
     # match sign with
     if isinstance(sign, Ret):
     # | Ret value_output ->
@@ -169,8 +170,8 @@ def invoke_rel(ctx, id, values_input):
     except P4Error as e:
         e.traceback_patch_last_name(id.value)
         raise
-    ctx = ctx.commit(ctx_local)
     #   let ctx = Ctx.commit ctx ctx_local in
+    ctx = ctx.commit(ctx_local)
     #   match sign with
     #   | Res values_output ->
     if isinstance(sign, Res):
@@ -238,6 +239,7 @@ class __extend__(p4specast.IfI):
         #     | Some (pid, _) -> Ctx.cover ctx (not cond) pid vid
         #     | None -> ctx
         #   in
+        ctx = ctx.cover(not cond, self.phantom, value_cond)
         #   if cond then eval_instrs ctx Cont instrs_then else (ctx, Cont)
         if cond:
             return eval_instrs(ctx, Cont(), self.instrs)
@@ -435,6 +437,7 @@ class __extend__(p4specast.CaseI):
         #   | Some (pid, _) -> Ctx.cover ctx (Option.is_none instrs_opt) pid vid
         #   | None -> ctx
         # in
+        ctx = ctx.cover(instrs_opt is None, self.phantom, value_cond)
         # match instrs_opt with
         # | Some instrs -> eval_instrs ctx Cont instrs
         if instrs_opt is not None:
@@ -948,51 +951,56 @@ class __extend__(p4specast.HoldI):
         #    (iterexps : iterexp list) (holdcase : holdcase) : Ctx.t * Sign.t =
         #  (* Copy the current coverage information *)
         #  let cover_backup = !(ctx.cover) in
+        cover_backup = ctx._cover
         #  (* Evaluate the hold condition *)
         #  let ctx, cond, value_cond = eval_hold_cond_iter ctx id notexp iterexps in
         ctx, cond, value_cond = eval_hold_cond_iter(ctx, self)
         #  (* Evaluate the hold case, and restore the coverage information
         #     if the expected behavior is the relation not holding *)
         #  let vid = value_cond.note.vid in
-        vid = value_cond.vid
         #  match holdcase with
         #  | BothH (instrs_hold, instrs_not_hold) ->
-        if isinstance(self.holdcase, p4specast.BothH):
+        holdcase = self.holdcase
+        if isinstance(holdcase, p4specast.BothH):
         #      if cond then eval_instrs ctx Cont instrs_hold
             if cond:
-                return eval_instrs(ctx, Cont(), self.holdcase.hold_instrs)
         #      else (
         #        ctx.cover := cover_backup;
         #        eval_instrs ctx Cont instrs_not_hold)
+                return eval_instrs(ctx, Cont(), holdcase.hold_instrs)
             else:
-                return eval_instrs(ctx, Cont(), self.holdcase.nothold_instrs)
+                ctx = ctx.copy_and_change(cover=cover_backup)
+                return eval_instrs(ctx, Cont(), holdcase.nothold_instrs)
         #  | HoldH (instrs_hold, phantom_opt) ->
-        elif isinstance(self.holdcase, p4specast.HoldH):
+        elif isinstance(holdcase, p4specast.HoldH):
         #      let ctx =
         #        match phantom_opt with
         #        | Some (pid, _) -> Ctx.cover ctx (not cond) pid vid
         #        | None -> ctx
         #      in
         #      if cond then eval_instrs ctx Cont instrs_hold else (ctx, Cont)
+            ctx = ctx.cover(not cond, holdcase.phantom, value_cond)
             if cond:
-                return eval_instrs(ctx, Cont(), self.holdcase.hold_instrs)
+                return eval_instrs(ctx, Cont(), holdcase.hold_instrs)
             else:
                 return ctx, Cont()
         #  | NotHoldH (instrs_not_hold, phantom_opt) ->
-        elif isinstance(self.holdcase, p4specast.NotHoldH):
+        elif isinstance(holdcase, p4specast.NotHoldH):
         #      ctx.cover := cover_backup;
+            ctx = ctx.copy_and_change(cover=cover_backup)
         #      let ctx =
         #        match phantom_opt with
         #        | Some (pid, _) -> Ctx.cover ctx cond pid vid
         #        | None -> ctx
         #      in
+            ctx = ctx.cover(cond, holdcase.phantom, value_cond)
         #      if not cond then eval_instrs ctx Cont instrs_not_hold else (ctx, Cont)
             if not cond:
-                return eval_instrs(ctx, Cont(), self.holdcase.nothold_instrs)
+                return eval_instrs(ctx, Cont(), holdcase.nothold_instrs)
             else:
                 return ctx, Cont()
         else:
-            assert False, "unknown holdcase type: %s" % self.holdcase.__class__.__name__
+            assert False, "unknown holdcase type: %s" % holdcase.__class__.__name__
 
 
 def assign_exp(ctx, exp, value):

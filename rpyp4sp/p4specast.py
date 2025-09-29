@@ -46,8 +46,8 @@ class AstBase(object):
         arcs = []
         label = [self.__class__.__name__]
         for key, value in self.__dict__.items():
-            if key == 'phantom':
-                continue
+            #if key == 'phantom':
+            #    continue
             if isinstance(value, (Region, Position)):
                 continue
             if isinstance(value, AstBase):
@@ -2391,7 +2391,6 @@ class Phantom(AstBase):
     def __init__(self, pid, pathconds):
         self.pid = pid # type: int
         self.pathconds = pathconds # type: list[PathCond]
-        print(pid, self.tostring_of_pathconds())
 
     def tostring(self):
         # and string_of_pid pid = Format.asprintf "Phantom#%d" pid
