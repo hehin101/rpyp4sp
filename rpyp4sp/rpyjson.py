@@ -25,6 +25,9 @@ class JsonBase(object):
     def tostring(self):
         raise P4NotImplementedError("abstract base class")
 
+    def dumps(self, strfragments):
+        raise P4NotImplementedError("abstract base class")
+
     def is_primitive(self):
         return False
 
@@ -93,6 +96,9 @@ class JsonNull(JsonPrimitive):
     def tostring(self):
         return "null"
 
+    def dumps(self, strfragments):
+        strfragments.append("null")
+
     def _unpack_deep(self):
         return None
 
@@ -104,6 +110,9 @@ class JsonFalse(JsonPrimitive):
 
     def tostring(self):
         return "false"
+
+    def dumps(self, strfragments):
+        strfragments.append("false")
 
     def value_bool(self):
         return False
@@ -120,6 +129,9 @@ class JsonTrue(JsonPrimitive):
 
     def tostring(self):
         return "true"
+
+    def dumps(self, strfragments):
+        strfragments.append("true")
 
     def value_bool(self):
         return True
@@ -139,6 +151,9 @@ class JsonInt(JsonPrimitive):
     def tostring(self):
         return str(self.value)
 
+    def dumps(self, strfragments):
+        strfragments.append(str(self.value))
+
     def _unpack_deep(self):
         return self.value
 
@@ -156,6 +171,9 @@ class JsonFloat(JsonPrimitive):
 
     def tostring(self):
         return str(self.value)
+
+    def dumps(self, strfragments):
+        strfragments.append(str(self.value))
 
     def value_float(self):
         return self.value
@@ -177,6 +195,31 @@ class JsonString(JsonPrimitive):
         # this function should really live in a slightly more accessible place
         from pypy.objspace.std.bytesobject import string_escape_encode
         return string_escape_encode(self.value, '"')
+
+    def dumps(self, strfragments):
+        strfragments.append('"')
+        # Escape special characters according to JSON spec
+        for char in self.value:
+            if char == '"':
+                strfragments.append('\\"')
+            elif char == '\\':
+                strfragments.append('\\\\')
+            elif char == '\b':
+                strfragments.append('\\b')
+            elif char == '\f':
+                strfragments.append('\\f')
+            elif char == '\n':
+                strfragments.append('\\n')
+            elif char == '\r':
+                strfragments.append('\\r')
+            elif char == '\t':
+                strfragments.append('\\t')
+            elif ord(char) < 32:
+                # Control characters must be escaped as \uXXXX
+                strfragments.append('\\u%04x' % ord(char))
+            else:
+                strfragments.append(char)
+        strfragments.append('"')
 
     def _unpack_deep(self):
         return self.value
@@ -217,6 +260,20 @@ class JsonObject(JsonBase):
 
     def tostring(self):
         return "{%s}" % ", ".join(["\"%s\": %s" % (key, self._get_value(index).tostring()) for key, index in self.map.attrs.iteritems()])
+
+    def dumps(self, strfragments):
+        strfragments.append("{")
+        first = True
+        for key, index in self.map.attrs.iteritems():
+            if not first:
+                strfragments.append(", ")
+            first = False
+            # Create a temporary JsonString to handle key escaping
+            key_string = JsonString(key)
+            key_string.dumps(strfragments)
+            strfragments.append(": ")
+            self._get_value(index).dumps(strfragments)
+        strfragments.append("}")
 
     def _unpack_deep(self):
         result = {}
@@ -321,6 +378,14 @@ class JsonArray(JsonBase):
 
     def tostring(self):
         return "[%s]" % ", ".join([e.tostring() for e in self.value])
+
+    def dumps(self, strfragments):
+        strfragments.append("[")
+        for i, element in enumerate(self.value):
+            if i > 0:
+                strfragments.append(", ")
+            element.dumps(strfragments)
+        strfragments.append("]")
 
     def _unpack_deep(self):
         return [e._unpack_deep() for e in self.value]
@@ -926,4 +991,19 @@ def _convert(data):
             curr_map = curr_map.get_next(key.encode("utf-8"))
             values.append(_convert(value))
         return JsonObject.make(curr_map, values)
+
+
+def dumps(json_obj):
+    """
+    Serialize a JsonBase object to a JSON string.
+
+    Args:
+        json_obj: A JsonBase instance to serialize
+
+    Returns:
+        A JSON string representation
+    """
+    fragments = []
+    json_obj.dumps(fragments)
+    return "".join(fragments)
 
