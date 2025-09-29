@@ -110,29 +110,28 @@ class TDenvDict(object):
 
 TDenvDict.EMPTY = TDenvDict.make0()
 
+@smalllist.inline_small_list(immutable=True)
 class FenvDict(object):
-    def __init__(self, keys=EnvKeys.EMPTY, funcs=None):
+    def __init__(self, keys=EnvKeys.EMPTY):
         self._keys = keys # type: EnvKeys
-        self._funcs = [] if funcs is None else funcs # type: list[p4specast.DecD]
 
     def get(self, id_value):
         # type: (str) -> p4specast.DecD
         pos = self._keys.get_pos(id_value, '')
         if pos < 0:
             raise P4ContextError('id_value %s does not exist' % (id_value))
-        return self._funcs[pos]
+        return self._get_list(pos)
 
     def set(self, id_value, func):
         # type: (str, p4specast.DecD) -> FenvDict
         pos = self._keys.get_pos(id_value, '')
         if pos < 0:
             keys = self._keys.add_key(id_value, '')
-            funcs = self._funcs + [func]
-            return FenvDict(keys, funcs)
+            return self._append_list(func, keys)
         else:
-            funcs = self._funcs[:]
+            funcs = self._get_full_list_copy()
             funcs[pos] = func
-            return FenvDict(self._keys, funcs)
+            return FenvDict.make(funcs, self._keys)
 
     def has_key(self, id_value):
         # type: (str) -> bool
@@ -143,7 +142,7 @@ class FenvDict(object):
         l = ["context.FenvDict.EMPTY"]
         for id_value, _ in self._keys.keys:
             pos = self._keys.get_pos(id_value, '')
-            func = self._funcs[pos]
+            func = self._get_list(pos)
             l.append(".set(%r, %r)" % (id_value, func))
         return "".join(l)
 
@@ -151,7 +150,7 @@ class FenvDict(object):
         l = ["<fenv "]
         for index, (id_value, _) in enumerate(self._keys.keys):
             pos = self._keys.get_pos(id_value, '')
-            func = self._funcs[pos]
+            func = self._get_list(pos)
             if index == 0:
                 l.append("%r: %r" % (id_value, func))
             else:
@@ -159,7 +158,7 @@ class FenvDict(object):
         l.append(">")
         return "".join(l)
 
-FenvDict.EMPTY = FenvDict()
+FenvDict.EMPTY = FenvDict.make0()
 
 @smalllist.inline_small_list(immutable=True)
 class Context(object):
