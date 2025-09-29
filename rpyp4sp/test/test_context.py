@@ -1,4 +1,4 @@
-from rpyp4sp.context import Context, FenvDict, TDenvDict, EnvKeys, ENV_KEYS_ROOT
+from rpyp4sp.context import Context, FenvDict, TDenvDict, EnvKeys
 from rpyp4sp.error import P4ContextError
 from rpyp4sp import objects, p4specast
 
@@ -134,7 +134,7 @@ def test_venv_vare_caching_add(monkeypatch):
     value1 = objects.TextV("abc")
     vare = p4specast.VarE(id1)
     ctx = Context.make0('dummy').add_value_local(id1, p4specast.IterList.EMPTY, value1, vare_cache=vare)
-    assert vare._ctx_keys_add is ENV_KEYS_ROOT
+    assert vare._ctx_keys_add is EnvKeys.EMPTY
     assert vare._ctx_keys_next is ctx.venv_keys
     value2 = ctx.find_value_local(id1, p4specast.IterList.EMPTY, vare_cache=vare)
     assert value1 is value2

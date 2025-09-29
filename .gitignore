@@ -7,4 +7,4 @@
 *.pyc
 ast.json
 integrationtests/*.actual
-targetrpyp4sp-c
+targetrpyp4sp-c*

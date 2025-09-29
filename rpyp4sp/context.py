@@ -36,7 +36,7 @@ class EnvKeys(object):
             return res
 
     def __repr__(self):
-        l = ["context.ENV_KEYS_ROOT"]
+        l = ["EnvKeys.EMPTY"]
         for var_name, var_iter in self.keys:
             l.append(".add_key(%r, %r)" % (var_name, var_iter))
         return "".join(l)
@@ -51,10 +51,10 @@ class EnvKeys(object):
         l.append(">")
         return "".join(l)
 
-ENV_KEYS_ROOT = EnvKeys({})
+EnvKeys.EMPTY = EnvKeys({})
 
 class TDenvDict(object):
-    def __init__(self, keys=ENV_KEYS_ROOT, typdefs=None):
+    def __init__(self, keys=EnvKeys.EMPTY, typdefs=None):
         self._keys = keys # type: EnvKeys
         self._typdefs = [] if typdefs is None else typdefs # type: list[p4specast.DefTyp]
 
@@ -110,7 +110,7 @@ class TDenvDict(object):
         return "".join(l)
 
 class FenvDict(object):
-    def __init__(self, keys=ENV_KEYS_ROOT, funcs=None):
+    def __init__(self, keys=EnvKeys.EMPTY, funcs=None):
         self._keys = keys # type: EnvKeys
         self._funcs = [] if funcs is None else funcs # type: list[p4specast.DecD]
 
@@ -167,7 +167,7 @@ class Context(object):
         self.derive = derive
         self.tdenv = tdenv if tdenv is not None else TDenvDict()
         self.fenv = fenv if fenv is not None else FenvDict()
-        self.venv_keys = venv_keys if venv_keys is not None else ENV_KEYS_ROOT # type: EnvKeys
+        self.venv_keys = venv_keys if venv_keys is not None else EnvKeys.EMPTY # type: EnvKeys
 
     def copy_and_change(self, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
         tdenv = tdenv if tdenv is not None else self.tdenv
@@ -192,7 +192,7 @@ class Context(object):
                 self.glbl.fenv[definition.id.value] = definition
 
     def localize(self):
-        return self.copy_and_change(tdenv=TDenvDict(), fenv=FenvDict(), venv_keys=ENV_KEYS_ROOT, venv_values=[])
+        return self.copy_and_change(tdenv=TDenvDict(), fenv=FenvDict(), venv_keys=EnvKeys.EMPTY, venv_values=[])
 
     def localize_venv(self, venv_keys, venv_values):
         # type: (EnvKeys, list[objects.BaseV]) -> Context

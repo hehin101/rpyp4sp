@@ -1145,7 +1145,7 @@ def assign_exp(ctx, exp, value):
         ctxs = []
         values = value._get_full_list()
         for value_elem in values:
-            ctx_local = ctx.localize_venv(venv_keys=context.ENV_KEYS_ROOT, venv_values=[])
+            ctx_local = ctx.localize_venv(venv_keys=context.EnvKeys.EMPTY, venv_values=[])
             ctx_local = assign_exp(ctx_local, exp.exp, value_elem)
             ctxs.append(ctx_local)
     #     in
