@@ -6,6 +6,8 @@ class GlobalContext(object):
     spec_dirname = None
 
     def __init__(self):
+        self.filename = None
+        self.derive = False
         self.tdenv = {}
         self.renv = {}
         self.fenv = {}
@@ -162,11 +164,9 @@ FenvDict.EMPTY = FenvDict.make0()
 
 @smalllist.inline_small_list(immutable=True)
 class Context(object):
-    def __init__(self, filename, derive=False, glbl=None, tdenv=None, fenv=None, venv_keys=None):
-        self.filename = filename
+    def __init__(self, glbl=None, tdenv=None, fenv=None, venv_keys=None):
         self.glbl = GlobalContext() if glbl is None else glbl
         # the local context is inlined
-        self.derive = derive
         self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY # type: TDenvDict
         self.fenv = fenv if fenv is not None else FenvDict.EMPTY # type: FenvDict
         self.venv_keys = venv_keys if venv_keys is not None else EnvKeys.EMPTY # type: EnvKeys
@@ -176,12 +176,12 @@ class Context(object):
         fenv = fenv if fenv is not None else self.fenv
         venv_keys = venv_keys if venv_keys is not None else self.venv_keys
         venv_values = venv_values if venv_values is not None else self._get_full_list()
-        return Context.make(venv_values, self.filename, self.derive, self.glbl, tdenv, fenv, venv_keys)
+        return Context.make(venv_values, self.glbl, tdenv, fenv, venv_keys)
 
     def copy_and_change_append_venv(self, value, venv_keys):
-        return self._append_list(value, self.filename, self.derive, self.glbl, self.tdenv, self.fenv, venv_keys)
+        return self._append_list(value, self.glbl, self.tdenv, self.fenv, venv_keys)
 
-    def load_spec(self, spec, file_content, spec_dirname):
+    def load_spec(self, spec, file_content, spec_dirname, filename, derive=False):
         self.glbl.file_content = file_content
         self.glbl.spec_dirname = spec_dirname
         for definition in spec:
@@ -192,6 +192,8 @@ class Context(object):
             else:
                 assert isinstance(definition, p4specast.DecD)
                 self.glbl.fenv[definition.id.value] = definition
+        self.glbl.filename = filename
+        self.derive = derive
 
     def localize(self):
         return self.copy_and_change(tdenv=TDenvDict.EMPTY, fenv=FenvDict.EMPTY, venv_keys=EnvKeys.EMPTY, venv_values=[])
