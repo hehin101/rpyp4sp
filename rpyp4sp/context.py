@@ -36,7 +36,7 @@ class EnvKeys(object):
             return res
 
     def __repr__(self):
-        l = ["EnvKeys.EMPTY"]
+        l = ["context.EnvKeys.EMPTY"]
         for var_name, var_iter in self.keys:
             l.append(".add_key(%r, %r)" % (var_name, var_iter))
         return "".join(l)
