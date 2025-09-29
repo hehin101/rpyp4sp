@@ -33,6 +33,18 @@ class BaseV(SubBase):
     _attrs_ = ['typ', 'vid']
     # vid: int
     # typ: p4specast.Type
+
+    def tojson(self):
+        from rpyp4sp import rpyjson
+        note_map = rpyjson.ROOT_MAP.get_next("typ").get_next("vid")
+        note_obj = rpyjson.JsonObject2(note_map, self.typ.tojson(), rpyjson.JsonInt(self.vid))
+        it_array = rpyjson.JsonArray(self._tojson_content())
+        root_map = rpyjson.ROOT_MAP.get_next("note").get_next("it")
+        return rpyjson.JsonObject2(root_map, note_obj, it_array)
+
+    def _tojson_content(self):
+        assert 0, "subclasses must implement _tojson_content"
+
     @staticmethod
     def fromjson(value):
         typ = p4specast.Type.fromjson(value.get_dict_value('note').get_dict_value('typ'))
@@ -128,6 +140,10 @@ class BoolV(BaseV):
         # | BoolV b -> string_of_bool b
         return "true" if self.value else "false"
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        return [rpyjson.JsonString("BoolV"), rpyjson.json_true if self.value else rpyjson.json_false]
+
     @staticmethod
     def fromjson(content, typ, vid):
         return BoolV(content.get_list_item(1).value_bool(), typ, vid)
@@ -161,6 +177,15 @@ class NumV(BaseV):
     @staticmethod
     def fromstr(value, what, typ=None, vid=-1):
         return NumV(integers.Integer.fromstr(value), what, typ, vid)
+
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        if isinstance(self.what, p4specast.IntT):
+            what_str = "Int"
+        else:
+            what_str = "Nat"
+        inner_array = rpyjson.JsonArray([rpyjson.JsonString(what_str), rpyjson.JsonString(self.value.str())])
+        return [rpyjson.JsonString("NumV"), inner_array]
 
     @staticmethod
     def fromjson(content, typ, vid):
@@ -199,6 +224,10 @@ class TextV(BaseV):
     def tostring(self, short=False, level=0):
         # | TextV s -> "\"" ^ s ^ "\""
         return string_escape_encode(self.value)
+
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        return [rpyjson.JsonString("TextV"), rpyjson.JsonString(self.value)]
 
     @staticmethod
     def fromjson(content, typ, vid):
@@ -325,6 +354,16 @@ class StructV(BaseV):
 
         return "{ %s }" % ";\n".join(parts)
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        fields_json = []
+        for fieldname, index in self.map.fieldpos.items():
+            value = self._get_list(index)
+            atom = p4specast.AtomT(fieldname)
+            field_array = rpyjson.JsonArray([atom.tojson(), value.tojson()])
+            fields_json.append(field_array)
+        return [rpyjson.JsonString("StructV"), rpyjson.JsonArray(fields_json)]
+
     @staticmethod
     def fromjson(content, typ, vid):
         values = []
@@ -388,6 +427,12 @@ class CaseV(BaseV):
 
         return "(" + " ".join(result_parts) + ")"
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        values_json = [self._get_list(i).tojson() for i in range(self._get_size_list())]
+        case_array = rpyjson.JsonArray([self.mixop.tojson(), rpyjson.JsonArray(values_json)])
+        return [rpyjson.JsonString("CaseV"), case_array]
+
     @staticmethod
     def fromjson(content, typ, vid):
         mixop_content, valuelist_content = content.get_list_item(1).value_array()
@@ -443,6 +488,11 @@ class TupleV(BaseV):
         element_strs = [self._get_list(i).tostring(short, level + 1) for i in range(self._get_size_list())]
         return "(%s)" % ", ".join(element_strs)
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        elements_json = [self._get_list(i).tojson() for i in range(self._get_size_list())]
+        return [rpyjson.JsonString("TupleV"), rpyjson.JsonArray(elements_json)]
+
     @staticmethod
     def fromjson(content, typ, vid):
         elements = [BaseV.fromjson(e) for e in content.get_list_item(1).value_array()]
@@ -479,6 +529,13 @@ class OptV(BaseV):
             return "None"
         else:
             return "Some(%s)" % self.value.tostring(short, level + 1)
+
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        if self.value is None:
+            return [rpyjson.JsonString("OptV"), rpyjson.json_null]
+        else:
+            return [rpyjson.JsonString("OptV"), self.value.tojson()]
 
     @staticmethod
     def fromjson(content, typ, vid):
@@ -539,6 +596,11 @@ class ListV(BaseV):
 
         return "[ %s ]" % ",\n".join(parts)
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        elements_json = [self._get_list(i).tojson() for i in range(self._get_size_list())]
+        return [rpyjson.JsonString("ListV"), rpyjson.JsonArray(elements_json)]
+
     @staticmethod
     def fromjson(content, typ, vid):
         elements = [BaseV.fromjson(e) for e in content.get_list_item(1).value_array()]
@@ -557,6 +619,10 @@ class FuncV(BaseV):
     def tostring(self, short=False, level=0):
         # | FuncV id -> string_of_defid id
         return self.id.value
+
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        return [rpyjson.JsonString("FuncV"), self.id.tojson()]
 
     @staticmethod
     def fromjson(content, typ, vid):

@@ -81,6 +81,10 @@ def define_enum(basename, *names):
                     return cls.INSTANCE
             assert 0
 
+        def tojson(self):
+            from rpyp4sp import rpyjson
+            return rpyjson.JsonArray([rpyjson.JsonString(self.__class__.__name__)])
+
         def __repr__(self):
             return "p4specast." + self.__class__.__name__ + ".INSTANCE"
     Base.__name__ = basename
@@ -108,6 +112,11 @@ class Position(AstBase):
     def fromjson(value):
         return Position(value.get_dict_value('file').value_string(), value.get_dict_value('line').value_int(), value.get_dict_value('column').value_int())
 
+    def tojson(self):
+        from rpyp4sp import rpyjson
+        file_map = rpyjson.ROOT_MAP.get_next("file").get_next("line").get_next("column")
+        return rpyjson.JsonObject3(file_map, rpyjson.JsonString(self.file), rpyjson.JsonInt(self.line), rpyjson.JsonInt(self.column))
+
     def has_information(self):
         return self.file != '' or self.line != 0 or self.column != 0
 
@@ -132,6 +141,11 @@ class Region(AstBase):
         if not left.has_information() and not right.has_information():
             return NO_REGION
         return Region(left, right)
+
+    def tojson(self):
+        from rpyp4sp import rpyjson
+        region_map = rpyjson.ROOT_MAP.get_next("left").get_next("right")
+        return rpyjson.JsonObject2(region_map, self.left.tojson(), self.right.tojson())
 
     @staticmethod
     def line_span(file, line, column_start, column_end):
@@ -185,6 +199,11 @@ class Id(AstBase):
             value.get_dict_value('it').value_string(),
             region
         )
+
+    def tojson(self):
+        from rpyp4sp import rpyjson
+        id_map = rpyjson.ROOT_MAP.get_next("it").get_next("note").get_next("at")
+        return rpyjson.JsonObject3(id_map, rpyjson.JsonString(self.value), rpyjson.json_null, self.region.tojson())
 
     def __repr__(self):
         return "p4specast.Id(%r, %s)" % (self.value, self.region)
@@ -1220,6 +1239,18 @@ class Type(AstBase):
     def tostring(self):
         assert 0  # abstract method
 
+    def tojson(self):
+        from rpyp4sp import rpyjson
+        content = self._tojson_content()
+        if not hasattr(self, 'region') or self.region is None:
+            return rpyjson.JsonArray(content)
+        else:
+            root_map = rpyjson.ROOT_MAP.get_next("at").get_next("it")
+            return rpyjson.JsonObject2(root_map, self.region.tojson(), rpyjson.JsonArray(content))
+
+    def _tojson_content(self):
+        assert 0  # abstract method
+
     @staticmethod
     def fromjson(value):
         if value.is_object:
@@ -1276,6 +1307,10 @@ class BoolT(Type):
     def __repr__(self):
         return "p4specast.BoolT.INSTANCE"
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        return [rpyjson.JsonString("BoolT")]
+
     @staticmethod
     def fromjson(content):
         return BoolT.INSTANCE
@@ -1302,6 +1337,10 @@ class NumT(Type):
         else:
             return "p4specast.NumT(%r)" % (self.typ,)
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        return [rpyjson.JsonString("NumT"), self.typ.tojson()]
+
     @staticmethod
     def fromjson(content):
         typ = NumTyp.fromjson(content.get_list_item(1))
@@ -1327,6 +1366,10 @@ class TextT(Type):
     def __repr__(self):
         return "p4specast.TextT.INSTANCE"
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        return [rpyjson.JsonString("TextT")]
+
     @staticmethod
     def fromjson(content):
         return TextT.INSTANCE
@@ -1345,6 +1388,11 @@ class VarT(Type):
 
     def __repr__(self):
         return "p4specast.VarT(%r, %r)" % (self.id, self.targs)
+
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        targs_json = [targ.tojson() for targ in self.targs]
+        return [rpyjson.JsonString("VarT"), self.id.tojson(), rpyjson.JsonArray(targs_json)]
 
     @staticmethod
     def fromjson(content):
@@ -1365,6 +1413,11 @@ class TupleT(Type):
     def __repr__(self):
         return "p4specast.TupleT(%r)" % (self.elts,)
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        elts_json = [elt.tojson() for elt in self.elts]
+        return [rpyjson.JsonString("TupleT"), rpyjson.JsonArray(elts_json)]
+
     @staticmethod
     def fromjson(content):
         return TupleT(
@@ -1383,6 +1436,10 @@ class IterT(Type):
     def __repr__(self):
         return "p4specast.IterT(%r, %r)" % (self.typ, self.iter)
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        return [rpyjson.JsonString("IterT"), self.typ.tojson(), self.iter.tojson()]
+
     @staticmethod
     def fromjson(content):
         return IterT(
@@ -1400,6 +1457,10 @@ class FuncT(Type):
 
     def __repr__(self):
         return "p4specast.FuncT.INSTANCE"
+
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        return [rpyjson.JsonString("FuncT")]
 
     @staticmethod
     def fromjson(content):
@@ -2633,6 +2694,14 @@ class MixOp(AstBase):
             phrases=[[AtomT.fromjson(phrase) for phrase in group.value_array()] for group in content.value_array()]
         )
 
+    def tojson(self):
+        from rpyp4sp import rpyjson
+        phrases_json = []
+        for phrase_group in self.phrases:
+            group_json = [atom.tojson() for atom in phrase_group]
+            phrases_json.append(rpyjson.JsonArray(group_json))
+        return rpyjson.JsonArray(phrases_json)
+
     def __repr__(self):
         return "p4specast.MixOp(%r)" % (self.phrases,)
 
@@ -2701,6 +2770,23 @@ class AtomT(AstBase):
                 value=atom_type_to_value(kind),
                 region=region
             )
+
+    def tojson(self):
+        from rpyp4sp import rpyjson
+        # Find the atom type for this value, or use 'Atom' as default
+        atom_type = None
+        for type_name, type_value in atom_type_map.items():
+            if type_value == self.value:
+                atom_type = type_name
+                break
+
+        if atom_type is not None:
+            content = rpyjson.JsonArray([rpyjson.JsonString(atom_type)])
+        else:
+            content = rpyjson.JsonArray([rpyjson.JsonString('Atom'), rpyjson.JsonString(self.value)])
+
+        atom_map = rpyjson.ROOT_MAP.get_next("it").get_next("note").get_next("at")
+        return rpyjson.JsonObject3(atom_map, content, rpyjson.json_null, self.region.tojson())
 
 def atom_type_to_value(kind):
     return atom_type_map[kind]
