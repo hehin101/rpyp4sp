@@ -97,13 +97,13 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             def _get_full_list(self):
                 if size == 0:
                     return empty_list
-                res = [None] * size
+                res = ()
                 for i, attr in unrolling_enumerate_attrs:
                     elem = getattr(self, attr)
                     if nonull:
                         debug.check_annotation(elem, _not_null)
-                    res[i] = getattr(self, attr)
-                return res
+                    res += (getattr(self, attr), )
+                return list(res)
             def _init(self, elems, *args):
                 assert len(elems) == size
                 for i, attr in unrolling_enumerate_attrs:
@@ -115,12 +115,12 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
 
             def _append_list(self, value, *args):
                 if size + 1 >= len(classes):
-                    reslist = [None] * (size + 1)
+                    restup = ()
                     for i, attr in unrolling_enumerate_attrs:
                         oldvalue = getattr(self, attr)
-                        reslist[i] = oldvalue
-                    reslist[size] = value
-                    return cls_arbitrary(reslist, *args)
+                        restup += (oldvalue, )
+                    restup += (value, )
+                    return cls_arbitrary(list(restup), *args)
                 else:
                     res = objectmodel.instantiate(classes[size + 1])
                     for i, attr in unrolling_enumerate_attrs:
