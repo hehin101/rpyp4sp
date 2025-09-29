@@ -53,29 +53,28 @@ class EnvKeys(object):
 
 EnvKeys.EMPTY = EnvKeys({})
 
+@smalllist.inline_small_list(immutable=True)
 class TDenvDict(object):
-    def __init__(self, keys=EnvKeys.EMPTY, typdefs=None):
+    def __init__(self, keys=EnvKeys.EMPTY):
         self._keys = keys # type: EnvKeys
-        self._typdefs = [] if typdefs is None else typdefs # type: list[p4specast.DefTyp]
 
     def get(self, id_value):
         # type: (str) -> p4specast.DefTyp
         pos = self._keys.get_pos(id_value, '')
         if pos < 0:
             raise P4ContextError('id_value %s does not exist' % (id_value))
-        return self._typdefs[pos]
+        return self._get_list(pos)
 
     def set(self, id_value, typdef):
         # type: (str, p4specast.DefTyp) -> TDenvDict
         pos = self._keys.get_pos(id_value, '')
         if pos < 0:
             keys = self._keys.add_key(id_value, '')
-            typdefs = self._typdefs + [typdef]
-            return TDenvDict(keys, typdefs)
+            return self._append_list(typdef, keys)
         else:
-            typdefs = self._typdefs[:]
+            typdefs = self._get_full_list_copy()
             typdefs[pos] = typdef
-            return TDenvDict(self._keys, typdefs)
+            return TDenvDict.make(typdefs, self._keys)
 
     def has_key(self, id_value):
         # type: (str) -> bool
@@ -86,14 +85,14 @@ class TDenvDict(object):
         # type: () -> list[tuple[str, tuple[list, p4specast.DefTyp]]]
         bindings = []
         for ((id_value, _), pos) in self._keys.keys.items():
-            bindings.append((id_value, self._typdefs[pos]))
+            bindings.append((id_value, self._get_list(pos)))
         return bindings
 
     def __repr__(self):
         l = ["context.TDenvDict.EMPTY"]
         for id_value, _ in self._keys.keys:
             pos = self._keys.get_pos(id_value, '')
-            typdef = self._typdefs[pos]
+            typdef = self._get_list(pos)
             l.append(".set(%r, %r)" % (id_value, typdef))
         return "".join(l)
 
@@ -101,7 +100,7 @@ class TDenvDict(object):
         l = ["<tdenv "]
         for index, (id_value, _) in enumerate(self._keys.keys):
             pos = self._keys.get_pos(id_value, '')
-            typdef = self._typdefs[pos]
+            typdef = self._get_list(pos)
             if index == 0:
                 l.append("%r: %r" % (id_value, typdef))
             else:
@@ -109,7 +108,7 @@ class TDenvDict(object):
         l.append(">")
         return "".join(l)
 
-TDenvDict.EMPTY = TDenvDict()
+TDenvDict.EMPTY = TDenvDict.make0()
 
 class FenvDict(object):
     def __init__(self, keys=EnvKeys.EMPTY, funcs=None):
