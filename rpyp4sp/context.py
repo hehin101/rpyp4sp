@@ -141,7 +141,7 @@ class FenvDict(object):
         return pos >= 0
 
     def __repr__(self):
-        l = ["context.FenvDict()"]
+        l = ["context.FenvDict.EMPTY"]
         for id_value, _ in self._keys.keys:
             pos = self._keys.get_pos(id_value, '')
             func = self._funcs[pos]
@@ -160,6 +160,8 @@ class FenvDict(object):
         l.append(">")
         return "".join(l)
 
+FenvDict.EMPTY = FenvDict()
+
 @smalllist.inline_small_list(immutable=True)
 class Context(object):
     def __init__(self, filename, derive=False, glbl=None, tdenv=None, fenv=None, venv_keys=None):
@@ -167,8 +169,8 @@ class Context(object):
         self.glbl = GlobalContext() if glbl is None else glbl
         # the local context is inlined
         self.derive = derive
-        self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY
-        self.fenv = fenv if fenv is not None else FenvDict()
+        self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY # type: TDenvDict
+        self.fenv = fenv if fenv is not None else FenvDict.EMPTY # type: FenvDict
         self.venv_keys = venv_keys if venv_keys is not None else EnvKeys.EMPTY # type: EnvKeys
 
     def copy_and_change(self, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
@@ -194,7 +196,7 @@ class Context(object):
                 self.glbl.fenv[definition.id.value] = definition
 
     def localize(self):
-        return self.copy_and_change(tdenv=TDenvDict.EMPTY, fenv=FenvDict(), venv_keys=EnvKeys.EMPTY, venv_values=[])
+        return self.copy_and_change(tdenv=TDenvDict.EMPTY, fenv=FenvDict.EMPTY, venv_keys=EnvKeys.EMPTY, venv_values=[])
 
     def localize_venv(self, venv_keys, venv_values):
         # type: (EnvKeys, list[objects.BaseV]) -> Context

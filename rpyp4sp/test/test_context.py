@@ -87,8 +87,8 @@ def test_tdenv_dict():
     assert d4.bindings() == [(id1.value, typdef3), (id2.value, typdef4)]
 
 def test_fenv_dict():
-    d_empty = FenvDict()
-    assert repr(d_empty) == "context.FenvDict()"
+    d_empty = FenvDict.EMPTY
+    assert repr(d_empty) == "context.FenvDict.EMPTY"
     assert str(d_empty) == "<fenv >"
 
     id1 = p4specast.Id("id1", None)
@@ -105,7 +105,7 @@ def test_fenv_dict():
     func3 = p4specast.DecD(id1, [], [], [])
     d3 = d2.set(id1.value, func3)
     assert d3._keys is d2._keys
-    assert repr(d3) == "context.FenvDict().set('id1', p4specast.DecD(p4specast.Id('id1', None), [], [], []))"
+    assert repr(d3) == "context.FenvDict.EMPTY.set('id1', p4specast.DecD(p4specast.Id('id1', None), [], [], []))"
     assert str(d3) == "<fenv 'id1': p4specast.DecD(p4specast.Id('id1', None), [], [], [])>"
 
     id2 = p4specast.Id("id2", None)
@@ -113,7 +113,7 @@ def test_fenv_dict():
     d4 = d3.set(id2.value, func4)
     assert d4.get(id1.value) is func3
     assert d4.get(id2.value) is func4
-    assert repr(d4) == "context.FenvDict().set('id1', p4specast.DecD(p4specast.Id('id1', None), [], [], [])).set('id2', p4specast.DecD(p4specast.Id('id2', None), [], [], []))"
+    assert repr(d4) == "context.FenvDict.EMPTY.set('id1', p4specast.DecD(p4specast.Id('id1', None), [], [], [])).set('id2', p4specast.DecD(p4specast.Id('id2', None), [], [], []))"
     assert str(d4) == "<fenv 'id1': p4specast.DecD(p4specast.Id('id1', None), [], [], []), 'id2': p4specast.DecD(p4specast.Id('id2', None), [], [], [])>"
 
 def test_venv_vare_caching(monkeypatch):
