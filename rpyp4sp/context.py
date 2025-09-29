@@ -90,7 +90,7 @@ class TDenvDict(object):
         return bindings
 
     def __repr__(self):
-        l = ["context.TDenvDict()"]
+        l = ["context.TDenvDict.EMPTY"]
         for id_value, _ in self._keys.keys:
             pos = self._keys.get_pos(id_value, '')
             typdef = self._typdefs[pos]
@@ -108,6 +108,8 @@ class TDenvDict(object):
                 l.append(", %r: %r" % (id_value, typdef))
         l.append(">")
         return "".join(l)
+
+TDenvDict.EMPTY = TDenvDict()
 
 class FenvDict(object):
     def __init__(self, keys=EnvKeys.EMPTY, funcs=None):
@@ -165,7 +167,7 @@ class Context(object):
         self.glbl = GlobalContext() if glbl is None else glbl
         # the local context is inlined
         self.derive = derive
-        self.tdenv = tdenv if tdenv is not None else TDenvDict()
+        self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY
         self.fenv = fenv if fenv is not None else FenvDict()
         self.venv_keys = venv_keys if venv_keys is not None else EnvKeys.EMPTY # type: EnvKeys
 
@@ -192,7 +194,7 @@ class Context(object):
                 self.glbl.fenv[definition.id.value] = definition
 
     def localize(self):
-        return self.copy_and_change(tdenv=TDenvDict(), fenv=FenvDict(), venv_keys=EnvKeys.EMPTY, venv_values=[])
+        return self.copy_and_change(tdenv=TDenvDict.EMPTY, fenv=FenvDict(), venv_keys=EnvKeys.EMPTY, venv_values=[])
 
     def localize_venv(self, venv_keys, venv_values):
         # type: (EnvKeys, list[objects.BaseV]) -> Context
