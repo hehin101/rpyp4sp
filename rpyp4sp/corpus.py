@@ -8,6 +8,45 @@ def basename(p):
     return p[i:]
 
 
+def weighted_random_choice(items, weights, rng):
+    """Select a random item based on weights.
+
+    Args:
+        items: List of items to choose from
+        weights: List of weights (same length as items)
+        rng: Random number generator with randint method
+
+    Returns:
+        Selected item from the list
+
+    Raises:
+        AssertionError: If items and weights have different lengths or weights are invalid
+    """
+    assert len(items) == len(weights), "Items and weights must have same length"
+    assert len(items) > 0, "Cannot choose from empty list"
+
+    # Calculate total weight
+    total_weight = 0
+    for weight in weights:
+        assert weight >= 0, "Weights must be non-negative"
+        total_weight += weight
+
+    assert total_weight > 0, "Total weight must be positive"
+
+    # Generate random number in range [0, total_weight)
+    target = rng.randint(0, total_weight - 1)
+
+    # Find the item corresponding to this weight
+    current_weight = 0
+    for i, weight in enumerate(weights):
+        current_weight += weight
+        if target < current_weight:
+            return items[i]
+
+    # Should never reach here, but return last item as fallback
+    return items[-1]
+
+
 class EmptyCorpusError(Exception):
     """Raised when trying to select from an empty corpus."""
     pass
@@ -192,6 +231,42 @@ class FuzzCorpus(object):
         # TODO: Implement smarter selection (e.g., favor recent discoveries)
         index = rng.randint(0, len(self.test_cases) - 1)
         return self.test_cases[index]
+
+    def select_for_mutation_weighted(self, rng):
+        """Select a test case for mutation using coverage-based weighting.
+
+        Args:
+            rng: Random number generator
+
+        Returns:
+            TestCase: Selected test case object
+
+        Raises:
+            EmptyCorpusError: If the corpus is empty
+        """
+        if not self.test_cases:
+            raise EmptyCorpusError("Cannot select from empty corpus")
+
+        # Calculate weights based on recency and rarity
+        weights = []
+        max_generation = 1.0
+        for test_case in test_cases:
+            if test_case.generation > max_generation:
+                max_generation = test_case.generation
+
+        for test_case in self.test_cases:
+            # Recency bonus: newer generations get higher weight
+            recency_weight = 1.0 + (test_case.generation / max_generation)
+
+            # Since we only keep one test case per coverage hash, all have frequency 1
+            rarity_weight = 1.0
+
+            # Combined weight
+            total_weight = recency_weight * rarity_weight
+            weights.append(int(total_weight * 1000))  # Scale and convert to int for randint
+
+        print(weights)
+        return weighted_random_choice(self.test_cases, weights, rng)
 
     def get_stats(self):
         """Get corpus statistics.

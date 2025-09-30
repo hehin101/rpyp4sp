@@ -238,9 +238,9 @@ def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
                 ))
                 stats.print_stats()
 
-            # Select test case for mutation
+            # Select test case for mutation using intelligent selection
             try:
-                selected = fuzz_corpus.select_for_mutation(rng)
+                selected = fuzz_corpus.select_for_mutation_weighted(rng)
                 parent_value = selected.value
                 parent_coverage = selected.coverage_hash
                 parent_generation = selected.generation

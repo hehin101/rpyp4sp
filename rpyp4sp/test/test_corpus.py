@@ -327,3 +327,208 @@ class TestFuzzCorpus(object):
             test_case = corpus.TestCase.from_file(filename, self.temp_corpus_dir)
             assert test_case is not None
             assert test_case.coverage_hash == coverage_hash
+
+    def test_select_for_mutation_weighted(self):
+        """Test weighted selection based on coverage and generation."""
+        test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
+
+        # Add test cases with different generations and coverage
+        bool_val1 = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=1)
+        bool_val2 = objects.BoolV(False, typ=p4specast.BoolT.INSTANCE, vid=2)
+        bool_val3 = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=3)
+
+        # Add cases: older generation, unique coverage
+        test_corpus.add_test_case(bool_val1, coverage_hash="old", generation=0)
+        # Add cases: newer generation, unique coverage
+        test_corpus.add_test_case(bool_val2, coverage_hash="new", generation=2)
+        # Add cases: newer generation, same coverage as first (less rare)
+        test_corpus.add_test_case(bool_val3, coverage_hash="old", generation=1)
+
+        # After adding 3rd case, "old" coverage has frequency=2, "new" has frequency=1
+        # Expected weights (roughly):
+        # Case 0: recency=(1+0/2)=1.0, rarity=1/2=0.5 → weight=0.5
+        # Case 1: recency=(1+2/2)=2.0, rarity=1/1=1.0 → weight=2.0 (highest)
+        # Case 2: recency=(1+1/2)=1.5, rarity=1/2=0.5 → weight=0.75
+
+        # Use MockRng to get deterministic selection
+        # With weights scaled by 1000: [500, 2000, 750]
+        # Total = 3250, cumulative = [500, 2500, 3250]
+        # Target 0-499 → Case 0, Target 500-2499 → Case 1, Target 2500+ → Case 2
+
+        rng = MockRng([0])  # Should select first case (old, gen 0)
+        result = test_corpus.select_for_mutation_weighted(rng)
+        assert result.coverage_hash == "old"
+        assert result.generation == 0
+
+        rng = MockRng([1000])  # Should select second case (new, gen 2) - highest weight
+        result = test_corpus.select_for_mutation_weighted(rng)
+        assert result.coverage_hash == "new"
+        assert result.generation == 2
+
+    def test_weighted_selection_empty_corpus(self):
+        """Test weighted selection with empty corpus."""
+        test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
+        rng = MockRng([0])
+
+        try:
+            test_corpus.select_for_mutation_weighted(rng)
+            assert False, "Should have raised EmptyCorpusError"
+        except corpus.EmptyCorpusError:
+            pass
+
+    def test_duplicate_coverage_handling(self):
+        """Test that duplicate coverage is properly handled."""
+        test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
+
+        bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
+
+        # Add cases with same coverage hash
+        filename1 = test_corpus.add_test_case(bool_val, coverage_hash="common", generation=0)
+        filename2 = test_corpus.add_test_case(bool_val, coverage_hash="rare", generation=1)
+        filename3 = test_corpus.add_test_case(bool_val, coverage_hash="common", generation=2)
+
+        # First occurrence saved, duplicate not saved
+        assert filename1 is not None
+        assert filename2 is not None
+        assert filename3 is None
+
+        # Check coverage tracking - duplicates increment count
+        assert test_corpus.coverage_seen["common"] == 2
+        assert test_corpus.coverage_seen["rare"] == 1
+
+        # Only unique coverage cases are stored
+        assert len(test_corpus.test_cases) == 2
+
+        # Test corpus loading - only unique coverage saved to disk
+        fresh_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
+        fresh_corpus.load_corpus()
+
+        # After loading, each unique coverage hash has count 1
+        assert fresh_corpus.coverage_seen["common"] == 1
+        assert fresh_corpus.coverage_seen["rare"] == 1
+
+        # Both test cases loaded from disk
+        assert len(fresh_corpus.test_cases) == 2
+
+
+class TestWeightedRandomChoice(object):
+    """Test weighted random selection functionality."""
+
+    def test_weighted_choice_basic(self):
+        """Test basic weighted random choice."""
+        items = ['a', 'b', 'c']
+        weights = [1, 2, 3]
+
+        # MockRng(0) should select first bucket (weight 1, target 0)
+        rng = MockRng([0])
+        result = corpus.weighted_random_choice(items, weights, rng)
+        assert result == 'a'
+
+        # MockRng(1) should select second bucket (weight 2, target 1)
+        rng = MockRng([1])
+        result = corpus.weighted_random_choice(items, weights, rng)
+        assert result == 'b'
+
+        # MockRng(3) should select third bucket (weight 3, target 3)
+        rng = MockRng([3])
+        result = corpus.weighted_random_choice(items, weights, rng)
+        assert result == 'c'
+
+        # MockRng(5) should select third bucket (weight 3, target 5 = last)
+        rng = MockRng([5])
+        result = corpus.weighted_random_choice(items, weights, rng)
+        assert result == 'c'
+
+    def test_weighted_choice_equal_weights(self):
+        """Test weighted choice with equal weights (should be uniform)."""
+        items = ['x', 'y', 'z']
+        weights = [1, 1, 1]
+
+        rng = MockRng([0])
+        result = corpus.weighted_random_choice(items, weights, rng)
+        assert result == 'x'
+
+        rng = MockRng([1])
+        result = corpus.weighted_random_choice(items, weights, rng)
+        assert result == 'y'
+
+        rng = MockRng([2])
+        result = corpus.weighted_random_choice(items, weights, rng)
+        assert result == 'z'
+
+    def test_weighted_choice_zero_weights(self):
+        """Test weighted choice with some zero weights."""
+        items = ['skip', 'pick', 'skip2']
+        weights = [0, 5, 0]
+
+        # All targets should select the only non-zero weight item
+        for target in [0, 1, 2, 3, 4]:
+            rng = MockRng([target])
+            result = corpus.weighted_random_choice(items, weights, rng)
+            assert result == 'pick'
+
+    def test_weighted_choice_single_item(self):
+        """Test weighted choice with single item."""
+        items = ['only']
+        weights = [42]
+
+        rng = MockRng([0])
+        result = corpus.weighted_random_choice(items, weights, rng)
+        assert result == 'only'
+
+        rng = MockRng([41])  # Last valid target
+        result = corpus.weighted_random_choice(items, weights, rng)
+        assert result == 'only'
+
+    def test_weighted_choice_large_weights(self):
+        """Test weighted choice with large weight differences."""
+        items = ['rare', 'common']
+        weights = [1, 1000]
+
+        # Target 0 should select rare item
+        rng = MockRng([0])
+        result = corpus.weighted_random_choice(items, weights, rng)
+        assert result == 'rare'
+
+        # Target 1+ should select common item
+        rng = MockRng([1])
+        result = corpus.weighted_random_choice(items, weights, rng)
+        assert result == 'common'
+
+        rng = MockRng([500])
+        result = corpus.weighted_random_choice(items, weights, rng)
+        assert result == 'common'
+
+    def test_weighted_choice_edge_cases(self):
+        """Test weighted choice error conditions."""
+        items = ['a', 'b']
+        weights = [1, 2]
+        rng = MockRng([0])
+
+        # Mismatched lengths
+        try:
+            corpus.weighted_random_choice(['a'], [1, 2], rng)
+            assert False, "Should raise assertion error"
+        except AssertionError:
+            pass
+
+        # Empty lists
+        try:
+            corpus.weighted_random_choice([], [], rng)
+            assert False, "Should raise assertion error"
+        except AssertionError:
+            pass
+
+        # Negative weights
+        try:
+            corpus.weighted_random_choice(['a'], [-1], rng)
+            assert False, "Should raise assertion error"
+        except AssertionError:
+            pass
+
+        # All zero weights
+        try:
+            corpus.weighted_random_choice(['a', 'b'], [0, 0], rng)
+            assert False, "Should raise assertion error"
+        except AssertionError:
+            pass
