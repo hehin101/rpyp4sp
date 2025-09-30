@@ -94,7 +94,7 @@ class TestFuzzCorpus(object):
         assert hash2 in fresh_corpus.coverage_seen
         
         # Check the loaded values
-        loaded_values = [val for val, _, _, _ in fresh_corpus.test_cases]
+        loaded_values = [test_case.value for test_case in fresh_corpus.test_cases]
         assert any(isinstance(val, objects.BoolV) and val.value == True for val in loaded_values)
         assert any(isinstance(val, objects.BoolV) and val.value == False for val in loaded_values)
     
@@ -116,11 +116,10 @@ class TestFuzzCorpus(object):
         test_corpus.add_test_case(bool_val, coverage_hash=hash_val, generation=0)
         
         result = test_corpus.select_for_mutation(rng)
-        selected_val, coverage_hash, generation, filename = result
-        assert isinstance(selected_val, objects.BoolV)
-        assert coverage_hash == hash_val
-        assert generation == 0
-        assert filename == "test_covdeadbeef_gen0.json"
+        assert isinstance(result.value, objects.BoolV)
+        assert result.coverage_hash == hash_val
+        assert result.generation == 0
+        assert result.filename == "test_covdeadbeef_gen0.json"
     
     def test_corpus_stats(self):
         """Test corpus statistics."""
@@ -194,7 +193,7 @@ class TestFuzzCorpus(object):
         fresh_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
         fresh_corpus.load_corpus()
         
-        generations = [gen for _, _, gen, _ in fresh_corpus.test_cases]
+        generations = [test_case.generation for test_case in fresh_corpus.test_cases]
         assert 0 in generations
         assert 3 in generations
     
@@ -215,7 +214,7 @@ class TestFuzzCorpus(object):
         
         # Check that we kept the 3 highest generations (5, 3, 2)
         assert len(test_corpus.test_cases) == 3
-        generations = [gen for _, _, gen, _ in test_corpus.test_cases]
+        generations = [test_case.generation for test_case in test_corpus.test_cases]
         assert 5 in generations
         assert 3 in generations  
         assert 2 in generations

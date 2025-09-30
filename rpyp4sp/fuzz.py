@@ -241,7 +241,10 @@ def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
             # Select test case for mutation
             try:
                 selected = fuzz_corpus.select_for_mutation(rng)
-                parent_value, parent_coverage, parent_generation, parent_filename = selected
+                parent_value = selected.value
+                parent_coverage = selected.coverage_hash
+                parent_generation = selected.generation
+                parent_filename = selected.filename
             except EmptyCorpusError:
                 print("Empty corpus - cannot continue fuzzing")
                 break

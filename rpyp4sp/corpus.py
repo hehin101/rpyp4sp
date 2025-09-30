@@ -13,6 +13,16 @@ class EmptyCorpusError(Exception):
     pass
 
 
+class TestCase(object):
+    """Represents a single test case in the fuzzing corpus."""
+
+    def __init__(self, value, coverage_hash, generation, filename):
+        self.value = value  # BaseV object
+        self.coverage_hash = coverage_hash  # str
+        self.generation = generation  # int
+        self.filename = filename  # str
+
+
 class CorpusStats(object):
     """Statistics about the fuzzing corpus."""
 
@@ -35,7 +45,7 @@ class FuzzCorpus(object):
 
     def __init__(self, corpus_dir):
         self.corpus_dir = corpus_dir
-        self.test_cases = []  # List of (BaseV, coverage_hash_str, generation, filename)
+        self.test_cases = []  # List of TestCase objects
         self.coverage_seen = {}  # Dict mapping coverage_hash (str) -> count (int)
 
         # Create corpus directory if it doesn't exist (assume non-recursive)
@@ -81,7 +91,8 @@ class FuzzCorpus(object):
             f.write(json_content)
 
         # Add to memory structures
-        self.test_cases.append((value, coverage_hash, generation, filename))
+        test_case = TestCase(value, coverage_hash, generation, filename)
+        self.test_cases.append(test_case)
         self.coverage_seen[coverage_hash] = 1  # First time seeing this coverage
 
         return filename
@@ -139,7 +150,8 @@ class FuzzCorpus(object):
                 value = objects.BaseV.fromjson(json_parsed)
 
                 # Add to corpus
-                self.test_cases.append((value, coverage_hash, generation, filename))
+                test_case = TestCase(value, coverage_hash, generation, filename)
+                self.test_cases.append(test_case)
                 self.coverage_seen[coverage_hash] = 1  # Set count to 1 for loaded cases
 
             except (IOError, ValueError, KeyError) as e:
@@ -154,7 +166,7 @@ class FuzzCorpus(object):
             rng: Random number generator
 
         Returns:
-            tuple: (BaseV value, coverage_hash, generation, filename)
+            TestCase: Selected test case object
 
         Raises:
             EmptyCorpusError: If the corpus is empty
@@ -176,7 +188,7 @@ class FuzzCorpus(object):
         if not self.test_cases:
             return CorpusStats()
 
-        generations = [gen for _, _, gen, _ in self.test_cases]
+        generations = [test_case.generation for test_case in self.test_cases]
         seeds = 0
         max_gen = 0
         for gen in generations:
@@ -205,9 +217,9 @@ class FuzzCorpus(object):
         # Sort by generation (keep newer generations) using radix sort
         # Find max generation to determine bucket count
         max_generation = 0
-        for _, _, generation, _ in self.test_cases:
-            if generation > max_generation:
-                max_generation = generation
+        for test_case in self.test_cases:
+            if test_case.generation > max_generation:
+                max_generation = test_case.generation
 
         # Create buckets for each generation (0 to max_generation)
         generation_buckets = []
@@ -216,8 +228,7 @@ class FuzzCorpus(object):
 
         # Distribute test cases into generation buckets
         for test_case in self.test_cases:
-            _, _, generation, _ = test_case
-            generation_buckets[generation].append(test_case)
+            generation_buckets[test_case.generation].append(test_case)
 
         # Concatenate buckets in reverse order (newer generations first)
         sorted_cases = []
@@ -234,8 +245,8 @@ class FuzzCorpus(object):
         self.test_cases = self.test_cases[:target_size]
 
         # Delete files and update coverage tracking
-        for _, coverage_hash, _, filename in cases_to_remove:
-            filepath = os.path.join(self.corpus_dir, filename)
+        for test_case in cases_to_remove:
+            filepath = os.path.join(self.corpus_dir, test_case.filename)
             try:
                 os.remove(filepath)
             except OSError:
@@ -243,5 +254,5 @@ class FuzzCorpus(object):
 
         # Rebuild coverage dict with remaining test cases
         self.coverage_seen = {}
-        for _, coverage_hash, _, _ in self.test_cases:
-            self.coverage_seen[coverage_hash] = 1
+        for test_case in self.test_cases:
+            self.coverage_seen[test_case.coverage_hash] = 1
