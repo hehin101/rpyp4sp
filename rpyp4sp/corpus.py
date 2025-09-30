@@ -22,6 +22,64 @@ class TestCase(object):
         self.generation = generation  # int
         self.filename = filename  # str
 
+    @staticmethod
+    def from_file(filename, corpus_dir):
+        """Load a TestCase from a corpus file.
+
+        Args:
+            filename: Name of the file (e.g., "test_cov1234_gen0.json")
+            corpus_dir: Directory containing the corpus files
+
+        Returns:
+            TestCase object or None if file cannot be loaded
+        """
+        from rpyp4sp import objects, rpyjson
+
+        # Parse filename to extract coverage hash and generation
+        # Expected format: test_cov{coverage_hash}_gen{generation}.json
+        if not (filename.startswith('test_cov') and filename.endswith('.json') and '_gen' in filename):
+            return None  # Skip malformed filenames
+
+        # Extract coverage hash: between 'test_cov' and '_gen'
+        start_pos = len('test_cov')
+        gen_pos = filename.find('_gen')
+        if gen_pos == -1 or gen_pos <= start_pos:
+            return None
+
+        coverage_hash = filename[start_pos:gen_pos]
+
+        # Extract generation: between '_gen' and '.json'
+        gen_start = gen_pos + len('_gen')
+        json_pos = filename.find('.json')
+        if json_pos == -1 or json_pos <= gen_start:
+            return None
+
+        gen_str = filename[gen_start:json_pos]
+        try:
+            generation = int(gen_str)
+        except ValueError:
+            return None  # Skip if generation is not a valid integer
+
+        # Validate coverage hash format
+        if not coverage_hash or '_' in coverage_hash:
+            return None  # Skip invalid coverage hash
+
+        try:
+            # Load and parse JSON
+            filepath = os.path.join(corpus_dir, filename)
+            with open(filepath, 'r') as f:
+                json_content = f.read()
+
+            json_parsed = rpyjson.loads(json_content)
+            value = objects.BaseV.fromjson(json_parsed)
+
+            return TestCase(value, coverage_hash, generation, filename)
+
+        except (IOError, ValueError, KeyError) as e:
+            # Skip corrupted files but don't crash
+            print("Warning: Could not load %s: %s" % (filename, str(e)))
+            return None
+
 
 class CorpusStats(object):
     """Statistics about the fuzzing corpus."""
@@ -110,54 +168,10 @@ class FuzzCorpus(object):
             return
 
         for filename in all_files:
-
-            # Parse filename to extract coverage hash and generation
-            # Expected format: test_cov{coverage_hash}_gen{generation}.json
-            if not (filename.startswith('test_cov') and filename.endswith('.json') and '_gen' in filename):
-                continue  # Skip malformed filenames
-
-            # Extract coverage hash: between 'test_cov' and '_gen'
-            start_pos = len('test_cov')
-            gen_pos = filename.find('_gen')
-            if gen_pos == -1 or gen_pos <= start_pos:
-                continue
-
-            coverage_hash = filename[start_pos:gen_pos]
-
-            # Extract generation: between '_gen' and '.json'
-            gen_start = gen_pos + len('_gen')
-            json_pos = filename.find('.json')
-            if json_pos == -1 or json_pos <= gen_start:
-                continue
-
-            gen_str = filename[gen_start:json_pos]
-            try:
-                generation = int(gen_str)
-            except ValueError:
-                continue  # Skip if generation is not a valid integer
-
-            # Validate coverage hash format
-            if not coverage_hash or '_' in coverage_hash:
-                continue  # Skip invalid coverage hash
-
-            try:
-                # Load and parse JSON
-                filepath = os.path.join(self.corpus_dir, filename)
-                with open(filepath, 'r') as f:
-                    json_content = f.read()
-
-                json_parsed = rpyjson.loads(json_content)
-                value = objects.BaseV.fromjson(json_parsed)
-
-                # Add to corpus
-                test_case = TestCase(value, coverage_hash, generation, filename)
+            test_case = TestCase.from_file(filename, self.corpus_dir)
+            if test_case is not None:
                 self.test_cases.append(test_case)
-                self.coverage_seen[coverage_hash] = 1  # Set count to 1 for loaded cases
-
-            except (IOError, ValueError, KeyError) as e:
-                # Skip corrupted files but don't crash
-                print("Warning: Could not load %s: %s" % (filename, str(e)))
-                continue
+                self.coverage_seen[test_case.coverage_hash] = 1  # Set count to 1 for loaded cases
 
     def select_for_mutation(self, rng):
         """Select a test case for mutation.

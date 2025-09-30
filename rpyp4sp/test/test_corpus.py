@@ -2,21 +2,21 @@ import pytest
 import os
 import tempfile
 import shutil
-from rpyp4sp import objects, p4specast, corpus
+from rpyp4sp import objects, p4specast, corpus, rpyjson
 from rpyp4sp.test.test_mutatevalues import MockRng
 
 
 class TestFuzzCorpus(object):
     """Test corpus management functionality."""
-    
+
     def setup_method(self, method):
         """Setup for each test method."""
         self.temp_corpus_dir = tempfile.mkdtemp(prefix='corpus_test_')
-    
+
     def teardown_method(self, method):
         """Cleanup for each test method."""
         shutil.rmtree(self.temp_corpus_dir, ignore_errors=True)
-    
+
     def test_corpus_creation(self):
         """Test corpus creation and directory setup."""
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
@@ -24,200 +24,306 @@ class TestFuzzCorpus(object):
         assert test_corpus.corpus_dir == self.temp_corpus_dir
         assert test_corpus.test_cases == []
         assert len(test_corpus.coverage_seen) == 0
-    
+
     def test_add_test_case(self):
         """Test adding test cases to corpus."""
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
-        
+
         # Create a simple test value
         bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
-        
+
         # Add test case
         coverage_hash = "12345678"  # String hash (printable ASCII, no underscores)
         filename = test_corpus.add_test_case(bool_val, coverage_hash=coverage_hash, generation=0)
-        
+
         assert filename == "test_cov12345678_gen0.json"
         assert len(test_corpus.test_cases) == 1
         assert coverage_hash in test_corpus.coverage_seen
-        
+
         # Check file was created
         filepath = os.path.join(self.temp_corpus_dir, filename)
         assert os.path.exists(filepath)
-        
+
         # Check file content
         with open(filepath, 'r') as f:
             content = f.read()
         assert '"BoolV"' in content
         assert 'true' in content
-    
+
     def test_duplicate_coverage_rejected(self):
         """Test that duplicate coverage hashes are rejected."""
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
-        
+
         bool_val1 = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
         bool_val2 = objects.BoolV(False, typ=p4specast.BoolT.INSTANCE, vid=43)
-        
+
         coverage_hash = "aabbccdd"
-        
+
         # Add first test case
         filename1 = test_corpus.add_test_case(bool_val1, coverage_hash=coverage_hash, generation=0)
         assert filename1 is not None
-        
+
         # Try to add second test case with same coverage hash
         filename2 = test_corpus.add_test_case(bool_val2, coverage_hash=coverage_hash, generation=1)
         assert filename2 is None  # Should be rejected
-        
+
         # Only one test case should be in corpus
         assert len(test_corpus.test_cases) == 1
-    
+
     def test_load_corpus(self):
         """Test loading corpus from disk."""
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
-        
+
         # Add several test cases
         bool_val1 = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
         bool_val2 = objects.BoolV(False, typ=p4specast.BoolT.INSTANCE, vid=43)
-        
+
         hash1 = "1111"
         hash2 = "2222"
-        
+
         test_corpus.add_test_case(bool_val1, coverage_hash=hash1, generation=0)
         test_corpus.add_test_case(bool_val2, coverage_hash=hash2, generation=1)
-        
+
         # Create new corpus instance and load from disk
         fresh_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
         fresh_corpus.load_corpus()
-        
+
         # Should have loaded both test cases
         assert len(fresh_corpus.test_cases) == 2
         assert hash1 in fresh_corpus.coverage_seen
         assert hash2 in fresh_corpus.coverage_seen
-        
+
         # Check the loaded values
         loaded_values = [test_case.value for test_case in fresh_corpus.test_cases]
         assert any(isinstance(val, objects.BoolV) and val.value == True for val in loaded_values)
         assert any(isinstance(val, objects.BoolV) and val.value == False for val in loaded_values)
-    
+
     def test_select_for_mutation(self):
         """Test selecting test cases for mutation."""
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
         rng = MockRng([0])  # Always select first item
-        
+
         # Empty corpus should raise exception
         try:
             test_corpus.select_for_mutation(rng)
             assert False, "Should have raised EmptyCorpusError"
         except corpus.EmptyCorpusError:
             pass  # Expected
-        
+
         # Add test case and select it
         bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
         hash_val = "deadbeef"
         test_corpus.add_test_case(bool_val, coverage_hash=hash_val, generation=0)
-        
+
         result = test_corpus.select_for_mutation(rng)
         assert isinstance(result.value, objects.BoolV)
         assert result.coverage_hash == hash_val
         assert result.generation == 0
         assert result.filename == "test_covdeadbeef_gen0.json"
-    
+
     def test_corpus_stats(self):
         """Test corpus statistics."""
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
-        
+
         # Empty corpus stats
         stats = test_corpus.get_stats()
         assert stats.total_cases == 0
         assert stats.unique_coverage == 0
         assert stats.seeds == 0
         assert stats.mutations == 0
-        
+
         # Add some test cases
         bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
         test_corpus.add_test_case(bool_val, coverage_hash="1111", generation=0)  # seed
         test_corpus.add_test_case(bool_val, coverage_hash="2222", generation=1)  # mutation
         test_corpus.add_test_case(bool_val, coverage_hash="3333", generation=2)  # mutation
-        
+
         stats = test_corpus.get_stats()
         assert stats.total_cases == 3
         assert stats.unique_coverage == 3
         assert stats.max_generation == 2
         assert stats.seeds == 1
         assert stats.mutations == 2
-    
+
     def test_filename_parsing(self):
         """Test that malformed filenames are handled gracefully."""
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
-        
+
         # Create some valid files
         bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
         valid_hash = "12345678"
         test_corpus.add_test_case(bool_val, coverage_hash=valid_hash, generation=0)
-        
+
         # Create some malformed files
         bad_files = [
             "not_a_test_file.json",
-            "test_invalid.json", 
+            "test_invalid.json",
             "test_cov_gen.json",
             "test_cov12345.json",
             "random.txt"
         ]
-        
+
         for bad_file in bad_files:
             filepath = os.path.join(self.temp_corpus_dir, bad_file)
             with open(filepath, 'w') as f:
                 f.write('{"dummy": "data"}')
-        
+
         # Load corpus - should only load valid files
         fresh_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
         fresh_corpus.load_corpus()
-        
+
         assert len(fresh_corpus.test_cases) == 1  # Only the valid one
         assert valid_hash in fresh_corpus.coverage_seen
-    
+
     def test_generation_handling(self):
         """Test that generation numbers work correctly."""
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
-        
+
         # Add seed (generation 0)
         seed_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=1)
         filename1 = test_corpus.add_test_case(seed_val, coverage_hash="0064", generation=0)  # was 100
         assert "gen0" in filename1
-        
-        # Add mutation (generation 3)  
+
+        # Add mutation (generation 3)
         mut_val = objects.BoolV(False, typ=p4specast.BoolT.INSTANCE, vid=2)
         filename2 = test_corpus.add_test_case(mut_val, coverage_hash="00c8", generation=3)  # was 200
         assert "gen3" in filename2
-        
+
         # Verify they load correctly
         fresh_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
         fresh_corpus.load_corpus()
-        
+
         generations = [test_case.generation for test_case in fresh_corpus.test_cases]
         assert 0 in generations
         assert 3 in generations
-    
+
     def test_corpus_minimization_sorting(self):
         """Test that corpus minimization correctly sorts by generation."""
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
-        
+
         # Add test cases with different generations (out of order)
         bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=1)
         test_corpus.add_test_case(bool_val, coverage_hash="gen1", generation=1)  # Gen 1
-        test_corpus.add_test_case(bool_val, coverage_hash="gen5", generation=5)  # Gen 5  
+        test_corpus.add_test_case(bool_val, coverage_hash="gen5", generation=5)  # Gen 5
         test_corpus.add_test_case(bool_val, coverage_hash="gen0", generation=0)  # Gen 0 (seed)
         test_corpus.add_test_case(bool_val, coverage_hash="gen3", generation=3)  # Gen 3
         test_corpus.add_test_case(bool_val, coverage_hash="gen2", generation=2)  # Gen 2
-        
+
         # Minimize to keep only 3 cases (should keep highest generations)
         test_corpus.minimize_corpus(target_size=3)
-        
+
         # Check that we kept the 3 highest generations (5, 3, 2)
         assert len(test_corpus.test_cases) == 3
         generations = [test_case.generation for test_case in test_corpus.test_cases]
         assert 5 in generations
-        assert 3 in generations  
+        assert 3 in generations
         assert 2 in generations
         # Should not keep gen 1 or 0
         assert 1 not in generations
         assert 0 not in generations
+
+    def test_testcase_from_file_valid(self):
+        """Test TestCase.from_file with valid files."""
+        # Create a test case file manually
+        bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
+        json_result = bool_val.tojson()
+        json_content = rpyjson.dumps(json_result)
+
+        filename = "test_cov12345abc_gen3.json"
+        filepath = os.path.join(self.temp_corpus_dir, filename)
+        with open(filepath, 'w') as f:
+            f.write(json_content)
+
+        # Load using from_file
+        test_case = corpus.TestCase.from_file(filename, self.temp_corpus_dir)
+
+        assert test_case is not None
+        assert test_case.coverage_hash == "12345abc"
+        assert test_case.generation == 3
+        assert test_case.filename == filename
+        assert isinstance(test_case.value, objects.BoolV)
+        assert test_case.value.value == True
+
+    def test_testcase_from_file_malformed_filenames(self):
+        """Test TestCase.from_file with malformed filenames."""
+        # Test various malformed filenames
+        malformed_names = [
+            "not_a_test_file.json",
+            "test_invalid.json",
+            "test_cov_gen.json",
+            "test_cov12345.json",
+            "test_cov12345_gen.json",
+            "test_cov12345_genX.json",
+            "test_cov12345_gen3.txt",
+            "random.txt",
+            "test_cov_gen3.json",  # Missing hash
+            "test_cov12_34_gen3.json",  # Hash with underscore
+        ]
+
+        for bad_filename in malformed_names:
+            filepath = os.path.join(self.temp_corpus_dir, bad_filename)
+            with open(filepath, 'w') as f:
+                f.write('{"dummy": "data"}')
+
+            result = corpus.TestCase.from_file(bad_filename, self.temp_corpus_dir)
+            assert result is None, "Should reject malformed filename: %s" % bad_filename
+
+    def test_testcase_from_file_corrupted_json(self):
+        """Test TestCase.from_file with corrupted JSON files."""
+        filename = "test_cov999_gen0.json"
+        filepath = os.path.join(self.temp_corpus_dir, filename)
+
+        # Write invalid JSON
+        with open(filepath, 'w') as f:
+            f.write('{"invalid": json content}')  # Missing quotes, invalid syntax
+
+        result = corpus.TestCase.from_file(filename, self.temp_corpus_dir)
+        assert result is None
+
+    def test_testcase_from_file_missing_file(self):
+        """Test TestCase.from_file with non-existent file."""
+        result = corpus.TestCase.from_file("test_covdoesnotexist_gen0.json", self.temp_corpus_dir)
+        assert result is None
+
+    def test_testcase_from_file_different_generations(self):
+        """Test TestCase.from_file with different generation numbers."""
+        bool_val = objects.BoolV(False, typ=p4specast.BoolT.INSTANCE, vid=99)
+        json_content = rpyjson.dumps(bool_val.tojson())
+
+        test_cases = [
+            ("test_covabc123_gen0.json", 0),  # Seed
+            ("test_covabc456_gen1.json", 1),  # First generation
+            ("test_covabc789_gen999.json", 999),  # High generation
+        ]
+
+        for filename, expected_gen in test_cases:
+            filepath = os.path.join(self.temp_corpus_dir, filename)
+            with open(filepath, 'w') as f:
+                f.write(json_content)
+
+            test_case = corpus.TestCase.from_file(filename, self.temp_corpus_dir)
+            assert test_case is not None
+            assert test_case.generation == expected_gen
+
+    def test_testcase_from_file_different_coverage_hashes(self):
+        """Test TestCase.from_file with different coverage hash formats."""
+        bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=123)
+        json_content = rpyjson.dumps(bool_val.tojson())
+
+        valid_hashes = [
+            "a1b2c3",
+            "deadbeef",
+            "123456789",
+            "mixedCASE123",
+            "special!@#$%",  # Special chars are allowed (printable ASCII)
+        ]
+
+        for coverage_hash in valid_hashes:
+            filename = "test_cov%s_gen0.json" % coverage_hash
+            filepath = os.path.join(self.temp_corpus_dir, filename)
+            with open(filepath, 'w') as f:
+                f.write(json_content)
+
+            test_case = corpus.TestCase.from_file(filename, self.temp_corpus_dir)
+            assert test_case is not None
+            assert test_case.coverage_hash == coverage_hash
