@@ -270,15 +270,20 @@ def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
                             coverage_hash=result.coverage_hash,
                             generation=parent_generation + 1
                         )
-                        if crash_filename and stats.seen_error_messages[result.error_msg] == 1:
-                            print("Saved crash as: %s" % crash_filename)
+                        if crash_filename:
+                            # Increment parent's descendant count
+                            selected.descendants_produced += 1
+                            if stats.seen_error_messages[result.error_msg] == 1:
+                                print("Saved crash as: %s" % crash_filename)
                         if result.ctx is not None:
                             for pid in result.ctx._cover.pidset_hit.to_list():
                                 if stats.is_new_coverage((pid, 'error hit')):
                                     print("NEW ERROR HIT at iteration %d: %s (total %s)" % (iteration, pid, len(stats.seen_coverage)))
+                                    selected.descendants_produced += 1
                             for pid in result.ctx._cover.pidset_miss.to_list():
                                 if stats.is_new_coverage((pid, 'error miss')):
                                     print("NEW ERROR MISS at iteration %d: %s (total %s)" % (iteration, pid, len(stats.seen_coverage)))
+                                    selected.descendants_produced += 1
 
                     elif result.timed_out:
                         stats.timeouts += 1
@@ -288,9 +293,11 @@ def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
                             for pid in result.ctx._cover.pidset_hit.to_list():
                                 if stats.is_new_coverage((pid, 'hit')):
                                     print("NEW HIT at iteration %d: %s (total %s)" % (iteration, pid, len(stats.seen_coverage)))
+                                    selected.descendants_produced += 1
                             for pid in result.ctx._cover.pidset_miss.to_list():
                                 if stats.is_new_coverage((pid, 'miss')):
                                     print("NEW MISS at iteration %d: %s (total %s)" % (iteration, pid, len(stats.seen_coverage)))
+                                    selected.descendants_produced += 1
                         # Check if this is new interesting coverage
                         saved_filename = fuzz_corpus.add_test_case(
                             mutated_value,
@@ -299,6 +306,8 @@ def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
                         )
 
                         if saved_filename:
+                            # Increment parent's descendant count
+                            selected.descendants_produced += 1
                             stats.new_coverage_found += 1
                             print("New coverage at iteration %d: %s" % (iteration, saved_filename))
 

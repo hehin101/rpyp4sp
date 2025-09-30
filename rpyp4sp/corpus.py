@@ -60,6 +60,7 @@ class TestCase(object):
         self.coverage_hash = coverage_hash  # str
         self.generation = generation  # int
         self.filename = filename  # str
+        self.descendants_produced = 0  # int - count of new test cases produced from this one
 
     @staticmethod
     def from_file(filename, corpus_dir):
@@ -194,6 +195,7 @@ class FuzzCorpus(object):
 
         return filename
 
+
     def load_corpus(self):
         """Load all test cases from the corpus directory."""
         self.test_cases = []
@@ -262,11 +264,13 @@ class FuzzCorpus(object):
             frequency = self.coverage_seen.get(test_case.coverage_hash, 1)
             rarity_weight = 1.0 / frequency
 
+            # Productivity bonus: test cases that produced more descendants get higher weight
+            productivity_weight = 1.0 + test_case.descendants_produced
+
             # Combined weight
-            total_weight = recency_weight * rarity_weight
+            total_weight = recency_weight * rarity_weight * productivity_weight
             weights.append(int(total_weight * 1000))  # Scale and convert to int for randint
 
-        print(weights)
         return weighted_random_choice(self.test_cases, weights, rng)
 
     def get_stats(self):
