@@ -249,17 +249,18 @@ class FuzzCorpus(object):
 
         # Calculate weights based on recency and rarity
         weights = []
-        max_generation = 1.0
-        for test_case in test_cases:
+        max_generation = 0
+        for test_case in self.test_cases:
             if test_case.generation > max_generation:
                 max_generation = test_case.generation
 
         for test_case in self.test_cases:
             # Recency bonus: newer generations get higher weight
-            recency_weight = 1.0 + (test_case.generation / max_generation)
+            recency_weight = 1.0 + (test_case.generation / max(max_generation, 1.0))
 
-            # Since we only keep one test case per coverage hash, all have frequency 1
-            rarity_weight = 1.0
+            # Rarity bonus: less frequent coverage gets higher weight
+            frequency = self.coverage_seen.get(test_case.coverage_hash, 1)
+            rarity_weight = 1.0 / frequency
 
             # Combined weight
             total_weight = recency_weight * rarity_weight
