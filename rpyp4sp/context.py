@@ -61,14 +61,14 @@ class TDenvDict(object):
         self._keys = keys # type: EnvKeys
 
     def get(self, id_value):
-        # type: (str) -> tuple[list, p4specast.DefTyp]
+        # type: (str) -> tuple[list[p4specast.TParam], p4specast.DefTyp]
         pos = self._keys.get_pos(id_value, '')
         if pos < 0:
             raise P4ContextError('id_value %s does not exist' % (id_value))
         return self._get_list(pos)
 
     def set(self, id_value, typdef):
-        # type: (str, tuple[list, p4specast.DefTyp]) -> TDenvDict
+        # type: (str, tuple[list[p4specast.TParam], p4specast.DefTyp]) -> TDenvDict
         pos = self._keys.get_pos(id_value, '')
         if pos < 0:
             keys = self._keys.add_key(id_value, '')
@@ -84,7 +84,7 @@ class TDenvDict(object):
         return pos >= 0
 
     def bindings(self):
-        # type: () -> list[tuple[str, tuple[list, p4specast.DefTyp]]]
+        # type: () -> list[tuple[str, tuple[list[p4specast.TParam], p4specast.DefTyp]]]
         bindings = []
         for ((id_value, _), pos) in self._keys.keys.items():
             bindings.append((id_value, self._get_list(pos)))
@@ -203,7 +203,7 @@ class Context(object):
         return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
 
     def find_value_local(self, id, iterlist=p4specast.IterList.EMPTY, vare_cache=None):
-        # type: (p4specast.Id, list[p4specast.Iter], p4specast.VarE | None) -> objects.BaseV
+        # type: (p4specast.Id, list[p4specast.IterList], p4specast.VarE | None) -> objects.BaseV
         var_iter = iterlist.to_key()
         if vare_cache is not None and vare_cache._ctx_keys is self.venv_keys:
             pos = vare_cache._ctx_index
@@ -217,13 +217,13 @@ class Context(object):
         return self._get_list(pos)
 
     def bound_value_local(self, id, iterlist):
-        # type: (p4specast.Id, list[p4specast.Iter]) -> bool
+        # type: (p4specast.Id, list[p4specast.IterList]) -> bool
         pos = self.venv_keys.get_pos(id.value, iterlist.to_key())
         return pos >= 0
 
     # TODO: why Id and not Tparam?
     def find_typdef_local(self, id):
-        # type: (p4specast.Id) -> tuple[list, p4specast.DefTyp]
+        # type: (p4specast.Id) -> tuple[list[p4specast.TParam], p4specast.DefTyp]
         if self.tdenv.has_key(id.value):
             typdef = self.tdenv.get(id.value)
         else:
@@ -234,7 +234,7 @@ class Context(object):
         return self.glbl.renv[id.value]
 
     def add_value_local(self, id, iterlist, value, vare_cache=None):
-        # type: (p4specast.Id, list, objects.BaseV, p4specast.VarE | None) -> Context
+        # type: (p4specast.Id, p4specast.IterList, objects.BaseV, p4specast.VarE | None) -> Context
         if vare_cache is not None and vare_cache._ctx_keys_add is self.venv_keys:
             venv_keys = vare_cache._ctx_keys_next
             return self.copy_and_change_append_venv(value, venv_keys)
