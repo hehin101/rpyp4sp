@@ -1435,7 +1435,10 @@ class IterT(Type):
         return "%s%s" % (self.typ.tostring(), string_of_iter(self.iter))
 
     def __repr__(self):
-        return "p4specast.IterT(%r, %r)" % (self.typ, self.iter)
+        if isinstance(self.iter, List):
+            return "%r.list_of()" % (self.typ, )
+        else:
+            return "%r.opt_of()" % (self.typ, )
 
     def _tojson_content(self):
         from rpyp4sp import rpyjson

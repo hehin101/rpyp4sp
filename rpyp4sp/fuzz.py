@@ -1,4 +1,5 @@
 """Greybox fuzzing main loop for P4 interpreter."""
+from __future__ import print_function
 
 import os
 import sys
@@ -253,7 +254,7 @@ def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
             for mutation_attempt in range(config.mutation_budget):
                 try:
                     # Mutate the selected value
-                    mutated_value = mutatevalues.mutate(parent_value, rng)
+                    mutated_value = mutatevalues.mutate(parent_value, rng, ctx=ctx)
                     stats.test_cases_run += 1
 
                     # Run mutated test case
@@ -316,6 +317,7 @@ def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
                         fuzz_corpus.minimize_corpus(config.corpus_max_size)
 
                 except Exception as e:
+                    #import pdb; pdb.xpm()
                     # Mutation or execution error - continue to next attempt
                     print("Mutation error at iteration %d: %s" % (iteration, str(e)))
                     continue
