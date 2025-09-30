@@ -82,7 +82,7 @@ class EnvKeys(object):
 
 EnvKeys.EMPTY = EnvKeys({})
 
-@smalllist.inline_small_list(immutable=True)
+@smalllist.inline_small_list(immutable=True, nonull=True, append_list_unroll_safe=True)
 class TDenvDict(object):
     def __init__(self, keys=EnvKeys.EMPTY):
         self._keys = keys # type: EnvKeys
@@ -141,7 +141,7 @@ TDenvDict.EMPTY = TDenvDict()
 
 TDenvDict.EMPTY = TDenvDict.make0()
 
-@smalllist.inline_small_list(immutable=True)
+@smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
 class FenvDict(object):
     def __init__(self, keys=EnvKeys.EMPTY):
         self._keys = keys # type: EnvKeys
@@ -168,7 +168,6 @@ class FenvDict(object):
     def has_key(self, id_value):
         # type: (str) -> bool
         pos = jit.promote(self._keys).get_pos(id_value, '')
-        pos = self._keys.get_pos(id_value, '')
         return pos >= 0
 
     def __repr__(self):
@@ -194,7 +193,7 @@ FenvDict.EMPTY = FenvDict()
 
 FenvDict.EMPTY = FenvDict.make0()
 
-@smalllist.inline_small_list(immutable=True)
+@smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
 class Context(object):
     _immutable_fields_ = ['glbl', 'values_input[*]',
                           'tdenv', 'fenv', 'venv_keys']
@@ -254,7 +253,7 @@ class Context(object):
     def bound_value_local(self, id, iterlist):
         # type: (p4specast.Id, list[p4specast.Iter]) -> bool
         jit.promote(id)
-        pos = self.venv_keys.get_pos(id.value, iterlist.to_key())
+        pos = jit.promote(self.venv_keys).get_pos(id.value, iterlist.to_key())
         return pos >= 0
 
     # TODO: why Id and not Tparam?
@@ -280,7 +279,7 @@ class Context(object):
         var_iter = iterlist.to_key()
         venv_keys = jit.promote(self.venv_keys)
         length = jit.promote(self._get_size_list())
-        pos = self.venv_keys.get_pos(id.value, var_iter)
+        pos = venv_keys.get_pos(id.value, var_iter)
         if pos < 0:
             venv_keys = self.venv_keys.add_key(id.value, var_iter)
             if not jit.we_are_jitted() and vare_cache:

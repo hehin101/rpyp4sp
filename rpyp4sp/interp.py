@@ -621,7 +621,7 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
         id_binding = var_binding.id
         typ_binding = var_binding.typ
         iters_binding = var_binding.iter
-        value_binding = objects.ListV.make(values_binding_item[:], typ_binding)
+        value_binding = objects.ListV.make(values_binding_item, typ_binding)
         ctx = ctx.add_value_local(id_binding, iters_binding.append_list(), value_binding)
     return ctx
 
@@ -634,14 +634,16 @@ jitdriver_eval_let_list_loop = jit.JitDriver(
     name='eval_let_list_loop', get_printable_location=get_printable_location)
 
 def _eval_let_list_loop(ctx, ctxs_sub, vars_binding_list, exp_l, exp_r, iterexps_t):
-    values_binding = [[] for _ in vars_binding_list.vars]
+    values_binding = [[None] * ctxs_sub.length for _ in vars_binding_list.vars]
+    j = 0
     for ctx_sub in ctxs_sub:
         jitdriver_eval_let_list_loop.jit_merge_point(exp_l=exp_l, exp_r=exp_r, vars_binding_list=vars_binding_list)
         ctx_sub = eval_let_iter_tick(ctx_sub, exp_l, exp_r, iterexps_t)
         ctx = ctx.commit(ctx_sub)
         for i, var_binding in enumerate(vars_binding_list.vars):
             value_binding = ctx_sub.find_value_local(var_binding.id, var_binding.iter)
-            values_binding[i].append(value_binding)
+            values_binding[i][j] = value_binding
+        j += 1
     return ctx, values_binding
 
 
