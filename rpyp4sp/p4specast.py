@@ -1345,7 +1345,6 @@ NumTyp, NatT, IntT = define_enum('NumTyp', 'NatT', 'IntT')
 #   | FuncT                   (* `func` *)
 
 class Type(AstBase):
-    _attrs_ = ['region']
     # has a .region, but only sometimes (eg exp uses typ')
 
     _attr_ = ['region', '_iterlist', '_iteropt']
