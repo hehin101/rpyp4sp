@@ -59,7 +59,7 @@ class FuzzStats(object):
         self.timeouts = 0
         self.start_time = time.time()
         self.seen_error_messages = {}  # Dict mapping error message -> count
-        self.seen_coverage = {}  # key -> count
+        self.seen_coverage = {'error hit': {}, 'error miss': {}, 'hit': {}, 'miss': {}}  # kind -> key -> count
 
     def get_runtime(self):
         return time.time() - self.start_time
@@ -73,13 +73,14 @@ class FuzzStats(object):
             self.seen_error_messages[error_msg] = 1
             return True
 
-    def is_new_coverage(self, key):
-        if key in self.seen_coverage:
-            self.seen_coverage[key] += 1
-            return False
+    def if_new_return_total_size(self, pid, kind):
+        d = self.seen_coverage[kind]
+        if pid in d:
+            d[pid] += 1
+            return 0
         else:
-            self.seen_coverage[key] = 1
-            return True
+            d[pid] = 1
+            return len(d)
 
 
     def print_stats(self):
@@ -280,12 +281,14 @@ def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
                                 print("Saved crash as: %s" % crash_filename)
                         if result.ctx is not None:
                             for pid in result.ctx._cover.pidset_hit.to_list():
-                                if stats.is_new_coverage((pid, 'error hit')):
-                                    print("NEW ERROR HIT at iteration %d: %s (total %s)" % (iteration, pid, len(stats.seen_coverage)))
+                                total = stats.if_new_return_total_size(pid, 'error hit')
+                                if total:
+                                    print("NEW ERROR HIT at iteration %d: %s (total %s)" % (iteration, pid, total))
                                     selected.descendants_produced += 1
                             for pid in result.ctx._cover.pidset_miss.to_list():
-                                if stats.is_new_coverage((pid, 'error miss')):
-                                    print("NEW ERROR MISS at iteration %d: %s (total %s)" % (iteration, pid, len(stats.seen_coverage)))
+                                total = stats.if_new_return_total_size(pid, 'error miss')
+                                if total:
+                                    print("NEW ERROR MISS at iteration %d: %s (total %s)" % (iteration, pid, total))
                                     selected.descendants_produced += 1
 
                     elif result.timed_out:
@@ -294,12 +297,14 @@ def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
                     else:
                         if result.ctx is not None:
                             for pid in result.ctx._cover.pidset_hit.to_list():
-                                if stats.is_new_coverage((pid, 'hit')):
-                                    print("NEW HIT at iteration %d: %s (total %s)" % (iteration, pid, len(stats.seen_coverage)))
+                                total = stats.if_new_return_total_size(pid, 'hit')
+                                if total:
+                                    print("NEW HIT at iteration %d: %s (total %s)" % (iteration, pid, total))
                                     selected.descendants_produced += 1
                             for pid in result.ctx._cover.pidset_miss.to_list():
-                                if stats.is_new_coverage((pid, 'miss')):
-                                    print("NEW MISS at iteration %d: %s (total %s)" % (iteration, pid, len(stats.seen_coverage)))
+                                total = stats.if_new_return_total_size(pid, 'miss')
+                                if total:
+                                    print("NEW MISS at iteration %d: %s (total %s)" % (iteration, pid, total))
                                     selected.descendants_produced += 1
                         # Check if this is new interesting coverage
                         saved_filename = fuzz_corpus.add_test_case(
