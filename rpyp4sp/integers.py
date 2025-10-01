@@ -1,4 +1,5 @@
 import sys
+from rpyp4sp.error import P4BuiltinError
 from rpython.rlib.rbigint import rbigint, _divrem as bigint_divrem, ONERBIGINT, \
         _divrem1 as bigint_divrem1, intsign, int_in_valid_range
 from rpython.rlib.rarithmetic import r_uint, intmask, string_to_int, ovfcheck, \
@@ -154,11 +155,13 @@ class SmallInteger(Integer):
             return other.mul(self)
 
     def rshift(self, i):
-        assert i >= 0
+        if i < 0:
+            raise P4BuiltinError("negative shift amount")
         return SmallInteger(self.val >> i)
 
     def lshift(self, i):
-        assert i >= 0
+        if i < 0:
+            raise P4BuiltinError("negative shift amount")
         return self.lshift_i_i(self.val, i)
 
     def mod(self, other):
@@ -357,11 +360,14 @@ class BigInteger(Integer):
         return shift
 
     def rshift(self, i):
-        assert i >= 0
+        if i < 0:
+            raise P4BuiltinError("negative shift amount")
         # XXX should we check whether it fits in a SmallInteger now?
         return BigInteger(self.rval.rshift(i))
 
     def lshift(self, i):
+        if i < 0:
+            raise P4BuiltinError("negative shift amount")
         return BigInteger(self.rval.lshift(i))
 
     def mod(self, other):
