@@ -137,7 +137,7 @@ def test_conse_fresh_tids():
 def test_check_arity():
     name = 'check_arity'
     input_values = [objects.ListV.make([], 4811, p4specast.IterT(p4specast.IterT(p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 21, 7), p4specast.Position('spec/1a-syntax-el.watsup', 21, 9))), []), p4specast.Opt()), p4specast.List())), objects.ListV.make([], 4812, p4specast.IterT(p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 21, 7), p4specast.Position('spec/1a-syntax-el.watsup', 21, 9))), []), p4specast.List()))]
-    res = objects.BoolV(True, p4specast.BoolT.INSTANCE, 4819)
+    res = objects.BoolV.make(True, p4specast.BoolT.INSTANCE, 4819)
     ctx = make_context()
     func = ctx.glbl.fenv[name]
     _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
@@ -148,7 +148,7 @@ def test_check_arity():
     assert value.eq(res)
 
 
-    res = objects.BoolV(False, p4specast.BoolT.INSTANCE, 4803)
+    res = objects.BoolV.make(False, p4specast.BoolT.INSTANCE, 4803)
     name = 'check_arity_more'
     func = ctx.glbl.fenv[name]
     _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)

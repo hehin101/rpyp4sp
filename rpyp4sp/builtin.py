@@ -141,7 +141,7 @@ def lists_rev_(ctx, targs, values_input):
         return value
     lst = lst[:]
     lst.reverse()
-    return objects.ListV.make(lst, value.typ)
+    return objects.ListV.make(lst, value.get_typ())
 
 
 @register_builtin("concat_")
@@ -151,7 +151,7 @@ def lists_concat_(ctx, targs, values_input):
     res = []
     for list_value in lists:
         res.extend(list_value.get_list())
-    typ = value.typ
+    typ = value.get_typ()
     assert isinstance(typ, p4specast.IterT)
     return objects.ListV.make(res[:], typ.typ)
 
@@ -160,13 +160,13 @@ def lists_distinct_(ctx, targs, values_input):
     value, = values_input
     lst = value.get_list()
     if len(lst) <= 1:
-        return objects.BoolV(True, p4specast.BoolT.INSTANCE)
+        return objects.BoolV.TRUE
     # naive quadratic implementation using .eq
     for i in range(len(lst)):
         for j in range(i + 1, len(lst)):
             if lst[i].eq(lst[j]):
-                return objects.BoolV(False, p4specast.BoolT.INSTANCE)
-    return objects.BoolV(True, p4specast.BoolT.INSTANCE)
+                return objects.BoolV.FALSE
+    return objects.BoolV.TRUE
 
 @register_builtin("partition_")
 def lists_partition_(ctx, targs, values_input):
@@ -214,8 +214,8 @@ def _extract_set_elems(set_value):
 
 def _wrap_set_elems(elems, set_value_for_types):
     assert isinstance(set_value_for_types, objects.CaseV)
-    lst_value = objects.ListV.make(elems[:], set_value_for_types._get_list(0).typ)
-    return objects.CaseV.make1(lst_value, set_value_for_types.mixop, set_value_for_types.typ)
+    lst_value = objects.ListV.make(elems[:], set_value_for_types._get_list(0).get_typ())
+    return objects.CaseV.make1(lst_value, set_value_for_types.mixop, set_value_for_types.get_typ())
 
 @register_builtin("intersect_set")
 def sets_intersect_set(ctx, targs, values_input):
@@ -316,8 +316,8 @@ def sets_sub_set(ctx, targs, values_input):
             if el.eq(el2):
                 break
         else:
-            return objects.BoolV(False, p4specast.BoolT.INSTANCE)
-    return objects.BoolV(True, p4specast.BoolT.INSTANCE)
+            return objects.BoolV.FALSE
+    return objects.BoolV.TRUE
 
 @register_builtin("eq_set")
 def sets_eq_set(ctx, targs, values_input):
@@ -325,14 +325,14 @@ def sets_eq_set(ctx, targs, values_input):
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
     if len(elems_l) != len(elems_r):
-        return objects.BoolV(False, p4specast.BoolT.INSTANCE)
+        return objects.BoolV.FALSE
     for el in elems_l:
         for el2 in elems_r:
             if el.eq(el2):
                 break
         else:
-            return objects.BoolV(False, p4specast.BoolT.INSTANCE)
-    return objects.BoolV(True, p4specast.BoolT.INSTANCE)
+            return objects.BoolV.FALSE
+    return objects.BoolV.TRUE
 
 # _________________________________________________________________
 
@@ -427,7 +427,7 @@ def maps_add_map(ctx, targs, values_input):
             assert 0, 'unreachable'
     else:
         res.append(new_pair)
-    list_value = objects.ListV.make(res[:], new_pair.typ.list_of())
+    list_value = objects.ListV.make(res[:], new_pair.get_typ().list_of())
     return objects.CaseV.make1(list_value, map_mixop, p4specast.VarT(map_id, targs))
 
 

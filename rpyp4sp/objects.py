@@ -30,7 +30,7 @@ class SubBase(object):
     _attrs_ = []
 
 class BaseV(SubBase):
-    _attrs_ = ['typ', 'vid']
+    _attrs_ = ['vid']
     # vid: int
     # typ: p4specast.Type
     @staticmethod
@@ -60,6 +60,9 @@ class BaseV(SubBase):
         else:
             raise P4UnknownTypeError("Unknown content type")
         return value
+
+    def get_typ(self):
+        raise NotImplementedError("abstract base class")
 
     def get_bool(self):
         raise TypeError("not a bool")
@@ -98,15 +101,32 @@ class BaseV(SubBase):
     def __str__(self):
         return self.tostring()
 
+class BaseVWithTyp(BaseV):
+    _attrs_ = ['typ']
+
+    def get_typ(self):
+        return self.typ
 
 class BoolV(BaseV):
     _compare_tag = 0
 
-    def __init__(self, value, typ=None, vid=-1):
+    _attrs_ = ['value']
+
+    def __init__(self, value, vid=-1):
         # TODO: assign a vid if the argument is -1
         self.value = value # type: bool
         self.vid = vid # type: int
-        self.typ = typ # type: p4specast.Type | None
+
+
+    @staticmethod
+    def make(value, typ, vid=-1):
+        if isinstance(typ, p4specast.BoolT):
+            if value:
+                return BoolV.TRUE
+            else:
+                return BoolV.FALSE
+        else:
+            return BoolVWithTyp(value, typ, vid)
 
     def compare(self, other):
         if not isinstance(other, BoolV):
@@ -122,7 +142,7 @@ class BoolV(BaseV):
         return self.value
 
     def __repr__(self):
-        return "objects.BoolV(%r, %r, %r)" % (self.value, self.typ, self.vid)
+        return "objects.BoolV.make(%r, %r, %r)" % (self.value, self.get_typ(), self.vid)
 
     def tostring(self, short=False, level=0):
         # | BoolV b -> string_of_bool b
@@ -130,9 +150,21 @@ class BoolV(BaseV):
 
     @staticmethod
     def fromjson(content, typ, vid):
-        return BoolV(content.get_list_item(1).value_bool(), typ, vid)
+        return BoolV.make(content.get_list_item(1).value_bool(), typ, vid)
 
-class NumV(BaseV):
+BoolV.TRUE = BoolV(True)
+BoolV.FALSE = BoolV(False)
+
+class BoolVWithTyp(BoolV):
+    _attrs_ = ['typ']
+    def __init__(self, value, typ, vid=-1):
+        BoolV.__init__(self, value, vid)
+        self.typ = typ
+
+    def get_typ(self):
+        return self.typ
+
+class NumV(BaseVWithTyp):
     def __init__(self, value, what, typ=None, vid=-1):
         self.value = value # type: integers.Integer
         assert isinstance(what, p4specast.NumTyp)
@@ -174,7 +206,7 @@ class NumV(BaseV):
         value = inner.get_list_item(1).value_string()
         return NumV.fromstr(value, what, typ, vid)
 
-class TextV(BaseV):
+class TextV(BaseVWithTyp):
     def __init__(self, value, typ=None, vid=-1):
         self.value = value #type: str
         self.vid = vid # type: int
@@ -256,7 +288,7 @@ StructMap.EMPTY = StructMap({})
 
 
 @inline_small_list(immutable=True)
-class StructV(BaseV):
+class StructV(BaseVWithTyp):
     _immutable_fields_ = ['map']
 
     @jit.unroll_safe
@@ -346,7 +378,7 @@ class StructV(BaseV):
         return compares(self._get_full_list(), other._get_full_list())
 
 @inline_small_list(immutable=True)
-class CaseV(BaseV):
+class CaseV(BaseVWithTyp):
     _immutable_fields_ = ['mixop']
     def __init__(self, mixop, typ=None, vid=-1):
         self.mixop = mixop # type: p4specast.MixOp
@@ -414,7 +446,7 @@ class CaseV(BaseV):
 
 
 @inline_small_list(immutable=True)
-class TupleV(BaseV):
+class TupleV(BaseVWithTyp):
     def __init__(self, typ=None, vid=-1):
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
@@ -448,7 +480,7 @@ class TupleV(BaseV):
         elements = [BaseV.fromjson(e) for e in content.get_list_item(1).value_array()]
         return TupleV.make(elements, typ, vid)
 
-class OptV(BaseV):
+class OptV(BaseVWithTyp):
     def __init__(self, value, typ=None, vid=-1):
         self.value = value # type: BaseV | None
         self.vid = vid # type: int
@@ -489,7 +521,7 @@ class OptV(BaseV):
 
 # just optimize lists of size 0, 1, arbitrary
 @inline_small_list(immutable=True, sizemax=2)
-class ListV(BaseV):
+class ListV(BaseVWithTyp):
     def __init__(self, typ=None, vid=-1):
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
@@ -545,7 +577,7 @@ class ListV(BaseV):
         return ListV.make(elements, typ, vid)
 
 
-class FuncV(BaseV):
+class FuncV(BaseVWithTyp):
     def __init__(self, id, typ=None, vid=-1):
         self.id = id # type: p4specast.Id
         self.vid = vid # type: int
