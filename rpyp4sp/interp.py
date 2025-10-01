@@ -139,10 +139,10 @@ def eval_args(ctx, args):
     #     let ctx, value = eval_arg ctx arg in
     #     (ctx, values @ [ value ]))
     #   (ctx, []) args
-    values = []
-    for arg in args:
+    values = [None] * len(args)
+    for i, arg in enumerate(args):
         ctx, value = eval_arg(ctx, arg)
-        values.append(value)
+        values[i] = value
     return ctx, values
 
 # ____________________________________________________________
@@ -384,7 +384,7 @@ def eval_cases(ctx, exp, cases, cases_exps):
     # returns  Ctx.t * instr list option * value =
     # cases
     block_match = None
-    values_cond = []
+    #values_cond = []
     # |> List.fold_left
     for i, case in enumerate(cases):
         #  (fun (ctx, block_match, values_cond) (guard, block) ->
@@ -400,7 +400,7 @@ def eval_cases(ctx, exp, cases, cases_exps):
         #        let ctx, value_cond = eval_exp ctx exp_cond in
         ctx, value_cond = eval_exp(ctx, exp_cond)
         #        let values_cond = values_cond @ [ value_cond ] in
-        values_cond.append(values_cond)
+        #values_cond.append(values_cond)
         #        let cond = Value.get_bool value_cond in
         cond = value_cond.get_bool()
         #        if cond then (ctx, Some block, values_cond)
@@ -1278,10 +1278,10 @@ def eval_exps(ctx, exps):
     #     let ctx, value = eval_exp ctx exp in
     #     (ctx, values @ [ value ]))
     #   (ctx, []) exps
-    values = []
-    for exp in exps:
+    values = [None] * len(exps)
+    for i, exp in enumerate(exps):
         ctx, value = eval_exp(ctx, exp)
-        values.append(value)
+        values[i] = value
     return ctx, values
 
 class __extend__(p4specast.Exp):
@@ -1721,11 +1721,11 @@ class __extend__(p4specast.StrE):
         # let ctx, values = eval_exps ctx exps in
         # let fields = List.combine atoms values in
         map = objects.StructMap.EMPTY
-        values = []
-        for (atom, exp) in self.fields:
+        values = [None] * len(self.fields)
+        for i, (atom, exp) in enumerate(self.fields):
             ctx, value = eval_exp(ctx, exp)
             map = map.add_field(atom.value)
-            values.append(value)
+            values[i] = value
         # let value_res =
         #   let vid = Value.fresh () in
         #   let typ = note in
