@@ -2249,16 +2249,4 @@ def upcast(ctx, typ, value):
 
 
 def mixop_eq(a, b):
-    phrasesa = a.phrases
-    phrasesb = b.phrases
-    if len(phrasesa) != len(phrasesb):
-        return False
-    for i, suba in enumerate(phrasesa):
-        subb = phrasesb[i]
-        if len(suba) != len(subb):
-            return False
-        for j, atoma in enumerate(suba):
-            atomb = subb[j]
-            if atoma.value != atomb.value:
-                return False
-    return True
+    return a.tostring() == b.tostring()

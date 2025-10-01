@@ -2437,6 +2437,7 @@ class DotP(Path):
 class MixOp(AstBase):
     def __init__(self, phrases):
         self.phrases = phrases # type: list[list[AtomT]]
+        self._str = None
 
     def compare(self, other):
         # type: (MixOp, MixOp) -> int
@@ -2483,12 +2484,15 @@ class MixOp(AstBase):
     def __repr__(self):
         return "p4specast.MixOp(%r)" % (self.phrases,)
 
+    @jit.elidable
     def tostring(self):
-        mixop = self.phrases
-        smixop = "%".join(
-            ["".join([atom.value for atom in atoms]) for atoms in mixop]
-        )
-        return "`" + smixop + "`"
+        if self._str is None:
+            mixop = self.phrases
+            smixop = "%".join(
+                ["".join([atom.value for atom in atoms]) for atoms in mixop]
+            )
+            self._str = "`" + smixop + "`"
+        return self._str
 
     def __str__(self):
         return self.tostring()
