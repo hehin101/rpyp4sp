@@ -110,6 +110,13 @@ class Position(AstBase):
     def has_information(self):
         return self.file != '' or self.line != 0 or self.column != 0
 
+    def eq(self, other):
+        if not isinstance(other, Position):
+            return False
+        return (self.file == other.file and
+                self.line == other.line and
+                self.column == other.column)
+
     def __repr__(self):
         return "p4specast.Position(%r, %d, %d)" % (self.file, self.line, self.column)
 
@@ -145,6 +152,13 @@ class Region(AstBase):
     def has_information(self):
         return self.left.has_information() or self.right.has_information()
 
+    def eq(self, other):
+        if self is other:
+            return True
+        if not isinstance(other, Region):
+            return False
+        return self.left.eq(other.left) and self.right.eq(other.right)
+
     def __repr__(self):
         if self.left.has_information() or self.right.has_information():
             if self.left.file == self.right.file and self.left.line == self.right.line:
@@ -179,11 +193,18 @@ class Id(AstBase):
           "right": { "file": "spec/0-aux.watsup", "line": 18, "column": 9 }
         }
       },"""
+        id_value = value.get_dict_value('it').value_string()
         region = Region.fromjson(value.get_dict_value('at'), cache)
-        return Id(
-            value.get_dict_value('it').value_string(),
-            region
-        )
+
+        if cache is not None:
+            cached_id = cache.id_cache.get(id_value)
+            if cached_id is not None and cached_id.region.eq(region):
+                return cached_id
+
+        result = Id(id_value, region)
+        if cache is not None:
+            cache.id_cache[id_value] = result
+        return result
 
     def __repr__(self):
         return "p4specast.Id(%r, %s)" % (self.value, self.region)
@@ -1395,10 +1416,23 @@ class VarT(Type):
 
     @staticmethod
     def fromjson(content, cache=None):
-        return VarT(
-            id=Id.fromjson(content.get_list_item(1), cache),
-            targs=[Type.fromjson(targ, cache) for targ in content.get_list_item(2).value_array()]
-        )
+        id = Id.fromjson(content.get_list_item(1), cache)
+        targs_array = content.get_list_item(2).value_array()
+
+        # Use cache if available and targs is empty
+        if cache is not None and len(targs_array) == 0:
+            cached_vart = cache.vart_cache.get(id)
+            if cached_vart is not None:
+                return cached_vart
+
+        targs = [Type.fromjson(targ, cache) for targ in targs_array]
+        vart = VarT(id=id, targs=targs)
+
+        # Cache only if targs is empty
+        if cache is not None and len(targs) == 0:
+            cache.vart_cache[id] = vart
+
+        return vart
 
 class TupleT(Type):
     def __init__(self, elts):
@@ -2617,3 +2651,9 @@ def _rename_fromjson_staticmethods():
         todo.extend(cls.__subclasses__())
 
 _rename_fromjson_staticmethods()
+
+
+class FromjsonCache(object):
+    def __init__(self):
+        self.id_cache = {}  # type: dict[str, Id]
+        self.vart_cache = {}  # type: dict[Id, VarT]

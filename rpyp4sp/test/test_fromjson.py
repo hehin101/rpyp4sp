@@ -41,3 +41,84 @@ def test_example_values_load():
     with open(fn) as f:
         value = loads(f.read())
     res = objects.BaseV.fromjson(value)
+
+
+def test_fromjson_cache():
+    from rpyp4sp.rpyjson import loads
+
+    # Test ID caching
+    cache = p4specast.FromjsonCache()
+
+    # Create two identical JSON representations of an ID
+    json_str = '{"it": "test_id", "note": null, "at": {"left": {"file": "", "line": 0, "column": 0}, "right": {"file": "", "line": 0, "column": 0}}}'
+    value1 = loads(json_str)
+    value2 = loads(json_str)
+
+    # Parse the same ID twice with cache
+    id1 = p4specast.Id.fromjson(value1, cache)
+    id2 = p4specast.Id.fromjson(value2, cache)
+
+    # Should return the same object instance due to caching
+    assert id1 is id2
+    assert id1.value == "test_id"
+    assert len(cache.id_cache) == 1
+
+    # Test with different region - should create new object
+    json_str_diff_region = '{"it": "test_id", "note": null, "at": {"left": {"file": "test.py", "line": 1, "column": 5}, "right": {"file": "test.py", "line": 1, "column": 10}}}'
+    value3 = loads(json_str_diff_region)
+    id3 = p4specast.Id.fromjson(value3, cache)
+
+    # Should be different object because region is different
+    assert id3 is not id1
+    assert id3.value == "test_id"
+    assert len(cache.id_cache) == 1  # Still only one entry because same value overwrites
+
+    # Test without cache - should always create new objects
+    id4 = p4specast.Id.fromjson(value1, None)
+    id5 = p4specast.Id.fromjson(value1, None)
+
+    assert id4 is not id5
+    assert id4.value == id5.value == "test_id"
+
+
+def test_vart_cache():
+    from rpyp4sp.rpyjson import loads
+
+    # Test VarT caching with empty targs
+    cache = p4specast.FromjsonCache()
+
+    # Create JSON representation of VarT with empty targs
+    json_str = '["VarT", {"it": "test_type", "note": null, "at": {"left": {"file": "", "line": 0, "column": 0}, "right": {"file": "", "line": 0, "column": 0}}}, []]'
+    value1 = loads(json_str)
+    value2 = loads(json_str)
+
+    # Parse the same VarT twice with cache
+    vart1 = p4specast.VarT.fromjson(value1, cache)
+    vart2 = p4specast.VarT.fromjson(value2, cache)
+
+    # Should return the same object instance due to caching (empty targs)
+    assert vart1 is vart2
+    assert vart1.id.value == "test_type"
+    assert len(vart1.targs) == 0
+    assert len(cache.vart_cache) == 1
+
+    # Test VarT with non-empty targs - should NOT be cached
+    json_str_with_targs = '["VarT", {"it": "test_type", "note": null, "at": {"left": {"file": "", "line": 0, "column": 0}, "right": {"file": "", "line": 0, "column": 0}}}, [["BoolT"]]]'
+    value3 = loads(json_str_with_targs)
+    value4 = loads(json_str_with_targs)
+
+    vart3 = p4specast.VarT.fromjson(value3, cache)
+    vart4 = p4specast.VarT.fromjson(value4, cache)
+
+    # Should be different objects because targs is not empty
+    assert vart3 is not vart4
+    assert vart3.id.value == "test_type"
+    assert len(vart3.targs) == 1
+    assert len(cache.vart_cache) == 1  # Still only one entry (the empty targs one)
+
+    # Test without cache - should always create new objects
+    vart5 = p4specast.VarT.fromjson(value1, None)
+    vart6 = p4specast.VarT.fromjson(value1, None)
+
+    assert vart5 is not vart6
+    assert vart5.id.value == vart6.id.value == "test_type"

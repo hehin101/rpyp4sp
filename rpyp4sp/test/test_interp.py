@@ -27,8 +27,9 @@ def load():
         file_content = {}
         spec_dirname = None
     defs = []
+    cache = p4specast.FromjsonCache()
     for i, d in enumerate(value.value_array()):
-        defs.append(p4specast.Def.fromjson(d))
+        defs.append(p4specast.Def.fromjson(d, cache))
     return defs, file_content, spec_dirname
 
 def make_context(loaded=[]):
