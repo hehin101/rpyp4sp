@@ -365,25 +365,12 @@ def generate_TupleV(typ, rng, ctx=None, maxdepth=10):
     """Generate a fresh TupleV from a TupleT type."""
     assert isinstance(typ, p4specast.TupleT)
 
-    if maxdepth <= 0:
-        # Generate minimal values for each type
-        content = []
-        for element_typ in typ.elts:
-            if isinstance(element_typ, p4specast.BoolT):
-                content.append(BoolV(False, element_typ))
-            elif isinstance(element_typ, p4specast.NumT):
-                content.append(NumV(integers.Integer.fromint(0), element_typ.typ, element_typ))
-            elif isinstance(element_typ, p4specast.TextT):
-                content.append(TextV("", element_typ))
-            else:
-                content.append(generate_value(element_typ, rng, ctx, 0))
-    else:
-        # Generate values for each element type
-        content = []
-        for element_typ in typ.elts:
-            content.append(generate_value(element_typ, rng, ctx, maxdepth))
+    # Generate values for each element type
+    content = []
+    for element_typ in typ.elts:
+        content.append(generate_value(element_typ, rng, ctx, maxdepth))
 
-    return TupleV.make(content, typ)
+    return TupleV.make(content[:], typ)
 
 def generate_value(typ, rng, ctx=None, maxdepth=-sys.maxint):
     """Dispatch to the appropriate generation function based on type."""
@@ -411,7 +398,6 @@ def generate_value(typ, rng, ctx=None, maxdepth=-sys.maxint):
         res.typ = typ
         return res
     else:
-        import pdb;pdb.set_trace()
         # For unknown types, raise an error for now
         raise NotImplementedError("Generation not implemented for type: %s" % typ.__class__.__name__)
 
