@@ -1122,6 +1122,8 @@ class CallE(Exp):
         self.func = func # typ: Id
         self.targs = targs
         self.args = args # typ: exp list
+        self._ctx_fenv_keys = None
+        self._ctx_func_res = None
 
     def tostring(self):
         # | Il.Ast.CallE (f, ts, as_) -> "$" ^ string_of_varid f ^ string_of_list_nl string_of_targ_inl ts ^ "(" ^ concat_map ", " string_of_arg as_ ^ ")"
@@ -1376,6 +1378,8 @@ class VarT(Type):
     def __init__(self, id, targs):
         self.id = id
         self.targs = targs
+        self._ctx_tdenv_keys = None
+        self._ctx_typ_res = (None, None)
 
     def tostring(self):
         # | VarT (typid, targs) -> string_of_typid typid ^ string_of_targs targs

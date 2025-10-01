@@ -49,7 +49,7 @@ def invoke_func_builtin(ctx, calle):
 def invoke_func_def(ctx, calle):
     from rpyp4sp.type_helpers import subst_typ_ctx
     # let tparams, args_input, instrs = Ctx.find_func Local ctx id in
-    func = ctx.find_func_local(calle.func)
+    func = ctx.find_func_local(calle.func, calle)
     # check (instrs <> []) id.at "function has no instructions";
     assert func.instrs
     # let ctx_local = Ctx.localize ctx in
@@ -2079,7 +2079,7 @@ def subtyp(ctx, typ, value):
     # | VarT (tid, targs) -> (
     if isinstance(typ, p4specast.VarT):
     #     let tparams, deftyp = Ctx.find_typdef Local ctx tid in
-        tparams, deftyp = ctx.find_typdef_local(typ.id)
+        tparams, deftyp = ctx.find_typdef_local(typ.id, typ)
     #     let theta = List.combine tparams targs |> TIdMap.of_list in
         assert tparams == []
         assert typ.targs == []
@@ -2143,7 +2143,7 @@ def downcast(ctx, typ, value):
             assert 0
     # | VarT (tid, targs) -> (
     if isinstance(typ, p4specast.VarT):
-        tparams, deftyp = ctx.find_typdef_local(typ.id)
+        tparams, deftyp = ctx.find_typdef_local(typ.id, typ)
         assert tparams == []
     #     let tparams, deftyp = Ctx.find_typdef Local ctx tid in
     #     let theta = List.combine tparams targs |> TIdMap.of_list in
@@ -2206,7 +2206,7 @@ def upcast(ctx, typ, value):
     #   | VarT (tid, targs) -> (
     if isinstance(typ, p4specast.VarT):
     #       let tparams, deftyp = Ctx.find_typdef Local ctx tid in
-        tparams, deftyp = ctx.find_typdef_local(typ.id)
+        tparams, deftyp = ctx.find_typdef_local(typ.id, typ)
     #       let theta = List.combine tparams targs |> TIdMap.of_list in
     #       match deftyp.it with
         if isinstance(deftyp, p4specast.PlainT):
