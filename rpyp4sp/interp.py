@@ -952,7 +952,6 @@ class __extend__(p4specast.HoldI):
         #  (* Evaluate the hold case, and restore the coverage information
         #     if the expected behavior is the relation not holding *)
         #  let vid = value_cond.note.vid in
-        vid = value_cond.vid
         #  match holdcase with
         #  | BothH (instrs_hold, instrs_not_hold) ->
         if isinstance(self.holdcase, p4specast.BothH):

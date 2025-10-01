@@ -30,33 +30,30 @@ class SubBase(object):
     _attrs_ = []
 
 class BaseV(SubBase):
-    _attrs_ = ['vid']
-    # vid: int
-    # typ: p4specast.Type
+    _attrs_ = []
     @staticmethod
     def fromjson(value):
         typ = p4specast.Type.fromjson(value.get_dict_value('note').get_dict_value('typ'))
-        vid = value.get_dict_value('note').get_dict_value('vid').value_int()
         content = value.get_dict_value('it')
         what = content.get_list_item(0).value_string()
         if what == 'BoolV':
-            value = BoolV.fromjson(content, typ, vid)
+            value = BoolV.fromjson(content, typ)
         elif what == 'NumV':
-            value = NumV.fromjson(content, typ, vid)
+            value = NumV.fromjson(content, typ)
         elif what == 'TextV':
-            value = TextV.fromjson(content, typ, vid)
+            value = TextV.fromjson(content, typ)
         elif what == 'StructV':
-            value = StructV.fromjson(content, typ, vid)
+            value = StructV.fromjson(content, typ)
         elif what == 'CaseV':
-            value = CaseV.fromjson(content, typ, vid)
+            value = CaseV.fromjson(content, typ)
         elif what == 'TupleV':
-            value = TupleV.fromjson(content, typ, vid)
+            value = TupleV.fromjson(content, typ)
         elif what == 'OptV':
-            value = OptV.fromjson(content, typ, vid)
+            value = OptV.fromjson(content, typ)
         elif what == 'ListV':
-            value = ListV.fromjson(content, typ, vid)
+            value = ListV.fromjson(content, typ)
         elif what == 'FuncV':
-            value = FuncV.fromjson(content, typ, vid)
+            value = FuncV.fromjson(content, typ)
         else:
             raise P4UnknownTypeError("Unknown content type")
         return value
@@ -103,6 +100,7 @@ class BaseV(SubBase):
 
 class BaseVWithTyp(BaseV):
     _attrs_ = ['typ']
+    # typ: p4specast.Type
 
     def get_typ(self):
         return self.typ
@@ -112,21 +110,19 @@ class BoolV(BaseV):
 
     _attrs_ = ['value']
 
-    def __init__(self, value, vid=-1):
-        # TODO: assign a vid if the argument is -1
+    def __init__(self, value):
         self.value = value # type: bool
-        self.vid = vid # type: int
 
 
     @staticmethod
-    def make(value, typ, vid=-1):
+    def make(value, typ):
         if isinstance(typ, p4specast.BoolT):
             if value:
                 return BoolV.TRUE
             else:
                 return BoolV.FALSE
         else:
-            return BoolVWithTyp(value, typ, vid)
+            return BoolVWithTyp(value, typ)
 
     def compare(self, other):
         if not isinstance(other, BoolV):
@@ -142,34 +138,33 @@ class BoolV(BaseV):
         return self.value
 
     def __repr__(self):
-        return "objects.BoolV.make(%r, %r, %r)" % (self.value, self.get_typ(), self.vid)
+        return "objects.BoolV.make(%r, %r)" % (self.value, self.get_typ())
 
     def tostring(self, short=False, level=0):
         # | BoolV b -> string_of_bool b
         return "true" if self.value else "false"
 
     @staticmethod
-    def fromjson(content, typ, vid):
-        return BoolV.make(content.get_list_item(1).value_bool(), typ, vid)
+    def fromjson(content, typ):
+        return BoolV.make(content.get_list_item(1).value_bool(), typ)
 
 BoolV.TRUE = BoolV(True)
 BoolV.FALSE = BoolV(False)
 
 class BoolVWithTyp(BoolV):
     _attrs_ = ['typ']
-    def __init__(self, value, typ, vid=-1):
-        BoolV.__init__(self, value, vid)
+    def __init__(self, value, typ):
+        BoolV.__init__(self, value)
         self.typ = typ
 
     def get_typ(self):
         return self.typ
 
 class NumV(BaseVWithTyp):
-    def __init__(self, value, what, typ=None, vid=-1):
+    def __init__(self, value, what, typ=None):
         self.value = value # type: integers.Integer
         assert isinstance(what, p4specast.NumTyp)
-        self.what = what # type: p4specast.NumTyp
-        self.vid = vid # type: int
+        self.what = what # type: p4specast.NumT
         self.typ = typ # type: p4specast.Type | None
 
     def compare(self, other):
@@ -180,8 +175,8 @@ class NumV(BaseVWithTyp):
         return self.value.compare(other.value)
 
     def __repr__(self):
-        return "objects.NumV.fromstr(%r, %r, %r, %r)" % (
-            self.value.str(), self.what, self.typ, self.vid)
+        return "objects.NumV.fromstr(%r, %r, %r)" % (
+            self.value.str(), self.what, self.typ)
 
     def get_num(self):
         return self.value
@@ -191,11 +186,11 @@ class NumV(BaseVWithTyp):
         return self.value.str()
 
     @staticmethod
-    def fromstr(value, what, typ=None, vid=-1):
-        return NumV(integers.Integer.fromstr(value), what, typ, vid)
+    def fromstr(value, what, typ=None):
+        return NumV(integers.Integer.fromstr(value), what, typ)
 
     @staticmethod
-    def fromjson(content, typ, vid):
+    def fromjson(content, typ):
         inner = content.get_list_item(1)
         what = inner.get_list_item(0).value_string()
         if what == 'Int':
@@ -204,12 +199,11 @@ class NumV(BaseVWithTyp):
             assert what == 'Nat'
             what = p4specast.NatT.INSTANCE
         value = inner.get_list_item(1).value_string()
-        return NumV.fromstr(value, what, typ, vid)
+        return NumV.fromstr(value, what, typ)
 
 class TextV(BaseVWithTyp):
-    def __init__(self, value, typ=None, vid=-1):
+    def __init__(self, value, typ=None):
         self.value = value #type: str
-        self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
 
     def get_text(self):
@@ -226,15 +220,15 @@ class TextV(BaseVWithTyp):
             return 1
 
     def __repr__(self):
-        return "objects.TextV(%r, %r, %r)" % (self.value, self.typ, self.vid)
+        return "objects.TextV(%r, %r)" % (self.value, self.typ)
 
     def tostring(self, short=False, level=0):
         # | TextV s -> "\"" ^ s ^ "\""
         return string_escape_encode(self.value)
 
     @staticmethod
-    def fromjson(content, typ, vid):
-        return TextV(content.get_list_item(1).value_string(), typ, vid)
+    def fromjson(content, typ):
+        return TextV(content.get_list_item(1).value_string(), typ)
 
 class StructMap(object):
     def __init__(self, fieldpos):
@@ -292,10 +286,9 @@ class StructV(BaseVWithTyp):
     _immutable_fields_ = ['map']
 
     @jit.unroll_safe
-    def __init__(self, map, typ=None, vid=-1):
+    def __init__(self, map, typ=None):
         assert isinstance(map, StructMap)
         self.map = map # type: StructMap
-        self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
 
     def get_struct(self):
@@ -313,19 +306,19 @@ class StructV(BaseVWithTyp):
             raise P4EvaluationError("no such field %s" % atom.value)
         new_fields = self._get_full_list()[:]
         new_fields[idx] = value
-        return StructV.make(new_fields, self.map, self.typ, self.vid)
+        return StructV.make(new_fields, self.map, self.typ)
 
 
     def __repr__(self):
         size = self._get_size_list()
         if size == 0:
-            return "objects.StructV.make0(%r, %r, %r)" % (self.map, self.typ, self.vid)
+            return "objects.StructV.make0(%r, %r)" % (self.map, self.typ)
         elif size == 1:
-            return "objects.StructV.make1(%r, %r, %r, %r)" % (self._get_list(0), self.map, self.typ, self.vid)
+            return "objects.StructV.make1(%r, %r, %r)" % (self._get_list(0), self.map, self.typ)
         elif size == 2:
-            return "objects.StructV.make2(%r, %r, %r, %r, %r)" % (self._get_list(0), self._get_list(1), self.map, self.typ, self.vid)
+            return "objects.StructV.make2(%r, %r, %r, %r)" % (self._get_list(0), self._get_list(1), self.map, self.typ)
         else:
-            return "objects.StructV.make(%r, %r, %r, %r)" % (self._get_full_list(), self.map, self.typ, self.vid)
+            return "objects.StructV.make(%r, %r, %r)" % (self._get_full_list(), self.map, self.typ)
 
     def tostring(self, short=False, level=0):
         # | StructV [] -> "{}"
@@ -358,7 +351,7 @@ class StructV(BaseVWithTyp):
         return "{ %s }" % ";\n".join(parts)
 
     @staticmethod
-    def fromjson(content, typ, vid):
+    def fromjson(content, typ):
         values = []
         map = StructMap.EMPTY
         for f in content.get_list_item(1).value_array():
@@ -367,7 +360,7 @@ class StructV(BaseVWithTyp):
             field = BaseV.fromjson(field_content)
             values.append(field)
             map = map.add_field(atom.value)
-        return StructV.make(values, map, typ, vid)
+        return StructV.make(values, map, typ)
 
     def compare(self, other):
         if not isinstance(other, StructV):
@@ -380,21 +373,20 @@ class StructV(BaseVWithTyp):
 @inline_small_list(immutable=True)
 class CaseV(BaseVWithTyp):
     _immutable_fields_ = ['mixop']
-    def __init__(self, mixop, typ=None, vid=-1):
+    def __init__(self, mixop, typ=None):
         self.mixop = mixop # type: p4specast.MixOp
-        self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
 
     def __repr__(self):
         size = self._get_size_list()
         if size == 0:
-            return "objects.CaseV.make0(%r, %r, %r)" % (self.mixop, self.typ, self.vid)
+            return "objects.CaseV.make0(%r, %r)" % (self.mixop, self.typ)
         elif size == 1:
-            return "objects.CaseV.make1(%r, %r, %r, %r)" % (self._get_list(0), self.mixop, self.typ, self.vid)
+            return "objects.CaseV.make1(%r, %r, %r)" % (self._get_list(0), self.mixop, self.typ)
         elif size == 2:
-            return "objects.CaseV.make2(%r, %r, %r, %r, %r)" % (self._get_list(0), self._get_list(1), self.mixop, self.typ, self.vid)
+            return "objects.CaseV.make2(%r, %r, %r, %r)" % (self._get_list(0), self._get_list(1), self.mixop, self.typ)
         else:
-            return "objects.CaseV.make(%r, %r, %r, %r)" % (self._get_full_list(), self.mixop, self.typ, self.vid)
+            return "objects.CaseV.make(%r, %r, %r)" % (self._get_full_list(), self.mixop, self.typ)
 
     def tostring(self, short=False, level=0):
         # | CaseV (mixop, _) when short -> string_of_mixop mixop
@@ -421,11 +413,11 @@ class CaseV(BaseVWithTyp):
         return "(" + " ".join(result_parts) + ")"
 
     @staticmethod
-    def fromjson(content, typ, vid):
+    def fromjson(content, typ):
         mixop_content, valuelist_content = content.get_list_item(1).value_array()
         mixop = p4specast.MixOp.fromjson(mixop_content)
         values = [BaseV.fromjson(v) for v in valuelist_content.value_array()]
-        return CaseV.make(values, mixop, typ, vid)
+        return CaseV.make(values, mixop, typ)
 
     def compare(self, other):
         if not isinstance(other, CaseV):
@@ -447,8 +439,7 @@ class CaseV(BaseVWithTyp):
 
 @inline_small_list(immutable=True)
 class TupleV(BaseVWithTyp):
-    def __init__(self, typ=None, vid=-1):
-        self.vid = vid # type: int
+    def __init__(self, typ=None):
         self.typ = typ # type: p4specast.Type | None
 
     def compare(self, other):
@@ -459,13 +450,13 @@ class TupleV(BaseVWithTyp):
     def __repr__(self):
         size = self._get_size_list()
         if size == 0:
-            return "objects.TupleV.make0(%r, %r)" % (self.typ, self.vid)
+            return "objects.TupleV.make0(%r)" % (self.typ)
         elif size == 1:
-            return "objects.TupleV.make1(%r, %r, %r)" % (self._get_list(0), self.typ, self.vid)
+            return "objects.TupleV.make1(%r, %r)" % (self._get_list(0), self.typ)
         elif size == 2:
-            return "objects.TupleV.make2(%r, %r, %r, %r)" % (self._get_list(0), self._get_list(1), self.typ, self.vid)
+            return "objects.TupleV.make2(%r, %r, %r)" % (self._get_list(0), self._get_list(1), self.typ)
         else:
-            return "objects.TupleV.make(%r, %r, %r)" % (self._get_full_list(), self.typ, self.vid)
+            return "objects.TupleV.make(%r, %r)" % (self._get_full_list(), self.typ)
 
     def tostring(self, short=False, level=0):
         # | TupleV values ->
@@ -476,14 +467,13 @@ class TupleV(BaseVWithTyp):
         return "(%s)" % ", ".join(element_strs)
 
     @staticmethod
-    def fromjson(content, typ, vid):
+    def fromjson(content, typ):
         elements = [BaseV.fromjson(e) for e in content.get_list_item(1).value_array()]
-        return TupleV.make(elements, typ, vid)
+        return TupleV.make(elements, typ)
 
 class OptV(BaseVWithTyp):
-    def __init__(self, value, typ=None, vid=-1):
+    def __init__(self, value, typ=None):
         self.value = value # type: BaseV | None
-        self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
 
     def compare(self, other):
@@ -500,7 +490,7 @@ class OptV(BaseVWithTyp):
 
 
     def __repr__(self):
-        return "objects.OptV(%r, %r, %r)" % (self.value, self.typ, self.vid)
+        return "objects.OptV(%r, %r)" % (self.value, self.typ)
 
     def tostring(self, short=False, level=0):
         # | OptV (Some value) ->
@@ -513,17 +503,16 @@ class OptV(BaseVWithTyp):
             return "Some(%s)" % self.value.tostring(short, level + 1)
 
     @staticmethod
-    def fromjson(content, typ, vid):
+    def fromjson(content, typ):
         value = None
         if not content.get_list_item(1).is_null:
             value = BaseV.fromjson(content.get_list_item(1))
-        return OptV(value, typ, vid)
+        return OptV(value, typ)
 
 # just optimize lists of size 0, 1, arbitrary
 @inline_small_list(immutable=True, sizemax=2)
 class ListV(BaseVWithTyp):
-    def __init__(self, typ=None, vid=-1):
-        self.vid = vid # type: int
+    def __init__(self, typ=None):
         self.typ = typ # type: p4specast.Type | None
 
     def get_list(self):
@@ -537,11 +526,11 @@ class ListV(BaseVWithTyp):
     def __repr__(self):
         size = self._get_size_list()
         if size == 0:
-            return "objects.ListV.make0(%r, %r)" % (self.typ, self.vid)
+            return "objects.ListV.make0(%r)" % (self.typ)
         elif size == 1:
-            return "objects.ListV.make1(%r, %r, %r)" % (self._get_list(0), self.typ, self.vid)
+            return "objects.ListV.make1(%r, %r)" % (self._get_list(0), self.typ)
         else:
-            return "objects.ListV.make(%r, %r, %r)" % (self._get_full_list(), self.typ, self.vid)
+            return "objects.ListV.make(%r, %r)" % (self._get_full_list(), self.typ)
 
     def tostring(self, short=False, level=0):
         # | ListV [] -> "[]"
@@ -572,28 +561,27 @@ class ListV(BaseVWithTyp):
         return "[ %s ]" % ",\n".join(parts)
 
     @staticmethod
-    def fromjson(content, typ, vid):
+    def fromjson(content, typ):
         elements = [BaseV.fromjson(e) for e in content.get_list_item(1).value_array()]
-        return ListV.make(elements, typ, vid)
+        return ListV.make(elements, typ)
 
 
 class FuncV(BaseVWithTyp):
-    def __init__(self, id, typ=None, vid=-1):
+    def __init__(self, id, typ=None):
         self.id = id # type: p4specast.Id
-        self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
 
     def __repr__(self):
-        return "objects.FuncV(%r, %r, %r)" % (self.id, self.typ, self.vid)
+        return "objects.FuncV(%r, %r)" % (self.id, self.typ)
 
     def tostring(self, short=False, level=0):
         # | FuncV id -> string_of_defid id
         return self.id.value
 
     @staticmethod
-    def fromjson(content, typ, vid):
+    def fromjson(content, typ):
         id = p4specast.Id.fromjson(content.get_list_item(1))
-        return FuncV(id, typ, vid)
+        return FuncV(id, typ)
 
 def atom_compares(atoms_l, atoms_r):
     len_l = len(atoms_l)

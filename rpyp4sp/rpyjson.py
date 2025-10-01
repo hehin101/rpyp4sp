@@ -423,7 +423,7 @@ ROOT_MAP = Map(None, {})
 ROOT_MAP.get_next("file").get_next("line").get_next("column")
 ROOT_MAP.get_next("it").get_next("node").get_next("at")
 ROOT_MAP.get_next("left").get_next("right")
-ROOT_MAP.get_next("vid").get_next("typ").get_next("at")
+ROOT_MAP.get_next("typ").get_next("at")
 
 
 TYPE_UNKNOWN = 0
