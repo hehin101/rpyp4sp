@@ -1294,22 +1294,21 @@ class Type(AstBase):
             content = value
         what = content.get_list_item(0).value_string()
         if what == 'BoolT':
-            ast = BoolT.fromjson(content, cache)
+            ast = BoolT.fromjson(content, region, cache)
         elif what == 'NumT':
-            ast = NumT.fromjson(content, cache)
+            ast = NumT.fromjson(content, region, cache)
         elif what == 'TextT':
-            ast = TextT.fromjson(content, cache)
+            ast = TextT.fromjson(content, region, cache)
         elif what == 'VarT':
-            ast = VarT.fromjson(content, cache)
+            ast = VarT.fromjson(content, region, cache)
         elif what == 'TupleT':
-            ast = TupleT.fromjson(content, cache)
+            ast = TupleT.fromjson(content, region, cache)
         elif what == 'IterT':
-            ast = IterT.fromjson(content, cache)
+            ast = IterT.fromjson(content, region, cache)
         elif what == 'FuncT':
-            ast = FuncT.fromjson(content, cache)
+            ast = FuncT.fromjson(content, region, cache)
         else:
             raise P4UnknownTypeError("Unknown Type: %s" % what)
-        ast.region = region
         return ast
 
     @jit.elidable
@@ -1330,25 +1329,30 @@ class Type(AstBase):
 
 
 class BoolT(Type):
-    def __init__(self):
-        pass
+    def __init__(self, region=None):
+        self.region = region
 
     def tostring(self):
         # | BoolT -> "bool"
         return "bool"
 
     def __repr__(self):
+        if self.region is not None and not self.region.eq(NO_REGION):
+            return "p4specast.BoolT(region=%r)" % (self.region,)
         return "p4specast.BoolT.INSTANCE"
 
     @staticmethod
-    def fromjson(content, cache=None):
-        return BoolT.INSTANCE
-BoolT.INSTANCE = BoolT()
+    def fromjson(content, region, cache=None):
+        if region is None or region.eq(NO_REGION):
+            return BoolT.INSTANCE
+        return BoolT(region)
+BoolT.INSTANCE = BoolT(NO_REGION)
 
 
 class NumT(Type):
-    def __init__(self, typ):
+    def __init__(self, typ, region=None):
         self.typ = typ # type: NumTyp
+        self.region = region
 
     def tostring(self):
         # | NumT numtyp -> Num.string_of_typ numtyp
@@ -1359,48 +1363,61 @@ class NumT(Type):
         assert 0, 'unreachable'
 
     def __repr__(self):
-        if isinstance(self.typ, IntT):
-            return "p4specast.NumT.INT"
-        elif isinstance(self.typ, NatT):
+        region_str = ""
+        if self.region is not None and not self.region.eq(NO_REGION):
+            region_str = ", region=%r" % (self.region,)
+
+        if isinstance(self.typ, NatT):
+            if region_str:
+                return "p4specast.NumT(NatT.INSTANCE%s)" % region_str
             return "p4specast.NumT.NAT"
+        elif isinstance(self.typ, IntT):
+            if region_str:
+                return "p4specast.NumT(IntT.INSTANCE%s)" % region_str
+            return "p4specast.NumT.INT"
         else:
-            return "p4specast.NumT(%r)" % (self.typ,)
+            return "p4specast.NumT(%r%s)" % (self.typ, region_str)
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, region, cache=None):
         typ = NumTyp.fromjson(content.get_list_item(1), cache)
-        if isinstance(typ, IntT):
-            return NumT.INT
-        elif isinstance(typ, NatT):
-            return NumT.NAT
-        else:
-            return NumT(typ)
-NumT.INT = NumT(IntT.INSTANCE)
-NumT.NAT = NumT(NatT.INSTANCE)
+        if region is None or region.eq(NO_REGION):
+            if isinstance(typ, IntT):
+                return NumT.INT
+            elif isinstance(typ, NatT):
+                return NumT.NAT
+        return NumT(typ, region)
+NumT.INT = NumT(IntT.INSTANCE, NO_REGION)
+NumT.NAT = NumT(NatT.INSTANCE, NO_REGION)
 
 
 
 class TextT(Type):
-    def __init__(self):
-        pass
+    def __init__(self, region=None):
+        self.region = region
 
     def tostring(self):
         # | TextT -> "text"
         return "text"
 
     def __repr__(self):
+        if self.region is not None and not self.region.eq(NO_REGION):
+            return "p4specast.TextT(region=%r)" % (self.region,)
         return "p4specast.TextT.INSTANCE"
 
     @staticmethod
-    def fromjson(content, cache=None):
-        return TextT.INSTANCE
-TextT.INSTANCE = TextT()
+    def fromjson(content, region, cache=None):
+        if region is None or region.eq(NO_REGION):
+            return TextT.INSTANCE
+        return TextT(region)
+TextT.INSTANCE = TextT(NO_REGION)
 
 
 class VarT(Type):
-    def __init__(self, id, targs):
+    def __init__(self, id, targs, region=None):
         self.id = id
         self.targs = targs
+        self.region = region
         self._ctx_tdenv_keys = None
         self._ctx_typ_res = (None, None)
 
@@ -1412,10 +1429,13 @@ class VarT(Type):
         return "%s%s" % (self.id.value, targs_str)
 
     def __repr__(self):
-        return "p4specast.VarT(%r, %r)" % (self.id, self.targs)
+        region_str = ""
+        if self.region is not None and not self.region.eq(NO_REGION):
+            region_str = ", region=%r" % (self.region,)
+        return "p4specast.VarT(%r, %r%s)" % (self.id, self.targs, region_str)
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, region, cache=None):
         id = Id.fromjson(content.get_list_item(1), cache)
         targs_array = content.get_list_item(2).value_array()
 
@@ -1423,10 +1443,12 @@ class VarT(Type):
         if cache is not None and len(targs_array) == 0:
             cached_vart = cache.vart_cache.get(id)
             if cached_vart is not None:
-                return cached_vart
+                if (cached_vart.region is None and region is None) or \
+                   (cached_vart.region is not None and region is not None and cached_vart.region.eq(region)):
+                    return cached_vart
 
         targs = [Type.fromjson(targ, cache) for targ in targs_array]
-        vart = VarT(id=id, targs=targs)
+        vart = VarT(id=id, targs=targs, region=region)
 
         # Cache only if targs is empty
         if cache is not None and len(targs) == 0:
@@ -1435,8 +1457,9 @@ class VarT(Type):
         return vart
 
 class TupleT(Type):
-    def __init__(self, elts):
+    def __init__(self, elts, region=None):
         self.elts = elts
+        self.region = region
 
     def tostring(self):
         # | TupleT typs -> "(" ^ string_of_typs ", " typs ^ ")"
@@ -1444,49 +1467,62 @@ class TupleT(Type):
         return "(%s)" % elts_str
 
     def __repr__(self):
-        return "p4specast.TupleT(%r)" % (self.elts,)
+        region_str = ""
+        if self.region is not None and not self.region.eq(NO_REGION):
+            region_str = ", region=%r" % (self.region,)
+        return "p4specast.TupleT(%r%s)" % (self.elts, region_str)
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, region, cache=None):
         return TupleT(
-            elts=[Type.fromjson(elt, cache) for elt in content.get_list_item(1).value_array()]
+            elts=[Type.fromjson(elt, cache) for elt in content.get_list_item(1).value_array()],
+            region=region
         )
 
 class IterT(Type):
-    def __init__(self, typ, iter):
+    def __init__(self, typ, iter, region=None):
         self.typ = typ
         self.iter = iter
+        self.region = region
 
     def tostring(self):
         # | IterT (typ, iter) -> string_of_typ typ ^ string_of_iter iter
         return "%s%s" % (self.typ.tostring(), string_of_iter(self.iter))
 
     def __repr__(self):
-        return "p4specast.IterT(%r, %r)" % (self.typ, self.iter)
+        region_str = ""
+        if self.region is not None and not self.region.eq(NO_REGION):
+            region_str = ", region=%r" % (self.region,)
+        return "p4specast.IterT(%r, %r%s)" % (self.typ, self.iter, region_str)
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, region, cache=None):
         return IterT(
             typ=Type.fromjson(content.get_list_item(1), cache),
             iter=Iter.fromjson(content.get_list_item(2), cache),
+            region=region
         )
 
 class FuncT(Type):
-    def __init__(self):
-        pass
+    def __init__(self, region=None):
+        self.region = region
 
     def tostring(self):
         # | FuncT -> "func"
         return "func"
 
     def __repr__(self):
+        if self.region is not None and not self.region.eq(NO_REGION):
+            return "p4specast.FuncT(region=%r)" % (self.region,)
         return "p4specast.FuncT.INSTANCE"
 
     @staticmethod
-    def fromjson(content, cache=None):
-        return FuncT.INSTANCE
+    def fromjson(content, region, cache=None):
+        if region is None or region.eq(NO_REGION):
+            return FuncT.INSTANCE
+        return FuncT(region)
 
-FuncT.INSTANCE = FuncT()
+FuncT.INSTANCE = FuncT(NO_REGION)
 
 # and nottyp = nottyp' phrase
 # [@@deriving yojson]

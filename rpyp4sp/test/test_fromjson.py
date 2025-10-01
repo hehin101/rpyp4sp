@@ -93,8 +93,9 @@ def test_vart_cache():
     value2 = loads(json_str)
 
     # Parse the same VarT twice with cache
-    vart1 = p4specast.VarT.fromjson(value1, cache)
-    vart2 = p4specast.VarT.fromjson(value2, cache)
+    region = p4specast.NO_REGION
+    vart1 = p4specast.VarT.fromjson(value1, region, cache)
+    vart2 = p4specast.VarT.fromjson(value2, region, cache)
 
     # Should return the same object instance due to caching (empty targs)
     assert vart1 is vart2
@@ -107,8 +108,8 @@ def test_vart_cache():
     value3 = loads(json_str_with_targs)
     value4 = loads(json_str_with_targs)
 
-    vart3 = p4specast.VarT.fromjson(value3, cache)
-    vart4 = p4specast.VarT.fromjson(value4, cache)
+    vart3 = p4specast.VarT.fromjson(value3, region, cache)
+    vart4 = p4specast.VarT.fromjson(value4, region, cache)
 
     # Should be different objects because targs is not empty
     assert vart3 is not vart4
@@ -116,9 +117,18 @@ def test_vart_cache():
     assert len(vart3.targs) == 1
     assert len(cache.vart_cache) == 1  # Still only one entry (the empty targs one)
 
+    # Test with different region - should create new object even with cache
+    different_region = p4specast.Region.line_span("test.py", 5, 1, 10)
+    vart7 = p4specast.VarT.fromjson(value1, different_region, cache)
+
+    # Should be different object because region is different
+    assert vart7 is not vart1
+    assert vart7.id.value == "test_type"
+    assert len(cache.vart_cache) == 1  # Still only one entry (the original one)
+
     # Test without cache - should always create new objects
-    vart5 = p4specast.VarT.fromjson(value1, None)
-    vart6 = p4specast.VarT.fromjson(value1, None)
+    vart5 = p4specast.VarT.fromjson(value1, region, None)
+    vart6 = p4specast.VarT.fromjson(value1, region, None)
 
     assert vart5 is not vart6
     assert vart5.id.value == vart6.id.value == "test_type"
