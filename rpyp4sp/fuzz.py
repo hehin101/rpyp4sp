@@ -127,6 +127,8 @@ def run_test_case(ctx, value, config):
         # P4 execution error (not necessarily a crash)
         error_msg = str(e.msg)
         coverage_hash = 'exception' + hex(objectmodel.compute_hash(e.msg))[2:]
+        if e.ctx:
+            coverage_hash += "Z" + e.ctx._cover.tostr_hit()
         res = TestResult(coverage_hash, crashed=True, error_msg=error_msg)
         res.ctx = e.ctx
         return res
