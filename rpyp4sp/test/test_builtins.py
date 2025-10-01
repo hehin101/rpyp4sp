@@ -157,7 +157,7 @@ def test_lists_concat():
     args = [objects.ListV.make([empty, empty], p4specast.TextT.INSTANCE.list_of().list_of(), -1)]
     res = builtin.lists_concat_(None, None, args)
     assert res.eq(empty)
-    assert repr(res.typ) == "p4specast.IterT(p4specast.TextT.INSTANCE, p4specast.List.INSTANCE)"
+    assert repr(res.typ) == "p4specast.TextT.INSTANCE.list_of()"
 
 def test_list_assoc():
     # Create a simple association list of (text, text) pairs

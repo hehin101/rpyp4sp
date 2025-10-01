@@ -1,3 +1,7 @@
+.cache
+.hypothesis/
+.vscode/
+
 /pypy/
 /_pypy_binary/
 /rpyp4sp/.hypothesis/
@@ -5,5 +9,6 @@
 *.pyc
 ast.json
 integrationtests/*.actual
+targetrpyp4sp-c*
 
 .vscode/

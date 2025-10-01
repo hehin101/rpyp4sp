@@ -24,6 +24,9 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
 
     _get_size_list(self): returns the length of the list
 
+    _append_list(self, value, *args): makes a new instance, the list is one
+    longer with value added at the end, *args are passed to the class __init__
+
     @staticmethod
     make(listcontent, *args): makes a new instance with the list's content set to listcontent
     """
@@ -63,6 +66,8 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                         setattr(self, attr, val)
                         return
                 raise IndexError
+            def _append_list0(self, value, *args):
+                return self.make1(value, *args)
             def _init(self, elems, *args):
                 assert len(elems) == 0
                 cls.__init__(self, *args)
@@ -73,6 +78,8 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                 listsizename   : _get_size_list,
                 listgettername : _get_full_list,
                 settername     : _set_list,
+                "_append_list" : _append_list0,
+                "_get_full_list_copy": _get_full_list,
                 "__init__"     : _init,
                 "_size_list"   : 0,
             }
@@ -90,13 +97,13 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             def _get_full_list(self):
                 if size == 0:
                     return empty_list
-                res = [None] * size
+                res = ()
                 for i, attr in unrolling_enumerate_attrs:
                     elem = getattr(self, attr)
                     if nonull:
                         debug.check_annotation(elem, _not_null)
-                    res[i] = getattr(self, attr)
-                return res
+                    res += (getattr(self, attr), )
+                return list(res)
             def _init(self, elems, *args):
                 assert len(elems) == size
                 for i, attr in unrolling_enumerate_attrs:
@@ -106,9 +113,30 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                     setattr(self, attr, elems[i])
                 cls.__init__(self, *args)
 
+            def _append_list(self, value, *args):
+                if size + 1 >= len(classes):
+                    restup = ()
+                    for i, attr in unrolling_enumerate_attrs:
+                        oldvalue = getattr(self, attr)
+                        restup += (oldvalue, )
+                    restup += (value, )
+                    return cls_arbitrary(list(restup), *args)
+                else:
+                    res = objectmodel.instantiate(classes[size + 1])
+                    for i, attr in unrolling_enumerate_attrs:
+                        oldvalue = getattr(self, attr)
+                        setattr(res, attr, oldvalue)
+                    setattr(res, "_%s_%s" % (attrname, size), value)
+                    cls.__init__(res, *args)
+                    return res
+
+
+
             # Methods for the new class being built
             methods = {
                 listgettername : _get_full_list,
+                "_append_list" : _append_list,
+                "_get_full_list_copy": _get_full_list,
                 "__init__"     : _init,
                 "_size_list"   : size,
             }
@@ -138,6 +166,8 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             return len(getattr(self, attrname))
         def _get_list_arbitrary(self):
             return getattr(self, attrname)
+        def _get_list_arbitrary_copy(self):
+            return getattr(self, attrname)[:]
         def _set_arbitrary(self, i, val):
             if nonull:
                 assert val is not None
@@ -146,12 +176,17 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             debug.make_sure_not_resized(elems)
             setattr(self, attrname, elems)
             cls.__init__(self, *args)
+        def _append_list_arbitrary(self, value, *args):
+            reslist = getattr(self, attrname) + [value]
+            return cls_arbitrary(reslist, *args)
 
         methods = {
             gettername     : _get_arbitrary,
             listsizename   : _get_size_list_arbitrary,
             listgettername : _get_list_arbitrary,
+            "_get_full_list_copy" : _get_list_arbitrary_copy,
             settername     : _set_arbitrary,
+            "_append_list" : _append_list_arbitrary,
             "__init__"     : _init,
         }
 
