@@ -1,3 +1,4 @@
+from __future__ import print_function
 from rpython.rlib.rbigint import rbigint
 from rpython.rlib import jit
 from rpython.rlib.rarithmetic import r_ulonglong
@@ -45,6 +46,8 @@ class ImmutableIntSet(object):
             return self
         if self.is_empty():
             return other
+        if self is other or self._bits is other._bits or self._bits.eq(other._bits):
+            return self
         new_bits = self._bits.or_(other._bits)
         return ImmutableIntSet(new_bits)
 
