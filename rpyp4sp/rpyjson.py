@@ -286,7 +286,7 @@ class JsonObject(JsonBase):
     def _unpack_deep(self):
         result = {}
         for key, index in self.map.attrs.iteritems():
-            result[key] = self.values[index]._unpack_deep()
+            result[key] = self._get_value(index)._unpack_deep()
         return result
 
     def __repr__(self):

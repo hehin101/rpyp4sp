@@ -1240,14 +1240,14 @@ class Type(AstBase):
     def tostring(self):
         assert 0  # abstract method
 
-    def tojson(self):
+    def tojson(self, as_bare_typ=False):
         from rpyp4sp import rpyjson
         content = self._tojson_content()
-        if self.region is None:
+        if as_bare_typ:
             return rpyjson.JsonArray(content)
         else:
-            root_map = rpyjson.ROOT_MAP.get_next("at").get_next("it")
-            return rpyjson.JsonObject2(root_map, self.region.tojson(), rpyjson.JsonArray(content))
+            root_map = rpyjson.ROOT_MAP.get_next("at").get_next("it").get_next("note")
+            return rpyjson.JsonObject3(root_map, self.region.tojson(), rpyjson.JsonArray(content), rpyjson.json_null)
 
     def _tojson_content(self):
         assert 0  # abstract method

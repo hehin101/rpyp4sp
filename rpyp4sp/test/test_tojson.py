@@ -1,7 +1,7 @@
 import pytest
 import os
 import glob
-from rpyp4sp import objects, rpyjson
+from rpyp4sp import objects, rpyjson, p4specast
 
 
 class TestTojsonIntegration(object):
@@ -38,3 +38,12 @@ class TestTojsonIntegration(object):
 
         # Check equality
         assert value1.eq(value2), "Values not equal after roundtrip for %s" % os.path.basename(json_file)
+
+    def test_typ_with_right_amount_of_regions(self):
+        s = """{"it":["ListV",[]],"note":{"vid":0,"typ":["VarT",{"it":"p4program","note":null,"at":{"left":{"file":"","line":0,"column":0},"right":{"file":"","line":0,"column":0}}},[]]},"at":null}"""
+        json_parsed = rpyjson.loads(s)
+        value1 = objects.BaseV.fromjson(json_parsed)
+        value1.typ.region = p4specast.NO_REGION
+        json_result = value1.tojson()
+        json_serialized = rpyjson.dumps(json_result)
+        assert json_parsed._unpack_deep() == json_result._unpack_deep()

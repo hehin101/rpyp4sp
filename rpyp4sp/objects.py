@@ -37,10 +37,12 @@ class BaseV(SubBase):
     def tojson(self):
         from rpyp4sp import rpyjson
         note_map = rpyjson.ROOT_MAP.get_next("typ").get_next("vid")
-        note_obj = rpyjson.JsonObject2(note_map, self.typ.tojson(), rpyjson.JsonInt(self.vid))
+        typ = self.typ
+        assert isinstance(typ, p4specast.Type)
+        note_obj = rpyjson.JsonObject2(note_map, typ.tojson(as_bare_typ=True), rpyjson.JsonInt(self.vid))
         it_array = rpyjson.JsonArray(self._tojson_content())
-        root_map = rpyjson.ROOT_MAP.get_next("note").get_next("it")
-        return rpyjson.JsonObject2(root_map, note_obj, it_array)
+        root_map = rpyjson.ROOT_MAP.get_next("note").get_next("it").get_next("at")
+        return rpyjson.JsonObject3(root_map, note_obj, it_array, rpyjson.json_null)
 
     def _tojson_content(self):
         assert 0, "subclasses must implement _tojson_content"
