@@ -410,7 +410,7 @@ class CaseV(BaseV):
             assert other._get_size_list() == 1
             return self._get_list(0).compare(other._get_list(0))
         else:
-            return compares(self._get_full_list()[:], other._get_full_list()[:]) # TODO, could do better?
+            return compares(self._get_full_list(), other._get_full_list())
 
 
 @inline_small_list(immutable=True)

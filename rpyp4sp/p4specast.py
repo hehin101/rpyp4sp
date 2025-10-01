@@ -264,16 +264,18 @@ class Var(AstBase):
     def __init__(self, id, typ, iter):
         self.id = id
         self.typ = typ
-        self.iter = iter
+        if iter == []:
+            self.iter = IterList.EMPTY
+        else:
+            self.iter = IterList(iter)
 
     def tostring(self):
         # let string_of_var (id, _typ, iters) =
         #   string_of_varid id ^ String.concat "" (List.map string_of_iter iters)
-        iters_str = "".join([string_of_iter(i) for i in self.iter])
-        return "%s%s" % (self.id.value, iters_str)
+        return "%s%s" % (self.id.value, self.iter.tostring())
 
     def __repr__(self):
-        return "p4specast.Var(id=%s, typ=%s, iter=%s)" % (self.id, self.typ, self.iter)
+        return "p4specast.Var(id=%s, typ=%s, iter=%s)" % (self.id, self.typ, self.iter.iterlist)
 
     @staticmethod
     def fromjson(content):
@@ -282,6 +284,42 @@ class Var(AstBase):
             typ=Type.fromjson(content.get_list_item(1)),
             iter=[Iter.fromjson(i) for i in content.get_list_item(2).value_array()]
         )
+
+
+class IterList(AstBase):
+    _immutable_fields_ = ['iterlist[*]', '_string']
+
+    def __init__(self, iterlist):
+        self.iterlist = iterlist
+        self._append_opt = None
+        self._append_list = None
+        self._string = "".join([string_of_iter(i) for i in self.iterlist])
+
+    def tostring(self):
+        return self._string
+
+    def to_key(self):
+        return self._string
+
+    @jit.elidable
+    def append_opt(self):
+        if not self._append_opt:
+            self._append_opt = IterList(self.iterlist + [Opt()])
+        return self._append_opt
+
+    @jit.elidable
+    def append_list(self):
+        if not self._append_list:
+            self._append_list = IterList(self.iterlist + [List()])
+        return self._append_list
+
+    def __repr__(self):
+        if not self.iterlist:
+            return "p4specast.IterList.EMPTY"
+        return "p4specast.IterList(%r)" % self.iterlist
+
+IterList.EMPTY = IterList([])
+
 
 # type def = def' phrase
 # and def' =
@@ -314,8 +352,8 @@ class Def(AstBase):
 class TypD(Def):
     def __init__(self, id, tparams, deftyp):
         self.id = id            # type: Id
-        self.tparams = tparams  # type: list[tparam]
-        self.deftyp = deftyp    # type: deftyp
+        self.tparams = tparams  # type: list[TParam]
+        self.deftyp = deftyp    # type: DefTyp
 
     def __repr__(self):
         return "p4specast.TypD(%s, %s, %s)" % (self.id, self.tparams, self.deftyp)
@@ -361,9 +399,9 @@ class RelD(Def):
 class DecD(Def):
     def __init__(self, id, tparams, args, instrs):
         self.id = id            # type: Id
-        self.tparams = tparams  # type: list[tparam]
-        self.args = args        # type: list[arg]
-        self.instrs = instrs    # type: list[instr]
+        self.tparams = tparams  # type: list[TParam]
+        self.args = args        # type: list[Arg]
+        self.instrs = instrs    # type: list[Instr]
 
     def __repr__(self):
         return "p4specast.DecD(%r, %r, %r, %r)" % (self.id, self.tparams, self.args, self.instrs)
@@ -611,6 +649,10 @@ class TextE(Exp):
 class VarE(Exp):
     def __init__(self, id):
         self.id = id # typ: id
+        self._ctx_keys = None
+        self._ctx_index = -1
+        self._ctx_keys_add = None
+        self._ctx_keys_next = None
 
     @staticmethod
     def fromjson(content):
@@ -1459,6 +1501,9 @@ class DefTyp(AstBase):
             raise P4UnknownTypeError("Unknown DefTyp: %s" % what)
         ast.region = region
         return ast
+
+    def __repr__(self):
+        return "p4specast.DefTyp()"
 
 class PlainT(DefTyp):
     def __init__(self, typ, region=None):

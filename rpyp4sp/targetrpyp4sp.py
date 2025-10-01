@@ -41,8 +41,6 @@ def parse_args(argv, shortname, longname="", want_arg=True, many=False):
 def parse_flag(argv, flagname, longname=""):
     return bool(parse_args(argv, flagname, longname=longname, want_arg=False))
 
-
-
 def command_run_test_jsonl(argv):
     ctx = make_context()
     passed = 0

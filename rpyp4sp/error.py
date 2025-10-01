@@ -486,7 +486,7 @@ def format_ctx(ctx, entry_line, color=False):
 
     # Filter variables that appear in the entry line (or show all if no entry line)
     relevant_vars = []
-    for (varname, iterators), value in ctx.venv.items():
+    for (varname, iterators), value in ctx.venv_items():
         if entry_line is None or varname in entry_line:
             relevant_vars.append(((varname, iterators), value))
 

@@ -35,8 +35,8 @@ def make_context(loaded=[]):
     if loaded:
         return loaded[0]
     spec, file_content, spec_dirname = load()
-    ctx = Context('dummy')
-    ctx.load_spec(spec, file_content, spec_dirname)
+    ctx = Context.make0()
+    ctx.load_spec(spec, file_content, spec_dirname, 'dummy')
     loaded.append(ctx)
     return ctx
 

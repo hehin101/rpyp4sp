@@ -1,8 +1,10 @@
+.cache
+.hypothesis/
+.vscode/
+
 /pypy/
 /pypy_binary/
-.cache
 *.pyc
 ast.json
 integrationtests/*.actual
-
-.vscode/
+targetrpyp4sp-c*

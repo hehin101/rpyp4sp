@@ -1283,14 +1283,25 @@ def test_traceback_header_bold():
     result_no_color = tb.format(file_content, color=False)
     assert any('Traceback (most recent call last):' in line and '\033[1m' not in line for line in result_no_color)
 
+
+class MockCtx:
+    def __init__(self, venv={}):
+        self.venv = venv
+    def venv_items(self):
+        return self.venv.items()
+
+class MockValue:
+    def __init__(self, value):
+        self.value = value
+
+    def tostring(self, short=False):
+        return str(self.value)
+
 def test_local_variables_header_bold():
     # Test that local variables header is bold when color=True
     from rpyp4sp.error import format_ctx
 
     # Mock context object
-    class MockCtx:
-        def __init__(self):
-            self.venv = {}
 
     ctx = MockCtx()
 
@@ -1306,25 +1317,13 @@ def test_format_ctx_variable_sorting():
     # Test that variables are sorted by their position in the entry line
     from rpyp4sp.error import format_ctx
 
-    # Mock value class
-    class MockValue:
-        def __init__(self, value):
-            self.value = value
-
-        def tostring(self, short=False):
-            return str(self.value)
-
     # Mock context with variables in arbitrary order
-    class MockCtx:
-        def __init__(self):
-            self.venv = {
-                ('gamma', ''): MockValue('third'),
-                ('alpha', ''): MockValue('first'),
-                ('beta', ''): MockValue('second'),
-                ('delta', ''): MockValue('fourth')
-            }
-
-    ctx = MockCtx()
+    ctx = MockCtx({
+        ('gamma', ''): MockValue('third'),
+        ('alpha', ''): MockValue('first'),
+        ('beta', ''): MockValue('second'),
+        ('delta', ''): MockValue('fourth')
+    })
     entry_line = "alpha + beta * gamma - delta"
 
     result = format_ctx(ctx, entry_line, color=False)
@@ -1348,21 +1347,11 @@ def test_format_ctx_no_entry_line():
     # Test that when entry_line is None, all variables are shown (order may vary)
     from rpyp4sp.error import format_ctx
 
-    class MockValue:
-        def __init__(self, value):
-            self.value = value
+    ctx = MockCtx({
+        ('var1', ''): MockValue('value1'),
+        ('var2', ''): MockValue('value2')
+    })
 
-        def tostring(self, short=False):
-            return str(self.value)
-
-    class MockCtx:
-        def __init__(self):
-            self.venv = {
-                ('var1', ''): MockValue('value1'),
-                ('var2', ''): MockValue('value2')
-            }
-
-    ctx = MockCtx()
     result = format_ctx(ctx, None, color=False)
 
     # Should contain both variables (order not guaranteed when entry_line is None)
@@ -1377,22 +1366,12 @@ def test_format_ctx_variable_filtering():
     # Test that only variables mentioned in entry_line are shown
     from rpyp4sp.error import format_ctx
 
-    class MockValue:
-        def __init__(self, value):
-            self.value = value
+    ctx = MockCtx({
+        ('used_var', ''): MockValue('shown'),
+        ('unused_var', ''): MockValue('hidden'),
+        ('also_used', ''): MockValue('also_shown')
+    })
 
-        def tostring(self, short=False):
-            return str(self.value)
-
-    class MockCtx:
-        def __init__(self):
-            self.venv = {
-                ('used_var', ''): MockValue('shown'),
-                ('unused_var', ''): MockValue('hidden'),
-                ('also_used', ''): MockValue('also_shown')
-            }
-
-    ctx = MockCtx()
     entry_line = "used_var + also_used"  # doesn't mention unused_var
 
     result = format_ctx(ctx, entry_line, color=False)
@@ -1412,21 +1391,11 @@ def test_format_ctx_iterators():
     # Test that iterators are properly included in variable names
     from rpyp4sp.error import format_ctx
 
-    class MockValue:
-        def __init__(self, value):
-            self.value = value
+    ctx = MockCtx({
+        ('x', '[0]'): MockValue('first_element'),
+        ('y', ''): MockValue('simple_var')
+    })
 
-        def tostring(self, short=False):
-            return str(self.value)
-
-    class MockCtx:
-        def __init__(self):
-            self.venv = {
-                ('x', '[0]'): MockValue('first_element'),
-                ('y', ''): MockValue('simple_var')
-            }
-
-    ctx = MockCtx()
     entry_line = "x[0] + y"
 
     result = format_ctx(ctx, entry_line, color=False)
@@ -1445,20 +1414,9 @@ def test_format_ctx_multiline_values():
     # Test handling of multiline values
     from rpyp4sp.error import format_ctx
 
-    class MockValue:
-        def __init__(self, value):
-            self.value = value
-
-        def tostring(self, short=False):
-            return self.value
-
-    class MockCtx:
-        def __init__(self):
-            self.venv = {
+    ctx = MockCtx({
                 ('multi', ''): MockValue('line1\nline2\nline3')
-            }
-
-    ctx = MockCtx()
+            })
     entry_line = "multi"
 
     result = format_ctx(ctx, entry_line, color=False)
@@ -1484,13 +1442,10 @@ def test_format_ctx_color_formatting():
         def tostring(self, short=False):
             return str(self.value)
 
-    class MockCtx:
-        def __init__(self):
-            self.venv = {
-                ('colored_var', '[i]'): MockValue('test_value')
-            }
+    ctx = MockCtx({
+        ('colored_var', '[i]'): MockValue('test_value')
+    })
 
-    ctx = MockCtx()
     entry_line = "colored_var"
 
     result = format_ctx(ctx, entry_line, color=True)
