@@ -1224,8 +1224,8 @@ def assign_arg(ctx_caller, ctx_callee, arg, value):
 #  List.fold_left2 (assign_arg ctx_caller) ctx_callee args values
 
 def assign_args(ctx_caller, ctx_callee, args, values):
-    assert len(args) == len(values), \
-        "mismatch in number of arguments while assigning, expected %d value(s) but got %d" % (len(args), len(values))
+    if len(args) != len(values):
+        raise P4EvaluationError("mismatch in number of arguments while assigning, expected %d value(s) but got %d" % (len(args), len(values)))
     for i, arg in enumerate(args):
         value = values[i]
         ctx_callee = assign_arg(ctx_caller, ctx_callee, arg, value)
