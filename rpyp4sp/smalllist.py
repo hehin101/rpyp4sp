@@ -56,6 +56,8 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                         return result
                 raise IndexError
             def _get_full_list(self):
+                if not objectmodel.we_are_translated():
+                    assert not empty_list
                 return empty_list
             def _set_list(self, i, val):
                 if nonull:

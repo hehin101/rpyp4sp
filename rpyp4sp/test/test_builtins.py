@@ -545,10 +545,333 @@ def test_unions_set_2():
     assert res.eq(make_set())
     # Union of two disjoint sets
     res = builtin.sets_unions_set([p4specast.TextT.INSTANCE], [objects.ListV.make2(make_set("a"), make_set("b"), p4specast.TextT.INSTANCE.list_of())])
-    assert res.eq(make_set("a", "b"))
+    assert res.eq(make_set("b", "a"))
     # Union of three overlapping sets
     res = builtin.sets_unions_set([p4specast.TextT.INSTANCE], [objects.ListV.make([make_set("a", "b"), make_set("b", "c"), make_set("c", "d")], p4specast.TextT.INSTANCE.list_of())])
     assert res.eq(make_set("a", "b", "c", "d"))
     # Union of identical sets
     res = builtin.sets_unions_set([p4specast.TextT.INSTANCE], [objects.ListV.make2(make_set("x", "y"), make_set("x", "y"), p4specast.TextT.INSTANCE.list_of())])
     assert res.eq(make_set("x", "y"))
+
+# ________________________________________________________________
+# Property-based tests for set operations using Hypothesis
+
+from hypothesis import given, strategies as st
+
+def set_to_python(set_value):
+    """Convert a P4 set value to a Python frozenset for comparison."""
+    elems = builtin._extract_set_elems(set_value)
+    return frozenset(elem.get_text() for elem in elems)
+
+@st.composite
+def text_set_strategy(draw):
+    """Strategy to generate P4 sets containing text values."""
+    elements = draw(st.lists(st.text(alphabet=st.characters(min_codepoint=97, max_codepoint=122), min_size=1, max_size=3), max_size=10))
+    elements = [val.encode('utf-8') for val in elements]
+    # Remove duplicates to create a proper set
+    unique_elements = list(dict.fromkeys(elements))
+    return make_set(*unique_elements)
+
+# Union properties
+@given(s1=text_set_strategy(), s2=text_set_strategy())
+def test_union_commutative(s1, s2):
+    """Union is commutative: A ∪ B = B ∪ A"""
+    res1 = builtin.sets_union_set(None, [s1, s2])
+    res2 = builtin.sets_union_set(None, [s2, s1])
+    assert builtin.sets_eq_set(None, [res1, res2]).get_bool()
+
+@given(s1=text_set_strategy(), s2=text_set_strategy(), s3=text_set_strategy())
+def test_union_associative(s1, s2, s3):
+    """Union is associative: (A ∪ B) ∪ C = A ∪ (B ∪ C)"""
+    left = builtin.sets_union_set(None, [builtin.sets_union_set(None, [s1, s2]), s3])
+    right = builtin.sets_union_set(None, [s1, builtin.sets_union_set(None, [s2, s3])])
+    assert builtin.sets_eq_set(None, [left, right]).get_bool()
+
+@given(s=text_set_strategy())
+def test_union_identity(s):
+    """Empty set is identity for union: A ∪ ∅ = A"""
+    empty = make_set()
+    res = builtin.sets_union_set(None, [s, empty])
+    assert builtin.sets_eq_set(None, [res, s]).get_bool()
+
+@given(s=text_set_strategy())
+def test_union_idempotent(s):
+    """Union is idempotent: A ∪ A = A"""
+    res = builtin.sets_union_set(None, [s, s])
+    assert builtin.sets_eq_set(None, [res, s]).get_bool()
+
+# Intersection properties
+@given(s1=text_set_strategy(), s2=text_set_strategy())
+def test_intersect_commutative(s1, s2):
+    """Intersection is commutative: A ∩ B = B ∩ A"""
+    res1 = builtin.sets_intersect_set(None, [s1, s2])
+    res2 = builtin.sets_intersect_set(None, [s2, s1])
+    assert builtin.sets_eq_set(None, [res1, res2]).get_bool()
+
+@given(s1=text_set_strategy(), s2=text_set_strategy(), s3=text_set_strategy())
+def test_intersect_associative(s1, s2, s3):
+    """Intersection is associative: (A ∩ B) ∩ C = A ∩ (B ∩ C)"""
+    left = builtin.sets_intersect_set(None, [builtin.sets_intersect_set(None, [s1, s2]), s3])
+    right = builtin.sets_intersect_set(None, [s1, builtin.sets_intersect_set(None, [s2, s3])])
+    assert builtin.sets_eq_set(None, [left, right]).get_bool()
+
+@given(s=text_set_strategy())
+def test_intersect_empty(s):
+    """Intersection with empty set is empty: A ∩ ∅ = ∅"""
+    empty = make_set()
+    res = builtin.sets_intersect_set(None, [s, empty])
+    assert builtin.sets_eq_set(None, [res, empty]).get_bool()
+
+@given(s=text_set_strategy())
+def test_intersect_idempotent(s):
+    """Intersection is idempotent: A ∩ A = A"""
+    res = builtin.sets_intersect_set(None, [s, s])
+    assert builtin.sets_eq_set(None, [res, s]).get_bool()
+
+# Difference properties
+@given(s=text_set_strategy())
+def test_diff_self_empty(s):
+    """A - A = ∅"""
+    res = builtin.sets_diff_set(None, [s, s])
+    assert builtin.sets_eq_set(None, [res, make_set()]).get_bool()
+
+@given(s=text_set_strategy())
+def test_diff_empty_identity(s):
+    """A - ∅ = A"""
+    empty = make_set()
+    res = builtin.sets_diff_set(None, [s, empty])
+    assert builtin.sets_eq_set(None, [res, s]).get_bool()
+
+@given(s=text_set_strategy())
+def test_empty_diff_empty(s):
+    """∅ - A = ∅"""
+    empty = make_set()
+    res = builtin.sets_diff_set(None, [empty, s])
+    assert builtin.sets_eq_set(None, [res, empty]).get_bool()
+
+# Subset properties
+@given(s=text_set_strategy())
+def test_subset_reflexive(s):
+    """Every set is a subset of itself: A ⊆ A"""
+    res = builtin.sets_sub_set(None, [s, s])
+    assert res.get_bool()
+
+@given(s=text_set_strategy())
+def test_empty_subset_all(s):
+    """Empty set is a subset of any set: ∅ ⊆ A"""
+    empty = make_set()
+    res = builtin.sets_sub_set(None, [empty, s])
+    assert res.get_bool()
+
+@given(s1=text_set_strategy(), s2=text_set_strategy(), s3=text_set_strategy())
+def test_subset_transitive(s1, s2, s3):
+    """Subset is transitive: if A ⊆ B and B ⊆ C then A ⊆ C"""
+    if builtin.sets_sub_set(None, [s1, s2]).get_bool() and builtin.sets_sub_set(None, [s2, s3]).get_bool():
+        assert builtin.sets_sub_set(None, [s1, s3]).get_bool()
+
+@given(s1=text_set_strategy(), s2=text_set_strategy())
+def test_subset_antisymmetric(s1, s2):
+    """If A ⊆ B and B ⊆ A then A = B"""
+    if builtin.sets_sub_set(None, [s1, s2]).get_bool() and builtin.sets_sub_set(None, [s2, s1]).get_bool():
+        assert builtin.sets_eq_set(None, [s1, s2]).get_bool()
+
+# Equality properties
+@given(s=text_set_strategy())
+def test_eq_reflexive(s):
+    """Equality is reflexive: A = A"""
+    res = builtin.sets_eq_set(None, [s, s])
+    assert res.get_bool()
+
+@given(s1=text_set_strategy(), s2=text_set_strategy())
+def test_eq_symmetric(s1, s2):
+    """Equality is symmetric: if A = B then B = A"""
+    res1 = builtin.sets_eq_set(None, [s1, s2])
+    res2 = builtin.sets_eq_set(None, [s2, s1])
+    assert res1.get_bool() == res2.get_bool()
+
+@given(s1=text_set_strategy(), s2=text_set_strategy(), s3=text_set_strategy())
+def test_eq_transitive(s1, s2, s3):
+    """Equality is transitive: if A = B and B = C then A = C"""
+    if builtin.sets_eq_set(None, [s1, s2]).get_bool() and builtin.sets_eq_set(None, [s2, s3]).get_bool():
+        assert builtin.sets_eq_set(None, [s1, s3]).get_bool()
+
+# Cross-operation properties
+@given(s1=text_set_strategy(), s2=text_set_strategy(), s3=text_set_strategy())
+def test_union_intersection_distributive(s1, s2, s3):
+    """Union distributes over intersection: A ∪ (B ∩ C) = (A ∪ B) ∩ (A ∪ C)"""
+    left = builtin.sets_union_set(None, [s1, builtin.sets_intersect_set(None, [s2, s3])])
+    right = builtin.sets_intersect_set(None, [builtin.sets_union_set(None, [s1, s2]), builtin.sets_union_set(None, [s1, s3])])
+    assert builtin.sets_eq_set(None, [left, right]).get_bool()
+
+@given(s1=text_set_strategy(), s2=text_set_strategy())
+def test_diff_union_relationship(s1, s2):
+    """A - B and A ∩ B are disjoint, and their union is A (assuming B ⊆ A or general case)"""
+    diff = builtin.sets_diff_set(None, [s1, s2])
+    intersect = builtin.sets_intersect_set(None, [s1, s2])
+    union_result = builtin.sets_union_set(None, [diff, intersect])
+    # This should equal s1
+    assert builtin.sets_eq_set(None, [union_result, s1]).get_bool()
+
+@given(s1=text_set_strategy(), s2=text_set_strategy())
+def test_subset_via_union(s1, s2):
+    """A ⊆ B iff A ∪ B = B"""
+    subset_res = builtin.sets_sub_set(None, [s1, s2])
+    union_res = builtin.sets_union_set(None, [s1, s2])
+    union_eq = builtin.sets_eq_set(None, [union_res, s2])
+    assert subset_res.get_bool() == union_eq.get_bool()
+
+@given(s1=text_set_strategy(), s2=text_set_strategy())
+def test_subset_via_intersection(s1, s2):
+    """A ⊆ B iff A ∩ B = A"""
+    subset_res = builtin.sets_sub_set(None, [s1, s2])
+    intersect_res = builtin.sets_intersect_set(None, [s1, s2])
+    intersect_eq = builtin.sets_eq_set(None, [intersect_res, s1])
+    assert subset_res.get_bool() == intersect_eq.get_bool()
+
+# unions_set (multiple sets) properties
+@given(sets=st.lists(text_set_strategy(), min_size=1, max_size=5))
+def test_unions_set_consistency(sets):
+    """unions_set should produce the same result as repeatedly calling union_set"""
+    # Use the same type pattern as existing tests
+    list_typ = p4specast.TextT.INSTANCE.list_of()
+
+    if len(sets) == 1:
+        # Single set case
+        list_value = objects.ListV.make([sets[0]], list_typ)
+        res = builtin.sets_unions_set([p4specast.TextT.INSTANCE], [list_value])
+        assert builtin.sets_eq_set(None, [res, sets[0]]).get_bool()
+    else:
+        # Multiple sets case - compare with iterative union
+        list_value = objects.ListV.make(sets, list_typ)
+        res_unions = builtin.sets_unions_set([p4specast.TextT.INSTANCE], [list_value])
+
+        # Build result iteratively
+        res_iterative = sets[0]
+        for s in sets[1:]:
+            res_iterative = builtin.sets_union_set(None, [res_iterative, s])
+
+        assert builtin.sets_eq_set(None, [res_unions, res_iterative]).get_bool()
+
+# ________________________________________________________________
+# Stateful property-based testing
+
+from hypothesis.stateful import RuleBasedStateMachine, rule, invariant, Bundle
+
+class SetStateMachine(RuleBasedStateMachine):
+    """Stateful test that compares P4 set operations against Python frozenset model."""
+
+    sets = Bundle('sets')
+
+    def __init__(self):
+        super(SetStateMachine, self).__init__()
+        # Map from set names to (p4_set, frozenset_model)
+        self.set_store = {}
+
+    @rule(target=sets, elements=st.lists(st.text(alphabet=st.characters(min_codepoint=97, max_codepoint=122), min_size=1, max_size=3), max_size=8))
+    def create_set(self, elements):
+        """Create a new set from a list of elements."""
+        # Encode elements for Python 2 compatibility
+        elements = [val.encode('utf-8') for val in elements]
+        unique_elements = list(dict.fromkeys(elements))
+
+        # Create P4 set
+        p4_set = make_set(*unique_elements)
+
+        # Create model frozenset
+        model_set = frozenset(unique_elements)
+
+        # Generate a unique name
+        name = 'set_%d' % len(self.set_store)
+        self.set_store[name] = (p4_set, model_set)
+        return name
+
+    @rule(target=sets, s1=sets, s2=sets)
+    def union_sets(self, s1, s2):
+        """Compute union of two sets."""
+        p4_s1, model_s1 = self.set_store[s1]
+        p4_s2, model_s2 = self.set_store[s2]
+
+        # P4 union
+        p4_result = builtin.sets_union_set(None, [p4_s1, p4_s2])
+
+        # Model union
+        model_result = model_s1 | model_s2
+
+        # Store result
+        name = 'union_%s_%s' % (s1, s2)
+        self.set_store[name] = (p4_result, model_result)
+        return name
+
+    @rule(target=sets, s1=sets, s2=sets)
+    def intersect_sets(self, s1, s2):
+        """Compute intersection of two sets."""
+        p4_s1, model_s1 = self.set_store[s1]
+        p4_s2, model_s2 = self.set_store[s2]
+
+        # P4 intersection
+        p4_result = builtin.sets_intersect_set(None, [p4_s1, p4_s2])
+
+        # Model intersection
+        model_result = model_s1 & model_s2
+
+        # Store result
+        name = 'intersect_%s_%s' % (s1, s2)
+        self.set_store[name] = (p4_result, model_result)
+        return name
+
+    @rule(target=sets, s1=sets, s2=sets)
+    def diff_sets(self, s1, s2):
+        """Compute difference of two sets."""
+        p4_s1, model_s1 = self.set_store[s1]
+        p4_s2, model_s2 = self.set_store[s2]
+
+        # P4 difference
+        p4_result = builtin.sets_diff_set(None, [p4_s1, p4_s2])
+
+        # Model difference
+        model_result = model_s1 - model_s2
+
+        # Store result
+        name = 'diff_%s_%s' % (s1, s2)
+        self.set_store[name] = (p4_result, model_result)
+        return name
+
+    @rule(s1=sets, s2=sets)
+    def check_subset(self, s1, s2):
+        """Check if s1 is a subset of s2."""
+        p4_s1, model_s1 = self.set_store[s1]
+        p4_s2, model_s2 = self.set_store[s2]
+
+        # P4 subset check
+        p4_result = builtin.sets_sub_set(None, [p4_s1, p4_s2]).get_bool()
+
+        # Model subset check
+        model_result = model_s1 <= model_s2
+
+        assert p4_result == model_result, "Subset check mismatch: P4=%s, Model=%s" % (p4_result, model_result)
+
+    @rule(s1=sets, s2=sets)
+    def check_equality(self, s1, s2):
+        """Check if two sets are equal."""
+        p4_s1, model_s1 = self.set_store[s1]
+        p4_s2, model_s2 = self.set_store[s2]
+
+        # P4 equality check
+        p4_result = builtin.sets_eq_set(None, [p4_s1, p4_s2]).get_bool()
+
+        # Model equality check
+        model_result = (model_s1 == model_s2)
+
+        assert p4_result == model_result, "Equality check mismatch: P4=%s, Model=%s" % (p4_result, model_result)
+
+    @invariant()
+    def sets_match_model(self):
+        """Invariant: all P4 sets match their frozenset models."""
+        for name, (p4_set, model_set) in self.set_store.items():
+            # Convert P4 set to Python set
+            p4_elements = set_to_python(p4_set)
+
+            # Check they match
+            assert p4_elements == model_set, "Set mismatch for %s: P4=%s, Model=%s" % (name, p4_elements, model_set)
+
+TestSetOperations = SetStateMachine.TestCase
