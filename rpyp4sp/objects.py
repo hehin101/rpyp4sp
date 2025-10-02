@@ -113,7 +113,6 @@ class BoolV(BaseV):
     def __init__(self, value):
         self.value = value # type: bool
 
-
     @staticmethod
     def make(value, typ):
         if isinstance(typ, p4specast.BoolT):
@@ -123,6 +122,9 @@ class BoolV(BaseV):
                 return BoolV.FALSE
         else:
             return BoolVWithTyp(value, typ)
+
+    def get_typ(self):
+        return p4specast.BoolT.INSTANCE
 
     def compare(self, other):
         if not isinstance(other, BoolV):
