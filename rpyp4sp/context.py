@@ -88,14 +88,14 @@ class TDenvDict(object):
         self._keys = keys # type: EnvKeys
 
     def get(self, id_value):
-        # type: (str) -> p4specast.DefTyp
+        # type: (str) -> tuple[list[p4specast.TParam], p4specast.DefTyp]
         pos = jit.promote(self._keys).get_pos(id_value, '')
         if pos < 0:
             raise P4ContextError('id_value %s does not exist' % (id_value))
         return self._get_list(pos)
 
     def set(self, id_value, typdef):
-        # type: (str, p4specast.DefTyp) -> TDenvDict
+        # type: (str, tuple[list[p4specast.TParam], p4specast.DefTyp]) -> TDenvDict
         pos = jit.promote(self._keys).get_pos(id_value, '')
         jit.promote(self._get_size_list())
         if pos < 0:
@@ -112,7 +112,7 @@ class TDenvDict(object):
         return pos >= 0
 
     def bindings(self):
-        # type: () -> list[tuple[str, tuple[list, p4specast.DefTyp]]]
+        # type: () -> list[tuple[str, tuple[list[p4specast.TParam], p4specast.DefTyp]]]
         bindings = []
         for ((id_value, _), pos) in self._keys.keys.items():
             bindings.append((id_value, self._get_list(pos)))
@@ -122,7 +122,7 @@ class TDenvDict(object):
         l = ["context.TDenvDict.EMPTY"]
         for id_value, _ in self._keys.keys:
             pos = jit.promote(self._keys).get_pos(id_value, '')
-            typdef = self._typdefs[pos]
+            typdef = self._get_list(pos)
             l.append(".set(%r, %r)" % (id_value, typdef))
         return "".join(l)
 
@@ -130,7 +130,7 @@ class TDenvDict(object):
         l = ["<tdenv "]
         for index, (id_value, _) in enumerate(self._keys.keys):
             pos = jit.promote(self._keys).get_pos(id_value, '')
-            typdef = self._typdefs[pos]
+            typdef = self._get_list(pos)
             if index == 0:
                 l.append("%r: %r" % (id_value, typdef))
             else:
@@ -182,7 +182,7 @@ class FenvDict(object):
         l = ["<fenv "]
         for index, (id_value, _) in enumerate(self._keys.keys):
             pos = jit.promote(self._keys).get_pos(id_value, '')
-            func = self._funcs[pos]
+            func = self._get_list(pos)
             if index == 0:
                 l.append("%r: %r" % (id_value, func))
             else:
@@ -236,7 +236,7 @@ class Context(object):
         return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
 
     def find_value_local(self, id, iterlist=p4specast.IterList.EMPTY, vare_cache=None):
-        # type: (p4specast.Id, list[p4specast.Iter], p4specast.VarE | None) -> objects.BaseV
+        # type: (p4specast.Id, list[p4specast.IterList], p4specast.VarE | None) -> objects.BaseV
         var_iter = iterlist.to_key()
         jit.promote(id)
         if not jit.we_are_jitted() and vare_cache is not None and vare_cache._ctx_keys is self.venv_keys:
@@ -251,14 +251,14 @@ class Context(object):
         return self._get_list(pos)
 
     def bound_value_local(self, id, iterlist):
-        # type: (p4specast.Id, list[p4specast.Iter]) -> bool
+        # type: (p4specast.Id, p4specast.IterList) -> bool
         jit.promote(id)
         pos = jit.promote(self.venv_keys).get_pos(id.value, iterlist.to_key())
         return pos >= 0
 
     # TODO: why Id and not Tparam?
     def find_typdef_local(self, id):
-        # type: (p4specast.Id) -> tuple[list, p4specast.DefTyp]
+        # type: (p4specast.Id) -> tuple[list[p4specast.TParam], p4specast.DefTyp]
         if self.tdenv.has_key(id.value):
             typdef = self.tdenv.get(id.value)
         else:
@@ -272,7 +272,7 @@ class Context(object):
         return res
 
     def add_value_local(self, id, iterlist, value, vare_cache=None):
-        # type: (p4specast.Id, list, objects.BaseV, p4specast.VarE | None) -> Context
+        # type: (p4specast.Id, p4specast.IterList, objects.BaseV, p4specast.VarE | None) -> Context
         if not jit.we_are_jitted() and vare_cache is not None and vare_cache._ctx_keys_add is self.venv_keys:
             venv_keys = vare_cache._ctx_keys_next
             return self.copy_and_change_append_venv(value, venv_keys)
