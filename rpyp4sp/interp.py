@@ -998,12 +998,20 @@ def eval_hold_cond_list(ctx, id, notexp, vars, iterexps):
         ctx = ctx.commit(ctx_sub)
         values_cond = [value_cond]
         return ctx, cond, values_cond
-    return _eval_hold_cond_list_loop(ctx, ctxs_sub, id, notexp, vars, iterexps)
+    return _eval_hold_cond_list_loop(ctx, ctxs_sub, id, notexp, iterexps)
 
-def _eval_hold_cond_list_loop(ctx, ctxs_sub, id, notexp, vars, iterexps):
+def get_printable_location(id, notexp, iterexps, varlist):
+    return "eval_hold_cond_list_loop %s %s %s %s" % (id.value, notexp.tostring(), iterexps.tostring(), varlist.tostring())
+
+jitdriver_eval_hold_cond_list_loop = jit.JitDriver(
+    reds='auto', greens=['id', 'notexp', 'iterexps', 'varlist'],
+    name='eval_hold_cond_list_loop', get_printable_location=get_printable_location)
+
+def _eval_hold_cond_list_loop(ctx, ctxs_sub, id, notexp, iterexps):
     cond = True
     values_cond = []
     for ctx_sub in ctxs_sub:
+        jitdriver_eval_hold_cond_list_loop.jit_merge_point(id=id, notexp=notexp, iterexps=iterexps, varlist=ctxs_sub.varlist)
         if not cond:
             break
         ctx_sub, cond_sub, value_cond = eval_hold_cond_iter_tick(ctx_sub, id, notexp, iterexps)
