@@ -1,3 +1,5 @@
+from __future__ import print_function
+from rpython.rlib import jit
 from rpyp4sp import p4specast, objects, smalllist
 from rpyp4sp.error import P4ContextError
 
@@ -12,13 +14,29 @@ class GlobalContext(object):
         self.renv = {}
         self.fenv = {}
 
+    @jit.elidable
+    def _find_rel(self, name):
+        return self.renv.get(name, None)
+
+    @jit.elidable
+    def _find_func(self, name):
+        return self.fenv.get(name, None)
+
+    @jit.elidable
+    def _find_typdef(self, name):
+        return self.tdenv.get(name, (None, None))
+
 
 class EnvKeys(object):
     def __init__(self, keys):
         self.keys = keys # type: dict[tuple[str, str], int]
         self.next_env_keys = {} # type: dict[tuple[str, str], EnvKeys]
+        self._next_var_name = None
+        self._next_var_iter = None
+        self._next_env_keys = None
 
     # TODO: default für var_iter
+    @jit.elidable
     def get_pos(self, var_name, var_iter):
         # type: (str, str) -> int
         if not self.keys:
@@ -26,8 +44,13 @@ class EnvKeys(object):
         return self.keys.get((var_name, var_iter), -1)
 
     # TODO: default für var_iter
+    @jit.elidable
     def add_key(self, var_name, var_iter):
         # type: (str, str) -> EnvKeys
+        if (self._next_var_name is not None and 
+                self._next_var_name == var_name and
+                self._next_var_iter == var_iter):
+            return self._next_env_keys
         key = (var_name, var_iter)
         res = self.next_env_keys.get(key)
         if res is not None:
@@ -37,6 +60,10 @@ class EnvKeys(object):
             keys[key] = len(keys)
             res = EnvKeys(keys)
             self.next_env_keys[key] = res
+            if self._next_env_keys is None:
+                self._next_var_name = var_name
+                self._next_var_iter = var_iter
+                self._next_env_keys = res
             return res
 
     def __repr__(self):
@@ -57,21 +84,22 @@ class EnvKeys(object):
 
 EnvKeys.EMPTY = EnvKeys({})
 
-@smalllist.inline_small_list(immutable=True)
+@smalllist.inline_small_list(immutable=True, nonull=True, append_list_unroll_safe=True)
 class TDenvDict(object):
     def __init__(self, keys=EnvKeys.EMPTY):
         self._keys = keys # type: EnvKeys
 
     def get(self, id_value):
         # type: (str) -> tuple[list[p4specast.TParam], p4specast.DefTyp]
-        pos = self._keys.get_pos(id_value, '')
+        pos = jit.promote(self._keys).get_pos(id_value, '')
         if pos < 0:
             raise P4ContextError('id_value %s does not exist' % (id_value))
         return self._get_list(pos)
 
     def set(self, id_value, typdef):
         # type: (str, tuple[list[p4specast.TParam], p4specast.DefTyp]) -> TDenvDict
-        pos = self._keys.get_pos(id_value, '')
+        pos = jit.promote(self._keys).get_pos(id_value, '')
+        jit.promote(self._get_size_list())
         if pos < 0:
             keys = self._keys.add_key(id_value, '')
             return self._append_list(typdef, keys)
@@ -82,7 +110,7 @@ class TDenvDict(object):
 
     def has_key(self, id_value):
         # type: (str) -> bool
-        pos = self._keys.get_pos(id_value, '')
+        pos = jit.promote(self._keys).get_pos(id_value, '')
         return pos >= 0
 
     def bindings(self):
@@ -95,7 +123,7 @@ class TDenvDict(object):
     def __repr__(self):
         l = ["context.TDenvDict.EMPTY"]
         for id_value, _ in self._keys.keys:
-            pos = self._keys.get_pos(id_value, '')
+            pos = jit.promote(self._keys).get_pos(id_value, '')
             typdef = self._get_list(pos)
             l.append(".set(%r, %r)" % (id_value, typdef))
         return "".join(l)
@@ -103,7 +131,7 @@ class TDenvDict(object):
     def __str__(self):
         l = ["<tdenv "]
         for index, (id_value, _) in enumerate(self._keys.keys):
-            pos = self._keys.get_pos(id_value, '')
+            pos = jit.promote(self._keys).get_pos(id_value, '')
             typdef = self._get_list(pos)
             if index == 0:
                 l.append("%r: %r" % (id_value, typdef))
@@ -111,24 +139,26 @@ class TDenvDict(object):
                 l.append(", %r: %r" % (id_value, typdef))
         l.append(">")
         return "".join(l)
+TDenvDict.EMPTY = TDenvDict()
 
 TDenvDict.EMPTY = TDenvDict.make0()
 
-@smalllist.inline_small_list(immutable=True)
+@smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
 class FenvDict(object):
     def __init__(self, keys=EnvKeys.EMPTY):
         self._keys = keys # type: EnvKeys
 
     def get(self, id_value):
         # type: (str) -> p4specast.DecD
-        pos = self._keys.get_pos(id_value, '')
+        pos = jit.promote(self._keys).get_pos(id_value, '')
         if pos < 0:
             raise P4ContextError('id_value %s does not exist' % (id_value))
         return self._get_list(pos)
 
     def set(self, id_value, func):
         # type: (str, p4specast.DecD) -> FenvDict
-        pos = self._keys.get_pos(id_value, '')
+        jit.promote(self._get_size_list())
+        pos = jit.promote(self._keys).get_pos(id_value, '')
         if pos < 0:
             keys = self._keys.add_key(id_value, '')
             return self._append_list(func, keys)
@@ -139,7 +169,7 @@ class FenvDict(object):
 
     def has_key(self, id_value):
         # type: (str) -> bool
-        pos = self._keys.get_pos(id_value, '')
+        pos = jit.promote(self._keys).get_pos(id_value, '')
         return pos >= 0
 
     def __repr__(self):
@@ -153,7 +183,7 @@ class FenvDict(object):
     def __str__(self):
         l = ["<fenv "]
         for index, (id_value, _) in enumerate(self._keys.keys):
-            pos = self._keys.get_pos(id_value, '')
+            pos = jit.promote(self._keys).get_pos(id_value, '')
             func = self._get_list(pos)
             if index == 0:
                 l.append("%r: %r" % (id_value, func))
@@ -161,11 +191,14 @@ class FenvDict(object):
                 l.append(", %r: %r" % (id_value, func))
         l.append(">")
         return "".join(l)
+FenvDict.EMPTY = FenvDict()
 
 FenvDict.EMPTY = FenvDict.make0()
 
-@smalllist.inline_small_list(immutable=True)
+@smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
 class Context(object):
+    _immutable_fields_ = ['glbl', 'values_input[*]',
+                          'tdenv', 'fenv', 'venv_keys']
     def __init__(self, glbl=None, tdenv=None, fenv=None, venv_keys=None):
         self.glbl = GlobalContext() if glbl is None else glbl
         # the local context is inlined
@@ -207,11 +240,12 @@ class Context(object):
     def find_value_local(self, id, iterlist=p4specast.IterList.EMPTY, vare_cache=None):
         # type: (p4specast.Id, list[p4specast.IterList], p4specast.VarE | None) -> objects.BaseV
         var_iter = iterlist.to_key()
-        if vare_cache is not None and vare_cache._ctx_keys is self.venv_keys:
+        jit.promote(id)
+        if not jit.we_are_jitted() and vare_cache is not None and vare_cache._ctx_keys is self.venv_keys:
             pos = vare_cache._ctx_index
         else:
-            pos = self.venv_keys.get_pos(id.value, var_iter)
-            if vare_cache is not None:
+            pos = jit.promote(self.venv_keys).get_pos(id.value, var_iter)
+            if not jit.we_are_jitted() and vare_cache is not None:
                 vare_cache._ctx_index = pos
                 vare_cache._ctx_keys = self.venv_keys
         if pos < 0:
@@ -219,8 +253,9 @@ class Context(object):
         return self._get_list(pos)
 
     def bound_value_local(self, id, iterlist):
-        # type: (p4specast.Id, list[p4specast.IterList]) -> bool
-        pos = self.venv_keys.get_pos(id.value, iterlist.to_key())
+        # type: (p4specast.Id, p4specast.IterList) -> bool
+        jit.promote(id)
+        pos = jit.promote(self.venv_keys).get_pos(id.value, iterlist.to_key())
         return pos >= 0
 
     # TODO: why Id and not Tparam?
@@ -229,22 +264,27 @@ class Context(object):
         if self.tdenv.has_key(id.value):
             typdef = self.tdenv.get(id.value)
         else:
-            typdef =  self.glbl.tdenv[id.value]
+            typdef = jit.promote(self.glbl)._find_typdef(id.value)
         return typdef
 
     def find_rel_local(self, id):
-        return self.glbl.renv[id.value]
+        res = jit.promote(self.glbl)._find_rel(id.value)
+        if res is None:
+            raise P4ContextError("rel %s not found" % id.value)
+        return res
 
     def add_value_local(self, id, iterlist, value, vare_cache=None):
         # type: (p4specast.Id, p4specast.IterList, objects.BaseV, p4specast.VarE | None) -> Context
-        if vare_cache is not None and vare_cache._ctx_keys_add is self.venv_keys:
+        if not jit.we_are_jitted() and vare_cache is not None and vare_cache._ctx_keys_add is self.venv_keys:
             venv_keys = vare_cache._ctx_keys_next
             return self.copy_and_change_append_venv(value, venv_keys)
         var_iter = iterlist.to_key()
-        pos = self.venv_keys.get_pos(id.value, var_iter)
+        venv_keys = jit.promote(self.venv_keys)
+        length = jit.promote(self._get_size_list())
+        pos = venv_keys.get_pos(id.value, var_iter)
         if pos < 0:
             venv_keys = self.venv_keys.add_key(id.value, var_iter)
-            if vare_cache:
+            if not jit.we_are_jitted() and vare_cache:
                 vare_cache._ctx_keys_add = self.venv_keys
                 vare_cache._ctx_keys_next = venv_keys
             return self.copy_and_change_append_venv(value, venv_keys)
@@ -270,13 +310,16 @@ class Context(object):
         if self.fenv.has_key(id.value):
             func = self.fenv.get(id.value)
         else:
-            func = self.glbl.fenv[id.value]
+            func = jit.promote(self.glbl)._find_func(id.value)
+            if func is None:
+                raise P4ContextError('func %s not found' % id.value)
         return func
 
     def commit(self, sub_ctx):
         # TODO: later add cover
         return self
 
+    @jit.unroll_safe
     def sub_opt(self, vars):
         #   (* First collect the values that are to be iterated over *)
         #   let values =
@@ -318,8 +361,13 @@ class Context(object):
                 ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value_sub.value)
             return ctx_sub
 
+    @jit.unroll_safe
+    def sub_list(self, varlist):
+        from rpyp4sp import interp
+        # type: (interp.VarList) -> SubListIter
+        # this is unroll_safe because varlist comes from an ast, so is
+        # constant-sized.
 
-    def sub_list(self, vars):
         # First break the values that are to be iterated over,
         # into a batch of values
         #   let values_batch =
@@ -328,10 +376,10 @@ class Context(object):
         #         find_value Local ctx (id, iters @ [ Il.Ast.List ]) |> Value.get_list)
         #       vars
         #     |> transpose
-        values_batch = []
-        assert vars
+        values_batch = [None] * len(varlist.vars)
+        assert varlist
         first_list = None
-        for var in vars:
+        for i, var in enumerate(varlist.vars):
             value = self.find_value_local(var.id, var.iter.append_list())
             value_list = value.get_list()
             if first_list is not None:
@@ -339,36 +387,15 @@ class Context(object):
                     raise P4ContextError("cannot transpose a matrix of value batches")
             else:
                 first_list = value_list
-            values_batch.append(value_list)
+            values_batch[i] = value_list
         assert first_list is not None
-        if len(first_list) == 0:
-            return []
-        #   in
-        #   (* For each batch of values, create a sub-context *)
-        #   List.fold_left
-        #     (fun ctxs_sub value_batch ->
-        #       let ctx_sub =
-        #         List.fold_left2
-        #           (fun ctx_sub (id, _typ, iters) value ->
-        #             add_value Local ctx_sub (id, iters) value)
-        #           ctx vars value_batch
-        #       in
-        #       ctxs_sub @ [ ctx_sub ])
-        #     [] values_batch
-        ctxs_sub = []
-        for j in range(len(first_list)):
-            ctx_sub = self
-            for i, var in enumerate(vars):
-                value = values_batch[i][j]
-                ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value)
-            ctxs_sub.append(ctx_sub)
-        return ctxs_sub
+        return SubListIter(self, varlist, len(first_list), values_batch)
 
     def _venv_str(self):
         l = ["<venv "]
         for index, (var_name, var_iter) in enumerate(self.venv_keys.keys):
             pos = self.venv_keys.get_pos(var_name, var_iter)
-            value = self._get_list(pos)
+            value = self._get_list(i)
             if index == 0:
                 l.append("%r: %r" % (var_name + var_iter, value))
             else:
@@ -382,6 +409,39 @@ class Context(object):
             res.append((key, self._get_list(index)))
         return res
 
+class SubListIter(object):
+    def __init__(self, ctx, varlist, length, values_batch):
+        self.varlist = varlist
+        self.length = length
+        self.j = 0
+        self.values_batch = values_batch
+        self.ctx = ctx
+
+    def __iter__(self):
+        return self
+
+    @jit.unroll_safe
+    def next(self):
+        #   in
+        #   (* For each batch of values, create a sub-context *)
+        #   List.fold_left
+        #     (fun ctxs_sub value_batch ->
+        #       let ctx_sub =
+        #         List.fold_left2
+        #           (fun ctx_sub (id, _typ, iters) value ->
+        #             add_value Local ctx_sub (id, iters) value)
+        #           ctx vars value_batch
+        #       in
+        #       ctxs_sub @ [ ctx_sub ])
+        #     [] values_batch
+        if self.j >= self.length:
+            raise StopIteration
+        ctx_sub = self.ctx
+        for i, var in enumerate(jit.promote(self.varlist).vars):
+            value = self.values_batch[i][self.j]
+            ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value)
+        self.j += 1
+        return ctx_sub
 
 def transpose(value_matrix):
     if not value_matrix:
