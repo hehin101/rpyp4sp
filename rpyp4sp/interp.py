@@ -1278,7 +1278,7 @@ def assign_exp(ctx, exp, value):
                 ctx = ctx.add_value_local(var.id, var.iter.append_list(), value_sub)
             return ctx
         else:
-            ctx_local = ctx.localize_venv(venv_keys=context.EnvKeys.EMPTY, venv_values=[])
+            ctx_local = ctx.localize()
             values = _assign_exp_iter_cases(ctx_local, exp, values)
             #     in
             #     (* Per iterated variable, collect its elementwise value,
@@ -1312,12 +1312,27 @@ def assign_exp(ctx, exp, value):
     #import pdb;pdb.set_trace()
     raise P4EvaluationError("todo assign_exp: unhandled expression type %s" % exp.__class__.__name__)
 
+def get_printable_location(exp):
+    return "assign_exp_iter_cases %s" % (exp.tostring())
+
+jitdriver_assign_exp_iter_cases = jit.JitDriver(
+    reds='auto', greens=['exp'],
+    name='assign_exp_iter_cases', get_printable_location=get_printable_location)
+
+
 def _assign_exp_iter_cases(ctx_local, exp, values):
+    # this is basically an unzip
     values_result = [[None] * len(values) for _ in exp.varlist]
-    for i, value_elem in enumerate(values):
-        ctx_local = assign_exp(ctx_local, exp.exp, value_elem)
+    i = 0
+    while 1:
+        jitdriver_assign_exp_iter_cases.jit_merge_point(exp=exp)
+        if i >= len(values):
+            break
+        value_elem = values[i]
+        ctx_local2 = assign_exp(ctx_local, exp.exp, value_elem)
         for index, var in enumerate(exp.varlist):
-            values_result[index][i] = ctx_local.find_value_local(var.id, var.iter)
+            values_result[index][i] = ctx_local2.find_value_local(var.id, var.iter)
+        i += 1
     return values_result
 
 @jit.unroll_safe
