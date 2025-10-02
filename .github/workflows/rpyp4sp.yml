@@ -72,7 +72,7 @@ jobs:
 
       - name: translate binary
         run: |
-          PYTHONPATH=. _pypy_binary/bin/python pypy/rpython/bin/rpython rpyp4sp/targetrpyp4sp.py
+          PYTHONPATH=. _pypy_binary/bin/python pypy/rpython/bin/rpython -Ojit rpyp4sp/targetrpyp4sp.py
 
       - name: make p4 json files
         run: |
@@ -81,6 +81,11 @@ jobs:
           cd ..
 
       - name: run p4 with targetrpyp4sp-c
+        run: |
+          ./targetrpyp4sp-c run-p4-json --jit off p4-spectec/p4c/testdata/p4_16_samples/*.p4.json | tee out
+          grep "PASSED: 11[0-9][0-9]" out
+
+      - name: run p4 with targetrpyp4sp-c with JIT
         run: |
           ./targetrpyp4sp-c run-p4-json p4-spectec/p4c/testdata/p4_16_samples/*.p4.json | tee out
           grep "PASSED: 11[0-9][0-9]" out
