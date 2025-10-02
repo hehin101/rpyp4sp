@@ -591,10 +591,15 @@ def compares(values_l, values_r):
     # lexicographic ordering, iterative version
     len_l = len(values_l)
     len_r = len(values_r)
-    if len_l == len_r == 0:
-        return 0
-    if len_l == len_r == 1:
-        return values_l[0].compare(values_r[0])
+    if len_l <= 1 and len_r <= 1:
+        if len_l == len_r == 0:
+            return 0
+        if len_l == len_r == 1:
+            return values_l[0].compare(values_r[0])
+        # if we reach here, one list is size 1, the other size 0
+        if len_l < len_r:
+            return -1
+        return 1
     return _compares(values_l, values_r, len_l, len_r)
 
 def _compares(values_l, values_r, len_l, len_r):

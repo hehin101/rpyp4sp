@@ -327,6 +327,7 @@ def _unions_set_loop(curr, sets_l, startindex):
         curr = _set_union_elems(curr, _extract_set_elems(sets_l[i]))
     return curr
 
+@jit.look_inside_iff(lambda elems_l, elems_r: (len(elems_l) <= 1) & (len(elems_r) <= 1))
 def _set_diff_elemens(elems_l, elems_r):
     res = []
     for el in elems_l:
@@ -427,8 +428,12 @@ def _extract_map_item(el):
     value = el._get_list(1)
     return key, value
 
+@jit.elidable
+def _make_vart(id, *targs):
+    return p4specast.VarT(id, list(targs))
+
 def _build_map_item(key_value, value_value, key_typ, value_typ):
-    pairtyp = p4specast.VarT(pair_id, [key_typ, value_typ])
+    pairtyp = _make_vart(pair_id, key_typ, value_typ)
     return objects.CaseV.make2(key_value, value_value, arrow_mixop, pairtyp)
 
 def find_map(map_value, key_value):
@@ -464,6 +469,7 @@ def maps_find_maps(targs, values_input):
     typ.region = p4specast.NO_REGION
     return objects.OptV(res_value, typ)
 
+@jit.elidable
 def _maps_find_map(list_maps_value, key_value):
     for map_value in list_maps_value.get_list():
         res_value = find_map(map_value, key_value)
@@ -476,15 +482,19 @@ def maps_add_map(targs, values_input):
     map_value, key_value, value_value = values_input
     key_typ, value_typ = targs
     content = _extract_map_content(map_value)
-    new_pair = _build_map_item(key_value, value_value, key_typ, value_typ)
     if not content:
-        res = [new_pair]
+        new_pair = _build_map_item(key_value, value_value, key_typ, value_typ)
+        listtyp = new_pair.typ.list_of()
+        list_value = objects.ListV.make1(new_pair, listtyp)
     else:
-        res = _add_map(key_value, content, new_pair)
-    list_value = objects.ListV.make(res, p4specast.IterT(new_pair.typ, p4specast.List()))
-    return objects.CaseV.make1(list_value, map_mixop, p4specast.VarT(map_id, targs))
+        res = _add_map(key_value, content, value_value, key_typ, value_typ)
+        listtyp = jit.promote(res[0].typ).list_of()
+        list_value = objects.ListV.make(res, listtyp)
+    return objects.CaseV.make1(list_value, map_mixop, _make_vart(map_id, key_typ, value_typ))
 
-def _add_map(key_value, content, new_pair):
+def _add_map(key_value, content, value_value, key_typ, value_typ):
+    new_pair = _build_map_item(key_value, value_value, key_typ, value_typ)
+    listtyp = new_pair.typ.list_of()
     res = []
     index = 0
     for index, el in enumerate(content):
@@ -516,6 +526,10 @@ def maps_adds_map(targs, values_input):
     values = value_value_list.get_list()
     if len(keys) != len(values):
         raise P4BuiltinError("adds_map: list of keys and list of values must have the same length")
+    return _maps_adds_map_loop(targs, value_map, keys, values)
+
+@jit.look_inside_iff(lambda targs, value_map, keys, values: jit.isconstant(len(keys)))
+def _maps_adds_map_loop(targs, value_map, keys, values):
     for index, key_value in enumerate(keys):
         value_value = values[index]
         value_map = maps_add_map(targs, [value_map, key_value, value_value])
