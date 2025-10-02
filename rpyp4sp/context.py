@@ -377,17 +377,19 @@ class Context(object):
         values_batch = [None] * len(varlist.vars)
         assert varlist
         first_list = None
+        first_list_length = 0
         for i, var in enumerate(varlist.vars):
             value = self.find_value_local(var.id, var.iter.append_list())
-            value_list = value.get_list()
+            value_len = value.get_list_len()
             if first_list is not None:
-                if len(first_list) != len(value_list):
+                if first_list_length != value_len:
                     raise P4ContextError("cannot transpose a matrix of value batches")
             else:
-                first_list = value_list
-            values_batch[i] = value_list
+                first_list = value
+                first_list_length = value_len
+            values_batch[i] = value
         assert first_list is not None
-        return SubListIter(self, varlist, len(first_list), values_batch)
+        return SubListIter(self, varlist, first_list_length, values_batch)
 
     def _venv_str(self):
         l = ["<venv "]
@@ -436,7 +438,7 @@ class SubListIter(object):
             raise StopIteration
         ctx_sub = self.ctx
         for i, var in enumerate(jit.promote(self.varlist).vars):
-            value = self.values_batch[i][self.j]
+            value = self.values_batch[i]._get_list(self.j)
             ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value)
         self.j += 1
         return ctx_sub

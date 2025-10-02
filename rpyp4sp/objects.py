@@ -73,6 +73,9 @@ class BaseV(SubBase):
     def get_list(self):
         raise TypeError("not a list")
 
+    def get_list_len(self):
+        raise TypeError("not a list")
+
     def get_tuple(self):
         raise TypeError("not a tuple")
 
@@ -504,6 +507,9 @@ class ListV(BaseV):
 
     def get_list(self):
         return self._get_full_list()
+
+    def get_list_len(self):
+        return self._get_size_list()
 
     def compare(self, other):
         if not isinstance(other, ListV):
