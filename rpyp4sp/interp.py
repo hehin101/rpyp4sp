@@ -10,6 +10,8 @@ class VarList(object):
     def __init__(self, vars):
         self.vars = vars  # type: list
         self.next_var_lists = {}  # type: dict[tuple[str, str], VarList]
+        self._ctx_env_key_cache = None
+        self._ctx_env_key_result = None
 
     @jit.elidable
     def add_var(self, var):
