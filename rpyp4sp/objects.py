@@ -73,6 +73,9 @@ class BaseV(SubBase):
     def get_list(self):
         raise TypeError("not a list")
 
+    def get_tuple(self):
+        raise TypeError("not a tuple")
+
     def get_struct(self):
         raise TypeError("not a struct")
 
@@ -415,9 +418,13 @@ class CaseV(BaseV):
 
 @inline_small_list(immutable=True)
 class TupleV(BaseV):
+    _immutable_fields_ = []
     def __init__(self, typ=None, vid=-1):
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
+
+    def get_tuple(self):
+        return self._get_full_list()
 
     def compare(self, other):
         if not isinstance(other, TupleV):
@@ -490,6 +497,7 @@ class OptV(BaseV):
 # just optimize lists of size 0, 1, arbitrary
 @inline_small_list(immutable=True, sizemax=2)
 class ListV(BaseV):
+    _immutable_fields_ = []
     def __init__(self, typ=None, vid=-1):
         self.vid = vid # type: int
         self.typ = typ # type: p4specast.Type | None
@@ -583,6 +591,13 @@ def compares(values_l, values_r):
     # lexicographic ordering, iterative version
     len_l = len(values_l)
     len_r = len(values_r)
+    if len_l == len_r == 0:
+        return 0
+    if len_l == len_r == 1:
+        return values_l[0].compare(values_r[0])
+    return _compares(values_l, values_r, len_l, len_r)
+
+def _compares(values_l, values_r, len_l, len_r):
     min_len = min(len_l, len_r)
     for i in range(min_len):
         cmp = values_l[i].compare(values_r[i])

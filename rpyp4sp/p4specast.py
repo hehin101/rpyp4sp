@@ -98,6 +98,8 @@ def define_enum(basename, *names):
 
 
 class Position(AstBase):
+    _immutable_fields_ = ['file', 'line', 'column']
+
     def __init__(self, file, line, column):
         self.file = file # type: str
         self.line = line # type: int
@@ -116,6 +118,8 @@ class Position(AstBase):
 # type region = { left : pos; right : pos } [@@deriving yojson]
 
 class Region(AstBase):
+    _immutable_fields_ = ['left', 'right']
+
     def __init__(self, left, right):
         self.left = left # type: Position
         self.right = right # type: Position
@@ -165,6 +169,8 @@ NO_REGION = Region(Position('', 0, 0), Position('', 0, 0))
 
 class Id(AstBase):
     _attrs_ = ['value', 'region']
+    _immutable_fields_ = ['value', 'region']
+
     def __init__(self, value, region):
         self.value = value # type: str
         self.region = region # type: Region
@@ -189,6 +195,8 @@ class Id(AstBase):
         return "p4specast.Id(%r, %s)" % (self.value, self.region)
 
 class TParam(AstBase):
+    _immutable_fields_ = ['value', 'region']
+
     def __init__(self, value, region):
         self.value = value # type: str
         self.region = region # type: Region
@@ -261,6 +269,8 @@ def string_of_iterexps(iterexps):
 # type var = id * typ * iter list
 
 class Var(AstBase):
+    _immutable_fields_ = ['id', 'typ', 'iter']
+
     def __init__(self, id, typ, iter):
         self.id = id
         self.typ = typ
@@ -300,6 +310,14 @@ class IterList(AstBase):
 
     def to_key(self):
         return self._string
+
+    @jit.elidable
+    def append(self, iter):
+        if isinstance(iter, List):
+            return self.append_list()
+        elif isinstance(iter, Opt):
+            return self.append_opt()
+        assert 0
 
     @jit.elidable
     def append_opt(self):
@@ -350,6 +368,8 @@ class Def(AstBase):
 
 
 class TypD(Def):
+    _immutable_fields_ = ['id', 'tparams[*]', 'deftyp']
+
     def __init__(self, id, tparams, deftyp):
         self.id = id            # type: Id
         self.tparams = tparams  # type: list[TParam]
@@ -371,10 +391,12 @@ class TypD(Def):
 
 
 class RelD(Def):
+    _immutable_fields_ = ['id', 'mixop', 'inputs', 'exps', 'instrs[*]']
+
     def __init__(self, id, mixop, inputs, exps, instrs):
         self.id = id            # type: Id
         self.mixop = mixop      # type: MixOp
-        self.inputs = inputs    # type: list[Input]
+        self.inputs = inputs    # type: list[int]
         self.exps = exps        # type: list[Exp]
         self.instrs = instrs    # type: list[Instr]
 
@@ -397,6 +419,8 @@ class RelD(Def):
         )
 
 class DecD(Def):
+    _immutable_fields_ = ['id', 'tparams[*]', 'args[*]', 'instrs[*]']
+
     def __init__(self, id, tparams, args, instrs):
         self.id = id            # type: Id
         self.tparams = tparams  # type: list[TParam]
@@ -442,6 +466,8 @@ class Arg(AstBase):
             raise P4UnknownTypeError("Unknown Arg type: %s" % what)
 
 class ExpA(Arg):
+    _immutable_fields_ = ['exp']
+
     def __init__(self, exp):
         self.exp = exp # typ: Exp
 
@@ -460,6 +486,8 @@ class ExpA(Arg):
         )
 
 class DefA(Arg):
+    _immutable_fields_ = ['id']
+
     def __init__(self, id):
         self.id = id # typ: Id
 
@@ -509,6 +537,7 @@ class DefA(Arg):
 
 class Exp(AstBase):
     _attrs_ = ['typ', 'region']
+    _immutable_fields_ = ['typ']
     # has .typ (with is in 'note' field of json) and a region
 
     @staticmethod
@@ -581,6 +610,8 @@ class Exp(AstBase):
 
 class BoolE(Exp):
     _attrs_ = ['value']
+    _immutable_fields_ = ['value']
+
     def __init__(self, value):
         assert isinstance(value, bool)
         self.value = value # type: bool
@@ -600,6 +631,7 @@ class BoolE(Exp):
 
 
 class NumE(Exp):
+    _immutable_fields_ = ['value', 'what']
     def __init__(self, value, what, typ=None):
         self.value = value # type: integers.Integer
         self.what = what # type: IntType
@@ -629,6 +661,8 @@ class NumE(Exp):
 
 
 class TextE(Exp):
+    _immutable_fields_ = ['value']
+
     def __init__(self, value):
         self.value = value # typ: str
 
@@ -647,6 +681,8 @@ class TextE(Exp):
         return string_escape_encode(self.value)
 
 class VarE(Exp):
+    _immutable_fields_ = ['id']
+
     def __init__(self, id):
         self.id = id # typ: id
         self._ctx_keys = None
@@ -668,7 +704,9 @@ class VarE(Exp):
         return self.id.value
 
 class UnE(Exp):
+    _immutable_fields_ = ['op', 'optyp', 'exp']
     #   | UnE of unop * optyp * exp             (* unop exp *)
+
     def __init__(self, op, optyp, exp):
         self.op = op # typ: unop
         self.optyp = optyp # typ: optyp
@@ -699,6 +737,7 @@ class UnE(Exp):
         )
 
 class BinE(Exp):
+    _immutable_fields_ = ['binop', 'optyp', 'left', 'right']
     #   | BinE of binop * optyp * exp * exp     (* exp binop exp *)
     def __init__(self, binop, optyp, left, right):
         self.binop = binop # typ: binop
@@ -741,6 +780,7 @@ class BinE(Exp):
         )
 
 class CmpE(Exp):
+    _immutable_fields_ = ['cmpop', 'optyp', 'left', 'right']
 #   | CmpE of cmpop * optyp * exp * exp     (* exp cmpop exp *)
     def __init__(self, cmpop, optyp, left, right):
         self.cmpop = cmpop # typ: cmpop
@@ -778,6 +818,8 @@ class CmpE(Exp):
         )
 
 class UpCastE(Exp):
+    _immutable_fields_ = ['check_typ', 'exp']
+
 #   | UpCastE of typ * exp                  (* exp as typ *)
     def __init__(self, check_typ, exp):
         self.check_typ = check_typ # typ: Typ
@@ -798,6 +840,8 @@ class UpCastE(Exp):
         )
 
 class DownCastE(Exp):
+    _immutable_fields_ = ['check_typ', 'exp']
+
 #   | DownCastE of typ * exp                (* exp as typ *)
     def __init__(self, check_typ, exp):
         self.check_typ = check_typ # typ: typ
@@ -818,6 +862,8 @@ class DownCastE(Exp):
         )
 
 class SubE(Exp):
+    _immutable_fields_ = ['exp', 'check_typ']
+
 #   | SubE of exp * typ                     (* exp `<:` typ *)
     def __init__(self, exp, check_typ):
         self.exp = exp
@@ -838,6 +884,8 @@ class SubE(Exp):
         return "p4specast.SubE(%r, %r)" % (self.exp, self.check_typ)
 
 class MatchE(Exp):
+    _immutable_fields_ = ['exp', 'pattern']
+
 #   | MatchE of exp * pattern               (* exp `matches` pattern *)
     def __init__(self, exp, pattern):
         self.exp = exp
@@ -858,6 +906,8 @@ class MatchE(Exp):
         return "p4specast.MatchE(%r, %r)" % (self.exp, self.pattern)
 
 class TupleE(Exp):
+    _immutable_fields_ = ['elts[*]']
+
 #   | TupleE of exp list                    (* `(` exp* `)` *)
     def __init__(self, elts):
         self.elts = elts # typ: exp list
@@ -877,6 +927,8 @@ class TupleE(Exp):
         return "p4specast.TupleE(%r)" % (self.elts,)
 
 class CaseE(Exp):
+    _immutable_fields_ = ['notexp']
+
 #   | CaseE of notexp                       (* notexp *)
     def __init__(self, notexp):
         self.notexp = notexp
@@ -895,6 +947,8 @@ class CaseE(Exp):
         return "p4specast.CaseE(%r)" % (self.notexp,)
 
 class StrE(Exp):
+    _immutable_fields_ = ['fields[*]']
+
 #   | StrE of (atom * exp) list             (* { expfield* } *)
     def __init__(self, fields):
         self.fields = fields
@@ -914,6 +968,8 @@ class StrE(Exp):
         return "p4specast.StrE(%r)" % (self.fields,)
 
 class OptE(Exp):
+    _immutable_fields_ = ['exp']
+
 #   | OptE of exp option                    (* exp? *)
     def __init__(self, exp):
         self.exp = exp # typ: Exp | None
@@ -936,6 +992,8 @@ class OptE(Exp):
         return "p4specast.OptE(%r)" % (self.exp,)
 
 class ListE(Exp):
+    _immutable_fields_ = ['elts[*]']
+
 #   | ListE of exp list                     (* `[` exp* `]` *)
     def __init__(self, elts):
         self.elts = elts # typ: exp list
@@ -955,6 +1013,8 @@ class ListE(Exp):
         return "p4specast.ListE(%r)" % (self.elts,)
 
 class ConsE(Exp):
+    _immutable_fields_ = ['head', 'tail']
+
 #   | ConsE of exp * exp                    (* exp `::` exp *)
     def __init__(self, head, tail):
         self.head = head # typ: exp
@@ -975,6 +1035,8 @@ class ConsE(Exp):
         return "p4specast.ConsE(%r, %r)" % (self.head, self.tail)
 
 class CatE(Exp):
+    _immutable_fields_ = ['left', 'right']
+
 #   | CatE of exp * exp                     (* exp `++` exp *)
     def __init__(self, left, right):
         self.left = left # typ: exp
@@ -995,6 +1057,8 @@ class CatE(Exp):
         return "p4specast.CatE(%r, %r)" % (self.left, self.right)
 
 class MemE(Exp):
+    _immutable_fields_ = ['elem', 'lst']
+
 #   | MemE of exp * exp                     (* exp `<-` exp *)
     def __init__(self, elem, lst):
         self.elem = elem # typ: exp
@@ -1015,6 +1079,8 @@ class MemE(Exp):
         return "p4specast.MemE(%r, %r)" % (self.elem, self.lst)
 
 class LenE(Exp):
+    _immutable_fields_ = ['lst']
+
 #   | LenE of exp                           (* `|` exp `|` *)
     def __init__(self, lst):
         self.lst = lst # typ: exp
@@ -1033,6 +1099,8 @@ class LenE(Exp):
         return "p4specast.LenE(%r)" % (self.lst,)
 
 class DotE(Exp):
+    _immutable_fields_ = ['obj', 'field']
+
 #   | DotE of exp * atom                    (* exp.atom *)
     def __init__(self, obj, field):
         self.obj = obj # typ: exp
@@ -1053,6 +1121,8 @@ class DotE(Exp):
         return "p4specast.DotE(%r, %r)" % (self.obj, self.field)
 
 class IdxE(Exp):
+    _immutable_fields_ = ['lst', 'idx']
+
 #   | IdxE of exp * exp                     (* exp `[` exp `]` *)
     def __init__(self, lst, idx):
         self.lst = lst # typ: exp
@@ -1073,6 +1143,8 @@ class IdxE(Exp):
         return "p4specast.IdxE(%r, %r)" % (self.lst, self.idx)
 
 class SliceE(Exp):
+    _immutable_fields_ = ['lst', 'start', 'length']
+
 #   | SliceE of exp * exp * exp             (* exp `[` exp `:` exp `]` *)
     def __init__(self, lst, start, length):
         self.lst = lst # typ: exp
@@ -1095,6 +1167,8 @@ class SliceE(Exp):
         return "p4specast.SliceE(%r, %r, %r)" % (self.lst, self.start, self.length)
 
 class UpdE(Exp):
+    _immutable_fields_ = ['exp', 'path', 'value']
+
 #   | UpdE of exp * path * exp              (* exp `[` path `=` exp `]` *)
     def __init__(self, exp, path, value):
         self.exp = exp
@@ -1117,6 +1191,8 @@ class UpdE(Exp):
         return "p4specast.UpdE(%r, %r, %r)" % (self.exp, self.path, self.value)
 
 class CallE(Exp):
+    _immutable_fields_ = ['func', 'targs[*]', 'args[*]']
+
 #   | CallE of id * targ list * arg list    (* $id`<` targ* `>``(` arg* `)` *)
     def __init__(self, func, targs, args):
         self.func = func # typ: Id
@@ -1144,12 +1220,25 @@ class CallE(Exp):
 
 
 class IterE(Exp):
+    _immutable_fields_ = ['exp', 'iter', 'varlist[*]']
 #   | IterE of exp * iterexp                (* exp iterexp *)
 # iterexp = iter * var list
     def __init__(self, exp, iter, varlist):
         self.exp = exp
         self.iter = iter
         self.varlist = varlist
+
+    def is_simple_list_expr(self):
+        # tostring of the form var * var
+        if not isinstance(self.iter, List):
+            return False
+        if len(self.varlist) != 1:
+            return False
+        exp = self.exp
+        if not isinstance(exp, VarE):
+            return False
+        var, = self.varlist
+        return len(var.iter.iterlist) == 0 and exp.id.value == var.id.value
 
     def tostring(self):
         # | Il.Ast.IterE (e, (iter, xs)) -> "(" ^ string_of_exp e ^ " " ^ string_of_iter iter ^ concat_map " " string_of_varid xs ^ ")"
@@ -1170,6 +1259,8 @@ class IterE(Exp):
 # and notexp = mixop * exp list
 
 class NotExp(AstBase):
+    _immutable_fields_ = ['mixop', 'exps[*]']
+
     def __init__(self, mixop, exps):
         self.mixop = mixop
         self.exps = exps
@@ -1201,6 +1292,8 @@ class NotExp(AstBase):
 # and iterexp = iter * var list
 
 class IterExp(AstBase):
+    _immutable_fields_ = ['iter', 'vars[*]']
+
     def __init__(self, iter, vars):
         self.iter = iter
         self.vars = vars
@@ -1221,7 +1314,7 @@ class IterExp(AstBase):
         var_strs = []
         for var in self.vars:
             id, typ, iters = var.id, var.typ, var.iter
-            var_strs.append("%s <- %s" % (var.tostring(), Var(id, typ, iters + [self.iter]).tostring()))
+            var_strs.append("%s <- %s" % (var.tostring(), Var(id, typ, iters.append(self.iter).iterlist).tostring()))
         res.append(", ".join(var_strs))
         res.append("}")
         return "".join(res)
@@ -1324,6 +1417,8 @@ BoolT.INSTANCE = BoolT()
 
 
 class NumT(Type):
+    _immutable_fields_ = ['typ']
+
     def __init__(self, typ):
         self.typ = typ # type: NumTyp
 
@@ -1373,6 +1468,8 @@ class TextT(Type):
         return TextT.INSTANCE
 
 class VarT(Type):
+    _immutable_fields_ = ['id', 'targs[*]']
+
     def __init__(self, id, targs):
         self.id = id
         self.targs = targs
@@ -1395,6 +1492,8 @@ class VarT(Type):
         )
 
 class TupleT(Type):
+    _immutable_fields_ = ['elts[*]']
+
     def __init__(self, elts):
         self.elts = elts
 
@@ -1413,6 +1512,8 @@ class TupleT(Type):
         )
 
 class IterT(Type):
+    _immutable_fields_ = ['typ', 'iter']
+
     def __init__(self, typ, iter):
         self.typ = typ
         self.iter = iter
@@ -1455,6 +1556,8 @@ FuncT.INSTANCE = FuncT()
 # [@@deriving yojson]
 
 class NotTyp(AstBase):
+    _immutable_fields_ = ['mixop', 'typs[*]']
+
     def __init__(self, mixop, typs):
         self.mixop = mixop
         self.typs = typs
@@ -1485,6 +1588,7 @@ class NotTyp(AstBase):
 #   | VariantT of typcase list
 
 class DefTyp(AstBase):
+    _immutable_fields_ = ['region']
     # base class
     @staticmethod
     def fromjson(value):
@@ -1506,6 +1610,8 @@ class DefTyp(AstBase):
         return "p4specast.DefTyp()"
 
 class PlainT(DefTyp):
+    _immutable_fields_ = ['typ', 'region']
+
     def __init__(self, typ, region=None):
         self.typ = typ
         self.region = region
@@ -1520,6 +1626,8 @@ class PlainT(DefTyp):
         return "p4specast.PlainT(typ=%s)" % (self.typ,)
 
 class StructT(DefTyp):
+    _immutable_fields_ = ['fields[*]']
+
     def __init__(self, fields):
         self.fields = fields
 
@@ -1533,6 +1641,8 @@ class StructT(DefTyp):
         return "p4specast.StructT(fields=%s)" % (self.fields,)
 
 class VariantT(DefTyp):
+    _immutable_fields_ = ['cases[*]']
+
     def __init__(self, cases):
         self.cases = cases
 
@@ -1548,6 +1658,8 @@ class VariantT(DefTyp):
 # and typfield = atom * typ
 
 class TypField(AstBase):
+    _immutable_fields_ = ['name', 'typ']
+
     def __init__(self, name, typ):
         self.name = name
         self.typ = typ
@@ -1582,6 +1694,8 @@ TypeCase = NotTyp
 
 class Instr(AstBase):
     _attrs_ = ['region']
+    _immutable_fields_ = ['region']
+
     # has a .region
 
     def tostring(self, level=0, index=0):
@@ -1621,6 +1735,7 @@ class InstrWithIters(Instr):
 
     _reverse_iters = None
 
+    @jit.elidable
     def _get_reverse_iters(self):
         if self._reverse_iters is not None:
             return self._reverse_iters
@@ -1630,6 +1745,8 @@ class InstrWithIters(Instr):
 
 
 class IfI(InstrWithIters):
+    _immutable_fields_ = ['exp', 'instrs[*]']
+
     def __init__(self, exp, iters, instrs, phantom, region=None):
         self.exp = exp
         self.iters = iters
@@ -1671,7 +1788,7 @@ class IfI(InstrWithIters):
 
 
 class HoldI(InstrWithIters):
-    _immutable_fields_ = ['id', 'notexp']
+    _immutable_fields_ = ['id', 'notexp', 'holdcase']
 
 #   | HoldI of id * notexp * iterexp list * holdcase
     def __init__(self, id, notexp, iters, holdcase, region=None):
@@ -1707,6 +1824,8 @@ class HoldI(InstrWithIters):
 
 
 class ReverseIterExp(object):
+    _immutable_fields_ = ['head', 'tail']
+
     def __init__(self, head, tail):
         self.head = head # type: IterExp
         self.tail = tail # type: ReverseIterExp
@@ -1798,6 +1917,8 @@ def _combine_case_exp(exp, case):
     return exp_cond
 
 class OtherwiseI(Instr):
+    _immutable_fields_ = ['instr', 'region']
+
     def __init__(self, instr, region=None):
         self.instr = instr
         self.region = region
@@ -1821,6 +1942,7 @@ class OtherwiseI(Instr):
         return "p4specast.OtherwiseI(%r)" % (self.instr,)
 
 class LetI(InstrWithIters):
+    _immutable_fields_ = ['var', 'value']
     def __init__(self, var, value, iters, region=None):
         self.var = var
         self.value = value
@@ -1848,6 +1970,8 @@ class LetI(InstrWithIters):
         return "p4specast.LetI(%r, %r, %r%s)" % (self.var, self.value, self.iters, (", " + repr(self.region)) if self.region is not None else '')
 
 class RuleI(InstrWithIters):
+    _immutable_fields_ = ['id', 'notexp']
+
     def __init__(self, id, notexp, iters, region=None):
         self.id = id
         self.notexp = notexp
@@ -1875,6 +1999,8 @@ class RuleI(InstrWithIters):
         return "p4specast.RuleI(%r, %r, %r%s)" % (self.id, self.notexp, self.iters, (", " + repr(self.region)) if self.region is not None else '')
 
 class ResultI(Instr):
+    _immutable_fields_ = ['exps[*]']
+
     def __init__(self, exps, region=None):
         self.exps = exps
         self.region = region
@@ -1900,6 +2026,8 @@ class ResultI(Instr):
         return "p4specast.ResultI(%r%s)" % (self.exps, (", " + repr(self.region)) if self.region is not None else '')
 
 class ReturnI(Instr):
+    _immutable_fields_ = ['exp']
+
     def __init__(self, exp, region=None):
         self.exp = exp
         self.region = region
@@ -1930,6 +2058,7 @@ class ReturnI(Instr):
 #  match holdcase with
 
 class HoldCase(AstBase):
+    _attrs_ = []
     # abstract base
     @staticmethod
     def fromjson(value):
@@ -1948,6 +2077,7 @@ class HoldCase(AstBase):
 
 
 class BothH(HoldCase):
+    _immutable_fields_ = ['hold_instrs', 'nothold_instrs']
     def __init__(self, hold_instrs, nothold_instrs):
         self.hold_instrs = hold_instrs
         self.nothold_instrs = nothold_instrs
@@ -1976,6 +2106,7 @@ class BothH(HoldCase):
 
 
 class HoldH(HoldCase):
+    _immutable_fields_ = ['hold_instrs']
     def __init__(self, hold_instrs, phantom):
         self.hold_instrs = hold_instrs
         self.phantom = phantom
@@ -2009,6 +2140,7 @@ class HoldH(HoldCase):
         return "p4specast.HoldH(%r, %r)" % (self.hold_instrs, self.phantom)
 
 class NotHoldH(HoldCase):
+    _immutable_fields_ = ['nothold_instrs']
     def __init__(self, nothold_instrs, phantom):
         self.nothold_instrs = nothold_instrs
         self.phantom = phantom
@@ -2054,6 +2186,8 @@ class NotHoldH(HoldCase):
 #   | MemG of exp
 
 class Case(AstBase):
+    _immutable_fields_ = ['guard', 'instrs[*]']
+
     def __init__(self, guard, instrs):
         self.guard = guard
         self.instrs = instrs
@@ -2102,6 +2236,8 @@ class Guard(AstBase):
             raise P4UnknownTypeError("Unknown Guard: %s" % kind)
 
 class BoolG(Guard):
+    _immutable_fields_ = ['value']
+
     def __init__(self, value):
         self.value = value # typ: bool
 
@@ -2119,6 +2255,8 @@ class BoolG(Guard):
         return "p4specast.BoolG(%r)" % (self.value,)
 
 class CmpG(Guard):
+    _immutable_fields_ = ['op', 'typ', 'exp']
+
     def __init__(self, op, typ, exp):
         self.op = op # typ: cmpop
         self.typ = typ # typ: optyp
@@ -2149,6 +2287,8 @@ class CmpG(Guard):
         return "p4specast.CmpG(%r, %r, %r)" % (self.op, self.typ, self.exp)
 
 class SubG(Guard):
+    _immutable_fields_ = ['typ']
+
     def __init__(self, typ):
         self.typ = typ # typ: Type
 
@@ -2166,6 +2306,8 @@ class SubG(Guard):
         return "p4specast.SubG(%r)" % (self.typ,)
 
 class MatchG(Guard):
+    _immutable_fields_ = ['pattern']
+
     def __init__(self, pattern):
         self.pattern = pattern # typ: Pattern
 
@@ -2183,6 +2325,8 @@ class MatchG(Guard):
         return "p4specast.MatchG(%r)" % (self.pattern,)
 
 class MemG(Guard):
+    _immutable_fields_ = ['exp']
+
     def __init__(self, exp):
         self.exp = exp # typ: Exp
 
@@ -2221,6 +2365,8 @@ class Pattern(AstBase):
             raise P4UnknownTypeError("Unknown Pattern: %s" % kind)
 
 class CaseP(Pattern):
+    _immutable_fields_ = ['mixop']
+
     def __init__(self, mixop):
         self.mixop = mixop # typ: mixop
 
@@ -2238,6 +2384,8 @@ class CaseP(Pattern):
         return "p4specast.CaseP(%r)" % (self.mixop,)
 
 class ListP(Pattern):
+    _immutable_fields_ = ['element']
+
     def __init__(self, element):
         self.element = element # typ: ListPElem
 
@@ -2245,11 +2393,12 @@ class ListP(Pattern):
         # | ListP `Cons -> "_ :: _"
         # | ListP (`Fixed len) -> Format.asprintf "[ _/%d ]" len
         # | ListP `Nil -> "[]"
-        if isinstance(self.element, Cons):
+        element = self.element
+        if isinstance(element, Cons):
             return "_ :: _"
-        elif isinstance(self.element, Fixed):
-            return "[ _/%d ]" % self.element.value
-        elif isinstance(self.element, Nil):
+        elif isinstance(element, Fixed):
+            return "[ _/%d ]" % element.value
+        elif isinstance(element, Nil):
             return "[]"
         else:
             assert 0, "Unknown ListP element: %s" % self.element
@@ -2264,6 +2413,8 @@ class ListP(Pattern):
         return "p4specast.ListP(%r)" % (self.element,)
 
 class OptP(Pattern):
+    _immutable_fields_ = ['kind']
+
     def __init__(self, kind):
         self.kind = kind # "Some" | "None"
 
@@ -2289,6 +2440,7 @@ class OptP(Pattern):
 # [ `cons | `fixed of int | `nil ]
 
 class ListPElem(AstBase):
+    _attrs_ = []
     @staticmethod
     def fromjson(content):
         kind = content.get_list_item(0).value_string()
@@ -2306,6 +2458,8 @@ class Cons(ListPElem):
         return "p4specast.Cons()"
 
 class Fixed(ListPElem):
+    _immutable_fields_ = ['value']
+
     def __init__(self, value):
         self.value = value # typ: int
 
@@ -2364,6 +2518,8 @@ class RootP(Path):
         return "p4specast.RootP()"
 
 class IdxP(Path):
+    _immutable_fields_ = ['path', 'exp']
+
     def __init__(self, path, exp):
         self.path = path
         self.exp = exp
@@ -2383,6 +2539,8 @@ class IdxP(Path):
         return "p4specast.IdxP(%r, %r)" % (self.path, self.exp)
 
 class SliceP(Path):
+    _immutable_fields_ = ['path', 'start', 'end']
+
     def __init__(self, path, start, end):
         self.path = path
         self.start = start
@@ -2406,6 +2564,8 @@ class SliceP(Path):
         return "p4specast.SliceP(%r, %r, %r)" % (self.path, self.start, self.end)
 
 class DotP(Path):
+    _immutable_fields_ = ['path', 'atom']
+
     def __init__(self, path, atom):
         self.path = path
         self.atom = atom
@@ -2431,9 +2591,12 @@ class DotP(Path):
 # type Mixop.t = Atom.t phrase list list
 
 class MixOp(AstBase):
+    _immutable_fields_ = ['phrases[*]']
+
     def __init__(self, phrases):
         self.phrases = phrases # type: list[list[AtomT]]
 
+    @jit.elidable_promote('0,1')
     def compare(self, other):
         # type: (MixOp, MixOp) -> int
         """ Compare two MixOp objects lexicographically by their phrases
@@ -2491,6 +2654,8 @@ class MixOp(AstBase):
 
 
 class AtomT(AstBase):
+    _immutable_fields_ = ['value']
+
     def __init__(self, value, region=NO_REGION):
         self.value = value # type: str
         self.region = region # type: Region

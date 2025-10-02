@@ -3,12 +3,11 @@ from __future__ import print_function
 import os, time
 
 from rpython.rlib.nonconst import NonConstant
-from rpython.rlib import objectmodel
+from rpython.rlib import objectmodel, jit, rsignal
 
 from rpyp4sp import p4specast, objects, builtin, context, integers, rpyjson, interp
 from rpyp4sp.error import P4Error, format_p4error
 from rpyp4sp.test.test_interp import make_context
-from rpython.rlib import rsignal
 
 @objectmodel.specialize.arg(4)
 def parse_args(argv, shortname, longname="", want_arg=True, many=False):
@@ -280,7 +279,28 @@ def command_bench_p4(argv):
             print_csv_line(fn, "run", str(i), str(t2 - t1), res, comment, str(t2), argv[0])
     return 0
 
+JIT_HELP = ["Advanced JIT options:", '', '']
+JIT_HELP.extend([" %s=<value>\n     %s (default: %s)\n" % (
+    key, jit.PARAMETER_DOCS[key], value)
+    for key, value in jit.PARAMETERS.items()]
+)
+JIT_HELP.extend([" off", "    turn JIT off", "", " help", "    print this page"])
+JIT_HELP = "\n".join(JIT_HELP)
+
+def print_help_jit():
+    print(JIT_HELP)
+
 def main(argv):
+    jitopts = parse_args(argv, "--jit")
+    if jitopts:
+        if jitopts == "help":
+            print_help_jit()
+            return 0
+        try:
+            jit.set_user_param(None, jitopts)
+        except ValueError:
+            print("invalid jit option")
+            return 1
     if len(argv) < 3:
         print("usage: %s run-test-jsonl/run-p4-json/bench-p4-json <fns>" % argv[0])
         return 1
