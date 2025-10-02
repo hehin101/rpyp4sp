@@ -84,6 +84,7 @@ EnvKeys.EMPTY = EnvKeys({})
 
 @smalllist.inline_small_list(immutable=True, nonull=True, append_list_unroll_safe=True)
 class TDenvDict(object):
+    _immutable_fields_ = ['_keys']
     def __init__(self, keys=EnvKeys.EMPTY):
         self._keys = keys # type: EnvKeys
 
@@ -143,6 +144,7 @@ TDenvDict.EMPTY = TDenvDict.make0()
 
 @smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
 class FenvDict(object):
+    _immutable_fields_ = ['_keys']
     def __init__(self, keys=EnvKeys.EMPTY):
         self._keys = keys # type: EnvKeys
 
