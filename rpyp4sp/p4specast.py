@@ -1845,6 +1845,13 @@ class ReverseIterExp(object):
         l.reverse()
         return "ReverseIterExp.from_unreversed_list(%r)" % (l, )
 
+    def tostring(self):
+        res = ["<ReverseIterExp"]
+        while self:
+            res.append(self.head.tostring())
+            self = self.tail
+        return " ".join(res) + ">"
+
 
 class CaseI(Instr):
     _immutable_fields_ = ['exp', 'cases[*]', 'cases_exps[*]']

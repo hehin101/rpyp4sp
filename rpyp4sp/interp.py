@@ -334,10 +334,18 @@ def eval_if_cond_list(ctx, exp_cond, vars, iterexps):
         return ctx, cond, values_cond
     return _eval_if_cond_list_loop(ctx, ctxs_sub, exp_cond, iterexps)
 
+def get_printable_location(exp_cond, iterexps, varlist):
+    return "eval_if_cond_list_loop %s %s %s" % (exp_cond.tostring(), iterexps.tostring(), varlist.tostring())
+
+jitdriver_eval_if_cond_list_loop = jit.JitDriver(
+    reds='auto', greens=['exp_cond', 'iterexps', 'varlist'],
+    name='eval_if_cond_list_loop', get_printable_location=get_printable_location)
+
 def _eval_if_cond_list_loop(ctx, ctxs_sub, exp_cond, iterexps):
     cond = True
     values_cond = []
     for ctx_sub in ctxs_sub:
+        jitdriver_eval_if_cond_list_loop.jit_merge_point(exp_cond=exp_cond, iterexps=iterexps, varlist=ctxs_sub.varlist)
         if not cond:
             break
         ctx_sub, cond, value_cond = eval_if_cond_iter_tick(ctx_sub, exp_cond, iterexps)
