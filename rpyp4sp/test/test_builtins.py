@@ -566,7 +566,7 @@ def set_to_python(set_value):
 @st.composite
 def text_set_strategy(draw):
     """Strategy to generate P4 sets containing text values."""
-    elements = draw(st.lists(st.text(alphabet=st.characters(min_codepoint=97, max_codepoint=122), min_size=1, max_size=3), max_size=10))
+    elements = draw(st.lists(st.text(alphabet=st.characters(min_codepoint=97, max_codepoint=122), min_size=1, max_size=3), min_size=0, max_size=10))
     elements = [val.encode('utf-8') for val in elements]
     # Remove duplicates to create a proper set
     unique_elements = list(dict.fromkeys(elements))
@@ -729,13 +729,18 @@ def test_subset_via_intersection(s1, s2):
     assert subset_res.get_bool() == intersect_eq.get_bool()
 
 # unions_set (multiple sets) properties
-@given(sets=st.lists(text_set_strategy(), min_size=1, max_size=5))
+@given(sets=st.lists(text_set_strategy(), min_size=0, max_size=5))
 def test_unions_set_consistency(sets):
     """unions_set should produce the same result as repeatedly calling union_set"""
     # Use the same type pattern as existing tests
     list_typ = p4specast.TextT.INSTANCE.list_of()
 
-    if len(sets) == 1:
+    if not sets:
+        # Empty list case
+        list_value = objects.ListV.make0(list_typ)
+        res = builtin.sets_unions_set([p4specast.TextT.INSTANCE], [list_value])
+        assert builtin.sets_eq_set(None, [res, make_set()]).get_bool()
+    elif len(sets) == 1:
         # Single set case
         list_value = objects.ListV.make([sets[0]], list_typ)
         res = builtin.sets_unions_set([p4specast.TextT.INSTANCE], [list_value])

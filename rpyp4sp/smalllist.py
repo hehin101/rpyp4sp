@@ -59,6 +59,8 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                 if not objectmodel.we_are_translated():
                     assert not empty_list
                 return empty_list
+            def _get_full_list_copy(self):
+                return []
             def _set_list(self, i, val):
                 if nonull:
                     assert val is not None
@@ -82,7 +84,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                 listgettername : _get_full_list,
                 settername     : _set_list,
                 "_append_list" : _append_list0,
-                "_get_full_list_copy": _get_full_list,
+                "_get_full_list_copy": _get_full_list_copy,
                 "__init__"     : _init,
                 "_size_list"   : 0,
             }

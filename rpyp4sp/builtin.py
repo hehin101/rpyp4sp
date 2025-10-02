@@ -320,8 +320,7 @@ def _set_add_element(elems, elem):
     for el in elems:
         if el.eq(elem):
             return elems
-    elems.append(elem)
-    return elems[:]
+    return elems + [elem]
 
 def _unions_set_loop(curr, sets_l, startindex):
     for i in range(startindex, len(sets_l)):
