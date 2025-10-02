@@ -1305,7 +1305,7 @@ class __extend__(p4specast.BoolE):
 
 class __extend__(p4specast.NumE):
     def eval_exp(self, ctx):
-        return ctx, objects.NumV(self.value, self.what, typ=self.typ)
+        return ctx, objects.NumV.make(self.value, self.what, typ=self.typ)
 
 class __extend__(p4specast.TextE):
     def eval_exp(self, ctx):
@@ -1518,7 +1518,7 @@ def eval_binop_num(binop, value_l, value_r, typ):
         raise P4NotImplementedError("PowOp")
     else:
         assert 0, "should be unreachable"
-    return objects.NumV(res_num, what, typ=typ)
+    return objects.NumV.make(res_num, what, typ=typ)
 
 class __extend__(p4specast.BinE):
     def eval_exp(self, ctx):
@@ -1561,9 +1561,9 @@ def eval_unop_num(unop, value, typ):
     num = value.get_num()
     # match unop with
     if unop == 'PlusOp':
-        return objects.NumV(num, value.what, typ=typ)
+        return objects.NumV.make(num, value.what, typ=typ)
     elif unop == 'MinusOp':
-        return objects.NumV(num.neg(), value.what, typ=typ)
+        return objects.NumV.make(num.neg(), value.what, typ=typ)
     else:
         assert 0, "Unknown numeric unary operator: %s" % unop
 
@@ -1818,7 +1818,7 @@ class __extend__(p4specast.LenE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(NumV (`Nat len) $$$ { vid; typ })
-        value_res = objects.NumV(value, p4specast.NatT.INSTANCE, typ=self.typ)
+        value_res = objects.NumV.make(value, p4specast.NatT.INSTANCE, typ=self.typ)
         # in
         # Ctx.add_node ctx value_res;
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op LenOp);
@@ -2137,7 +2137,7 @@ def downcast(ctx, typ, value):
             return ctx, value
         elif value.what == p4specast.IntT.INSTANCE:
             assert value.value.ge(integers.Integer.fromint(0))
-            return ctx, objects.NumV(value.value, p4specast.NatT.INSTANCE, typ=typ)
+            return ctx, objects.NumV.make(value.value, p4specast.NatT.INSTANCE, typ=typ)
         else:
             assert 0
     # | VarT (tid, targs) -> (
@@ -2194,7 +2194,7 @@ def upcast(ctx, typ, value):
     #             let vid = Value.fresh () in
     #             let typ = typ.it in
     #             Il.Ast.(NumV (`Int n) $$$ { vid; typ })
-            value_res = objects.NumV(value.get_num(), p4specast.IntT.INSTANCE, typ=typ)
+            value_res = objects.NumV.make(value.get_num(), p4specast.IntT.INSTANCE, typ=typ)
             return ctx, value_res
     #           in
     #           Ctx.add_node ctx value_res;

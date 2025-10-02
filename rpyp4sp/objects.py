@@ -162,12 +162,22 @@ class BoolVWithTyp(BoolV):
     def get_typ(self):
         return self.typ
 
-class NumV(BaseVWithTyp):
-    def __init__(self, value, what, typ=None):
+class NumV(BaseV):
+    _attrs_ = ['value', 'what']
+
+    def __init__(self, value, what):
         self.value = value # type: integers.Integer
         assert isinstance(what, p4specast.NumTyp)
         self.what = what # type: p4specast.NumT
-        self.typ = typ # type: p4specast.Type | None
+
+    @staticmethod
+    def make(value, what, typ):
+        if isinstance(typ, p4specast.IntT):
+            return IntV(value, what)
+        elif isinstance(typ, p4specast.NatT):
+            return NatV(value, what)
+        else:
+            return NumVWithTyp(value, what, typ)
 
     def compare(self, other):
         if not isinstance(other, NumV):
@@ -178,7 +188,7 @@ class NumV(BaseVWithTyp):
 
     def __repr__(self):
         return "objects.NumV.fromstr(%r, %r, %r)" % (
-            self.value.str(), self.what, self.typ)
+            self.value.str(), self.what, self.get_typ())
 
     def get_num(self):
         return self.value
@@ -189,7 +199,7 @@ class NumV(BaseVWithTyp):
 
     @staticmethod
     def fromstr(value, what, typ=None):
-        return NumV(integers.Integer.fromstr(value), what, typ)
+        return NumV.make(integers.Integer.fromstr(value), what, typ)
 
     @staticmethod
     def fromjson(content, typ):
@@ -202,6 +212,30 @@ class NumV(BaseVWithTyp):
             what = p4specast.NatT.INSTANCE
         value = inner.get_list_item(1).value_string()
         return NumV.fromstr(value, what, typ)
+
+class IntV(NumV):
+    def __init__(self, value, what):
+        NumV.__init__(self, value, what)
+
+    def get_typ(self):
+        return p4specast.IntT.INSTANCE
+
+class NatV(NumV):
+    def __init__(self, value, what):
+        NumV.__init__(self, value, what)
+
+    def get_typ(self):
+        return p4specast.NatT.INSTANCE
+
+class NumVWithTyp(NumV):
+    _attrs_ = ['typ']
+
+    def __init__(self, value, what, typ):
+        NumV.__init__(self, value, what)
+        self.typ = typ
+
+    def get_typ(self):
+        return self.typ
 
 class TextV(BaseVWithTyp):
     def __init__(self, value, typ=None):
