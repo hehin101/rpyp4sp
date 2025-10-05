@@ -460,7 +460,7 @@ ROOT_MAP = Map(None, {})
 
 # prime the root map with some common transitions
 position_map = ROOT_MAP.get_next("file").get_next("line").get_next("column")
-it_node_at_map = ROOT_MAP.get_next("it").get_next("node").get_next("at")
+it_note_at_map = ROOT_MAP.get_next("it").get_next("note").get_next("at")
 region_map = ROOT_MAP.get_next("left").get_next("right")
 ROOT_MAP.get_next("vid").get_next("typ").get_next("at")
 
