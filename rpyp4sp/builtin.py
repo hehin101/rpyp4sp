@@ -4,9 +4,9 @@ from rpyp4sp.error import P4NotImplementedError, P4BuiltinError
 
 all_builtins = {}
 
-def register_builtin(name):
+def register_builtin(name, requires_ctx=False):
     def decorator(func):
-        all_builtins[name] = func
+        all_builtins[name] = func, requires_ctx
         return func
     return decorator
 
@@ -16,16 +16,19 @@ def is_builtin(name):
 
 @jit.elidable
 def _get_function(name):
-    return all_builtins.get(name, None)
+    return all_builtins.get(name, (None, False))
 
 def invoke(ctx, name, targs, values_input):
     if not is_builtin(name.value):
         raise P4BuiltinError("Unknown built-in function: %s" % name.value)
-    func = _get_function(name.value)
+    jit.jit_debug(name.value)
+    func, requires_ctx = _get_function(name.value)
+    if not requires_ctx:
+        return func(targs, values_input)
     return func(ctx, targs, values_input)
 
 @register_builtin("sum")
-def nats_sum(ctx, targs, values_input):
+def nats_sum(targs, values_input):
     # (* dec $sum(nat* ) : nat *)
 
     # let sum (ctx : Ctx.t) (at : region) (targs : targ list)
@@ -52,7 +55,7 @@ def nats_sum(ctx, targs, values_input):
     return objects.NumV(sum_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
 
 @register_builtin("max")
-def nats_max(ctx, targs, values_input):
+def nats_max(targs, values_input):
     # (* dec $max(nat* ) : nat *)
     list_value, = values_input
     values = list_value.get_list()
@@ -71,7 +74,7 @@ def _nats_max(values, max_result):
     return max_result
 
 @register_builtin("min")
-def nats_min(ctx, targs, values_input):
+def nats_min(targs, values_input):
     # (* dec $min(nat* ) : nat *)
     list_value, = values_input
     values = list_value.get_list()
@@ -90,12 +93,12 @@ def _nats_min(values, min_result):
     return min_result
 
 @register_builtin("int_to_text")
-def texts_int_to_text(ctx, targs, values_input):
+def texts_int_to_text(targs, values_input):
     int_value, = values_input
     return objects.TextV(int_value.get_num().str(), p4specast.TextT.INSTANCE)
 
 @register_builtin("strip_prefix")
-def texts_strip_prefix(ctx, targs, values_input):
+def texts_strip_prefix(targs, values_input):
     # Extract.zero at targs;
     # let value_text, value_prefix = Extract.two at values_input in
     # let text = Value.get_text value_text in
@@ -122,7 +125,7 @@ def texts_strip_prefix(ctx, targs, values_input):
     return objects.TextV(stripped_text, p4specast.TextT.INSTANCE)
 
 @register_builtin("strip_suffix")
-def texts_strip_suffix(ctx, targs, values_input):
+def texts_strip_suffix(targs, values_input):
     # Extract.zero at targs;
     # let value_text, value_suffix = Extract.two at values_input in
     # let text = Value.get_text value_text in
@@ -147,7 +150,7 @@ def texts_strip_suffix(ctx, targs, values_input):
     return objects.TextV(stripped_text, p4specast.TextT.INSTANCE)
 
 @register_builtin("rev_")
-def lists_rev_(ctx, targs, values_input):
+def lists_rev_(targs, values_input):
     value, = values_input
     lst = value.get_list()
     if len(lst) <= 1:
@@ -158,7 +161,7 @@ def lists_rev_(ctx, targs, values_input):
 
 
 @register_builtin("concat_")
-def lists_concat_(ctx, targs, values_input):
+def lists_concat_(targs, values_input):
     value, = values_input
     lists = value.get_list()
     res = []
@@ -173,20 +176,24 @@ def _lists_concat(lists, res):
         res.extend(list_value.get_list())
 
 @register_builtin("distinct_")
-def lists_distinct_(ctx, targs, values_input):
+def lists_distinct_(targs, values_input):
     value, = values_input
     lst = value.get_list()
     if len(lst) <= 1:
         return objects.BoolV(True, p4specast.BoolT.INSTANCE)
+    result = _lists_distinct(lst)
+    return objects.BoolV(result, p4specast.BoolT.INSTANCE)
+
+def _lists_distinct(lst):
     # naive quadratic implementation using .eq
     for i in range(len(lst)):
         for j in range(i + 1, len(lst)):
             if lst[i].eq(lst[j]):
-                return objects.BoolV(False, p4specast.BoolT.INSTANCE)
-    return objects.BoolV(True, p4specast.BoolT.INSTANCE)
+                return False
+    return True
 
 @register_builtin("partition_")
-def lists_partition_(ctx, targs, values_input):
+def lists_partition_(targs, values_input):
     # dec $partition_<X>(X*, nat) : (X*, X* )
     typ, = targs
     value_list, value_len = values_input
@@ -205,7 +212,7 @@ def lists_partition_(ctx, targs, values_input):
 
 
 @register_builtin("assoc_")
-def lists_assoc_(ctx, targs, values_input):
+def lists_assoc_(targs, values_input):
     typ_key, typ_value = targs
     value, value_list = values_input
     res_value = None
@@ -235,7 +242,7 @@ def _wrap_set_elems(elems, set_value_for_types):
     return objects.CaseV.make1(lst_value, set_value_for_types.mixop, set_value_for_types.typ)
 
 @register_builtin("intersect_set")
-def sets_intersect_set(ctx, targs, values_input):
+def sets_intersect_set(targs, values_input):
     #let intersect_set (ctx : Ctx.t) (at : region) (targs : targ list)
     #    (values_input : value list) : value =
     #  let typ_key = Extract.one at targs in
@@ -246,17 +253,25 @@ def sets_intersect_set(ctx, targs, values_input):
     set_l, set_r = values_input
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
+    if len(elems_l) == 0 or len(elems_r) == 0:
+        res = []
+    else:
+        res = _intersect_set(elems_l, elems_r)
+    return _wrap_set_elems(res, set_l)
+
+def _intersect_set(elems_l, elems_r):
     res = []
     for el in elems_l:
         for el2 in elems_r:
             if el.eq(el2):
                 res.append(el)
                 break
-    return _wrap_set_elems(res, set_l)
+    return res
 
 def _set_union_elems(elems_l, elems_r):
-    res = []
-    for el in elems_l + elems_r:
+    res = elems_l[:]
+    # add elems_r that are not already in res
+    for el in elems_r:
         for el2 in res:
             if el.eq(el2):
                 break
@@ -265,7 +280,7 @@ def _set_union_elems(elems_l, elems_r):
     return res[:]
 
 @register_builtin("union_set")
-def sets_union_set(ctx, targs, values_input):
+def sets_union_set(targs, values_input):
     set_l, set_r = values_input
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
@@ -279,7 +294,7 @@ def sets_union_set(ctx, targs, values_input):
     return _wrap_set_elems(res, set_l)
 
 @register_builtin("unions_set")
-def sets_unions_set(ctx, targs, values_input):
+def sets_unions_set(targs, values_input):
     value_list, = values_input
     sets_l = value_list.get_list()
     element_typ, = targs
@@ -290,11 +305,29 @@ def sets_unions_set(ctx, targs, values_input):
             map_mixop,
             p4specast.VarT(set_id, targs))
     first = sets_l[0]
+    if len(sets_l) == 1:
+        return first
     curr = _extract_set_elems(first)
-    for i in range(1, len(sets_l)):
-        curr = _set_union_elems(curr, _extract_set_elems(sets_l[i]))
+    if len(curr) == 1:
+        curr = _set_add_element(_extract_set_elems(sets_l[1]), curr[0])
+        startindex = 2
+    else:
+        startindex = 1
+    curr = _unions_set_loop(curr, sets_l, startindex)
     return _wrap_set_elems(curr, first)
 
+def _set_add_element(elems, elem):
+    for el in elems:
+        if el.eq(elem):
+            return elems
+    return elems + [elem]
+
+def _unions_set_loop(curr, sets_l, startindex):
+    for i in range(startindex, len(sets_l)):
+        curr = _set_union_elems(curr, _extract_set_elems(sets_l[i]))
+    return curr
+
+@jit.look_inside_iff(lambda elems_l, elems_r: (len(elems_l) <= 1) & (len(elems_r) <= 1))
 def _set_diff_elemens(elems_l, elems_r):
     res = []
     for el in elems_l:
@@ -307,7 +340,7 @@ def _set_diff_elemens(elems_l, elems_r):
 
 
 @register_builtin("diff_set")
-def sets_diff_set(ctx, targs, values_input):
+def sets_diff_set(targs, values_input):
     set_l, set_r = values_input
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
@@ -318,7 +351,7 @@ def sets_diff_set(ctx, targs, values_input):
     return _wrap_set_elems(res, set_l)
 
 @register_builtin("sub_set")
-def sets_sub_set(ctx, targs, values_input):
+def sets_sub_set(targs, values_input):
     #let sub_set (ctx : Ctx.t) (at : region) (targs : targ list)
     #    (values_input : value list) : value =
     #  let _typ_key = Extract.one at targs in
@@ -345,19 +378,28 @@ def sets_sub_set(ctx, targs, values_input):
     return objects.BoolV(True, p4specast.BoolT.INSTANCE)
 
 @register_builtin("eq_set")
-def sets_eq_set(ctx, targs, values_input):
+def sets_eq_set(targs, values_input):
     set_l, set_r = values_input
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
     if len(elems_l) != len(elems_r):
         return objects.BoolV(False, p4specast.BoolT.INSTANCE)
+    if len(elems_l) == 0:
+        result = True
+    elif len(elems_l) == 1:
+        result = elems_l[0].eq(elems_r[0])
+    else:
+        result = _sets_eq_set_bool(elems_l, elems_r)
+    return objects.BoolV(result, p4specast.BoolT.INSTANCE)
+
+def _sets_eq_set_bool(elems_l, elems_r):
     for el in elems_l:
         for el2 in elems_r:
             if el.eq(el2):
                 break
         else:
-            return objects.BoolV(False, p4specast.BoolT.INSTANCE)
-    return objects.BoolV(True, p4specast.BoolT.INSTANCE)
+            return False
+    return True
 
 # _________________________________________________________________
 
@@ -386,8 +428,12 @@ def _extract_map_item(el):
     value = el._get_list(1)
     return key, value
 
+@jit.elidable
+def _make_vart(id, *targs):
+    return p4specast.VarT(id, list(targs))
+
 def _build_map_item(key_value, value_value, key_typ, value_typ):
-    pairtyp = p4specast.VarT(pair_id, [key_typ, value_typ])
+    pairtyp = _make_vart(pair_id, key_typ, value_typ)
     return objects.CaseV.make2(key_value, value_value, arrow_mixop, pairtyp)
 
 def find_map(map_value, key_value):
@@ -402,7 +448,7 @@ def _find_map(key_value, content):
     return None
 
 @register_builtin("find_map")
-def maps_find_map(ctx, targs, values_input):
+def maps_find_map(targs, values_input):
     key_typ, value_typ = targs
     map_value, key_value = values_input
     found_value = find_map(map_value, key_value)
@@ -412,7 +458,7 @@ def maps_find_map(ctx, targs, values_input):
 
 
 @register_builtin("find_maps")
-def maps_find_maps(ctx, targs, values_input):
+def maps_find_maps(targs, values_input):
     # look through many maps, return first result
     key_typ, value_typ = targs
     list_maps_value, key_value = values_input
@@ -423,6 +469,7 @@ def maps_find_maps(ctx, targs, values_input):
     typ.region = p4specast.NO_REGION
     return objects.OptV(res_value, typ)
 
+@jit.elidable
 def _maps_find_map(list_maps_value, key_value):
     for map_value in list_maps_value.get_list():
         res_value = find_map(map_value, key_value)
@@ -431,19 +478,23 @@ def _maps_find_map(list_maps_value, key_value):
     return None
 
 @register_builtin("add_map")
-def maps_add_map(ctx, targs, values_input):
+def maps_add_map(targs, values_input):
     map_value, key_value, value_value = values_input
     key_typ, value_typ = targs
     content = _extract_map_content(map_value)
-    new_pair = _build_map_item(key_value, value_value, key_typ, value_typ)
     if not content:
-        res = [new_pair]
+        new_pair = _build_map_item(key_value, value_value, key_typ, value_typ)
+        listtyp = new_pair.typ.list_of()
+        list_value = objects.ListV.make1(new_pair, listtyp)
     else:
-        res = _add_map(key_value, content, new_pair)
-    list_value = objects.ListV.make(res, p4specast.IterT(new_pair.typ, p4specast.List()))
-    return objects.CaseV.make1(list_value, map_mixop, p4specast.VarT(map_id, targs))
+        res = _add_map(key_value, content, value_value, key_typ, value_typ)
+        listtyp = jit.promote(res[0].typ).list_of()
+        list_value = objects.ListV.make(res, listtyp)
+    return objects.CaseV.make1(list_value, map_mixop, _make_vart(map_id, key_typ, value_typ))
 
-def _add_map(key_value, content, new_pair):
+def _add_map(key_value, content, value_value, key_typ, value_typ):
+    new_pair = _build_map_item(key_value, value_value, key_typ, value_typ)
+    listtyp = new_pair.typ.list_of()
     res = []
     index = 0
     for index, el in enumerate(content):
@@ -469,21 +520,25 @@ def _add_map(key_value, content, new_pair):
 
 
 @register_builtin("adds_map")
-def maps_adds_map(ctx, targs, values_input):
+def maps_adds_map(targs, values_input):
     value_map, value_key_list, value_value_list = values_input
     keys = value_key_list.get_list()
     values = value_value_list.get_list()
     if len(keys) != len(values):
         raise P4BuiltinError("adds_map: list of keys and list of values must have the same length")
+    return _maps_adds_map_loop(targs, value_map, keys, values)
+
+@jit.look_inside_iff(lambda targs, value_map, keys, values: jit.isconstant(len(keys)))
+def _maps_adds_map_loop(targs, value_map, keys, values):
     for index, key_value in enumerate(keys):
         value_value = values[index]
-        value_map = maps_add_map(ctx, targs, [value_map, key_value, value_value])
+        value_map = maps_add_map(targs, [value_map, key_value, value_value])
     return value_map
 
 
 @register_builtin("update_map")
-def maps_update_map(ctx, targs, values_input):
-    return maps_add_map(ctx, targs, values_input)
+def maps_update_map(targs, values_input):
+    return maps_add_map(targs, values_input)
 
 class CounterHolder(object):
     def __init__(self):
@@ -491,8 +546,10 @@ class CounterHolder(object):
 
 HOLDER = CounterHolder()
 
+TID_VART = p4specast.VarT(p4specast.Id('tid', p4specast.NO_REGION), [])
+
 @register_builtin("fresh_tid")
-def fresh_fresh_tid(ctx, targs, values_input):
+def fresh_fresh_tid(targs, values_input):
     assert targs == []
     assert values_input == []
     # let tid = "FRESH__" ^ string_of_int !ctr in
@@ -504,7 +561,7 @@ def fresh_fresh_tid(ctx, targs, values_input):
     #   let typ = Il.Ast.VarT ("tid" $ no_region, []) in
     #   TextV tid $$$ { vid; typ }
     return objects.TextV(tid,
-                         typ=p4specast.VarT(p4specast.Id('tid', p4specast.NO_REGION), []))
+                         typ=TID_VART)
     # in
     # Ctx.add_node ctx value;
     # value
@@ -515,21 +572,21 @@ def _integer_to_value(integer):
 
 
 @register_builtin("shl")
-def numerics_shl(ctx, targs, values_input):
+def numerics_shl(targs, values_input):
     left, right = values_input
     return _integer_to_value(left.get_num().lshift(right.get_num().toint()))
 
 @register_builtin("shr")
-def numerics_shr(ctx, targs, values_input):
+def numerics_shr(targs, values_input):
     left, right = values_input
     return _integer_to_value(left.get_num().rshift(right.get_num().toint()))
 
 @register_builtin("shr_arith")
-def numerics_shr_arith(ctx, targs, values_input):
+def numerics_shr_arith(targs, values_input):
     raise P4NotImplementedError("numerics_shr_arith is not implemented yet")
 
 @register_builtin("pow2")
-def numerics_pow2(ctx, targs, values_input):
+def numerics_pow2(targs, values_input):
     arg, = values_input
     val = arg.get_num().toint()
     if val < 0:
@@ -538,7 +595,7 @@ def numerics_pow2(ctx, targs, values_input):
     return _integer_to_value(res)
 
 @register_builtin("to_int")
-def numerics_to_int(ctx, targs, values_input):
+def numerics_to_int(targs, values_input):
     width, num = values_input
     width = width.get_num().toint()
     num_num = num.get_num()
@@ -551,7 +608,7 @@ def numerics_to_int(ctx, targs, values_input):
     return _integer_to_value(num_num.sub(maxvalue))
 
 @register_builtin("to_bitstr")
-def numerics_to_bitstr(ctx, targs, values_input):
+def numerics_to_bitstr(targs, values_input):
     width, num = values_input
     width_num = width.get_num()
     num_num = num.get_num()
@@ -559,7 +616,7 @@ def numerics_to_bitstr(ctx, targs, values_input):
     return _integer_to_value(num_num.mod(maxvalue))
 
 @register_builtin("bneg")
-def numerics_bneg(ctx, targs, values_input):
+def numerics_bneg(targs, values_input):
     # Extract.zero at targs;
     # let value = Extract.one at values_input in
     # let rawint = bigint_of_value value in
@@ -569,22 +626,22 @@ def numerics_bneg(ctx, targs, values_input):
     return _integer_to_value(result)
 
 @register_builtin("band")
-def numerics_band(ctx, targs, values_input):
+def numerics_band(targs, values_input):
     left, right = values_input
     return _integer_to_value(left.get_num().and_(right.get_num()))
 
 @register_builtin("bxor")
-def numerics_bxor(ctx, targs, values_input):
+def numerics_bxor(targs, values_input):
     left, right = values_input
     return _integer_to_value(left.get_num().xor(right.get_num()))
 
 @register_builtin("bor")
-def numerics_bor(ctx, targs, values_input):
+def numerics_bor(targs, values_input):
     left, right = values_input
     return _integer_to_value(left.get_num().or_(right.get_num()))
 
 @register_builtin("bitacc")
-def numerics_bitacc(ctx, targs, values_input):
+def numerics_bitacc(targs, values_input):
     #(* dec $bitacc(int, int, int) : int *)
     #
     #let bitacc' (n : Bigint.t) (m : Bigint.t) (l : Bigint.t) : Bigint.t =

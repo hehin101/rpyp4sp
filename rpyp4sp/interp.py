@@ -10,6 +10,8 @@ class VarList(object):
     def __init__(self, vars):
         self.vars = vars  # type: list
         self.next_var_lists = {}  # type: dict[tuple[str, str], VarList]
+        self._ctx_env_key_cache = None
+        self._ctx_env_key_result = None
 
     @jit.elidable
     def add_var(self, var):
@@ -288,7 +290,7 @@ class __extend__(p4specast.IfI):
         #     eval_if_instr (ctx : Ctx.t) (exp_cond : exp) (iterexps : iterexp list)
         #     (instrs_then : instr list) (phantom_opt : phantom option) : Ctx.t * Sign.t =
         #   let ctx, cond, value_cond = eval_if_cond_iter ctx exp_cond iterexps in
-        ctx, cond, value_cond = eval_if_cond_iter(ctx, self)
+        ctx, cond = eval_if_cond_iter(ctx, self)
         #   let vid = value_cond.note.vid in
         #   let ctx =
         #     match phantom_opt with
@@ -322,26 +324,30 @@ def eval_if_cond_list(ctx, exp_cond, vars, iterexps):
     ctxs_sub = ctx.sub_list(_make_varlist(vars))
     if ctxs_sub.length == 0:
         cond = True
-        values_cond = []
-        return ctx, cond, values_cond
+        return ctx, cond
     elif ctxs_sub.length == 1:
         ctx_sub = next(ctxs_sub)
-        ctx_sub, cond, value_cond = eval_if_cond_iter_tick(ctx_sub, exp_cond, iterexps)
-        values_cond = [value_cond]
+        ctx_sub, cond = eval_if_cond_iter_tick(ctx_sub, exp_cond, iterexps)
         ctx = ctx.commit(ctx_sub)
-        return ctx, cond, values_cond
+        return ctx, cond
     return _eval_if_cond_list_loop(ctx, ctxs_sub, exp_cond, iterexps)
+
+def get_printable_location(exp_cond, iterexps, varlist):
+    return "eval_if_cond_list_loop %s %s %s" % (exp_cond.tostring(), iterexps.tostring(), varlist.tostring())
+
+jitdriver_eval_if_cond_list_loop = jit.JitDriver(
+    reds='auto', greens=['exp_cond', 'iterexps', 'varlist'],
+    name='eval_if_cond_list_loop', get_printable_location=get_printable_location)
 
 def _eval_if_cond_list_loop(ctx, ctxs_sub, exp_cond, iterexps):
     cond = True
-    values_cond = []
     for ctx_sub in ctxs_sub:
+        jitdriver_eval_if_cond_list_loop.jit_merge_point(exp_cond=exp_cond, iterexps=iterexps, varlist=ctxs_sub.varlist)
         if not cond:
             break
-        ctx_sub, cond, value_cond = eval_if_cond_iter_tick(ctx_sub, exp_cond, iterexps)
+        ctx_sub, cond = eval_if_cond_iter_tick(ctx_sub, exp_cond, iterexps)
         ctx = ctx.commit(ctx_sub)
-        values_cond.append(value_cond)
-    return ctx, cond, values_cond
+    return ctx, cond
 
 def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
     # INCOMPLETE
@@ -379,10 +385,10 @@ def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
     #           vars_h;
     #         (ctx, cond, value_cond))
         elif isinstance(iter_h, p4specast.List):
-            ctx, cond, values_cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexps_t)
+            ctx, cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexps_t)
             typ = p4specast.BoolT.INSTANCE.list_of()
-            value_cond = objects.ListV.make(values_cond, typ)
-            return ctx, cond, value_cond
+            return ctx, cond
+    assert 0
     # | iterexp_h :: iterexps_t -> (
     #     let iter_h, vars_h = iterexp_h in
     #     match iter_h with
@@ -433,13 +439,11 @@ def eval_if_cond_iter_tick(ctx, exp_cond, iterexps):
         #             Ctx.add_edge ctx value_cond value_sub Dep.Edges.Iter)
         #           vars_h;
         #         (ctx, cond, value_cond))
-        ctx, cond, values_cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexps_t)
-        typ = p4specast.BoolT.INSTANCE.list_of()
-        value_cond = objects.ListV.make(values_cond, typ)
+        ctx, cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexps_t)
         # for (id, _typ, iters) in vars_h:
         #     value_sub = ctx.find_value_local(id, iters + [p4specast.List])
         #     # TODO: add edge
-        return ctx, cond, value_cond
+        return ctx
     else:
         assert 0, "should be unreachable"
 
@@ -449,7 +453,7 @@ def eval_if_cond(ctx, exp_cond):
     # let cond = Value.get_bool value_cond in
     cond = value_cond.get_bool()
     # (ctx, cond, value_cond)
-    return ctx, cond, value_cond
+    return ctx, cond
 
 
 @jit.unroll_safe
@@ -489,17 +493,15 @@ def eval_cases(ctx, exp, cases, cases_exps):
     #   let vid = Value.fresh () in
     #   let typ = Il.Ast.IterT (Il.Ast.BoolT $ no_region, Il.Ast.List) in
     #   Il.Ast.(ListV values_cond $$$ { vid; typ })
-    value_cond = None # INCOMPLETE
     # in
     # Ctx.add_node ctx value_cond;
     # (ctx, block_match, value_cond)
-    return ctx, block_match, value_cond
+    return ctx, block_match
 
 class __extend__(p4specast.CaseI):
     def eval_instr(self, ctx):
         # let ctx, instrs_opt, value_cond = eval_cases ctx exp cases in
-        ctx, instrs_opt, value_cond = eval_cases(ctx, self.exp, self.cases, self.cases_exps)
-        assert value_cond is None
+        ctx, instrs_opt = eval_cases(ctx, self.exp, self.cases, self.cases_exps)
         # let vid = value_cond.note.vid in
         # let ctx =
         #   match phantom_opt with
@@ -954,7 +956,6 @@ def eval_hold_cond(ctx, id, notexp):
     #    let vid = Value.fresh () in
     #    let typ = Il.Ast.BoolT in
     #    Il.Ast.(BoolV hold $$$ { vid; typ })
-    value_res = objects.BoolV(hold, p4specast.BoolT.INSTANCE)
     #  in
     #  Ctx.add_node ctx value_res;
     #  List.iteri
@@ -962,7 +963,7 @@ def eval_hold_cond(ctx, id, notexp):
     #      Ctx.add_edge ctx value_res value_input (Dep.Edges.Rel (id, idx)))
     #    values_input;
     #  (ctx, hold, value_res)
-    return ctx, hold, value_res
+    return ctx, hold
 
 def eval_hold_cond_list(ctx, id, notexp, vars, iterexps):
     #and eval_hold_cond_list (ctx : Ctx.t) (id : id) (notexp : notexp)
@@ -981,26 +982,31 @@ def eval_hold_cond_list(ctx, id, notexp, vars, iterexps):
     #        (ctx, cond, values_cond))
     #    (ctx, true, []) ctxs_sub
     if ctxs_sub.length == 0:
-        return ctx, True, []
+        return ctx, True
     elif ctxs_sub.length == 1:
         ctx_sub = next(ctxs_sub)
-        ctx_sub, cond, value_cond = eval_hold_cond_iter_tick(ctx_sub, id, notexp, iterexps)
+        ctx_sub, cond = eval_hold_cond_iter_tick(ctx_sub, id, notexp, iterexps)
         ctx = ctx.commit(ctx_sub)
-        values_cond = [value_cond]
-        return ctx, cond, values_cond
-    return _eval_hold_cond_list_loop(ctx, ctxs_sub, id, notexp, vars, iterexps)
+        return ctx, cond
+    return _eval_hold_cond_list_loop(ctx, ctxs_sub, id, notexp, iterexps)
 
-def _eval_hold_cond_list_loop(ctx, ctxs_sub, id, notexp, vars, iterexps):
+def get_printable_location(id, notexp, iterexps, varlist):
+    return "eval_hold_cond_list_loop %s %s %s %s" % (id.value, notexp.tostring(), iterexps.tostring(), varlist.tostring())
+
+jitdriver_eval_hold_cond_list_loop = jit.JitDriver(
+    reds='auto', greens=['id', 'notexp', 'iterexps', 'varlist'],
+    name='eval_hold_cond_list_loop', get_printable_location=get_printable_location)
+
+def _eval_hold_cond_list_loop(ctx, ctxs_sub, id, notexp, iterexps):
     cond = True
-    values_cond = []
     for ctx_sub in ctxs_sub:
+        jitdriver_eval_hold_cond_list_loop.jit_merge_point(id=id, notexp=notexp, iterexps=iterexps, varlist=ctxs_sub.varlist)
         if not cond:
             break
-        ctx_sub, cond_sub, value_cond = eval_hold_cond_iter_tick(ctx_sub, id, notexp, iterexps)
+        ctx_sub, cond_sub = eval_hold_cond_iter_tick(ctx_sub, id, notexp, iterexps)
         ctx = ctx.commit(ctx_sub)
-        values_cond.append(value_cond)
         cond = cond_sub
-    return ctx, cond, values_cond
+    return ctx, cond
 
 def eval_hold_cond_iter_tick(ctx, id, notexp, iterexps):
     #and eval_hold_cond_iter' (ctx : Ctx.t) (id : id) (notexp : notexp)
@@ -1023,13 +1029,12 @@ def eval_hold_cond_iter_tick(ctx, id, notexp, iterexps):
     elif isinstance(iter_h, p4specast.List):
     #          let ctx, cond, values_cond =
     #            eval_hold_cond_list ctx id notexp vars_h iterexps_t
-        ctx, cond, values_cond = eval_hold_cond_list(ctx, id, notexp, vars_h, iterexps_t)
+        ctx, cond = eval_hold_cond_list(ctx, id, notexp, vars_h, iterexps_t)
     #          in
     #          let value_cond =
     #            let vid = Value.fresh () in
     #            let typ = Il.Ast.IterT (Il.Ast.BoolT $ no_region, Il.Ast.List) in
     #            Il.Ast.(ListV values_cond $$$ { vid; typ })
-        value_cond = objects.ListV.make(values_cond, p4specast.BoolT.INSTANCE.list_of())
     #          in
     #          Ctx.add_node ctx value_cond;
     #          List.iter
@@ -1040,7 +1045,7 @@ def eval_hold_cond_iter_tick(ctx, id, notexp, iterexps):
     #              Ctx.add_edge ctx value_cond value_sub Dep.Edges.Iter)
     #            vars_h;
     #          (ctx, cond, value_cond))
-        return ctx, cond, value_cond
+        return ctx, cond
     else:
         assert False, "unknown iter_h type: %s" % iter_h.__class__.__name__
 
@@ -1061,11 +1066,10 @@ class __extend__(p4specast.HoldI):
         #  let cover_backup = !(ctx.cover) in
         #  (* Evaluate the hold condition *)
         #  let ctx, cond, value_cond = eval_hold_cond_iter ctx id notexp iterexps in
-        ctx, cond, value_cond = eval_hold_cond_iter(ctx, self)
+        ctx, cond = eval_hold_cond_iter(ctx, self)
         #  (* Evaluate the hold case, and restore the coverage information
         #     if the expected behavior is the relation not holding *)
         #  let vid = value_cond.note.vid in
-        vid = value_cond.vid
         #  match holdcase with
         #  | BothH (instrs_hold, instrs_not_hold) ->
         holdcase = self.holdcase
@@ -1278,7 +1282,7 @@ def assign_exp(ctx, exp, value):
                 ctx = ctx.add_value_local(var.id, var.iter.append_list(), value_sub)
             return ctx
         else:
-            ctx_local = ctx.localize_venv(venv_keys=context.EnvKeys.EMPTY, venv_values=[])
+            ctx_local = ctx.localize()
             values = _assign_exp_iter_cases(ctx_local, exp, values)
             #     in
             #     (* Per iterated variable, collect its elementwise value,
@@ -1312,12 +1316,27 @@ def assign_exp(ctx, exp, value):
     #import pdb;pdb.set_trace()
     raise P4EvaluationError("todo assign_exp: unhandled expression type %s" % exp.__class__.__name__)
 
+def get_printable_location(exp):
+    return "assign_exp_iter_cases %s" % (exp.tostring())
+
+jitdriver_assign_exp_iter_cases = jit.JitDriver(
+    reds='auto', greens=['exp'],
+    name='assign_exp_iter_cases', get_printable_location=get_printable_location)
+
+
 def _assign_exp_iter_cases(ctx_local, exp, values):
+    # this is basically an unzip
     values_result = [[None] * len(values) for _ in exp.varlist]
-    for i, value_elem in enumerate(values):
-        ctx_local = assign_exp(ctx_local, exp.exp, value_elem)
+    i = 0
+    while 1:
+        jitdriver_assign_exp_iter_cases.jit_merge_point(exp=exp)
+        if i >= len(values):
+            break
+        value_elem = values[i]
+        ctx_local2 = assign_exp(ctx_local, exp.exp, value_elem)
         for index, var in enumerate(exp.varlist):
-            values_result[index][i] = ctx_local.find_value_local(var.id, var.iter)
+            values_result[index][i] = ctx_local2.find_value_local(var.id, var.iter)
+        i += 1
     return values_result
 
 @jit.unroll_safe

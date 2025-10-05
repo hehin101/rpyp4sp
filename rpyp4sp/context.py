@@ -85,6 +85,7 @@ EnvKeys.EMPTY = EnvKeys({})
 
 @smalllist.inline_small_list(immutable=True, nonull=True, append_list_unroll_safe=True)
 class TDenvDict(object):
+    _immutable_fields_ = ['_keys']
     def __init__(self, keys=EnvKeys.EMPTY):
         self._keys = keys # type: EnvKeys
 
@@ -144,6 +145,7 @@ TDenvDict.EMPTY = TDenvDict.make0()
 
 @smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
 class FenvDict(object):
+    _immutable_fields_ = ['_keys']
     def __init__(self, keys=EnvKeys.EMPTY):
         self._keys = keys # type: EnvKeys
 
@@ -385,17 +387,19 @@ class Context(object):
         values_batch = [None] * len(varlist.vars)
         assert varlist
         first_list = None
+        first_list_length = 0
         for i, var in enumerate(varlist.vars):
             value = self.find_value_local(var.id, var.iter.append_list())
-            value_list = value.get_list()
+            value_len = value.get_list_len()
             if first_list is not None:
-                if len(first_list) != len(value_list):
+                if first_list_length != value_len:
                     raise P4ContextError("cannot transpose a matrix of value batches")
             else:
-                first_list = value_list
-            values_batch[i] = value_list
+                first_list = value
+                first_list_length = value_len
+            values_batch[i] = value
         assert first_list is not None
-        return SubListIter(self, varlist, len(first_list), values_batch)
+        return SubListIter(self, varlist, first_list_length, values_batch)
 
     def _venv_str(self):
         l = ["<venv "]
@@ -443,11 +447,46 @@ class SubListIter(object):
         if self.j >= self.length:
             raise StopIteration
         ctx_sub = self.ctx
-        for i, var in enumerate(jit.promote(self.varlist).vars):
-            value = self.values_batch[i][self.j]
-            ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value)
+        len_oldvalues = jit.promote(ctx_sub._get_size_list())
+        varlist = jit.promote(self.varlist)
+        final_env_keys = _varlist_compute_final_env_keys(varlist, jit.promote(ctx_sub.venv_keys))
+        if final_env_keys is None:
+            # some of the keys exist and need to be overridden - the complicated case
+            for i, var in enumerate(varlist.vars):
+                value = self.values_batch[i]._get_list(self.j)
+                ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value)
+        elif len(varlist.vars) == 1:
+            # a single new variable
+            value = self.values_batch[0]._get_list(self.j)
+            ctx_sub = ctx_sub.copy_and_change_append_venv(value, final_env_keys)
+        else:
+            # several new variables
+            oldvalues = ctx_sub._get_full_list()
+            values = [None] * (len_oldvalues + len(varlist.vars))
+            for i in range(len(oldvalues)):
+                values[i] = oldvalues[i]
+            ctxindex = len_oldvalues
+            for i, var in enumerate(varlist.vars):
+                value = self.values_batch[i]._get_list(self.j)
+                values[ctxindex] = value
+                ctxindex += 1
+            ctx_sub = ctx_sub.copy_and_change(venv_keys=final_env_keys, venv_values=values)
         self.j += 1
         return ctx_sub
+
+@jit.elidable
+def _varlist_compute_final_env_keys(varlist, env_keys):
+    # returns None if some of the vars are already present in the env_keys
+    if varlist._ctx_env_key_cache is env_keys:
+        return varlist._ctx_env_key_result
+    begin_env_keys = env_keys
+    for var in varlist.vars:
+        if env_keys.get_pos(var.id.value, var.iter.to_key()) >= 0:
+            return None
+        env_keys = env_keys.add_key(var.id.value, var.iter.to_key())
+    varlist._ctx_env_key_cache = begin_env_keys
+    varlist._ctx_env_key_result = env_keys
+    return env_keys
 
 def transpose(value_matrix):
     if not value_matrix:
