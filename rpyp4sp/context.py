@@ -2,6 +2,7 @@ from __future__ import print_function
 from rpython.rlib import jit
 from rpyp4sp import p4specast, objects, smalllist
 from rpyp4sp.error import P4ContextError
+from rpython.rlib import jit
 
 class GlobalContext(object):
     file_content = {}
@@ -258,13 +259,17 @@ class Context(object):
         pos = jit.promote(self.venv_keys).get_pos(id.value, iterlist.to_key())
         return pos >= 0
 
-    # TODO: why Id and not Tparam?
-    def find_typdef_local(self, id):
+    def find_typdef_local(self, id, typ_cache=None):
         # type: (p4specast.Id) -> tuple[list[p4specast.TParam], p4specast.DefTyp]
+        if not jit.we_are_jitted() and typ_cache and typ_cache._ctx_tdenv_keys is self.tdenv._keys:
+            return typ_cache._ctx_typ_res
         if self.tdenv.has_key(id.value):
             typdef = self.tdenv.get(id.value)
         else:
             typdef = jit.promote(self.glbl)._find_typdef(id.value)
+            if not jit.we_are_jitted() and typ_cache:
+                typ_cache._ctx_tdenv_keys = self.tdenv._keys
+                typ_cache._ctx_typ_res = typdef
         return typdef
 
     def find_rel_local(self, id):
@@ -305,14 +310,17 @@ class Context(object):
         result = self.copy_and_change(tdenv=tdenv)
         return result
 
-    def find_func_local(self, id):
+    def find_func_local(self, id, calle_cache=None):
         # type: (p4specast.Id) -> p4specast.DecD
+        if not jit.we_are_jitted() and calle_cache and calle_cache._ctx_fenv_keys is self.fenv._keys:
+            return calle_cache._ctx_func_res
         if self.fenv.has_key(id.value):
             func = self.fenv.get(id.value)
         else:
             func = jit.promote(self.glbl)._find_func(id.value)
-            if func is None:
-                raise P4ContextError('func %s not found' % id.value)
+            if not jit.we_are_jitted() and calle_cache:
+                calle_cache._ctx_fenv_keys = self.fenv._keys
+                calle_cache._ctx_func_res = func
         return func
 
     def commit(self, sub_ctx):

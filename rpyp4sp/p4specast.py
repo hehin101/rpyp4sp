@@ -72,7 +72,7 @@ class AstBase(object):
 def define_enum(basename, *names):
     class Base(AstBase):
         @staticmethod
-        def fromjson(value):
+        def fromjson(value, cache=None):
             content, = value.value_array()
             content = content.value_string()
             for name, cls in unrolling_tups:
@@ -106,11 +106,18 @@ class Position(AstBase):
         self.column = column # type: int
 
     @staticmethod
-    def fromjson(value):
+    def fromjson(value, cache=None):
         return Position(value.get_dict_value('file').value_string(), value.get_dict_value('line').value_int(), value.get_dict_value('column').value_int())
 
     def has_information(self):
         return self.file != '' or self.line != 0 or self.column != 0
+
+    def eq(self, other):
+        if not isinstance(other, Position):
+            return False
+        return (self.file == other.file and
+                self.line == other.line and
+                self.column == other.column)
 
     def __repr__(self):
         return "p4specast.Position(%r, %d, %d)" % (self.file, self.line, self.column)
@@ -125,13 +132,13 @@ class Region(AstBase):
         self.right = right # type: Position
 
     @staticmethod
-    def fromjson(value):
+    def fromjson(value, cache=None):
         # {
         #  "left": { "file": "spec/0-aux.watsup", "line": 18, "column": 5 },
         #  "right": { "file": "spec/0-aux.watsup", "line": 18, "column": 9 }
         # }
-        left = Position.fromjson(value.get_dict_value('left'))
-        right = Position.fromjson(value.get_dict_value('right'))
+        left = Position.fromjson(value.get_dict_value('left'), cache)
+        right = Position.fromjson(value.get_dict_value('right'), cache)
         if not left.has_information() and not right.has_information():
             return NO_REGION
         return Region(left, right)
@@ -148,6 +155,13 @@ class Region(AstBase):
 
     def has_information(self):
         return self.left.has_information() or self.right.has_information()
+
+    def eq(self, other):
+        if self is other:
+            return True
+        if not isinstance(other, Region):
+            return False
+        return self.left.eq(other.left) and self.right.eq(other.right)
 
     def __repr__(self):
         if self.left.has_information() or self.right.has_information():
@@ -176,7 +190,7 @@ class Id(AstBase):
         self.region = region # type: Region
 
     @staticmethod
-    def fromjson(value):
+    def fromjson(value, cache=None):
         """ example:{
         "it": "sum",
         "note": null,
@@ -185,11 +199,18 @@ class Id(AstBase):
           "right": { "file": "spec/0-aux.watsup", "line": 18, "column": 9 }
         }
       },"""
-        region = Region.fromjson(value.get_dict_value('at'))
-        return Id(
-            value.get_dict_value('it').value_string(),
-            region
-        )
+        id_value = value.get_dict_value('it').value_string()
+        region = Region.fromjson(value.get_dict_value('at'), cache)
+
+        if cache is not None:
+            cached_id = cache.id_cache.get(id_value)
+            if cached_id is not None and cached_id.region.eq(region):
+                return cached_id
+
+        result = Id(id_value, region)
+        if cache is not None:
+            cache.id_cache[id_value] = result
+        return result
 
     def __repr__(self):
         return "p4specast.Id(%r, %s)" % (self.value, self.region)
@@ -206,10 +227,10 @@ class TParam(AstBase):
         return self.value
 
     @staticmethod
-    def fromjson(value):
+    def fromjson(value, cache=None):
         return TParam(
             value.get_dict_value('it').value_string(),
-            Region.fromjson(value.get_dict_value('at'))
+            Region.fromjson(value.get_dict_value('at'), cache)
         )
 
     def __repr__(self):
@@ -288,11 +309,11 @@ class Var(AstBase):
         return "p4specast.Var(id=%s, typ=%s, iter=%s)" % (self.id, self.typ, self.iter.iterlist)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return Var(
-            id=Id.fromjson(content.get_list_item(0)),
-            typ=Type.fromjson(content.get_list_item(1)),
-            iter=[Iter.fromjson(i) for i in content.get_list_item(2).value_array()]
+            id=Id.fromjson(content.get_list_item(0), cache),
+            typ=Type.fromjson(content.get_list_item(1), cache),
+            iter=[Iter.fromjson(i, cache) for i in content.get_list_item(2).value_array()]
         )
 
 
@@ -350,17 +371,17 @@ IterList.EMPTY = IterList([])
 
 class Def(AstBase):
     @staticmethod
-    def fromjson(value):
+    def fromjson(value, cache=None):
         assert value.get_dict_value('note').is_null
-        region = Region.fromjson(value.get_dict_value('at'))
+        region = Region.fromjson(value.get_dict_value('at'), cache)
         content = value.get_dict_value('it')
         what = content.get_list_item(0).value_string()
         if what == 'DecD':
-            ast = DecD.fromjson(content)
+            ast = DecD.fromjson(content, cache)
         elif what == 'TypD':
-            ast = TypD.fromjson(content)
+            ast = TypD.fromjson(content, cache)
         elif what == 'RelD':
-            ast = RelD.fromjson(content)
+            ast = RelD.fromjson(content, cache)
         else:
             raise P4UnknownTypeError("Unknown Def type: %s" % what)
         ast.region = region
@@ -379,12 +400,12 @@ class TypD(Def):
         return "p4specast.TypD(%s, %s, %s)" % (self.id, self.tparams, self.deftyp)
 
     @staticmethod
-    def fromjson(value):
+    def fromjson(value, cache=None):
         _, id, tparams_value, deftype_value = value.unpack(4)
-        tparams = [TParam.fromjson(p) for p in tparams_value]
-        deftyp = DefTyp.fromjson(deftype_value)
+        tparams = [TParam.fromjson(p, cache) for p in tparams_value]
+        deftyp = DefTyp.fromjson(deftype_value, cache)
         return TypD(
-            id=Id.fromjson(id),
+            id=Id.fromjson(id, cache),
             tparams=tparams,
             deftyp=deftyp
         )
@@ -404,14 +425,14 @@ class RelD(Def):
         return "p4specast.RelD(%r, %r, %r, %r, %r)" % (self.id, self.mixop, self.inputs, self.exps, self.instrs)
 
     @staticmethod
-    def fromjson(value):
+    def fromjson(value, cache=None):
         _, id, mixop_and_ints, exps_value, instrs_value = value.unpack(5)
-        mixop = MixOp.fromjson(mixop_and_ints.get_list_item(0))
+        mixop = MixOp.fromjson(mixop_and_ints.get_list_item(0), cache)
         inputs = [i.value_int() for i in mixop_and_ints.get_list_item(1).value_array()]
-        exps = [Exp.fromjson(e) for e in exps_value]
-        instrs = [Instr.fromjson(i) for i in instrs_value]
+        exps = [Exp.fromjson(e, cache) for e in exps_value]
+        instrs = [Instr.fromjson(i, cache) for i in instrs_value]
         return RelD(
-            id=Id.fromjson(id),
+            id=Id.fromjson(id, cache),
             mixop=mixop,
             inputs=inputs,
             exps=exps,
@@ -431,13 +452,13 @@ class DecD(Def):
         return "p4specast.DecD(%r, %r, %r, %r)" % (self.id, self.tparams, self.args, self.instrs)
 
     @staticmethod
-    def fromjson(value):
+    def fromjson(value, cache=None):
         _, id, tparams_value, args_value, instrs_value = value.unpack(5)
-        tparams = [TParam.fromjson(p) for p in tparams_value]
-        args = [Arg.fromjson(a) for a in args_value]
-        instrs = [Instr.fromjson(i) for i in instrs_value]
+        tparams = [TParam.fromjson(p, cache) for p in tparams_value]
+        args = [Arg.fromjson(a, cache) for a in args_value]
+        instrs = [Instr.fromjson(i, cache) for i in instrs_value]
         return DecD(
-            id=Id.fromjson(id),
+            id=Id.fromjson(id, cache),
             tparams=tparams,
             args=args,
             instrs=instrs
@@ -453,15 +474,15 @@ class Arg(AstBase):
         assert 0  # abstract method
 
     @staticmethod
-    def fromjson(value):
+    def fromjson(value, cache=None):
         assert value.get_dict_value('note').is_null
-        region = Region.fromjson(value.get_dict_value('at'))
+        region = Region.fromjson(value.get_dict_value('at'), cache)
         content = value.get_dict_value('it')
         what = content.get_list_item(0).value_string()
         if what == 'ExpA':
-            return ExpA.fromjson(content)
+            return ExpA.fromjson(content, cache)
         elif what == 'DefA':
-            return DefA.fromjson(content)
+            return DefA.fromjson(content, cache)
         else:
             raise P4UnknownTypeError("Unknown Arg type: %s" % what)
 
@@ -479,10 +500,10 @@ class ExpA(Arg):
         return "p4specast.ExpA(%r)" % (self.exp,)
 
     @staticmethod
-    def fromjson(value):
+    def fromjson(value, cache=None):
         _, exp_value = value.unpack(2)
         return ExpA(
-            exp=Exp.fromjson(exp_value)
+            exp=Exp.fromjson(exp_value, cache)
         )
 
 class DefA(Arg):
@@ -499,10 +520,10 @@ class DefA(Arg):
         return "p4specast.DefA(%r)" % (self.id,)
 
     @staticmethod
-    def fromjson(value):
+    def fromjson(value, cache=None):
         _, id_value = value.unpack(2)
         return DefA(
-            id=Id.fromjson(id_value)
+            id=Id.fromjson(id_value, cache)
         )
 
 # and exp = (exp', typ') note_phrase
@@ -541,63 +562,63 @@ class Exp(AstBase):
     # has .typ (with is in 'note' field of json) and a region
 
     @staticmethod
-    def fromjson(value):
-        typ = Type.fromjson(value.get_dict_value('note'))
-        region = Region.fromjson(value.get_dict_value('at'))
+    def fromjson(value, cache=None):
+        typ = Type.fromjson(value.get_dict_value('note'), cache)
+        region = Region.fromjson(value.get_dict_value('at'), cache)
         content = value.get_dict_value('it')
         what = content.get_list_item(0).value_string()
         if what == 'BoolE':
-            ast = BoolE.fromjson(content)
+            ast = BoolE.fromjson(content, cache)
         elif what == 'NumE':
-            ast = NumE.fromjson(content)
+            ast = NumE.fromjson(content, cache)
         elif what == 'TextE':
-            ast = TextE.fromjson(content)
+            ast = TextE.fromjson(content, cache)
         elif what == 'VarE':
-            ast = VarE.fromjson(content)
+            ast = VarE.fromjson(content, cache)
         elif what == 'UnE':
-            ast = UnE.fromjson(content)
+            ast = UnE.fromjson(content, cache)
         elif what == 'BinE':
-            ast = BinE.fromjson(content)
+            ast = BinE.fromjson(content, cache)
         elif what == 'CmpE':
-            ast = CmpE.fromjson(content)
+            ast = CmpE.fromjson(content, cache)
         elif what == 'UpCastE':
-            ast = UpCastE.fromjson(content)
+            ast = UpCastE.fromjson(content, cache)
         elif what == 'DownCastE':
-            ast = DownCastE.fromjson(content)
+            ast = DownCastE.fromjson(content, cache)
         elif what == 'SubE':
-            ast = SubE.fromjson(content)
+            ast = SubE.fromjson(content, cache)
         elif what == 'MatchE':
-            ast = MatchE.fromjson(content)
+            ast = MatchE.fromjson(content, cache)
         elif what == 'TupleE':
-            ast = TupleE.fromjson(content)
+            ast = TupleE.fromjson(content, cache)
         elif what == 'CaseE':
-            ast = CaseE.fromjson(content)
+            ast = CaseE.fromjson(content, cache)
         elif what == 'StrE':
-            ast = StrE.fromjson(content)
+            ast = StrE.fromjson(content, cache)
         elif what == 'OptE':
-            ast = OptE.fromjson(content)
+            ast = OptE.fromjson(content, cache)
         elif what == 'ListE':
-            ast = ListE.fromjson(content)
+            ast = ListE.fromjson(content, cache)
         elif what == 'ConsE':
-            ast = ConsE.fromjson(content)
+            ast = ConsE.fromjson(content, cache)
         elif what == 'CatE':
-            ast = CatE.fromjson(content)
+            ast = CatE.fromjson(content, cache)
         elif what == 'MemE':
-            ast = MemE.fromjson(content)
+            ast = MemE.fromjson(content, cache)
         elif what == 'LenE':
-            ast = LenE.fromjson(content)
+            ast = LenE.fromjson(content, cache)
         elif what == 'DotE':
-            ast = DotE.fromjson(content)
+            ast = DotE.fromjson(content, cache)
         elif what == 'IdxE':
-            ast = IdxE.fromjson(content)
+            ast = IdxE.fromjson(content, cache)
         elif what == 'SliceE':
-            ast = SliceE.fromjson(content)
+            ast = SliceE.fromjson(content, cache)
         elif what == 'UpdE':
-            ast = UpdE.fromjson(content)
+            ast = UpdE.fromjson(content, cache)
         elif what == 'CallE':
-            ast = CallE.fromjson(content)
+            ast = CallE.fromjson(content, cache)
         elif what == 'IterE':
-            ast = IterE.fromjson(content)
+            ast = IterE.fromjson(content, cache)
         else:
             raise P4UnknownTypeError("Unknown Exp type: %s" % what)
         ast.typ = typ
@@ -617,7 +638,7 @@ class BoolE(Exp):
         self.value = value # type: bool
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return BoolE(
             value=content.get_list_item(1).value_bool()
         )
@@ -638,7 +659,7 @@ class NumE(Exp):
         self.typ = typ # type: Type
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         what = content.get_list_item(1).get_list_item(0).value_string()
         if what == 'Int':
             what = IntT.INSTANCE
@@ -667,7 +688,7 @@ class TextE(Exp):
         self.value = value # typ: str
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return TextE(
             value=content.get_list_item(1).value_string()
         )
@@ -691,9 +712,9 @@ class VarE(Exp):
         self._ctx_keys_next = None
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return VarE(
-            id=Id.fromjson(content.get_list_item(1))
+            id=Id.fromjson(content.get_list_item(1), cache)
         )
 
     def __repr__(self):
@@ -729,11 +750,11 @@ class UnE(Exp):
         return "%s%s" % (unop_str, self.exp.tostring())
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return UnE(
             op=content.get_list_item(1).get_list_item(0).value_string(),
             optyp=content.get_list_item(2).get_list_item(0).value_string(),
-            exp=Exp.fromjson(content.get_list_item(3))
+            exp=Exp.fromjson(content.get_list_item(3), cache)
         )
 
 class BinE(Exp):
@@ -771,12 +792,12 @@ class BinE(Exp):
         return "(%s %s %s)" % (self.left.tostring(), binop_str, self.right.tostring())
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return BinE(
             binop=content.get_list_item(1).get_list_item(0).value_string(),
             optyp=content.get_list_item(2).get_list_item(0).value_string(),
-            left=Exp.fromjson(content.get_list_item(3)),
-            right=Exp.fromjson(content.get_list_item(4))
+            left=Exp.fromjson(content.get_list_item(3), cache),
+            right=Exp.fromjson(content.get_list_item(4), cache)
         )
 
 class CmpE(Exp):
@@ -809,12 +830,12 @@ class CmpE(Exp):
         return "(%s %s %s)" % (self.left.tostring(), cmpop_str, self.right.tostring())
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return CmpE(
             cmpop=content.get_list_item(1).get_list_item(0).value_string(),
             optyp=content.get_list_item(2).get_list_item(0).value_string(),
-            left=Exp.fromjson(content.get_list_item(3)),
-            right=Exp.fromjson(content.get_list_item(4))
+            left=Exp.fromjson(content.get_list_item(3), cache),
+            right=Exp.fromjson(content.get_list_item(4), cache)
         )
 
 class UpCastE(Exp):
@@ -833,10 +854,10 @@ class UpCastE(Exp):
         return "p4specast.UpCastE(%r, %r)" % (self.check_typ, self.exp)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return UpCastE(
-            check_typ=Type.fromjson(content.get_list_item(1)),
-            exp=Exp.fromjson(content.get_list_item(2)),
+            check_typ=Type.fromjson(content.get_list_item(1), cache),
+            exp=Exp.fromjson(content.get_list_item(2), cache),
         )
 
 class DownCastE(Exp):
@@ -855,10 +876,10 @@ class DownCastE(Exp):
         return "p4specast.DownCastE(%r, %r)" % (self.check_typ, self.exp)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return DownCastE(
-            check_typ=Type.fromjson(content.get_list_item(1)),
-            exp=Exp.fromjson(content.get_list_item(2)),
+            check_typ=Type.fromjson(content.get_list_item(1), cache),
+            exp=Exp.fromjson(content.get_list_item(2), cache),
         )
 
 class SubE(Exp):
@@ -874,10 +895,10 @@ class SubE(Exp):
         return "%s <: %s" % (self.exp.tostring(), self.check_typ.tostring())
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return SubE(
-            exp=Exp.fromjson(content.get_list_item(1)),
-            check_typ=Type.fromjson(content.get_list_item(2))
+            exp=Exp.fromjson(content.get_list_item(1), cache),
+            check_typ=Type.fromjson(content.get_list_item(2), cache)
         )
 
     def __repr__(self):
@@ -896,10 +917,10 @@ class MatchE(Exp):
         return "%s matches %s" % (self.exp.tostring(), self.pattern.tostring())
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return MatchE(
-            exp=Exp.fromjson(content.get_list_item(1)),
-            pattern=Pattern.fromjson(content.get_list_item(2))
+            exp=Exp.fromjson(content.get_list_item(1), cache),
+            pattern=Pattern.fromjson(content.get_list_item(2), cache)
         )
 
     def __repr__(self):
@@ -918,9 +939,9 @@ class TupleE(Exp):
         return "(%s)" % elts_str
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return TupleE(
-            elts=[Exp.fromjson(elt) for elt in content.get_list_item(1).value_array()]
+            elts=[Exp.fromjson(elt, cache) for elt in content.get_list_item(1).value_array()]
         )
 
     def __repr__(self):
@@ -938,9 +959,9 @@ class CaseE(Exp):
         return self.notexp.tostring()
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return CaseE(
-            notexp=NotExp.fromjson(content.get_list_item(1))
+            notexp=NotExp.fromjson(content.get_list_item(1), cache)
         )
 
     def __repr__(self):
@@ -959,9 +980,9 @@ class StrE(Exp):
         return "{%s}" % fields_str
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return StrE(
-            fields=[(AtomT.fromjson(field.get_list_item(0)), Exp.fromjson(field.get_list_item(1))) for field in content.get_list_item(1).value_array()]
+            fields=[(AtomT.fromjson(field.get_list_item(0), cache), Exp.fromjson(field.get_list_item(1), cache)) for field in content.get_list_item(1).value_array()]
         )
 
     def __repr__(self):
@@ -981,11 +1002,11 @@ class OptE(Exp):
         return "%s?" % self.exp.tostring()
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         if content.get_list_item(1).is_null:
             return OptE(exp=None)
         return OptE(
-            exp=Exp.fromjson(content.get_list_item(1))
+            exp=Exp.fromjson(content.get_list_item(1), cache)
         )
 
     def __repr__(self):
@@ -1004,9 +1025,9 @@ class ListE(Exp):
         return "[%s]" % elts_str
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return ListE(
-            elts=[Exp.fromjson(elt) for elt in content.get_list_item(1).value_array()]
+            elts=[Exp.fromjson(elt, cache) for elt in content.get_list_item(1).value_array()]
         )
 
     def __repr__(self):
@@ -1025,10 +1046,10 @@ class ConsE(Exp):
         return "%s :: %s" % (self.head.tostring(), self.tail.tostring())
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return ConsE(
-            head=Exp.fromjson(content.get_list_item(1)),
-            tail=Exp.fromjson(content.get_list_item(2))
+            head=Exp.fromjson(content.get_list_item(1), cache),
+            tail=Exp.fromjson(content.get_list_item(2), cache)
         )
 
     def __repr__(self):
@@ -1047,10 +1068,10 @@ class CatE(Exp):
         return "%s ++ %s" % (self.left.tostring(), self.right.tostring())
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return CatE(
-            left=Exp.fromjson(content.get_list_item(1)),
-            right=Exp.fromjson(content.get_list_item(2))
+            left=Exp.fromjson(content.get_list_item(1), cache),
+            right=Exp.fromjson(content.get_list_item(2), cache)
         )
 
     def __repr__(self):
@@ -1069,10 +1090,10 @@ class MemE(Exp):
         return "%s <- %s" % (self.elem.tostring(), self.lst.tostring())
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return MemE(
-            elem=Exp.fromjson(content.get_list_item(1)),
-            lst=Exp.fromjson(content.get_list_item(2))
+            elem=Exp.fromjson(content.get_list_item(1), cache),
+            lst=Exp.fromjson(content.get_list_item(2), cache)
         )
 
     def __repr__(self):
@@ -1090,9 +1111,9 @@ class LenE(Exp):
         return "|%s|" % self.lst.tostring()
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return LenE(
-            lst=Exp.fromjson(content.get_list_item(1))
+            lst=Exp.fromjson(content.get_list_item(1), cache)
         )
 
     def __repr__(self):
@@ -1111,10 +1132,10 @@ class DotE(Exp):
         return "%s.%s" % (self.obj.tostring(), self.field.tostring())
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return DotE(
-            obj=Exp.fromjson(content.get_list_item(1)),
-            field=AtomT.fromjson(content.get_list_item(2))
+            obj=Exp.fromjson(content.get_list_item(1), cache),
+            field=AtomT.fromjson(content.get_list_item(2), cache)
         )
 
     def __repr__(self):
@@ -1133,10 +1154,10 @@ class IdxE(Exp):
         return "%s[%s]" % (self.lst.tostring(), self.idx.tostring())
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return IdxE(
-            lst=Exp.fromjson(content.get_list_item(1)),
-            idx=Exp.fromjson(content.get_list_item(2))
+            lst=Exp.fromjson(content.get_list_item(1), cache),
+            idx=Exp.fromjson(content.get_list_item(2), cache)
         )
 
     def __repr__(self):
@@ -1156,11 +1177,11 @@ class SliceE(Exp):
         return "%s[%s : %s]" % (self.lst.tostring(), self.start.tostring(), self.length.tostring())
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return SliceE(
-            lst=Exp.fromjson(content.get_list_item(1)),
-            start=Exp.fromjson(content.get_list_item(2)),
-            length=Exp.fromjson(content.get_list_item(3))
+            lst=Exp.fromjson(content.get_list_item(1), cache),
+            start=Exp.fromjson(content.get_list_item(2), cache),
+            length=Exp.fromjson(content.get_list_item(3), cache)
         )
 
     def __repr__(self):
@@ -1180,11 +1201,11 @@ class UpdE(Exp):
         return "%s[%s = %s]" % (self.exp.tostring(), self.path.tostring(), self.value.tostring())  # TODO: implement Path.tostring
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return UpdE(
-            exp=Exp.fromjson(content.get_list_item(1)),
-            path=Path.fromjson(content.get_list_item(2)),
-            value=Exp.fromjson(content.get_list_item(3))
+            exp=Exp.fromjson(content.get_list_item(1), cache),
+            path=Path.fromjson(content.get_list_item(2), cache),
+            value=Exp.fromjson(content.get_list_item(3), cache)
         )
 
     def __repr__(self):
@@ -1198,6 +1219,8 @@ class CallE(Exp):
         self.func = func # typ: Id
         self.targs = targs
         self.args = args # typ: exp list
+        self._ctx_fenv_keys = None
+        self._ctx_func_res = None
 
     def tostring(self):
         # | Il.Ast.CallE (f, ts, as_) -> "$" ^ string_of_varid f ^ string_of_list_nl string_of_targ_inl ts ^ "(" ^ concat_map ", " string_of_arg as_ ^ ")"
@@ -1208,11 +1231,11 @@ class CallE(Exp):
         return "$%s%s(%s)" % (self.func.value, targs_str, args_str)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return CallE(
-            func=Id.fromjson(content.get_list_item(1)),
-            targs=[Type.fromjson(targ) for targ in content.get_list_item(2).value_array()],
-            args=[Arg.fromjson(arg) for arg in content.get_list_item(3).value_array()]
+            func=Id.fromjson(content.get_list_item(1), cache),
+            targs=[Type.fromjson(targ, cache) for targ in content.get_list_item(2).value_array()],
+            args=[Arg.fromjson(arg, cache) for arg in content.get_list_item(3).value_array()]
         )
 
     def __repr__(self):
@@ -1249,11 +1272,11 @@ class IterE(Exp):
         return "p4specast.IterE(%r, %r, %r)" % (self.exp, self.iter, self.varlist)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return IterE(
-            exp=Exp.fromjson(content.get_list_item(1)),
-            iter=Iter.fromjson(content.get_list_item(2).get_list_item(0)),
-            varlist=[Var.fromjson(value) for value in content.get_list_item(2).get_list_item(1).value_array()],
+            exp=Exp.fromjson(content.get_list_item(1), cache),
+            iter=Iter.fromjson(content.get_list_item(2).get_list_item(0), cache),
+            varlist=[Var.fromjson(value, cache) for value in content.get_list_item(2).get_list_item(1).value_array()],
         )
 
 # and notexp = mixop * exp list
@@ -1281,10 +1304,10 @@ class NotExp(AstBase):
             return "%s(%s)" % (self.mixop.tostring(), exps_str)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return NotExp(
-            mixop=MixOp.fromjson(content.get_list_item(0)),
-            exps=[Exp.fromjson(exp) for exp in content.get_list_item(1).value_array()]
+            mixop=MixOp.fromjson(content.get_list_item(0), cache),
+            exps=[Exp.fromjson(exp, cache) for exp in content.get_list_item(1).value_array()]
         )
     def __repr__(self):
         return "p4specast.NotExp(%r, %r)" % (self.mixop, self.exps)
@@ -1320,10 +1343,10 @@ class IterExp(AstBase):
         return "".join(res)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return IterExp(
-            iter=Iter.fromjson(content.get_list_item(0)),
-            vars=[Var.fromjson(var) for var in content.get_list_item(1).value_array()]
+            iter=Iter.fromjson(content.get_list_item(0), cache),
+            vars=[Var.fromjson(var, cache) for var in content.get_list_item(1).value_array()]
         )
 
     def __repr__(self):
@@ -1355,31 +1378,30 @@ class Type(AstBase):
         assert 0  # abstract method
 
     @staticmethod
-    def fromjson(value):
+    def fromjson(value, cache=None):
         if value.is_object:
-            region = Region.fromjson(value.get_dict_value('at'))
+            region = Region.fromjson(value.get_dict_value('at'), cache)
             content = value.get_dict_value('it')
         else:
             region = None
             content = value
         what = content.get_list_item(0).value_string()
         if what == 'BoolT':
-            ast = BoolT.fromjson(content)
+            ast = BoolT.fromjson(content, region, cache)
         elif what == 'NumT':
-            ast = NumT.fromjson(content)
+            ast = NumT.fromjson(content, region, cache)
         elif what == 'TextT':
-            ast = TextT.fromjson(content)
+            ast = TextT.fromjson(content, region, cache)
         elif what == 'VarT':
-            ast = VarT.fromjson(content)
+            ast = VarT.fromjson(content, region, cache)
         elif what == 'TupleT':
-            ast = TupleT.fromjson(content)
+            ast = TupleT.fromjson(content, region, cache)
         elif what == 'IterT':
-            ast = IterT.fromjson(content)
+            ast = IterT.fromjson(content, region, cache)
         elif what == 'FuncT':
-            ast = FuncT.fromjson(content)
+            ast = FuncT.fromjson(content, region, cache)
         else:
             raise P4UnknownTypeError("Unknown Type: %s" % what)
-        ast.region = region
         return ast
 
     @jit.elidable
@@ -1400,27 +1422,31 @@ class Type(AstBase):
 
 
 class BoolT(Type):
-    def __init__(self):
-        pass
+    def __init__(self, region=None):
+        self.region = region
 
     def tostring(self):
         # | BoolT -> "bool"
         return "bool"
 
     def __repr__(self):
+        if self.region is not None and not self.region.eq(NO_REGION):
+            return "p4specast.BoolT(region=%r)" % (self.region,)
         return "p4specast.BoolT.INSTANCE"
 
     @staticmethod
-    def fromjson(content):
-        return BoolT.INSTANCE
-BoolT.INSTANCE = BoolT()
+    def fromjson(content, region, cache=None):
+        if region is None or region.eq(NO_REGION):
+            return BoolT.INSTANCE
+        return BoolT(region)
+BoolT.INSTANCE = BoolT(NO_REGION)
 
 
 class NumT(Type):
     _immutable_fields_ = ['typ']
-
-    def __init__(self, typ):
+    def __init__(self, typ, region=None):
         self.typ = typ # type: NumTyp
+        self.region = region
 
     def tostring(self):
         # | NumT numtyp -> Num.string_of_typ numtyp
@@ -1431,48 +1457,64 @@ class NumT(Type):
         assert 0, 'unreachable'
 
     def __repr__(self):
-        if isinstance(self.typ, IntT):
-            return "p4specast.NumT.INT"
-        elif isinstance(self.typ, NatT):
+        region_str = ""
+        if self.region is not None and not self.region.eq(NO_REGION):
+            region_str = ", region=%r" % (self.region,)
+
+        if isinstance(self.typ, NatT):
+            if region_str:
+                return "p4specast.NumT(NatT.INSTANCE%s)" % region_str
             return "p4specast.NumT.NAT"
+        elif isinstance(self.typ, IntT):
+            if region_str:
+                return "p4specast.NumT(IntT.INSTANCE%s)" % region_str
+            return "p4specast.NumT.INT"
         else:
-            return "p4specast.NumT(%r)" % (self.typ,)
+            return "p4specast.NumT(%r%s)" % (self.typ, region_str)
 
     @staticmethod
-    def fromjson(content):
-        typ = NumTyp.fromjson(content.get_list_item(1))
-        if isinstance(typ, IntT):
-            return NumT.INT
-        elif isinstance(typ, NatT):
-            return NumT.NAT
-        else:
-            return NumT(typ)
-NumT.INT = NumT(IntT.INSTANCE)
-NumT.NAT = NumT(NatT.INSTANCE)
+    def fromjson(content, region, cache=None):
+        typ = NumTyp.fromjson(content.get_list_item(1), cache)
+        if region is None or region.eq(NO_REGION):
+            if isinstance(typ, IntT):
+                return NumT.INT
+            elif isinstance(typ, NatT):
+                return NumT.NAT
+        return NumT(typ, region)
+NumT.INT = NumT(IntT.INSTANCE, NO_REGION)
+NumT.NAT = NumT(NatT.INSTANCE, NO_REGION)
 
 
 
 class TextT(Type):
-    def __init__(self):
-        pass
+    def __init__(self, region=None):
+        self.region = region
 
     def tostring(self):
         # | TextT -> "text"
         return "text"
 
     def __repr__(self):
+        if self.region is not None and not self.region.eq(NO_REGION):
+            return "p4specast.TextT(region=%r)" % (self.region,)
         return "p4specast.TextT.INSTANCE"
 
     @staticmethod
-    def fromjson(content):
-        return TextT.INSTANCE
+    def fromjson(content, region, cache=None):
+        if region is None or region.eq(NO_REGION):
+            return TextT.INSTANCE
+        return TextT(region)
+TextT.INSTANCE = TextT(NO_REGION)
+
 
 class VarT(Type):
     _immutable_fields_ = ['id', 'targs[*]']
-
-    def __init__(self, id, targs):
+    def __init__(self, id, targs, region=None):
         self.id = id
         self.targs = targs
+        self.region = region
+        self._ctx_tdenv_keys = None
+        self._ctx_typ_res = (None, None)
 
     def tostring(self):
         # | VarT (typid, targs) -> string_of_typid typid ^ string_of_targs targs
@@ -1482,20 +1524,38 @@ class VarT(Type):
         return "%s%s" % (self.id.value, targs_str)
 
     def __repr__(self):
-        return "p4specast.VarT(%r, %r)" % (self.id, self.targs)
+        region_str = ""
+        if self.region is not None and not self.region.eq(NO_REGION):
+            region_str = ", region=%r" % (self.region,)
+        return "p4specast.VarT(%r, %r%s)" % (self.id, self.targs, region_str)
 
     @staticmethod
-    def fromjson(content):
-        return VarT(
-            id=Id.fromjson(content.get_list_item(1)),
-            targs=[Type.fromjson(targ) for targ in content.get_list_item(2).value_array()]
-        )
+    def fromjson(content, region, cache=None):
+        id = Id.fromjson(content.get_list_item(1), cache)
+        targs_array = content.get_list_item(2).value_array()
+
+        # Use cache if available and targs is empty
+        if cache is not None and len(targs_array) == 0:
+            cached_vart = cache.vart_cache.get(id)
+            if cached_vart is not None:
+                if (cached_vart.region is None and region is None) or \
+                   (cached_vart.region is not None and region is not None and cached_vart.region.eq(region)):
+                    return cached_vart
+
+        targs = [Type.fromjson(targ, cache) for targ in targs_array]
+        vart = VarT(id=id, targs=targs, region=region)
+
+        # Cache only if targs is empty
+        if cache is not None and len(targs) == 0:
+            cache.vart_cache[id] = vart
+
+        return vart
 
 class TupleT(Type):
     _immutable_fields_ = ['elts[*]']
-
-    def __init__(self, elts):
+    def __init__(self, elts, region=None):
         self.elts = elts
+        self.region = region
 
     def tostring(self):
         # | TupleT typs -> "(" ^ string_of_typs ", " typs ^ ")"
@@ -1503,52 +1563,63 @@ class TupleT(Type):
         return "(%s)" % elts_str
 
     def __repr__(self):
-        return "p4specast.TupleT(%r)" % (self.elts,)
+        region_str = ""
+        if self.region is not None and not self.region.eq(NO_REGION):
+            region_str = ", region=%r" % (self.region,)
+        return "p4specast.TupleT(%r%s)" % (self.elts, region_str)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, region, cache=None):
         return TupleT(
-            elts=[Type.fromjson(elt) for elt in content.get_list_item(1).value_array()]
+            elts=[Type.fromjson(elt, cache) for elt in content.get_list_item(1).value_array()],
+            region=region
         )
 
 class IterT(Type):
     _immutable_fields_ = ['typ', 'iter']
-
-    def __init__(self, typ, iter):
+    def __init__(self, typ, iter, region=None):
         self.typ = typ
         self.iter = iter
+        self.region = region
 
     def tostring(self):
         # | IterT (typ, iter) -> string_of_typ typ ^ string_of_iter iter
         return "%s%s" % (self.typ.tostring(), string_of_iter(self.iter))
 
     def __repr__(self):
-        return "p4specast.IterT(%r, %r)" % (self.typ, self.iter)
+        region_str = ""
+        if self.region is not None and not self.region.eq(NO_REGION):
+            region_str = ", region=%r" % (self.region,)
+        return "p4specast.IterT(%r, %r%s)" % (self.typ, self.iter, region_str)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, region, cache=None):
         return IterT(
-            typ=Type.fromjson(content.get_list_item(1)),
-            iter=Iter.fromjson(content.get_list_item(2)),
+            typ=Type.fromjson(content.get_list_item(1), cache),
+            iter=Iter.fromjson(content.get_list_item(2), cache),
+            region=region
         )
 
 class FuncT(Type):
-    def __init__(self):
-        pass
+    def __init__(self, region=None):
+        self.region = region
 
     def tostring(self):
         # | FuncT -> "func"
         return "func"
 
     def __repr__(self):
+        if self.region is not None and not self.region.eq(NO_REGION):
+            return "p4specast.FuncT(region=%r)" % (self.region,)
         return "p4specast.FuncT.INSTANCE"
 
     @staticmethod
-    def fromjson(content):
-        return FuncT.INSTANCE
+    def fromjson(content, region, cache=None):
+        if region is None or region.eq(NO_REGION):
+            return FuncT.INSTANCE
+        return FuncT(region)
 
-TextT.INSTANCE = TextT()
-FuncT.INSTANCE = FuncT()
+FuncT.INSTANCE = FuncT(NO_REGION)
 
 # and nottyp = nottyp' phrase
 # [@@deriving yojson]
@@ -1573,12 +1644,12 @@ class NotTyp(AstBase):
         return "p4specast.NotTyp(%r, %r)" % (self.mixop, self.typs)
 
     @staticmethod
-    def fromjson(value):
-        region = Region.fromjson(value.get_dict_value('at'))
+    def fromjson(value, cache=None):
+        region = Region.fromjson(value.get_dict_value('at'), cache)
         content = value.get_dict_value('it')
         return NotTyp(
-            mixop=MixOp.fromjson(content.get_list_item(0)),
-            typs=[Type.fromjson(typ) for typ in content.get_list_item(1).value_array()]
+            mixop=MixOp.fromjson(content.get_list_item(0), cache),
+            typs=[Type.fromjson(typ, cache) for typ in content.get_list_item(1).value_array()]
         )
 
 # and deftyp = deftyp' phrase
@@ -1591,16 +1662,16 @@ class DefTyp(AstBase):
     _immutable_fields_ = ['region']
     # base class
     @staticmethod
-    def fromjson(value):
-        region = Region.fromjson(value.get_dict_value('at'))
+    def fromjson(value, cache=None):
+        region = Region.fromjson(value.get_dict_value('at'), cache)
         content = value.get_dict_value('it')
         what = content.get_list_item(0).value_string()
         if what == 'PlainT':
-            ast = PlainT.fromjson(content)
+            ast = PlainT.fromjson(content, cache)
         elif what == 'StructT':
-            ast = StructT.fromjson(content)
+            ast = StructT.fromjson(content, cache)
         elif what == 'VariantT':
-            ast = VariantT.fromjson(content)
+            ast = VariantT.fromjson(content, cache)
         else:
             raise P4UnknownTypeError("Unknown DefTyp: %s" % what)
         ast.region = region
@@ -1617,9 +1688,9 @@ class PlainT(DefTyp):
         self.region = region
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return PlainT(
-            typ=Type.fromjson(content.get_list_item(1))
+            typ=Type.fromjson(content.get_list_item(1), cache)
         )
 
     def __repr__(self):
@@ -1632,9 +1703,9 @@ class StructT(DefTyp):
         self.fields = fields
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return StructT(
-            fields=[TypField.fromjson(field) for field in content.get_list_item(1).value_array()]
+            fields=[TypField.fromjson(field, cache) for field in content.get_list_item(1).value_array()]
         )
 
     def __repr__(self):
@@ -1647,9 +1718,9 @@ class VariantT(DefTyp):
         self.cases = cases
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return VariantT(
-            cases=[TypeCase.fromjson(case) for case in content.get_list_item(1).value_array()]
+            cases=[TypeCase.fromjson(case, cache) for case in content.get_list_item(1).value_array()]
         )
 
     def __repr__(self):
@@ -1668,10 +1739,10 @@ class TypField(AstBase):
         return "p4specast.TypField(%r, %r)" % (self.name, self.typ)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return TypField(
-            name=AtomT.fromjson(content.get_list_item(0)),
-            typ=Type.fromjson(content.get_list_item(1))
+            name=AtomT.fromjson(content.get_list_item(0), cache),
+            typ=Type.fromjson(content.get_list_item(1), cache)
         )
 
 # and typcase = nottyp
@@ -1702,27 +1773,27 @@ class Instr(AstBase):
         assert 0  # abstract method
 
     @staticmethod
-    def fromjson(value):
+    def fromjson(value, cache=None):
         assert value.get_dict_value('note').is_null
-        region = Region.fromjson(value.get_dict_value('at'))
+        region = Region.fromjson(value.get_dict_value('at'), cache)
         content = value.get_dict_value('it')
         what = content.get_list_item(0).value_string()
         if what == 'IfI':
-            ast = IfI.fromjson(content)
+            ast = IfI.fromjson(content, cache)
         elif what == 'HoldI':
-            ast = HoldI.fromjson(content)
+            ast = HoldI.fromjson(content, cache)
         elif what == 'CaseI':
-            ast = CaseI.fromjson(content)
+            ast = CaseI.fromjson(content, cache)
         elif what == 'OtherwiseI':
-            ast = OtherwiseI.fromjson(content)
+            ast = OtherwiseI.fromjson(content, cache)
         elif what == 'LetI':
-            ast = LetI.fromjson(content)
+            ast = LetI.fromjson(content, cache)
         elif what == 'RuleI':
-            ast = RuleI.fromjson(content)
+            ast = RuleI.fromjson(content, cache)
         elif what == 'ResultI':
-            ast = ResultI.fromjson(content)
+            ast = ResultI.fromjson(content, cache)
         elif what == 'ReturnI':
-            ast = ReturnI.fromjson(content)
+            ast = ReturnI.fromjson(content, cache)
         else:
             raise P4UnknownTypeError("Unknown Instr: %s" % what)
         ast.region = region
@@ -1775,11 +1846,11 @@ class IfI(InstrWithIters):
             return "%sIf (%s)%s, then\n\n%s\n\n%sElse %s" % (order, self.exp.tostring(), iterexps_str, instrs_str, order, phantom_str)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return IfI(
-            exp=Exp.fromjson(content.get_list_item(1)),
-            iters=[IterExp.fromjson(ite) for ite in content.get_list_item(2).value_array()],
-            instrs=[Instr.fromjson(instr) for instr in content.get_list_item(3).value_array()],
+            exp=Exp.fromjson(content.get_list_item(1), cache),
+            iters=[IterExp.fromjson(ite, cache) for ite in content.get_list_item(2).value_array()],
+            instrs=[Instr.fromjson(instr, cache) for instr in content.get_list_item(3).value_array()],
             phantom=content.get_list_item(4)
         )
 
@@ -1811,12 +1882,12 @@ class HoldI(InstrWithIters):
         return "%sIf (%s: %s)%s:\n\n%s" % (order, self.id.value, self.notexp.tostring(), iterexps_str, holdcase_str)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return HoldI(
-            id=Id.fromjson(content.get_list_item(1)),
-            notexp=NotExp.fromjson(content.get_list_item(2)),
-            iters=[IterExp.fromjson(ite) for ite in content.get_list_item(3).value_array()],
-            holdcase=HoldCase.fromjson(content.get_list_item(4)),
+            id=Id.fromjson(content.get_list_item(1), cache),
+            notexp=NotExp.fromjson(content.get_list_item(2), cache),
+            iters=[IterExp.fromjson(ite, cache) for ite in content.get_list_item(3).value_array()],
+            holdcase=HoldCase.fromjson(content.get_list_item(4), cache),
         )
 
     def __repr__(self):
@@ -1882,10 +1953,10 @@ class CaseI(Instr):
             return "%sCase analysis on %s\n\n%s\n\n%sElse %s" % (order, self.exp.tostring(), cases_str, order, phantom_str)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return CaseI(
-            exp=Exp.fromjson(content.get_list_item(1)),
-            cases=[Case.fromjson(case) for case in content.get_list_item(2).value_array()],
+            exp=Exp.fromjson(content.get_list_item(1), cache),
+            cases=[Case.fromjson(case, cache) for case in content.get_list_item(2).value_array()],
             phantom=content.get_list_item(3)
         )
 
@@ -1940,9 +2011,9 @@ class OtherwiseI(Instr):
         return "%sOtherwise\n\n%s" % (order, instr_str)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return OtherwiseI(
-            instr=Instr.fromjson(content.get_list_item(1))
+            instr=Instr.fromjson(content.get_list_item(1), cache)
         )
 
     def __repr__(self):
@@ -1966,11 +2037,11 @@ class LetI(InstrWithIters):
         return "%s(Let %s be %s)%s" % (order, self.var.tostring(), self.value.tostring(), iterexps_str)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return LetI(
-            var=Exp.fromjson(content.get_list_item(1)),
-            value=Exp.fromjson(content.get_list_item(2)),
-            iters=[IterExp.fromjson(ite) for ite in content.get_list_item(3).value_array()]
+            var=Exp.fromjson(content.get_list_item(1), cache),
+            value=Exp.fromjson(content.get_list_item(2), cache),
+            iters=[IterExp.fromjson(ite, cache) for ite in content.get_list_item(3).value_array()]
         )
 
     def __repr__(self):
@@ -1995,11 +2066,11 @@ class RuleI(InstrWithIters):
         return "%s(%s: %s)%s" % (order, self.id.value, self.notexp.tostring(), iterexps_str)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return RuleI(
-            id=Id.fromjson(content.get_list_item(1)),
-            notexp=NotExp.fromjson(content.get_list_item(2)),
-            iters=[IterExp.fromjson(ite) for ite in content.get_list_item(3).value_array()]
+            id=Id.fromjson(content.get_list_item(1), cache),
+            notexp=NotExp.fromjson(content.get_list_item(2), cache),
+            iters=[IterExp.fromjson(ite, cache) for ite in content.get_list_item(3).value_array()]
         )
 
     def __repr__(self):
@@ -2024,9 +2095,9 @@ class ResultI(Instr):
             return "%sResult in %s" % (order, exps_str)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return ResultI(
-            exps=[Exp.fromjson(elt) for elt in content.get_list_item(1).value_array()]
+            exps=[Exp.fromjson(elt, cache) for elt in content.get_list_item(1).value_array()]
         )
 
     def __repr__(self):
@@ -2046,9 +2117,9 @@ class ReturnI(Instr):
         return "%sReturn %s" % (order, self.exp.tostring())
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return ReturnI(
-            exp=Exp.fromjson(content.get_list_item(1))
+            exp=Exp.fromjson(content.get_list_item(1), cache)
         )
 
     def __repr__(self):
@@ -2068,14 +2139,14 @@ class HoldCase(AstBase):
     _attrs_ = []
     # abstract base
     @staticmethod
-    def fromjson(value):
+    def fromjson(value, cache=None):
         what = value.get_list_item(0).value_string()
         if what == 'BothH':
-            return BothH.fromjson(value)
+            return BothH.fromjson(value, cache)
         elif what == 'HoldH':
-            return HoldH.fromjson(value)
+            return HoldH.fromjson(value, cache)
         elif what == 'NotHoldH':
-            return NotHoldH.fromjson(value)
+            return NotHoldH.fromjson(value, cache)
         else:
             raise P4UnknownTypeError("Unknown HoldCase: %s" % what)
 
@@ -2090,10 +2161,10 @@ class BothH(HoldCase):
         self.nothold_instrs = nothold_instrs
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return BothH(
-            hold_instrs=[Instr.fromjson(instr) for instr in content.get_list_item(1).value_array()],
-            nothold_instrs=[Instr.fromjson(instr) for instr in content.get_list_item(2).value_array()]
+            hold_instrs=[Instr.fromjson(instr, cache) for instr in content.get_list_item(1).value_array()],
+            nothold_instrs=[Instr.fromjson(instr, cache) for instr in content.get_list_item(2).value_array()]
         )
 
     def tostring(self, level=0):
@@ -2119,9 +2190,9 @@ class HoldH(HoldCase):
         self.phantom = phantom
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return HoldH(
-            hold_instrs=[Instr.fromjson(instr) for instr in content.get_list_item(1).value_array()],
+            hold_instrs=[Instr.fromjson(instr, cache) for instr in content.get_list_item(1).value_array()],
             phantom=content.get_list_item(2)
         )
 
@@ -2153,9 +2224,9 @@ class NotHoldH(HoldCase):
         self.phantom = phantom
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return NotHoldH(
-            nothold_instrs=[Instr.fromjson(instr) for instr in content.get_list_item(1).value_array()],
+            nothold_instrs=[Instr.fromjson(instr, cache) for instr in content.get_list_item(1).value_array()],
             phantom=content.get_list_item(2)
         )
 
@@ -2212,10 +2283,10 @@ class Case(AstBase):
         return "%sCase %s\n\n%s" % (order, self.guard.tostring(), instrs_str)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return Case(
-            guard=Guard.fromjson(content.get_list_item(0)),
-            instrs=[Instr.fromjson(instr) for instr in content.get_list_item(1).value_array()]
+            guard=Guard.fromjson(content.get_list_item(0), cache),
+            instrs=[Instr.fromjson(instr, cache) for instr in content.get_list_item(1).value_array()]
         )
 
     def __repr__(self):
@@ -2227,18 +2298,18 @@ class Guard(AstBase):
         assert 0  # abstract method
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         kind = content.get_list_item(0).value_string()
         if kind == 'BoolG':
-            return BoolG.fromjson(content)
+            return BoolG.fromjson(content, cache)
         elif kind == 'CmpG':
-            return CmpG.fromjson(content)
+            return CmpG.fromjson(content, cache)
         elif kind == 'SubG':
-            return SubG.fromjson(content)
+            return SubG.fromjson(content, cache)
         elif kind == 'MatchG':
-            return MatchG.fromjson(content)
+            return MatchG.fromjson(content, cache)
         elif kind == 'MemG':
-            return MemG.fromjson(content)
+            return MemG.fromjson(content, cache)
         else:
             raise P4UnknownTypeError("Unknown Guard: %s" % kind)
 
@@ -2253,7 +2324,7 @@ class BoolG(Guard):
         return "true" if self.value else "false"
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return BoolG(
             value=content.get_list_item(1).value_bool()
         )
@@ -2283,11 +2354,11 @@ class CmpG(Guard):
         return "(%% %s %s)" % (cmpop_str, self.exp.tostring())
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return CmpG(
             op=content.get_list_item(1).get_list_item(0).value_string(),
             typ=content.get_list_item(2).get_list_item(0).value_string(),
-            exp=Exp.fromjson(content.get_list_item(3))
+            exp=Exp.fromjson(content.get_list_item(3), cache)
         )
 
     def __repr__(self):
@@ -2304,9 +2375,9 @@ class SubG(Guard):
         return "(%% has type %s)" % self.typ.tostring()
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return SubG(
-            typ=Type.fromjson(content.get_list_item(1))
+            typ=Type.fromjson(content.get_list_item(1), cache)
         )
 
     def __repr__(self):
@@ -2323,9 +2394,9 @@ class MatchG(Guard):
         return "(%% matches pattern %s)" % self.pattern.tostring()
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return MatchG(
-            pattern=Pattern.fromjson(content.get_list_item(1))
+            pattern=Pattern.fromjson(content.get_list_item(1), cache)
         )
 
     def __repr__(self):
@@ -2342,9 +2413,9 @@ class MemG(Guard):
         return "(%% is in %s)" % self.exp.tostring()
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return MemG(
-            exp=Exp.fromjson(content.get_list_item(1))
+            exp=Exp.fromjson(content.get_list_item(1), cache)
         )
 
     def __repr__(self):
@@ -2360,14 +2431,14 @@ class Pattern(AstBase):
         assert 0  # abstract method
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         kind = content.get_list_item(0).value_string()
         if kind == 'CaseP':
-            return CaseP.fromjson(content)
+            return CaseP.fromjson(content, cache)
         elif kind == 'ListP':
-            return ListP.fromjson(content)
+            return ListP.fromjson(content, cache)
         elif kind == 'OptP':
-            return OptP.fromjson(content)
+            return OptP.fromjson(content, cache)
         else:
             raise P4UnknownTypeError("Unknown Pattern: %s" % kind)
 
@@ -2382,9 +2453,9 @@ class CaseP(Pattern):
         return self.mixop.tostring()
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return CaseP(
-            mixop=MixOp.fromjson(content.get_list_item(1))
+            mixop=MixOp.fromjson(content.get_list_item(1), cache)
         )
 
     def __repr__(self):
@@ -2411,9 +2482,9 @@ class ListP(Pattern):
             assert 0, "Unknown ListP element: %s" % self.element
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return ListP(
-            element=ListPElem.fromjson(content.get_list_item(1))
+            element=ListPElem.fromjson(content.get_list_item(1), cache)
         )
 
     def __repr__(self):
@@ -2436,7 +2507,7 @@ class OptP(Pattern):
             assert 0, "Unknown OptP kind: %s" % self.kind
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return OptP(
             kind=content.get_list_item(1).get_list_item(0).value_string()
         )
@@ -2449,7 +2520,7 @@ class OptP(Pattern):
 class ListPElem(AstBase):
     _attrs_ = []
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         kind = content.get_list_item(0).value_string()
         if kind == 'Cons':
             return Cons()
@@ -2493,19 +2564,19 @@ class Path(AstBase):
         assert 0  # abstract method
 
     @staticmethod
-    def fromjson(value):
-        region = Region.fromjson(value.get_dict_value('at'))
+    def fromjson(value, cache=None):
+        region = Region.fromjson(value.get_dict_value('at'), cache)
         content = value.get_dict_value('it')
-        typ = Type.fromjson(value.get_dict_value('note'))
+        typ = Type.fromjson(value.get_dict_value('note'), cache)
         kind = content.get_list_item(0).value_string()
         if kind == 'RootP':
             ast = RootP()
         elif kind == 'IdxP':
-            ast = IdxP.fromjson(content)
+            ast = IdxP.fromjson(content, cache)
         elif kind == 'SliceP':
-            ast = SliceP.fromjson(content)
+            ast = SliceP.fromjson(content, cache)
         elif kind == 'DotP':
-            ast = DotP.fromjson(content)
+            ast = DotP.fromjson(content, cache)
         else:
             raise P4UnknownTypeError("Unknown Path: %s" % kind)
         ast.region = region
@@ -2518,7 +2589,7 @@ class RootP(Path):
         return ""
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return RootP()
 
     def __repr__(self):
@@ -2536,10 +2607,10 @@ class IdxP(Path):
         return "%s[%s]" % (self.path.tostring(), self.exp.tostring())
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return IdxP(
-            path=Path.fromjson(content.get_list_item(1)),
-            exp=Exp.fromjson(content.get_list_item(2))
+            path=Path.fromjson(content.get_list_item(1), cache),
+            exp=Exp.fromjson(content.get_list_item(2), cache)
         )
 
     def __repr__(self):
@@ -2560,11 +2631,11 @@ class SliceP(Path):
         return "%s[%s : %s]" % (self.path.tostring(), self.start.tostring(), self.end.tostring())
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return SliceP(
-            path=Path.fromjson(content.get_list_item(1)),
-            start=Exp.fromjson(content.get_list_item(2)),
-            end=Exp.fromjson(content.get_list_item(3))
+            path=Path.fromjson(content.get_list_item(1), cache),
+            start=Exp.fromjson(content.get_list_item(2), cache),
+            end=Exp.fromjson(content.get_list_item(3), cache)
         )
 
     def __repr__(self):
@@ -2586,10 +2657,10 @@ class DotP(Path):
             return "%s.%s" % (self.path.tostring(), self.atom.value)
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return DotP(
-            path=Path.fromjson(content.get_list_item(1)),
-            atom=AtomT.fromjson(content.get_list_item(2))
+            path=Path.fromjson(content.get_list_item(1), cache),
+            atom=AtomT.fromjson(content.get_list_item(2), cache)
         )
 
     def __repr__(self):
@@ -2602,6 +2673,7 @@ class MixOp(AstBase):
 
     def __init__(self, phrases):
         self.phrases = phrases # type: list[list[AtomT]]
+        self._str = None
 
     @jit.elidable_promote('0,1')
     def compare(self, other):
@@ -2641,20 +2713,23 @@ class MixOp(AstBase):
             return 0
 
     @staticmethod
-    def fromjson(content):
+    def fromjson(content, cache=None):
         return MixOp(
-            phrases=[[AtomT.fromjson(phrase) for phrase in group.value_array()] for group in content.value_array()]
+            phrases=[[AtomT.fromjson(phrase, cache) for phrase in group.value_array()] for group in content.value_array()]
         )
 
     def __repr__(self):
         return "p4specast.MixOp(%r)" % (self.phrases,)
 
+    @jit.elidable
     def tostring(self):
-        mixop = self.phrases
-        smixop = "%".join(
-            ["".join([atom.value for atom in atoms]) for atoms in mixop]
-        )
-        return "`" + smixop + "`"
+        if self._str is None:
+            mixop = self.phrases
+            smixop = "%".join(
+                ["".join([atom.value for atom in atoms]) for atoms in mixop]
+            )
+            self._str = "`" + smixop + "`"
+        return self._str
 
     def __str__(self):
         return self.tostring()
@@ -2702,8 +2777,8 @@ class AtomT(AstBase):
         )
 
     @staticmethod
-    def fromjson(value):
-        region = Region.fromjson(value.get_dict_value('at'))
+    def fromjson(value, cache=None):
+        region = Region.fromjson(value.get_dict_value('at'), cache)
         content = value.get_dict_value('it')
         kind = content.get_list_item(0).value_string()
         if kind == 'Atom':
@@ -2770,3 +2845,19 @@ atom_type_map = {
     'RBrack': ']',
     'RBrace': '}',
 }
+
+def _rename_fromjson_staticmethods():
+    todo = AstBase.__subclasses__()
+    while todo:
+        cls = todo.pop()
+        if hasattr(cls, 'fromjson'):
+            cls.fromjson.func_name += "_" + cls.__name__
+        todo.extend(cls.__subclasses__())
+
+_rename_fromjson_staticmethods()
+
+
+class FromjsonCache(object):
+    def __init__(self):
+        self.id_cache = {}  # type: dict[str, Id]
+        self.vart_cache = {}  # type: dict[Id, VarT]
