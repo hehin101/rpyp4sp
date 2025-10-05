@@ -2,6 +2,7 @@ from rpython.rlib import jit
 from rpython.tool.pairtype import extendabletype
 from rpyp4sp import integers
 from rpyp4sp.error import P4UnknownTypeError, P4NotImplementedError
+from rpyp4sp import rpyjson
 
 def ast_anywhere_in_list(l):
     for index, el in enumerate(l):
@@ -107,6 +108,8 @@ class Position(AstBase):
 
     @staticmethod
     def fromjson(value, cache=None):
+        if isinstance(value, rpyjson.JsonAdapterPosition):
+            return value.position
         return Position(value.get_dict_value('file').value_string(), value.get_dict_value('line').value_int(), value.get_dict_value('column').value_int())
 
     def has_information(self):
@@ -137,6 +140,8 @@ class Region(AstBase):
         #  "left": { "file": "spec/0-aux.watsup", "line": 18, "column": 5 },
         #  "right": { "file": "spec/0-aux.watsup", "line": 18, "column": 9 }
         # }
+        if isinstance(value, rpyjson.JsonAdapterRegion):
+            return value.region
         left = Position.fromjson(value.get_dict_value('left'), cache)
         right = Position.fromjson(value.get_dict_value('right'), cache)
         if not left.has_information() and not right.has_information():
