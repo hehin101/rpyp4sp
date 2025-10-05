@@ -92,7 +92,7 @@ invoke_func_def_jit_driver = jit.JitDriver(
 def invoke_func_def(ctx, calle):
     from rpyp4sp.type_helpers import subst_typ_ctx
     # let tparams, args_input, instrs = Ctx.find_func Local ctx id in
-    func = ctx.find_func_local(calle.func)
+    func = ctx.find_func_local(calle.func, calle)
     # check (instrs <> []) id.at "function has no instructions";
     assert func.instrs
     # let ctx_local = Ctx.localize ctx in
@@ -184,10 +184,10 @@ def eval_args(ctx, args):
     #     let ctx, value = eval_arg ctx arg in
     #     (ctx, values @ [ value ]))
     #   (ctx, []) args
-    values = []
-    for arg in args:
+    values = [None] * len(args)
+    for i, arg in enumerate(args):
         ctx, value = eval_arg(ctx, arg)
-        values.append(value)
+        values[i] = value
     return ctx, values
 
 # ____________________________________________________________
@@ -457,7 +457,7 @@ def eval_cases(ctx, exp, cases, cases_exps):
     # returns  Ctx.t * instr list option * value =
     # cases
     block_match = None
-    values_cond = []
+    #values_cond = []
     # |> List.fold_left
     for i, case in enumerate(cases):
         #  (fun (ctx, block_match, values_cond) (guard, block) ->
@@ -473,7 +473,7 @@ def eval_cases(ctx, exp, cases, cases_exps):
         #        let ctx, value_cond = eval_exp ctx exp_cond in
         ctx, value_cond = eval_exp(ctx, exp_cond)
         #        let values_cond = values_cond @ [ value_cond ] in
-        values_cond.append(values_cond)
+        #values_cond.append(values_cond)
         #        let cond = Value.get_bool value_cond in
         cond = value_cond.get_bool()
         #        if cond then (ctx, Some block, values_cond)
@@ -1365,8 +1365,8 @@ def assign_arg(ctx_caller, ctx_callee, arg, value):
 
 @jit.unroll_safe
 def assign_args(ctx_caller, ctx_callee, args, values):
-    assert len(args) == len(values), \
-        "mismatch in number of arguments while assigning, expected %d value(s) but got %d" % (len(args), len(values))
+    if len(args) != len(values):
+        raise P4EvaluationError("mismatch in number of arguments while assigning, expected %d value(s) but got %d" % (len(args), len(values)))
     for i, arg in enumerate(args):
         value = values[i]
         ctx_callee = assign_arg(ctx_caller, ctx_callee, arg, value)
@@ -1427,10 +1427,10 @@ def eval_exps(ctx, exps):
     #     let ctx, value = eval_exp ctx exp in
     #     (ctx, values @ [ value ]))
     #   (ctx, []) exps
-    values = []
-    for exp in exps:
+    values = [None] * len(exps)
+    for i, exp in enumerate(exps):
         ctx, value = eval_exp(ctx, exp)
-        values.append(value)
+        values[i] = value
     return ctx, values
 
 class __extend__(p4specast.Exp):
@@ -1878,11 +1878,11 @@ class __extend__(p4specast.StrE):
         # let ctx, values = eval_exps ctx exps in
         # let fields = List.combine atoms values in
         map = objects.StructMap.EMPTY
-        values = []
-        for (atom, exp) in self.fields:
+        values = [None] * len(self.fields)
+        for i, (atom, exp) in enumerate(self.fields):
             ctx, value = eval_exp(ctx, exp)
             map = map.add_field(atom.value)
-            values.append(value)
+            values[i] = value
         # let value_res =
         #   let vid = Value.fresh () in
         #   let typ = note in
@@ -2271,7 +2271,7 @@ def subtyp(ctx, typ, value):
     # | VarT (tid, targs) -> (
     if isinstance(typ, p4specast.VarT):
     #     let tparams, deftyp = Ctx.find_typdef Local ctx tid in
-        tparams, deftyp = ctx.find_typdef_local(typ.id)
+        tparams, deftyp = ctx.find_typdef_local(typ.id, typ)
     #     let theta = List.combine tparams targs |> TIdMap.of_list in
         assert tparams == []
         assert typ.targs == []
@@ -2335,7 +2335,7 @@ def downcast(ctx, typ, value):
             assert 0
     # | VarT (tid, targs) -> (
     if isinstance(typ, p4specast.VarT):
-        tparams, deftyp = ctx.find_typdef_local(typ.id)
+        tparams, deftyp = ctx.find_typdef_local(typ.id, typ)
         assert tparams == []
     #     let tparams, deftyp = Ctx.find_typdef Local ctx tid in
     #     let theta = List.combine tparams targs |> TIdMap.of_list in
@@ -2398,7 +2398,7 @@ def upcast(ctx, typ, value):
     #   | VarT (tid, targs) -> (
     if isinstance(typ, p4specast.VarT):
     #       let tparams, deftyp = Ctx.find_typdef Local ctx tid in
-        tparams, deftyp = ctx.find_typdef_local(typ.id)
+        tparams, deftyp = ctx.find_typdef_local(typ.id, typ)
     #       let theta = List.combine tparams targs |> TIdMap.of_list in
     #       match deftyp.it with
         if isinstance(deftyp, p4specast.PlainT):
@@ -2442,16 +2442,4 @@ def upcast(ctx, typ, value):
 
 @jit.elidable_promote('0,1')
 def mixop_eq(a, b):
-    phrasesa = a.phrases
-    phrasesb = b.phrases
-    if len(phrasesa) != len(phrasesb):
-        return False
-    for i, suba in enumerate(phrasesa):
-        subb = phrasesb[i]
-        if len(suba) != len(subb):
-            return False
-        for j, atoma in enumerate(suba):
-            atomb = subb[j]
-            if atoma.value != atomb.value:
-                return False
-    return True
+    return a.tostring() == b.tostring()
