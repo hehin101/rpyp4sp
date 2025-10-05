@@ -23,8 +23,8 @@ from rpyp4sp.error import P4TypeSubstitutionError
 #       IterT (typ, iter) $ typ.at
 #   | FuncT -> typ
 
-@jit.unroll_safe
 def make_subst_typ(func):
+    @jit.unroll_safe
     def subst_typ(typ, *args):
         if isinstance(typ, p4specast.BoolT) or isinstance(typ, p4specast.NumT) or isinstance(typ, p4specast.TextT):
             return typ
@@ -51,8 +51,9 @@ def subst_typ(theta, typ):
     return _subst_typ_dict_key(typ, theta)
 
 def ctx_search(name, ctx):
-    if name in ctx.glbl.tdenv:
-        _, deftyp = ctx.glbl.tdenv[name]
+    a, b = jit.promote(ctx.glbl)._find_typdef(name)
+    if a is not None and b is not None:
+        deftyp = b
         if isinstance(deftyp, p4specast.PlainT):
             return deftyp.typ
     if ctx.tdenv.has_key(name):
