@@ -1435,6 +1435,18 @@ class Type(AstBase):
             assert isinstance(iter, Opt)
             return self.opt_of()
 
+    @jit.elidable
+    def iterate(self, iterlist):
+        # let rec iterate (typ : t) (iters : iter list) : t =
+        #   match iters with
+        #   | [] -> typ
+        #   | iter :: iters -> iterate (IterT (typ, iter) $ typ.at) iters
+        res = self
+        for iter in iterlist.iterlist:
+            res = res.iter_of(iter)
+        return res
+
+
 class BoolT(Type):
     def __init__(self, region=None):
         self.region = region
