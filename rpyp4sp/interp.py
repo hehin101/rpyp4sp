@@ -824,8 +824,7 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
         #       in
         #       (ctx, values_binding)
             values_binding = [
-                objects.ListV.make0(
-                    var_binding.typ.iterate(var_binding.iter.append_list()))
+                var_binding.typ.iterate(var_binding.iter.append_list()).empty_list_value()
                 for var_binding in vars_binding_list.vars]
         #   (* Otherwise, evaluate the premise for each batch of bound values,
         #      and collect the resulting binding batches *)
@@ -1256,7 +1255,7 @@ def assign_exp(ctx, exp, value):
     #       ctx vars
             for var in exp.varlist:
                 typ = var.typ.iterate(var.iter.append_opt())
-                value_sub = objects.OptV(None, typ)
+                value_sub = typ.opt_none_value()
                 ctx = ctx.add_value_local(var.id, var.iter.append_opt(), value_sub)
             return ctx
     # | IterE (exp, (Opt, vars)), OptV (Some value) ->
@@ -1307,7 +1306,8 @@ def assign_exp(ctx, exp, value):
         if len(values) == 0:
             for var in exp.varlist:
                 # create a ListV value for these
-                value_sub = objects.ListV.make0(var.typ)
+                listtyp = var.typ.iterate(var.iter.append_list())
+                value_sub = listtyp.empty_list_value()
                 ctx = ctx.add_value_local(var.id, var.iter.append_list(), value_sub)
             return ctx
         elif len(values) == 1:
@@ -1318,7 +1318,8 @@ def assign_exp(ctx, exp, value):
                 # collect elementwise values from each ctx in ctxs
                 newvalue = ctx_local.find_value_local(var.id, var.iter)
                 # create a ListV value for these
-                value_sub = objects.ListV.make1(newvalue, var.typ)
+                listtyp = var.typ.iterate(var.iter.append_list())
+                value_sub = objects.ListV.make1(newvalue, listtyp)
                 ctx = ctx.add_value_local(var.id, var.iter.append_list(), value_sub)
             return ctx
         else:
@@ -1545,7 +1546,7 @@ class __extend__(p4specast.OptE):
         #     let vid = Value.fresh () in
         #     let typ = note in
         #     Il.Ast.(OptV value_opt $$$ { vid; typ })
-        value_res = objects.OptV(value, self.typ)
+        value_res = self.typ.make_opt_value(value)
         return ctx, value_res
         #   in
         #   Ctx.add_node ctx value_res;
@@ -1578,6 +1579,8 @@ class __extend__(p4specast.TupleE):
 class __extend__(p4specast.ListE):
     def eval_exp(self, ctx):
         #   let ctx, values = eval_exps ctx exps in
+        if not self.elts:
+            return ctx, self.typ.empty_list_value()
         ctx, values = eval_exps(ctx, self.elts)
         #   let value_res =
         #     let vid = Value.fresh () in
@@ -2078,6 +2081,8 @@ class __extend__(p4specast.SliceE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(ListV values_slice $$$ { vid; typ })
+        if not values_slice:
+            return ctx, self.typ.empty_list_value()
         value_res = objects.ListV.make(values_slice, self.typ)
         return ctx, value_res
         # in
@@ -2161,7 +2166,7 @@ def eval_iter_exp_opt(note, ctx, exp, vars):
     #           Il.Ast.(OptV (Some value) $$$ { vid; typ })
     #         in
     #         (ctx, value_res)
-        value_res = objects.OptV(value, note)
+        value_res = note.make_opt_value(value)
         return ctx, value_res
     #     | None ->
     else:
@@ -2169,7 +2174,7 @@ def eval_iter_exp_opt(note, ctx, exp, vars):
     #           let vid = Value.fresh () in
     #           let typ = note in
     #           Il.Ast.(OptV None $$$ { vid; typ })
-        value_res = objects.OptV(None, note)
+        value_res = note.opt_none_value()
     #         in
     #         (ctx, value_res)
         return ctx, value_res
@@ -2186,7 +2191,7 @@ def eval_iter_exp_list(note, ctx, exp, vars):
     # let ctxs_sub = Ctx.sub_list ctx vars in
     ctxs_sub = ctx.sub_list(_make_varlist(vars))
     if ctxs_sub.length == 0:
-        value_res = objects.ListV.make0(note)
+        value_res = note.empty_list_value()
     elif ctxs_sub.length == 1:
         ctx_sub = next(ctxs_sub)
         ctx_sub, value = eval_exp(ctx_sub, exp)
