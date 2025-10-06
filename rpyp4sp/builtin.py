@@ -438,6 +438,14 @@ def _build_map_item(key_value, value_value, key_typ, value_typ):
 
 def find_map(map_value, key_value):
     content = _extract_map_content(map_value)
+    if not content:
+        return None
+    if len(content) == 1:
+        el = content[0]
+        key, value = _extract_map_item(el)
+        if key.eq(key_value):
+            return value
+        return None
     return _find_map(key_value, content)
 
 def _find_map(key_value, content):
@@ -453,7 +461,6 @@ def maps_find_map(targs, values_input):
     map_value, key_value = values_input
     found_value = find_map(map_value, key_value)
     typ = key_typ.opt_of()
-    typ.region = p4specast.NO_REGION
     return objects.OptV(found_value, typ)
 
 
@@ -466,7 +473,6 @@ def maps_find_maps(targs, values_input):
     res_value = None
     res_value = _maps_find_map(list_maps_value, key_value)
     typ = key_typ.opt_of()
-    typ.region = p4specast.NO_REGION
     return objects.OptV(res_value, typ)
 
 @jit.elidable
