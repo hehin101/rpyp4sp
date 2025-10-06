@@ -817,26 +817,29 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
     #   (* If the bound variable supposed to guide the iteration is already empty,
     #      then the binding variables are also empty *)
     #   | [] ->
-    if ctxs_sub.length == 0:
-    #       let values_binding =
-    #         List.init (List.length vars_binding) (fun _ -> [])
-    #       in
-    #       (ctx, values_binding)
-        values_binding = [[] for _ in vars_binding_list.vars]
-    #   (* Otherwise, evaluate the premise for each batch of bound values,
-    #      and collect the resulting binding batches *)
-    #   | _ ->
-    elif ctxs_sub.length == 1:
-        ctx_sub = next(ctxs_sub)
-        ctx_sub = eval_rule_iter_tick(ctx_sub, id, notexp, iterexps)
-        ctx = ctx.commit(ctx_sub)
-        values_binding = [None] * len(vars_binding_list.vars)
-        for i, var_binding in enumerate(vars_binding_list.vars):
-            value_binding = ctx_sub.find_value_local(var_binding.id, var_binding.iter)
-            values_binding[i] = [value_binding]
-    #       in
-    #       let values_binding = values_binding_batch |> Ctx.transpose in
-        assert len(values_binding) == len(vars_binding_list.vars)
+    if ctxs_sub.length <= 1:
+        if ctxs_sub.length == 0:
+        #       let values_binding =
+        #         List.init (List.length vars_binding) (fun _ -> [])
+        #       in
+        #       (ctx, values_binding)
+            values_binding = [objects.ListV.make0(var_binding.typ)
+                              for var_binding in vars_binding_list.vars]
+        #   (* Otherwise, evaluate the premise for each batch of bound values,
+        #      and collect the resulting binding batches *)
+        #   | _ ->
+        elif ctxs_sub.length == 1:
+            ctx_sub = next(ctxs_sub)
+            ctx_sub = eval_rule_iter_tick(ctx_sub, id, notexp, iterexps)
+            ctx = ctx.commit(ctx_sub)
+            values_binding = [None] * len(vars_binding_list.vars)
+            for i, var_binding in enumerate(vars_binding_list.vars):
+                value_binding = ctx_sub.find_value_local(var_binding.id, var_binding.iter)
+                values_binding[i] = objects.ListV.make1(value_binding, var_binding.typ)
+        #       in
+        #       let values_binding = values_binding_batch |> Ctx.transpose in
+            assert len(values_binding) == len(vars_binding_list.vars)
+        return _dont_make_lists_and_assign(ctx, vars_binding_list, values_binding)
     else:
     #       let ctx, values_binding_batch =
     #         List.fold_left
@@ -886,9 +889,20 @@ def _make_lists_and_assign(ctx, vars_binding_list, values_binding):
         id_binding = var_binding.id
         typ_binding = var_binding.typ
         iters_binding = var_binding.iter
+        import pdb;pdb.set_trace()
         value_binding = objects.ListV.make(values_binding, typ_binding)
         ctx = ctx.add_value_local(id_binding, iters_binding.append_list(), value_binding)
     return ctx
+
+@jit.unroll_safe
+def _dont_make_lists_and_assign(ctx, vars_binding_list, values_binding):
+    for index, value_binding in enumerate(values_binding):
+        var_binding = vars_binding_list.vars[index]
+        id_binding = var_binding.id
+        iters_binding = var_binding.iter
+        ctx = ctx.add_value_local(id_binding, iters_binding.append_list(), value_binding)
+    return ctx
+
 
 def get_printable_location(id, notexp, vars_binding_list):
     return "eval_rule_list_loop %s %s %s" % (id.tostring(), notexp.tostring(), vars_binding_list.tostring())
