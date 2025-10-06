@@ -832,6 +832,17 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
     #   (* Otherwise, evaluate the premise for each batch of bound values,
     #      and collect the resulting binding batches *)
     #   | _ ->
+    elif ctxs_sub.length == 1:
+        ctx_sub = next(ctxs_sub)
+        ctx_sub = eval_rule_iter_tick(ctx_sub, id, notexp, iterexps)
+        ctx = ctx.commit(ctx_sub)
+        values_binding = [None] * len(vars_binding_list.vars)
+        for i, var_binding in enumerate(vars_binding_list.vars):
+            value_binding = ctx_sub.find_value_local(var_binding.id, var_binding.iter)
+            values_binding[i] = [value_binding]
+    #       in
+    #       let values_binding = values_binding_batch |> Ctx.transpose in
+        assert len(values_binding) == len(vars_binding_list.vars)
     else:
     #       let ctx, values_binding_batch =
     #         List.fold_left
@@ -849,18 +860,17 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
     #             in
     #             (ctx, values_binding_batch))
     #           (ctx, []) ctxs_sub
-        values_binding_batch = []
+        values_binding = [[None] * ctxs_sub.length for _ in vars_binding_list.vars]
+        j = 0
         for ctx_sub in ctxs_sub:
             ctx_sub = eval_rule_iter_tick(ctx_sub, id, notexp, iterexps)
             ctx = ctx.commit(ctx_sub)
-            value_binding_batch = []
-            for var_binding in vars_binding_list.vars:
+            for i, var_binding in enumerate(vars_binding_list.vars):
                 value_binding = ctx_sub.find_value_local(var_binding.id, var_binding.iter)
-                value_binding_batch.append(value_binding)
-            values_binding_batch.append(value_binding_batch)
+                values_binding[i][j] = value_binding
+            j += 1
     #       in
     #       let values_binding = values_binding_batch |> Ctx.transpose in
-        values_binding = context.transpose(values_binding_batch)
         assert len(values_binding) == len(vars_binding_list.vars)
     #       (ctx, values_binding)
     # in
