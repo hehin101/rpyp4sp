@@ -805,6 +805,7 @@ def eval_rule(ctx, id, notexp):
     ctx = assign_exps(ctx, exps_output, values_output)
     return ctx
 
+@jit.unroll_safe
 def eval_rule_list(ctx, id, notexp, vars, iterexps):
     # INCOMPLETE, a lot of copy-pasted code from eval_let_list
     # (* Discriminate between bound and binding variables *)
@@ -860,18 +861,7 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
     #             in
     #             (ctx, values_binding_batch))
     #           (ctx, []) ctxs_sub
-        values_binding = [[None] * ctxs_sub.length for _ in vars_binding_list.vars]
-        j = 0
-        for ctx_sub in ctxs_sub:
-            ctx_sub = eval_rule_iter_tick(ctx_sub, id, notexp, iterexps)
-            ctx = ctx.commit(ctx_sub)
-            for i, var_binding in enumerate(vars_binding_list.vars):
-                value_binding = ctx_sub.find_value_local(var_binding.id, var_binding.iter)
-                values_binding[i][j] = value_binding
-            j += 1
-    #       in
-    #       let values_binding = values_binding_batch |> Ctx.transpose in
-        assert len(values_binding) == len(vars_binding_list.vars)
+        ctx, values_binding = _eval_rule_list_loop(ctx, id, notexp, iterexps, vars_binding_list, ctxs_sub)
     #       (ctx, values_binding)
     # in
     # (* Finally, bind the resulting binding batches *)
@@ -902,6 +892,29 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
         value_binding = objects.ListV.make(values_binding, typ_binding)
         ctx = ctx.add_value_local(id_binding, iters_binding.append_list(), value_binding)
     return ctx
+
+def get_printable_location(id, notexp, vars_binding_list):
+    return "eval_rule_list_loop %s %s %s" % (id.tostring(), notexp.tostring(), vars_binding_list.tostring())
+
+jitdriver_eval_rule_list_loop = jit.JitDriver(
+    reds='auto', greens=['id', 'notexp', 'vars_binding_list'],
+    name='eval_rule_list_loop', get_printable_location=get_printable_location)
+
+def _eval_rule_list_loop(ctx, id, notexp, iterexps, vars_binding_list, ctxs_sub):
+    values_binding = [[None] * ctxs_sub.length for _ in vars_binding_list.vars]
+    j = 0
+    for ctx_sub in ctxs_sub:
+        jitdriver_eval_rule_list_loop.jit_merge_point(id=id, notexp=notexp, vars_binding_list=vars_binding_list)
+        ctx_sub = eval_rule_iter_tick(ctx_sub, id, notexp, iterexps)
+        ctx = ctx.commit(ctx_sub)
+        for i, var_binding in enumerate(vars_binding_list.vars):
+            value_binding = ctx_sub.find_value_local(var_binding.id, var_binding.iter)
+            values_binding[i][j] = value_binding
+        j += 1
+    #       in
+    #       let values_binding = values_binding_batch |> Ctx.transpose in
+    assert len(values_binding) == len(vars_binding_list.vars)
+    return ctx,values_binding
 
 
 def eval_rule_iter_tick(ctx, id, notexp, iterexps):

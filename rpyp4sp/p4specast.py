@@ -195,6 +195,9 @@ class Id(AstBase):
         self.value = value # type: str
         self.region = region # type: Region
 
+    def tostring(self):
+        return self.value
+
     @staticmethod
     def fromjson(value, cache=None):
         """ example:{
