@@ -618,14 +618,7 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     #     Ctx.add_value Local ctx
     #       (id_binding, iters_binding @ [ Il.Ast.List ])
     #       value_binding)
-    for i, var_binding in enumerate(vars_binding_list.vars):
-        values_binding_item = values_binding[i]
-        id_binding = var_binding.id
-        typ_binding = var_binding.typ
-        iters_binding = var_binding.iter
-        value_binding = objects.ListV.make(values_binding_item, typ_binding)
-        ctx = ctx.add_value_local(id_binding, iters_binding.append_list(), value_binding)
-    return ctx
+    return _make_lists_and_assign(ctx, vars_binding_list, values_binding)
 
 def get_printable_location(exp_l, exp_r, vars_binding_list):
     return "eval_let_list_loop %s %s %s" % (exp_l.tostring(), exp_r.tostring(), vars_binding_list.tostring())
@@ -884,6 +877,10 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
     #       (id_binding, iters_binding @ [ Il.Ast.List ])
     #       value_binding)
     #   ctx vars_binding values_binding
+    return _make_lists_and_assign(ctx, vars_binding_list, values_binding)
+
+@jit.unroll_safe
+def _make_lists_and_assign(ctx, vars_binding_list, values_binding):
     for index, values_binding in enumerate(values_binding):
         var_binding = vars_binding_list.vars[index]
         id_binding = var_binding.id
