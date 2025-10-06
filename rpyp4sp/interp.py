@@ -1461,6 +1461,8 @@ class __extend__(p4specast.ResultI):
         # type: (p4specast.ResultI, context.Context) -> tuple[context.Context, Res]
         #  let ctx, values = eval_exps ctx exps in
         #  (ctx, Res values)
+        if not self.exps:
+            return ctx, Res([])
         ctx, values = eval_exps(ctx, self.exps)
         return ctx, Res(values)
 
@@ -1581,12 +1583,16 @@ class __extend__(p4specast.ListE):
         #   let ctx, values = eval_exps ctx exps in
         if not self.elts:
             return ctx, self.typ.empty_list_value()
-        ctx, values = eval_exps(ctx, self.elts)
-        #   let value_res =
-        #     let vid = Value.fresh () in
-        #     let typ = note in
-        #     Il.Ast.(ListV values $$$ { vid; typ })
-        value_res = objects.ListV.make(values, self.typ)
+        if len(self.elts) == 1:
+            ctx, value = eval_exp(ctx, self.elts[0])
+            value_res = objects.ListV.make1(value, self.typ)
+        else:
+            ctx, values = eval_exps(ctx, self.elts)
+            #   let value_res =
+            #     let vid = Value.fresh () in
+            #     let typ = note in
+            #     Il.Ast.(ListV values $$$ { vid; typ })
+            value_res = objects.ListV.make(values, self.typ)
         #   in
         #   Ctx.add_node ctx value_res;
         #   if List.length values = 0 then
@@ -1966,12 +1972,18 @@ class __extend__(p4specast.CaseE):
         mixop = self.notexp.mixop
         exps = self.notexp.exps
         # let ctx, values = eval_exps ctx exps in
-        ctx, values = eval_exps(ctx, exps)
-        # let value_res =
-        #   let vid = Value.fresh () in
-        #   let typ = note in
-        #   Il.Ast.(CaseV (mixop, values) $$$ { vid; typ })
-        value_res = objects.CaseV.make(values, mixop, self.typ)
+        if len(exps) == 0:
+            value_res = objects.CaseV.make0(mixop, self.typ)
+        elif len(exps) == 1:
+            ctx, value = eval_exp(ctx, exps[0])
+            value_res = objects.CaseV.make1(value, mixop, self.typ)
+        else:
+            ctx, values = eval_exps(ctx, exps)
+            # let value_res =
+            #   let vid = Value.fresh () in
+            #   let typ = note in
+            #   Il.Ast.(CaseV (mixop, values) $$$ { vid; typ })
+            value_res = objects.CaseV.make(values, mixop, self.typ)
         # in
         # Ctx.add_node ctx value_res;
         # if List.length values = 0 then
