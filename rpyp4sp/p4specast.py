@@ -1,3 +1,4 @@
+from __future__ import print_function
 from rpython.rlib import jit
 from rpython.tool.pairtype import extendabletype
 from rpyp4sp import integers
@@ -1413,18 +1414,23 @@ class Type(AstBase):
     def list_of(self):
         if self._iterlist is not None:
             return self._iterlist
-        self._iterlist = res = IterT(self, List.INSTANCE)
-        res.region = NO_REGION
+        self._iterlist = res = IterT(self, List.INSTANCE, NO_REGION)
         return res
 
     @jit.elidable
     def opt_of(self):
         if self._iteropt is not None:
             return self._iteropt
-        self._iteropt = res = IterT(self, Opt.INSTANCE)
-        res.region = NO_REGION
+        self._iteropt = res = IterT(self, Opt.INSTANCE, NO_REGION)
         return res
 
+    @jit.elidable
+    def iter_of(self, iter):
+        if isinstance(iter, List):
+            return self.list_of()
+        else:
+            assert isinstance(iter, Opt)
+            return self.opt_of()
 
 class BoolT(Type):
     def __init__(self, region=None):
@@ -1599,11 +1605,16 @@ class IterT(Type):
 
     @staticmethod
     def fromjson(content, region, cache=None):
-        return IterT(
-            typ=Type.fromjson(content.get_list_item(1), cache),
-            iter=Iter.fromjson(content.get_list_item(2), cache),
+        typ = Type.fromjson(content.get_list_item(1), cache)
+        iter = Iter.fromjson(content.get_list_item(2), cache)
+        if region is None or not region.has_information():
+            return typ.iter_of(iter)
+        res = IterT(
+            typ=typ,
+            iter=iter,
             region=region
         )
+        return res
 
 class FuncT(Type):
     def __init__(self, region=None):
