@@ -574,6 +574,10 @@ class ListV(BaseVWithTyp):
         return ListV._make1(val, typ)
 
     @staticmethod
+    def make2(val0, val1, typ):
+        return ListV._make2(val0, val1, typ)
+
+    @staticmethod
     def make(values, typ):
         if not values and isinstance(typ, p4specast.IterT):
             return typ.empty_list_value()
