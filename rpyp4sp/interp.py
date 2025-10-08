@@ -3,6 +3,7 @@ from rpython.rlib import objectmodel, jit
 from rpyp4sp import p4specast, objects, builtin, context, integers
 from rpyp4sp.error import (P4Error, P4EvaluationError, P4CastError,
                            P4NotImplementedError, P4RelationError)
+from rpyp4sp.sign import Res, Ret
 
 class VarList(object):
     _immutable_fields_ = ['vars[*]']
@@ -38,22 +39,6 @@ class VarList(object):
         return "".join(l)
 
 VARLIST_ROOT = VarList([])
-
-class Sign(object):
-    # abstract base
-    pass
-
-class Cont(Sign):
-    pass
-
-class Res(Sign):
-    def __init__(self, values):
-        self.values = values
-
-class Ret(Sign):
-    def __init__(self, value):
-        self.value = value
-
 
 def invoke_func(ctx, calle):
     try:
@@ -146,7 +131,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     # let ctx_local = assign_args ctx ctx_local args_input values_input in
     ctx_local = assign_args(ctx, ctx_local, args_input, values_input)
     # let ctx_local, sign = eval_instrs ctx_local Cont instrs in
-    ctx_local, sign = eval_instrs(ctx_local, Cont(), func.instrs)
+    sign = eval_instrs(ctx_local, func.instrs)
     # let ctx = Ctx.commit ctx ctx_local in
     # match sign with
     if isinstance(sign, Ret):
@@ -219,16 +204,16 @@ def invoke_rel(ctx, id, values_input):
     #   let ctx_local, sign = eval_instrs ctx_local Cont instrs in
     invoke_rel_jit_driver.jit_merge_point(name=id.value, reld=reld)
     try:
-        ctx_local, sign = eval_instrs(ctx_local, Cont(), reld.instrs)
+        sign = eval_instrs(ctx_local, reld.instrs)
     except P4Error as e:
         e.traceback_patch_last_name(id.value)
         raise
-    ctx = ctx.commit(ctx_local)
     #   let ctx = Ctx.commit ctx ctx_local in
+    ctx = ctx.commit(sign.sign_get_ctx())
     #   match sign with
     #   | Res values_output ->
     if isinstance(sign, Res):
-        return ctx, sign.values
+        return ctx, sign._get_full_list()
     #       List.iteri
     #         (fun idx_arg value_input ->
     #           List.iter
@@ -269,7 +254,7 @@ def eval_instr(ctx, instr):
         raise
 
 @jit.unroll_safe
-def eval_instrs(ctx, sign, instrs):
+def eval_instrs(sign, instrs):
     #     eval_instrs (ctx : Ctx.t) (sign : Sign.t) (instrs : instr list) :
     #     Ctx.t * Sign.t =
     #   List.fold_left
@@ -277,12 +262,9 @@ def eval_instrs(ctx, sign, instrs):
     #       match sign with Sign.Cont -> eval_instr ctx instr | _ -> (ctx, sign))
     #     (ctx, sign) instrs
     for instr in instrs:
-        if isinstance(sign, Cont):
-            ctx, sign = eval_instr(ctx, instr)
-        else:
-            if not objectmodel.we_are_translated():
-                assert sign is not Cont
-    return ctx, sign
+        if sign.sign_is_cont():
+            sign = eval_instr(sign.sign_get_ctx(), instr)
+    return sign
 
 class __extend__(p4specast.IfI):
     def eval_instr(self, ctx):
@@ -299,8 +281,8 @@ class __extend__(p4specast.IfI):
         #   in
         #   if cond then eval_instrs ctx Cont instrs_then else (ctx, Cont)
         if cond:
-            return eval_instrs(ctx, Cont(), self.instrs)
-        return (ctx, Cont())
+            return eval_instrs(ctx, self.instrs)
+        return ctx
 
 def eval_if_cond_iter(ctx, instr):
     # let iterexps = List.rev iterexps in
@@ -511,9 +493,9 @@ class __extend__(p4specast.CaseI):
         # match instrs_opt with
         # | Some instrs -> eval_instrs ctx Cont instrs
         if instrs_opt is not None:
-            return eval_instrs(ctx, Cont(), instrs_opt)
+            return eval_instrs(ctx, instrs_opt)
         # | None -> (ctx, Cont)
-        return ctx, Cont()
+        return ctx
 
 class __extend__(p4specast.OtherwiseI):
     def eval_instr(self, ctx):
@@ -524,7 +506,7 @@ class __extend__(p4specast.LetI):
         # let ctx = eval_let_iter ctx exp_l exp_r iterexps in
         # (ctx, Cont)
         ctx = eval_let_iter(ctx, self)
-        return ctx, Cont()
+        return ctx
 
 @jit.unroll_safe
 def _make_varlist(vars):
@@ -931,7 +913,7 @@ class __extend__(p4specast.RuleI):
         except P4Error as e:
             e.traceback_add_frame('???', self.region, self)
             raise
-        return ctx, Cont()
+        return ctx
 
 
 def eval_hold_cond(ctx, id, notexp):
@@ -1076,12 +1058,12 @@ class __extend__(p4specast.HoldI):
         if isinstance(holdcase, p4specast.BothH):
         #      if cond then eval_instrs ctx Cont instrs_hold
             if cond:
-                return eval_instrs(ctx, Cont(), holdcase.hold_instrs)
+                return eval_instrs(ctx, holdcase.hold_instrs)
         #      else (
         #        ctx.cover := cover_backup;
         #        eval_instrs ctx Cont instrs_not_hold)
             else:
-                return eval_instrs(ctx, Cont(), holdcase.nothold_instrs)
+                return eval_instrs(ctx, holdcase.nothold_instrs)
         #  | HoldH (instrs_hold, phantom_opt) ->
         elif isinstance(holdcase, p4specast.HoldH):
         #      let ctx =
@@ -1091,9 +1073,9 @@ class __extend__(p4specast.HoldI):
         #      in
         #      if cond then eval_instrs ctx Cont instrs_hold else (ctx, Cont)
             if cond:
-                return eval_instrs(ctx, Cont(), holdcase.hold_instrs)
+                return eval_instrs(ctx, holdcase.hold_instrs)
             else:
-                return ctx, Cont()
+                return ctx
         #  | NotHoldH (instrs_not_hold, phantom_opt) ->
         elif isinstance(holdcase, p4specast.NotHoldH):
         #      ctx.cover := cover_backup;
@@ -1104,9 +1086,9 @@ class __extend__(p4specast.HoldI):
         #      in
         #      if not cond then eval_instrs ctx Cont instrs_not_hold else (ctx, Cont)
             if not cond:
-                return eval_instrs(ctx, Cont(), holdcase.nothold_instrs)
+                return eval_instrs(ctx, holdcase.nothold_instrs)
             else:
-                return ctx, Cont()
+                return ctx
         else:
             assert False, "unknown holdcase type: %s" % self.holdcase.__class__.__name__
 
@@ -1420,14 +1402,14 @@ class __extend__(p4specast.ResultI):
         #  let ctx, values = eval_exps ctx exps in
         #  (ctx, Res values)
         ctx, values = eval_exps(ctx, self.exps)
-        return ctx, Res(values)
+        return Res.make(values, ctx)
 
 class __extend__(p4specast.ReturnI):
     def eval_instr(self, ctx):
         # let ctx, value = eval_exp ctx exp in
         # (ctx, Ret value)
         ctx, value = eval_exp(ctx, self.exp)
-        return (ctx, Ret(value))
+        return Ret(ctx, value)
 
 # ____________________________________________________________
 # expressions
