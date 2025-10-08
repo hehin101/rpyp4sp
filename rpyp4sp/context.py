@@ -14,6 +14,7 @@ class GlobalContext(object):
         self.tdenv = {}
         self.renv = {}
         self.fenv = {}
+        self.empty_envkeys = EnvKeys({}, self)
 
     @jit.elidable
     def _find_rel(self, name):
@@ -29,12 +30,13 @@ class GlobalContext(object):
 
 
 class EnvKeys(object):
-    def __init__(self, keys):
+    def __init__(self, keys, glbl=None):
         self.keys = keys # type: dict[tuple[str, str], int]
         self.next_env_keys = {} # type: dict[tuple[str, str], EnvKeys]
         self._next_var_name = None
         self._next_var_iter = None
         self._next_env_keys = None
+        self.glbl = glbl
 
     # TODO: default für var_iter
     @jit.elidable
@@ -201,11 +203,11 @@ class Context(object):
     _immutable_fields_ = ['glbl', 'values_input[*]',
                           'tdenv', 'fenv', 'venv_keys']
     def __init__(self, glbl=None, tdenv=None, fenv=None, venv_keys=None):
-        self.glbl = GlobalContext() if glbl is None else glbl
         # the local context is inlined
         self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY # type: TDenvDict
         self.fenv = fenv if fenv is not None else FenvDict.EMPTY # type: FenvDict
-        self.venv_keys = venv_keys if venv_keys is not None else EnvKeys.EMPTY # type: EnvKeys
+        self.venv_keys = venv_keys if venv_keys is not None else glbl.empty_envkeys # type: EnvKeys
+        assert self.venv_keys.glbl is not None
 
     def copy_and_change(self, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
         tdenv = tdenv if tdenv is not None else self.tdenv
@@ -237,6 +239,9 @@ class Context(object):
     def localize_venv(self, venv_keys, venv_values):
         # type: (EnvKeys, list[objects.BaseV]) -> Context
         return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
+
+    def localize_empty_venv(self):
+        return self.localize_venv(venv_keys=EnvKeys.EMPTY, venv_values=[])
 
     def find_value_local(self, id, iterlist=p4specast.IterList.EMPTY, vare_cache=None):
         # type: (p4specast.Id, list[p4specast.IterList], p4specast.VarE | None) -> objects.BaseV
