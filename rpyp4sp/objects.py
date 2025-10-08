@@ -106,6 +106,8 @@ class BaseV(SubBase):
 
 class BaseVWithTyp(BaseV):
     _attrs_ = ['typ']
+    _immutable_fields_ = ['typ']
+
     # typ: p4specast.Type
 
     def get_typ(self):
