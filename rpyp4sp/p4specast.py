@@ -1640,7 +1640,7 @@ class IterT(Type):
             res = self._empty_value_of
             assert isinstance(self._empty_value_of, objects.ListV)
             return res
-        res = objects.ListV.make0(self)
+        res = objects.ListV._make0(self)
         self._empty_value_of = res
         return res
 
