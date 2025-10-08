@@ -66,12 +66,12 @@ def invoke_func_builtin(ctx, calle):
     # (ctx, value_output)
     return ctx, value_output
 
-def get_printable_location(name, func):
-    return name
+def get_printable_location(func):
+    return func.id.value
 
 invoke_func_def_jit_driver = jit.JitDriver(
-    reds='auto', greens=['name', 'func'],
-    should_unroll_one_iteration = lambda name, func: True,
+    reds='auto', greens=['func'],
+    should_unroll_one_iteration = lambda func: True,
     name='invoke_func', get_printable_location=get_printable_location,
     is_recursive=True)
 
@@ -122,7 +122,6 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     # INCOMPLETE
     # and invoke_func_def (ctx : Ctx.t) (id : id) (targs : targ list) (args : arg list) : Ctx.t * value =
     # let tparams, args_input, instrs = Ctx.find_func Local ctx id in
-    invoke_func_def_jit_driver.jit_merge_point(name=func.id.value, func=func)
     tparams, args_input, instrs = func.tparams, func.args, func.instrs
     # let ctx_local = Ctx.localize ctx in
     if ctx_local is None:
@@ -130,8 +129,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     # let ctx_local = Ctx.localize_inputs ctx_local values_input in
     # let ctx_local = assign_args ctx ctx_local args_input values_input in
     ctx_local = assign_args(ctx, ctx_local, args_input, values_input)
-    # let ctx_local, sign = eval_instrs ctx_local Cont instrs in
-    sign = eval_instrs(ctx_local, func.instrs)
+    sign = _func_eval_instrs(ctx_local, func)
     # let ctx = Ctx.commit ctx ctx_local in
     # match sign with
     if isinstance(sign, Ret):
@@ -145,6 +143,11 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
         return ctx, sign.value
     # | _ -> error id.at "function was not matched"
     raise P4EvaluationError("function was not matched: %s" % (func.id.value))
+
+def _func_eval_instrs(ctx_local, func):
+    invoke_func_def_jit_driver.jit_merge_point(func=func)
+    # let ctx_local, sign = eval_instrs ctx_local Cont instrs in
+    return eval_instrs(ctx_local, func.instrs)
 
 def eval_arg(ctx, arg):
     # match arg.it with
@@ -180,12 +183,12 @@ def eval_args(ctx, args):
 # ____________________________________________________________
 # relations
 
-def get_printable_location(name, reld):
-    return name
+def get_printable_location(reld):
+    return reld.id.value
 
 invoke_rel_jit_driver = jit.JitDriver(
-    reds='auto', greens=['name', 'reld'],
-    should_unroll_one_iteration = lambda name, reld: True,
+    reds='auto', greens=['reld'],
+    should_unroll_one_iteration = lambda reld: True,
     name='invoke_rel', get_printable_location=get_printable_location,
     is_recursive=True)
 
@@ -202,12 +205,7 @@ def invoke_rel(ctx, id, values_input):
     #   let ctx_local = assign_exps ctx_local exps_input values_input in
     ctx_local = assign_exps(ctx_local, reld.exps, values_input)
     #   let ctx_local, sign = eval_instrs ctx_local Cont instrs in
-    invoke_rel_jit_driver.jit_merge_point(name=id.value, reld=reld)
-    try:
-        sign = eval_instrs(ctx_local, reld.instrs)
-    except P4Error as e:
-        e.traceback_patch_last_name(id.value)
-        raise
+    sign = _rel_eval_instrs(ctx_local, reld)
     #   let ctx = Ctx.commit ctx ctx_local in
     ctx = ctx.commit(sign.sign_get_ctx())
     #   match sign with
@@ -236,6 +234,14 @@ def invoke_rel(ctx, id, values_input):
     #       Cache.Cache.add !rule_cache (id.it, values_input) values_output;
     #       Some (ctx, values_output))
     # else attempt_rules ()
+
+def _rel_eval_instrs(ctx_local, reld):
+    invoke_rel_jit_driver.jit_merge_point(reld=reld)
+    try:
+        return eval_instrs(ctx_local, reld.instrs)
+    except P4Error as e:
+        e.traceback_patch_last_name(reld.id.value)
+        raise
 
 # ____________________________________________________________
 # instructions
