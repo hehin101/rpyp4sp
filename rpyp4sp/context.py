@@ -1,6 +1,6 @@
 from __future__ import print_function
 from rpython.rlib import jit
-from rpyp4sp import p4specast, objects, smalllist
+from rpyp4sp import p4specast, objects, smalllist, sign
 from rpyp4sp.error import P4ContextError
 from rpython.rlib import jit
 
@@ -40,6 +40,8 @@ class EnvKeys(object):
     @jit.elidable
     def get_pos(self, var_name, var_iter):
         # type: (str, str) -> int
+        if not self.keys:
+            return -1
         return self.keys.get((var_name, var_iter), -1)
 
     # TODO: default für var_iter
@@ -197,7 +199,7 @@ FenvDict.EMPTY = FenvDict()
 FenvDict.EMPTY = FenvDict.make0()
 
 @smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
-class Context(object):
+class Context(sign.Sign):
     _immutable_fields_ = ['glbl', 'values_input[*]',
                           'tdenv', 'fenv', 'venv_keys']
     def __init__(self, glbl=None, tdenv=None, fenv=None, venv_keys=None):
@@ -417,6 +419,12 @@ class Context(object):
         for key, index in self.venv_keys.keys.items():
             res.append((key, self._get_list(index)))
         return res
+
+    def sign_is_cont(self):
+        return True
+
+    def sign_get_ctx(self):
+        return self
 
 class SubListIter(object):
     def __init__(self, ctx, varlist, length, values_batch):

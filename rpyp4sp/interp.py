@@ -3,6 +3,7 @@ from rpython.rlib import objectmodel, jit
 from rpyp4sp import p4specast, objects, builtin, context, integers
 from rpyp4sp.error import (P4Error, P4EvaluationError, P4CastError,
                            P4NotImplementedError, P4RelationError)
+from rpyp4sp.sign import Res, Ret
 
 class VarList(object):
     _immutable_fields_ = ['vars[*]']
@@ -38,22 +39,6 @@ class VarList(object):
         return "".join(l)
 
 VARLIST_ROOT = VarList([])
-
-class Sign(object):
-    # abstract base
-    pass
-
-class Cont(Sign):
-    pass
-
-class Res(Sign):
-    def __init__(self, values):
-        self.values = values
-
-class Ret(Sign):
-    def __init__(self, value):
-        self.value = value
-
 
 def invoke_func(ctx, calle):
     try:
@@ -146,7 +131,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     # let ctx_local = assign_args ctx ctx_local args_input values_input in
     ctx_local = assign_args(ctx, ctx_local, args_input, values_input)
     # let ctx_local, sign = eval_instrs ctx_local Cont instrs in
-    ctx_local, sign = eval_instrs(ctx_local, Cont(), func.instrs)
+    sign = eval_instrs(ctx_local, func.instrs)
     # let ctx = Ctx.commit ctx ctx_local in
     # match sign with
     if isinstance(sign, Ret):
@@ -219,16 +204,16 @@ def invoke_rel(ctx, id, values_input):
     #   let ctx_local, sign = eval_instrs ctx_local Cont instrs in
     invoke_rel_jit_driver.jit_merge_point(name=id.value, reld=reld)
     try:
-        ctx_local, sign = eval_instrs(ctx_local, Cont(), reld.instrs)
+        sign = eval_instrs(ctx_local, reld.instrs)
     except P4Error as e:
         e.traceback_patch_last_name(id.value)
         raise
-    ctx = ctx.commit(ctx_local)
     #   let ctx = Ctx.commit ctx ctx_local in
+    ctx = ctx.commit(sign.sign_get_ctx())
     #   match sign with
     #   | Res values_output ->
     if isinstance(sign, Res):
-        return ctx, sign.values
+        return ctx, sign._get_full_list()
     #       List.iteri
     #         (fun idx_arg value_input ->
     #           List.iter
@@ -269,7 +254,7 @@ def eval_instr(ctx, instr):
         raise
 
 @jit.unroll_safe
-def eval_instrs(ctx, sign, instrs):
+def eval_instrs(sign, instrs):
     #     eval_instrs (ctx : Ctx.t) (sign : Sign.t) (instrs : instr list) :
     #     Ctx.t * Sign.t =
     #   List.fold_left
@@ -277,12 +262,9 @@ def eval_instrs(ctx, sign, instrs):
     #       match sign with Sign.Cont -> eval_instr ctx instr | _ -> (ctx, sign))
     #     (ctx, sign) instrs
     for instr in instrs:
-        if isinstance(sign, Cont):
-            ctx, sign = eval_instr(ctx, instr)
-        else:
-            if not objectmodel.we_are_translated():
-                assert sign is not Cont
-    return ctx, sign
+        if sign.sign_is_cont():
+            sign = eval_instr(sign.sign_get_ctx(), instr)
+    return sign
 
 class __extend__(p4specast.IfI):
     def eval_instr(self, ctx):
@@ -299,8 +281,8 @@ class __extend__(p4specast.IfI):
         #   in
         #   if cond then eval_instrs ctx Cont instrs_then else (ctx, Cont)
         if cond:
-            return eval_instrs(ctx, Cont(), self.instrs)
-        return (ctx, Cont())
+            return eval_instrs(ctx, self.instrs)
+        return ctx
 
 def eval_if_cond_iter(ctx, instr):
     # let iterexps = List.rev iterexps in
@@ -511,9 +493,9 @@ class __extend__(p4specast.CaseI):
         # match instrs_opt with
         # | Some instrs -> eval_instrs ctx Cont instrs
         if instrs_opt is not None:
-            return eval_instrs(ctx, Cont(), instrs_opt)
+            return eval_instrs(ctx, instrs_opt)
         # | None -> (ctx, Cont)
-        return ctx, Cont()
+        return ctx
 
 class __extend__(p4specast.OtherwiseI):
     def eval_instr(self, ctx):
@@ -524,7 +506,7 @@ class __extend__(p4specast.LetI):
         # let ctx = eval_let_iter ctx exp_l exp_r iterexps in
         # (ctx, Cont)
         ctx = eval_let_iter(ctx, self)
-        return ctx, Cont()
+        return ctx
 
 @jit.unroll_safe
 def _make_varlist(vars):
@@ -970,7 +952,7 @@ class __extend__(p4specast.RuleI):
         except P4Error as e:
             e.traceback_add_frame('???', self.region, self)
             raise
-        return ctx, Cont()
+        return ctx
 
 
 def eval_hold_cond(ctx, id, notexp):
@@ -1115,12 +1097,12 @@ class __extend__(p4specast.HoldI):
         if isinstance(holdcase, p4specast.BothH):
         #      if cond then eval_instrs ctx Cont instrs_hold
             if cond:
-                return eval_instrs(ctx, Cont(), holdcase.hold_instrs)
+                return eval_instrs(ctx, holdcase.hold_instrs)
         #      else (
         #        ctx.cover := cover_backup;
         #        eval_instrs ctx Cont instrs_not_hold)
             else:
-                return eval_instrs(ctx, Cont(), holdcase.nothold_instrs)
+                return eval_instrs(ctx, holdcase.nothold_instrs)
         #  | HoldH (instrs_hold, phantom_opt) ->
         elif isinstance(holdcase, p4specast.HoldH):
         #      let ctx =
@@ -1130,9 +1112,9 @@ class __extend__(p4specast.HoldI):
         #      in
         #      if cond then eval_instrs ctx Cont instrs_hold else (ctx, Cont)
             if cond:
-                return eval_instrs(ctx, Cont(), holdcase.hold_instrs)
+                return eval_instrs(ctx, holdcase.hold_instrs)
             else:
-                return ctx, Cont()
+                return ctx
         #  | NotHoldH (instrs_not_hold, phantom_opt) ->
         elif isinstance(holdcase, p4specast.NotHoldH):
         #      ctx.cover := cover_backup;
@@ -1143,9 +1125,9 @@ class __extend__(p4specast.HoldI):
         #      in
         #      if not cond then eval_instrs ctx Cont instrs_not_hold else (ctx, Cont)
             if not cond:
-                return eval_instrs(ctx, Cont(), holdcase.nothold_instrs)
+                return eval_instrs(ctx, holdcase.nothold_instrs)
             else:
-                return ctx, Cont()
+                return ctx
         else:
             assert False, "unknown holdcase type: %s" % self.holdcase.__class__.__name__
 
@@ -1225,7 +1207,7 @@ def assign_exp(ctx, exp, value):
     #       let vid = Value.fresh () in
     #       let typ = note in
     #       Il.Ast.(ListV (List.tl values_inner) $$$ { vid; typ })
-        value_t = objects.ListV.make(values_inner[1:], value.typ)
+        value_t = objects.ListV.make(values_inner[1:], value.get_typ())
     #     in
     #     Ctx.add_node ctx value_t;
     #     let ctx = assign_exp ctx exp_h value_h in
@@ -1462,16 +1444,16 @@ class __extend__(p4specast.ResultI):
         #  let ctx, values = eval_exps ctx exps in
         #  (ctx, Res values)
         if not self.exps:
-            return ctx, Res([])
+            return Res.make0(ctx)
         ctx, values = eval_exps(ctx, self.exps)
-        return ctx, Res(values)
+        return Res.make(values, ctx)
 
 class __extend__(p4specast.ReturnI):
     def eval_instr(self, ctx):
         # let ctx, value = eval_exp ctx exp in
         # (ctx, Ret value)
         ctx, value = eval_exp(ctx, self.exp)
-        return (ctx, Ret(value))
+        return Ret(ctx, value)
 
 # ____________________________________________________________
 # expressions
@@ -1514,11 +1496,11 @@ class __extend__(p4specast.BoolE):
         #     Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
         #   ctx.local.values_input;
         # (ctx, value_res)
-        return ctx, objects.BoolV(self.value, self.typ)
+        return ctx, objects.BoolV.make(self.value, self.typ)
 
 class __extend__(p4specast.NumE):
     def eval_exp(self, ctx):
-        return ctx, objects.NumV(self.value, self.what, typ=self.typ)
+        return ctx, objects.NumV.make(self.value, self.what, typ=self.typ)
 
 class __extend__(p4specast.TextE):
     def eval_exp(self, ctx):
@@ -1608,7 +1590,7 @@ def eval_cmp_bool(cmpop, value_l, value_r, typ):
     eq = value_l.eq(value_r)
     # match cmpop with `EqOp -> Il.Ast.BoolV eq | `NeOp -> Il.Ast.BoolV (not eq)
     value = eq if cmpop == 'EqOp' else not eq
-    return objects.BoolV(value, typ)
+    return objects.BoolV.make(value, typ)
 
 class __extend__(p4specast.ConsE):
     def eval_exp(self, ctx):
@@ -1651,7 +1633,7 @@ def eval_cmp_num(cmpop, value_l, value_r, typ):
         res = num_l.ge(num_r)
     else:
         assert 0, "should be unreachable"
-    return objects.BoolV(res, typ)
+    return objects.BoolV.make(res, typ)
     # Il.Ast.BoolV (Num.cmp cmpop num_l num_r)
 
 
@@ -1703,7 +1685,7 @@ def eval_binop_bool(binop, value_l, value_r, typ):
         res_bool = bool_l == bool_r
     else:
         assert 0, "should be unreachable"
-    return objects.BoolV(res_bool, typ)
+    return objects.BoolV.make(res_bool, typ)
 
 def eval_binop_num(binop, value_l, value_r, typ):
     # let num_l = Value.get_num value_l in
@@ -1737,7 +1719,7 @@ def eval_binop_num(binop, value_l, value_r, typ):
         raise P4NotImplementedError("PowOp")
     else:
         assert 0, "should be unreachable"
-    return objects.NumV(res_num, what, typ=typ)
+    return objects.NumV.make(res_num, what, typ=typ)
 
 class __extend__(p4specast.BinE):
     def eval_exp(self, ctx):
@@ -1770,7 +1752,7 @@ class __extend__(p4specast.BinE):
 def eval_unop_bool(unop, value, typ):
     # match unop with `NotOp -> Il.Ast.BoolV (not (Value.get_bool value))
     if unop == 'NotOp':
-        return objects.BoolV(not value.get_bool(), typ=typ)
+        return objects.BoolV.make(not value.get_bool(), typ=typ)
     else:
         assert 0, "Unknown boolean unary operator: %s" % unop
 
@@ -1780,9 +1762,9 @@ def eval_unop_num(unop, value, typ):
     num = value.get_num()
     # match unop with
     if unop == 'PlusOp':
-        return objects.NumV(num, value.what, typ=typ)
+        return objects.NumV.make(num, value.what, typ=typ)
     elif unop == 'MinusOp':
-        return objects.NumV(num.neg(), value.what, typ=typ)
+        return objects.NumV.make(num.neg(), value.what, typ=typ)
     else:
         assert 0, "Unknown numeric unary operator: %s" % unop
 
@@ -1818,7 +1800,7 @@ class __extend__(p4specast.MemE):
         else:
             values_s = value_s.get_list()
             res = _mem_list(value_e, values_s)
-        value_res = objects.BoolV(res, self.typ)
+        value_res = objects.BoolV.make(res, self.typ)
         return ctx, value_res
         #   in
         #   Ctx.add_node ctx value_res;
@@ -1859,7 +1841,7 @@ class __extend__(p4specast.SubE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(BoolV sub $$$ { vid; typ })
-        value_res = objects.BoolV(sub, note)
+        value_res = objects.BoolV.make(sub, note)
         # in
         # Ctx.add_node ctx value_res;
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op (SubOp typ));
@@ -1927,7 +1909,7 @@ class __extend__(p4specast.MatchE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(BoolV matches $$$ { vid; typ })
-        value_res = objects.BoolV(matches, self.typ)
+        value_res = objects.BoolV.make(matches, self.typ)
         # in
         # Ctx.add_node ctx value_res;
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op (MatchOp pattern));
@@ -2056,7 +2038,7 @@ class __extend__(p4specast.LenE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(NumV (`Nat len) $$$ { vid; typ })
-        value_res = objects.NumV(value, p4specast.NatT.INSTANCE, typ=self.typ)
+        value_res = objects.NumV.make(value, p4specast.NatT.INSTANCE, typ=self.typ)
         # in
         # Ctx.add_node ctx value_res;
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op LenOp);
@@ -2407,7 +2389,7 @@ def downcast(ctx, typ, value):
             return ctx, value
         elif value.what == p4specast.IntT.INSTANCE:
             assert value.value.ge(integers.Integer.fromint(0))
-            return ctx, objects.NumV(value.value, p4specast.NatT.INSTANCE, typ=typ)
+            return ctx, objects.NumV.make(value.value, p4specast.NatT.INSTANCE, typ=typ)
         else:
             assert 0
     # | VarT (tid, targs) -> (
@@ -2464,7 +2446,7 @@ def upcast(ctx, typ, value):
     #             let vid = Value.fresh () in
     #             let typ = typ.it in
     #             Il.Ast.(NumV (`Int n) $$$ { vid; typ })
-            value_res = objects.NumV(value.get_num(), p4specast.IntT.INSTANCE, typ=typ)
+            value_res = objects.NumV.make(value.get_num(), p4specast.IntT.INSTANCE, typ=typ)
             return ctx, value_res
     #           in
     #           Ctx.add_node ctx value_res;

@@ -52,7 +52,7 @@ def nats_sum(targs, values_input):
         sum_result = sum_result.add(value.get_num())
 
     # value_of_bigint ctx sum
-    return objects.NumV(sum_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
+    return objects.NumV.make(sum_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
 
 @register_builtin("max")
 def nats_max(targs, values_input):
@@ -63,7 +63,7 @@ def nats_max(targs, values_input):
         raise P4BuiltinError("max: empty list")
     max_result = values[0].get_num()
     max_result = _nats_max(values, max_result)
-    return objects.NumV(max_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
+    return objects.NumV.make(max_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
 
 def _nats_max(values, max_result):
     for index in range(1, len(values)):
@@ -82,7 +82,7 @@ def nats_min(targs, values_input):
         raise P4BuiltinError("min: empty list")
     min_result = values[0].get_num()
     min_result = _nats_min(values, min_result)
-    return objects.NumV(min_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
+    return objects.NumV.make(min_result, p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
 
 def _nats_min(values, min_result):
     for index in range(1, len(values)):
@@ -157,7 +157,7 @@ def lists_rev_(targs, values_input):
         return value
     lst = lst[:]
     lst.reverse()
-    return objects.ListV.make(lst, value.typ)
+    return objects.ListV.make(lst, value.get_typ())
 
 
 @register_builtin("concat_")
@@ -167,7 +167,7 @@ def lists_concat_(targs, values_input):
     res = []
     if lists:
         _lists_concat(lists, res)
-    typ = value.typ
+    typ = value.get_typ()
     assert isinstance(typ, p4specast.IterT)
     return objects.ListV.make(res[:], typ.typ)
 
@@ -181,9 +181,9 @@ def lists_distinct_(targs, values_input):
     value, = values_input
     lst = value.get_list()
     if len(lst) <= 1:
-        return objects.BoolV(True, p4specast.BoolT.INSTANCE)
+        return objects.BoolV.TRUE
     result = _lists_distinct(lst)
-    return objects.BoolV(result, p4specast.BoolT.INSTANCE)
+    return objects.BoolV.make(result, p4specast.BoolT.INSTANCE)
 
 def _lists_distinct(lst):
     # naive quadratic implementation using .eq
@@ -239,8 +239,8 @@ def _extract_set_elems(set_value):
 
 def _wrap_set_elems(elems, set_value_for_types):
     assert isinstance(set_value_for_types, objects.CaseV)
-    lst_value = objects.ListV.make(elems, set_value_for_types._get_list(0).typ)
-    return objects.CaseV.make1(lst_value, set_value_for_types.mixop, set_value_for_types.typ)
+    lst_value = objects.ListV.make(elems, set_value_for_types._get_list(0).get_typ())
+    return objects.CaseV.make1(lst_value, set_value_for_types.mixop, set_value_for_types.get_typ())
 
 @register_builtin("intersect_set")
 def sets_intersect_set(targs, values_input):
@@ -374,8 +374,8 @@ def sets_sub_set(targs, values_input):
             if el.eq(el2):
                 break
         else:
-            return objects.BoolV(False, p4specast.BoolT.INSTANCE)
-    return objects.BoolV(True, p4specast.BoolT.INSTANCE)
+            return objects.BoolV.FALSE
+    return objects.BoolV.TRUE
 
 @register_builtin("eq_set")
 def sets_eq_set(targs, values_input):
@@ -383,14 +383,14 @@ def sets_eq_set(targs, values_input):
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
     if len(elems_l) != len(elems_r):
-        return objects.BoolV(False, p4specast.BoolT.INSTANCE)
+        return objects.BoolV.FALSE
     if len(elems_l) == 0:
         result = True
     elif len(elems_l) == 1:
         result = elems_l[0].eq(elems_r[0])
     else:
         result = _sets_eq_set_bool(elems_l, elems_r)
-    return objects.BoolV(result, p4specast.BoolT.INSTANCE)
+    return objects.BoolV.make(result, p4specast.BoolT.INSTANCE)
 
 def _sets_eq_set_bool(elems_l, elems_r):
     for el in elems_l:
@@ -494,7 +494,7 @@ def maps_add_map(targs, values_input):
         list_value = objects.ListV.make1(new_pair, listtyp)
     else:
         res = _add_map(key_value, content, value_value, key_typ, value_typ)
-        listtyp = jit.promote(res[0].typ).list_of()
+        listtyp = jit.promote(res[0].get_typ()).list_of()
         list_value = objects.ListV.make(res, listtyp)
     return objects.CaseV.make1(list_value, map_mixop, _make_vart(map_id, key_typ, value_typ))
 
@@ -521,8 +521,7 @@ def _add_map(key_value, content, value_value, key_typ, value_typ):
             assert 0, 'unreachable'
     else:
         res.append(new_pair)
-    res = res[:]
-    return res
+    return res[:]
 
 
 @register_builtin("adds_map")
@@ -574,7 +573,7 @@ def fresh_fresh_tid(targs, values_input):
 
 def _integer_to_value(integer):
     # type: (integers.Integer) -> objects.NumV
-    return objects.NumV(integer, p4specast.IntT.INSTANCE, p4specast.NumT.INT)
+    return objects.NumV.make(integer, p4specast.IntT.INSTANCE, p4specast.NumT.INT)
 
 
 @register_builtin("shl")

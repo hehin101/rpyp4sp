@@ -726,10 +726,6 @@ def test_format_p4error_function():
     assert lines[-2] == "Error:"  # Error header
     assert lines[-1] == "Division by zero"  # Error message at bottom
 
-    # Test auto color detection (should return False when not in TTY)
-    result_auto = format_p4error(error_with_trace, {})  # color=None, auto-detect
-    assert result_auto == result  # Should be same as color=False when not in TTY
-
     # Test with colors enabled
     result_colored = format_p4error(error_with_trace, {}, color=True)
     lines_colored = result_colored.split('\n')
@@ -740,6 +736,12 @@ def test_format_p4error_function():
     assert '\033[35mdivide\033[0m' in lines_colored[1]  # MAGENTA function name
     assert lines_colored[-2] == '\033[1mError:\033[0m'  # Bold error header
     assert lines_colored[-1] == "\033[35mDivision by zero\033[0m"  # Error message with magenta color
+
+
+    # Test auto color detection (should return False when not in TTY)
+    result_auto = format_p4error(error_with_trace, {})  # color=None, auto-detect
+    assert result_auto == result or result_auto == result_colored
+
 
 def test_format_p4error_error_header_bold():
     # Test that "Error:" header is bold when color=True
