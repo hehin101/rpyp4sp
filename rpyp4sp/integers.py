@@ -116,6 +116,21 @@ class SmallInteger(Integer):
         assert isinstance(other, BigInteger)
         return other.rval.int_le(self.val)
 
+    def int_eq(self, iother):
+        return self.val == iother
+
+    def int_lt(self, iother):
+        return self.val < iother
+
+    def int_le(self, iother):
+        return self.val <= iother.val
+
+    def int_gt(self, iother):
+        return self.val > iother
+
+    def int_ge(self, iother):
+        return self.val >= iother
+
     def abs(self):
         if self.val == MININT:
             return BigInteger(rbigint.fromint(self.val).abs())
@@ -307,6 +322,21 @@ class BigInteger(Integer):
         assert isinstance(other, BigInteger)
         return self.rval.ge(other.rval)
 
+    def int_eq(self, iother):
+        return self.rval.int_eq(iother)
+
+    def int_lt(self, iother):
+        return self.rval.int_lt(iother)
+
+    def int_le(self, iother):
+        return self.rval.int_le(iother)
+
+    def int_gt(self, iother):
+        return self.rval.int_gt(iother)
+
+    def int_ge(self, iother):
+        return self.rval.int_ge(iother)
+
     def abs(self):
         return BigInteger(self.rval.abs())
 
@@ -369,7 +399,7 @@ class BigInteger(Integer):
                 raise ZeroDivisionError("integer division or modulo by zero")
             return SmallInteger(self.rval.int_mod_int_result(other.val))
         assert isinstance(other, BigInteger)
-        if other.eq(SmallInteger(0)):
+        if other.int_eq(0):
             raise ZeroDivisionError("integer division or modulo by zero")
         return BigInteger(self.rval.mod(other.rval))
 
@@ -379,7 +409,7 @@ class BigInteger(Integer):
                 raise ZeroDivisionError("integer division by zero")
             return BigInteger(self.rval.int_div(other.val))
         assert isinstance(other, BigInteger)
-        if other.eq(SmallInteger(0)):
+        if other.int_eq(0):
             raise ZeroDivisionError("integer division by zero")
         return BigInteger(self.rval.div(other.rval))
 

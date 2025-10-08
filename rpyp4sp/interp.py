@@ -1655,14 +1655,14 @@ def eval_binop_num(binop, value_l, value_r, typ):
     elif binop == 'MulOp':
         res_num = num_l.mul(num_r)
     elif binop == 'DivOp':
-        if num_r.eq(integers.Integer.fromint(0)):
+        if num_r.int_eq(0):
             raise P4EvaluationError("Modulo with 0")
         remainder = num_l.mod(num_r)
-        if not remainder.eq(integers.Integer.fromint(0)):
+        if not remainder.int_eq(0):
             raise P4EvaluationError("division remainder isn't zero")
         res_num = num_l.div(num_r)
     elif binop == 'ModOp':
-        if num_r.eq(integers.Integer.fromint(0)):
+        if num_r.int_eq(0):
             raise P4EvaluationError("Modulo with 0")
         res_num = num_l.mod(num_r)
     elif binop == 'PowOp':
@@ -1977,7 +1977,7 @@ class __extend__(p4specast.LenE):
         # let ctx, value = eval_exp ctx exp in
         ctx, value = eval_exp(ctx, self.lst)
         # let len = value |> Value.get_list |> List.length |> Bigint.of_int in
-        value = integers.Integer.fromint(len(value.get_list()))
+        value = integers.Integer.fromint(value.get_list_len())
         # let value_res =
         #   let vid = Value.fresh () in
         #   let typ = note in
@@ -2266,7 +2266,7 @@ def subtyp(ctx, typ, value):
         if value.what == p4specast.NatT.INSTANCE:
             return True
         elif value.what == p4specast.IntT.INSTANCE:
-            return value.value.ge(integers.Integer.fromint(0))
+            return value.value.int_ge(0)
         else:
             assert 0
     # | VarT (tid, targs) -> (
@@ -2330,7 +2330,7 @@ def downcast(ctx, typ, value):
         if value.what == p4specast.NatT.INSTANCE:
             return ctx, value
         elif value.what == p4specast.IntT.INSTANCE:
-            assert value.value.ge(integers.Integer.fromint(0))
+            assert value.value.int_ge(0)
             return ctx, objects.NumV.make(value.value, p4specast.NatT.INSTANCE, typ=typ)
         else:
             assert 0

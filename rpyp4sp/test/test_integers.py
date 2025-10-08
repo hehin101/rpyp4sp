@@ -37,6 +37,14 @@ def test_op_int_hypothesis(a, b):
     assert a.le(b) == (v1 <= v2)
     assert a.ge(b) == (v1 >= v2)
 
+    if isinstance(v2, SmallInteger):
+        i2 = v2.toint()
+        assert a.int_eq(i2) == (v1 == v2)
+        assert a.int_lt(i2) == (v1 < v2)
+        assert a.int_gt(i2) == (v1 > v2)
+        assert a.int_le(i2) == (v1 <= v2)
+        assert a.int_ge(i2) == (v1 >= v2)
+
 @given(wrapped_ints, ints)
 def test_int_add_sub_hypothesis(a, b):
     v1 = a.tobigint().tolong()
