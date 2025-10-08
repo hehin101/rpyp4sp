@@ -494,7 +494,7 @@ def maps_add_map(targs, values_input):
         list_value = objects.ListV.make1(new_pair, listtyp)
     else:
         res = _add_map(key_value, content, value_value, key_typ, value_typ)
-        listtyp = jit.promote(res[0].typ).list_of()
+        listtyp = jit.promote(res[0].get_typ()).list_of()
         list_value = objects.ListV.make(res, listtyp)
     return objects.CaseV.make1(list_value, map_mixop, _make_vart(map_id, key_typ, value_typ))
 
