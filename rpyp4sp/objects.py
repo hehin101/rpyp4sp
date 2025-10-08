@@ -117,6 +117,7 @@ class BoolV(BaseV):
     _compare_tag = 0
 
     _attrs_ = ['value']
+    _immutable_fields_ = ['value']
 
     def __init__(self, value):
         self.value = value # type: bool
