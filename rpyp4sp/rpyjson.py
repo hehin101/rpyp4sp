@@ -4,7 +4,6 @@ from rpython.tool.pairtype import extendabletype
 
 import sys
 from rpython.rlib.rstring import StringBuilder
-from rpyp4sp.error import P4ParseError, P4NotImplementedError
 from rpython.rlib.objectmodel import specialize, always_inline, r_dict
 from rpython.rlib import rfloat, rutf8
 from rpython.rtyper.lltypesystem import lltype, rffi
@@ -12,10 +11,12 @@ from rpython.rlib.rarithmetic import r_uint
 from pypy.interpreter.error import oefmt
 from pypy.interpreter import unicodehelper
 
+from rpyp4sp.error import P4ParseError, P4NotImplementedError
 
 # Union-Object to represent a json structure in a static way
 class JsonBase(object):
     __metaclass__ = extendabletype
+    _attrs_ = []
 
     is_string = is_int = is_float = is_bool = is_object = is_array = is_null = False
 
@@ -196,6 +197,28 @@ class JsonObject(JsonBase):
 
     @staticmethod
     def make(map, values):
+        from rpyp4sp.p4specast import Position, Region, NO_REGION
+        if map is position_map:
+            file = values[0]
+            from_ = values[1]
+            to = values[2]
+            if (isinstance(file, JsonString)
+                    and isinstance(from_, JsonInt)
+                    and isinstance(to, JsonInt)):
+                return JsonAdapterPosition(
+                        Position(
+                            file.value_string(),
+                            from_.value_int(),
+                            to.value_int()))
+        if map is region_map:
+            from_ = values[0]
+            to = values[1]
+            if isinstance(from_, JsonAdapterPosition) and isinstance(to, JsonAdapterPosition):
+                from_ = from_.position
+                to = to.position
+                if not from_.has_information() and not to.has_information():
+                    return JsonAdapterRegion(NO_REGION)
+                return JsonAdapterRegion(Region(from_, to))
         size = len(map.attrs)
         if not size:
             return JsonObject0(map)
@@ -313,6 +336,22 @@ class JsonObjectGeneral(JsonObject):
         return self.values[i]
 
 
+class JsonAdapterPosition(JsonBase):
+    def __init__(self, position):
+        self.position = position
+
+    def __repr__(self):
+        return "rpyjson.JsonAdapterPosition(%r)" % (self.position, )
+
+
+class JsonAdapterRegion(JsonBase):
+    def __init__(self, region):
+        self.region = region
+
+    def __repr__(self):
+        return "rpyjson.JsonAdapterRegion(%r)" % (self.region, )
+
+
 class JsonArray(JsonBase):
     is_array = True
 
@@ -420,11 +459,10 @@ class MapLookupCache(object):
 ROOT_MAP = Map(None, {})
 
 # prime the root map with some common transitions
-ROOT_MAP.get_next("file").get_next("line").get_next("column")
-ROOT_MAP.get_next("it").get_next("node").get_next("at")
-ROOT_MAP.get_next("left").get_next("right")
-ROOT_MAP.get_next("typ").get_next("at")
-
+position_map = ROOT_MAP.get_next("file").get_next("line").get_next("column")
+it_note_at_map = ROOT_MAP.get_next("it").get_next("note").get_next("at")
+region_map = ROOT_MAP.get_next("left").get_next("right")
+ROOT_MAP.get_next("vid").get_next("typ").get_next("at")
 
 TYPE_UNKNOWN = 0
 TYPE_STRING = 1
