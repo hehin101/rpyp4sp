@@ -1186,7 +1186,7 @@ def assign_exp(ctx, exp, value):
     #       let vid = Value.fresh () in
     #       let typ = note in
     #       Il.Ast.(ListV (List.tl values_inner) $$$ { vid; typ })
-        value_t = objects.ListV.make(values_inner[1:], value.typ)
+        value_t = objects.ListV.make(values_inner[1:], value.get_typ())
     #     in
     #     Ctx.add_node ctx value_t;
     #     let ctx = assign_exp ctx exp_h value_h in
@@ -1470,11 +1470,11 @@ class __extend__(p4specast.BoolE):
         #     Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
         #   ctx.local.values_input;
         # (ctx, value_res)
-        return ctx, objects.BoolV(self.value, self.typ)
+        return ctx, objects.BoolV.make(self.value, self.typ)
 
 class __extend__(p4specast.NumE):
     def eval_exp(self, ctx):
-        return ctx, objects.NumV(self.value, self.what, typ=self.typ)
+        return ctx, objects.NumV.make(self.value, self.what, typ=self.typ)
 
 class __extend__(p4specast.TextE):
     def eval_exp(self, ctx):
@@ -1558,7 +1558,7 @@ def eval_cmp_bool(cmpop, value_l, value_r, typ):
     eq = value_l.eq(value_r)
     # match cmpop with `EqOp -> Il.Ast.BoolV eq | `NeOp -> Il.Ast.BoolV (not eq)
     value = eq if cmpop == 'EqOp' else not eq
-    return objects.BoolV(value, typ)
+    return objects.BoolV.make(value, typ)
 
 class __extend__(p4specast.ConsE):
     def eval_exp(self, ctx):
@@ -1601,7 +1601,7 @@ def eval_cmp_num(cmpop, value_l, value_r, typ):
         res = num_l.ge(num_r)
     else:
         assert 0, "should be unreachable"
-    return objects.BoolV(res, typ)
+    return objects.BoolV.make(res, typ)
     # Il.Ast.BoolV (Num.cmp cmpop num_l num_r)
 
 
@@ -1653,7 +1653,7 @@ def eval_binop_bool(binop, value_l, value_r, typ):
         res_bool = bool_l == bool_r
     else:
         assert 0, "should be unreachable"
-    return objects.BoolV(res_bool, typ)
+    return objects.BoolV.make(res_bool, typ)
 
 def eval_binop_num(binop, value_l, value_r, typ):
     # let num_l = Value.get_num value_l in
@@ -1687,7 +1687,7 @@ def eval_binop_num(binop, value_l, value_r, typ):
         raise P4NotImplementedError("PowOp")
     else:
         assert 0, "should be unreachable"
-    return objects.NumV(res_num, what, typ=typ)
+    return objects.NumV.make(res_num, what, typ=typ)
 
 class __extend__(p4specast.BinE):
     def eval_exp(self, ctx):
@@ -1720,7 +1720,7 @@ class __extend__(p4specast.BinE):
 def eval_unop_bool(unop, value, typ):
     # match unop with `NotOp -> Il.Ast.BoolV (not (Value.get_bool value))
     if unop == 'NotOp':
-        return objects.BoolV(not value.get_bool(), typ=typ)
+        return objects.BoolV.make(not value.get_bool(), typ=typ)
     else:
         assert 0, "Unknown boolean unary operator: %s" % unop
 
@@ -1730,9 +1730,9 @@ def eval_unop_num(unop, value, typ):
     num = value.get_num()
     # match unop with
     if unop == 'PlusOp':
-        return objects.NumV(num, value.what, typ=typ)
+        return objects.NumV.make(num, value.what, typ=typ)
     elif unop == 'MinusOp':
-        return objects.NumV(num.neg(), value.what, typ=typ)
+        return objects.NumV.make(num.neg(), value.what, typ=typ)
     else:
         assert 0, "Unknown numeric unary operator: %s" % unop
 
@@ -1768,7 +1768,7 @@ class __extend__(p4specast.MemE):
         else:
             values_s = value_s.get_list()
             res = _mem_list(value_e, values_s)
-        value_res = objects.BoolV(res, self.typ)
+        value_res = objects.BoolV.make(res, self.typ)
         return ctx, value_res
         #   in
         #   Ctx.add_node ctx value_res;
@@ -1809,7 +1809,7 @@ class __extend__(p4specast.SubE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(BoolV sub $$$ { vid; typ })
-        value_res = objects.BoolV(sub, note)
+        value_res = objects.BoolV.make(sub, note)
         # in
         # Ctx.add_node ctx value_res;
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op (SubOp typ));
@@ -1877,7 +1877,7 @@ class __extend__(p4specast.MatchE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(BoolV matches $$$ { vid; typ })
-        value_res = objects.BoolV(matches, self.typ)
+        value_res = objects.BoolV.make(matches, self.typ)
         # in
         # Ctx.add_node ctx value_res;
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op (MatchOp pattern));
@@ -2000,7 +2000,7 @@ class __extend__(p4specast.LenE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(NumV (`Nat len) $$$ { vid; typ })
-        value_res = objects.NumV(value, p4specast.NatT.INSTANCE, typ=self.typ)
+        value_res = objects.NumV.make(value, p4specast.NatT.INSTANCE, typ=self.typ)
         # in
         # Ctx.add_node ctx value_res;
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op LenOp);
@@ -2349,7 +2349,7 @@ def downcast(ctx, typ, value):
             return ctx, value
         elif value.what == p4specast.IntT.INSTANCE:
             assert value.value.ge(integers.Integer.fromint(0))
-            return ctx, objects.NumV(value.value, p4specast.NatT.INSTANCE, typ=typ)
+            return ctx, objects.NumV.make(value.value, p4specast.NatT.INSTANCE, typ=typ)
         else:
             assert 0
     # | VarT (tid, targs) -> (
@@ -2406,7 +2406,7 @@ def upcast(ctx, typ, value):
     #             let vid = Value.fresh () in
     #             let typ = typ.it in
     #             Il.Ast.(NumV (`Int n) $$$ { vid; typ })
-            value_res = objects.NumV(value.get_num(), p4specast.IntT.INSTANCE, typ=typ)
+            value_res = objects.NumV.make(value.get_num(), p4specast.IntT.INSTANCE, typ=typ)
             return ctx, value_res
     #           in
     #           Ctx.add_node ctx value_res;

@@ -40,6 +40,8 @@ class EnvKeys(object):
     @jit.elidable
     def get_pos(self, var_name, var_iter):
         # type: (str, str) -> int
+        if not self.keys:
+            return -1
         return self.keys.get((var_name, var_iter), -1)
 
     # TODO: default für var_iter
