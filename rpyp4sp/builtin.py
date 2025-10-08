@@ -172,6 +172,7 @@ def lists_concat_(targs, values_input):
     return objects.ListV.make(res[:], typ.typ)
 
 def _lists_concat(lists, res):
+    # TODO: unroll sometimes
     for list_value in lists:
         res.extend(list_value.get_list())
 
@@ -221,7 +222,7 @@ def lists_assoc_(targs, values_input):
         if tup._get_list(0).eq(value):
             res_value = tup._get_list(1)
             break
-    return objects.OptV(res_value, typ_value.opt_of())
+    return typ_value.opt_of().make_opt_value(res_value)
 
 # ________________________________________________________________
 # sets
@@ -300,8 +301,7 @@ def sets_unions_set(targs, values_input):
     element_typ, = targs
     if not sets_l:
         return objects.CaseV.make1(
-            objects.ListV.make0(
-                element_typ.list_of()),
+            element_typ.list_of().empty_list_value(),
             map_mixop,
             p4specast.VarT(set_id, targs))
     first = sets_l[0]
@@ -461,7 +461,7 @@ def maps_find_map(targs, values_input):
     map_value, key_value = values_input
     found_value = find_map(map_value, key_value)
     typ = key_typ.opt_of()
-    return objects.OptV(found_value, typ)
+    return typ.make_opt_value(found_value)
 
 
 @register_builtin("find_maps")
@@ -473,7 +473,7 @@ def maps_find_maps(targs, values_input):
     res_value = None
     res_value = _maps_find_map(list_maps_value, key_value)
     typ = key_typ.opt_of()
-    return objects.OptV(res_value, typ)
+    return typ.make_opt_value(res_value)
 
 @jit.elidable
 def _maps_find_map(list_maps_value, key_value):

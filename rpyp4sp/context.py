@@ -367,8 +367,7 @@ class Context(sign.Sign):
             for i, var in enumerate(vars):
                 value = values[i]
                 assert value is not None
-                value_sub = objects.OptV(value, var.typ)
-                ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value_sub.value)
+                ctx_sub = ctx_sub.add_value_local(var.id, var.iter, value)
             return ctx_sub
 
     @jit.unroll_safe

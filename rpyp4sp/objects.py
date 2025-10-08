@@ -106,6 +106,8 @@ class BaseV(SubBase):
 
 class BaseVWithTyp(BaseV):
     _attrs_ = ['typ']
+    _immutable_fields_ = ['typ']
+
     # typ: p4specast.Type
 
     def get_typ(self):
@@ -115,6 +117,7 @@ class BoolV(BaseV):
     _compare_tag = 0
 
     _attrs_ = ['value']
+    _immutable_fields_ = ['value']
 
     def __init__(self, value):
         self.value = value # type: bool
@@ -556,11 +559,29 @@ class OptV(BaseVWithTyp):
         return OptV(value, typ)
 
 # just optimize lists of size 0, 1, arbitrary
-@inline_small_list(immutable=True, sizemax=2)
+@inline_small_list(immutable=True, sizemax=2, factoryname='_make')
 class ListV(BaseVWithTyp):
     _immutable_fields_ = []
     def __init__(self, typ=None):
         self.typ = typ # type: p4specast.Type | None
+
+    @staticmethod
+    def make0(typ):
+        return typ.empty_list_value()
+
+    @staticmethod
+    def make1(val, typ):
+        return ListV._make1(val, typ)
+
+    @staticmethod
+    def make2(val0, val1, typ):
+        return ListV._make2(val0, val1, typ)
+
+    @staticmethod
+    def make(values, typ):
+        if not values and isinstance(typ, p4specast.IterT):
+            return typ.empty_list_value()
+        return ListV._make(values, typ)
 
     def get_list(self):
         return self._get_full_list()

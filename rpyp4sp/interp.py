@@ -600,14 +600,7 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     #     Ctx.add_value Local ctx
     #       (id_binding, iters_binding @ [ Il.Ast.List ])
     #       value_binding)
-    for i, var_binding in enumerate(vars_binding_list.vars):
-        values_binding_item = values_binding[i]
-        id_binding = var_binding.id
-        typ_binding = var_binding.typ
-        iters_binding = var_binding.iter
-        value_binding = objects.ListV.make(values_binding_item, typ_binding)
-        ctx = ctx.add_value_local(id_binding, iters_binding.append_list(), value_binding)
-    return ctx
+    return _make_lists_and_assign(ctx, vars_binding_list, values_binding)
 
 def get_printable_location(exp_l, exp_r, vars_binding_list):
     return "eval_let_list_loop %s %s %s" % (exp_l.tostring(), exp_r.tostring(), vars_binding_list.tostring())
@@ -787,6 +780,7 @@ def eval_rule(ctx, id, notexp):
     ctx = assign_exps(ctx, exps_output, values_output)
     return ctx
 
+@jit.unroll_safe
 def eval_rule_list(ctx, id, notexp, vars, iterexps):
     # INCOMPLETE, a lot of copy-pasted code from eval_let_list
     # (* Discriminate between bound and binding variables *)
@@ -805,15 +799,33 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
     #   (* If the bound variable supposed to guide the iteration is already empty,
     #      then the binding variables are also empty *)
     #   | [] ->
-    if ctxs_sub.length == 0:
-    #       let values_binding =
-    #         List.init (List.length vars_binding) (fun _ -> [])
-    #       in
-    #       (ctx, values_binding)
-        values_binding = [[] for _ in vars_binding_list.vars]
-    #   (* Otherwise, evaluate the premise for each batch of bound values,
-    #      and collect the resulting binding batches *)
-    #   | _ ->
+    if ctxs_sub.length <= 1:
+        if ctxs_sub.length == 0:
+        #       let values_binding =
+        #         List.init (List.length vars_binding) (fun _ -> [])
+        #       in
+        #       (ctx, values_binding)
+            values_binding = [
+                var_binding.typ.iterate(var_binding.iter.append_list()).empty_list_value()
+                for var_binding in vars_binding_list.vars]
+        #   (* Otherwise, evaluate the premise for each batch of bound values,
+        #      and collect the resulting binding batches *)
+        #   | _ ->
+        else:
+            assert ctxs_sub.length == 1
+            ctx_sub = next(ctxs_sub)
+            ctx_sub = eval_rule_iter_tick(ctx_sub, id, notexp, iterexps)
+            ctx = ctx.commit(ctx_sub)
+            values_binding = [None] * len(vars_binding_list.vars)
+            for i, var_binding in enumerate(vars_binding_list.vars):
+                iters_binding = var_binding.iter
+                list_typ = var_binding.typ.iterate(iters_binding.append_list())
+                value_binding = ctx_sub.find_value_local(var_binding.id, var_binding.iter)
+                values_binding[i] = objects.ListV.make1(value_binding, list_typ)
+        #       in
+        #       let values_binding = values_binding_batch |> Ctx.transpose in
+            assert len(values_binding) == len(vars_binding_list.vars)
+        return _dont_make_lists_and_assign(ctx, vars_binding_list, values_binding)
     else:
     #       let ctx, values_binding_batch =
     #         List.fold_left
@@ -831,20 +843,12 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
     #             in
     #             (ctx, values_binding_batch))
     #           (ctx, []) ctxs_sub
-        values_binding_batch = []
-        for ctx_sub in ctxs_sub:
-            ctx_sub = eval_rule_iter_tick(ctx_sub, id, notexp, iterexps)
-            ctx = ctx.commit(ctx_sub)
-            value_binding_batch = []
-            for var_binding in vars_binding_list.vars:
-                value_binding = ctx_sub.find_value_local(var_binding.id, var_binding.iter)
-                value_binding_batch.append(value_binding)
-            values_binding_batch.append(value_binding_batch)
-    #       in
-    #       let values_binding = values_binding_batch |> Ctx.transpose in
-        values_binding = context.transpose(values_binding_batch)
-        assert len(values_binding) == len(vars_binding_list.vars)
+        ctx, values_binding = _eval_rule_list_loop(ctx, id, notexp, iterexps, vars_binding_list, ctxs_sub)
     #       (ctx, values_binding)
+    return _make_lists_and_assign(ctx, vars_binding_list, values_binding)
+
+@jit.unroll_safe
+def _make_lists_and_assign(ctx, vars_binding_list, values_binding):
     # in
     # (* Finally, bind the resulting binding batches *)
     # List.fold_left2
@@ -871,9 +875,44 @@ def eval_rule_list(ctx, id, notexp, vars, iterexps):
         id_binding = var_binding.id
         typ_binding = var_binding.typ
         iters_binding = var_binding.iter
-        value_binding = objects.ListV.make(values_binding, typ_binding)
+        iters_binding_list = iters_binding.append_list()
+        list_typ = typ_binding.iterate(iters_binding_list)
+        value_binding = objects.ListV.make(values_binding, list_typ)
+        ctx = ctx.add_value_local(id_binding, iters_binding_list, value_binding)
+    return ctx
+
+@jit.unroll_safe
+def _dont_make_lists_and_assign(ctx, vars_binding_list, values_binding):
+    for index, value_binding in enumerate(values_binding):
+        var_binding = vars_binding_list.vars[index]
+        id_binding = var_binding.id
+        iters_binding = var_binding.iter
         ctx = ctx.add_value_local(id_binding, iters_binding.append_list(), value_binding)
     return ctx
+
+
+def get_printable_location(id, notexp, vars_binding_list):
+    return "eval_rule_list_loop %s %s %s" % (id.tostring(), notexp.tostring(), vars_binding_list.tostring())
+
+jitdriver_eval_rule_list_loop = jit.JitDriver(
+    reds='auto', greens=['id', 'notexp', 'vars_binding_list'],
+    name='eval_rule_list_loop', get_printable_location=get_printable_location)
+
+def _eval_rule_list_loop(ctx, id, notexp, iterexps, vars_binding_list, ctxs_sub):
+    values_binding = [[None] * ctxs_sub.length for _ in vars_binding_list.vars]
+    j = 0
+    for ctx_sub in ctxs_sub:
+        jitdriver_eval_rule_list_loop.jit_merge_point(id=id, notexp=notexp, vars_binding_list=vars_binding_list)
+        ctx_sub = eval_rule_iter_tick(ctx_sub, id, notexp, iterexps)
+        ctx = ctx.commit(ctx_sub)
+        for i, var_binding in enumerate(vars_binding_list.vars):
+            value_binding = ctx_sub.find_value_local(var_binding.id, var_binding.iter)
+            values_binding[i][j] = value_binding
+        j += 1
+    #       in
+    #       let values_binding = values_binding_batch |> Ctx.transpose in
+    assert len(values_binding) == len(vars_binding_list.vars)
+    return ctx,values_binding
 
 
 def eval_rule_iter_tick(ctx, id, notexp, iterexps):
@@ -1197,8 +1236,8 @@ def assign_exp(ctx, exp, value):
     #         Ctx.add_value Local ctx (id, iters @ [ Il.Ast.Opt ]) value_sub)
     #       ctx vars
             for var in exp.varlist:
-                typ = var.typ.opt_of()
-                value_sub = objects.OptV(None, typ)
+                typ = var.typ.iterate(var.iter.append_opt())
+                value_sub = typ.opt_none_value()
                 ctx = ctx.add_value_local(var.id, var.iter.append_opt(), value_sub)
             return ctx
     # | IterE (exp, (Opt, vars)), OptV (Some value) ->
@@ -1221,7 +1260,7 @@ def assign_exp(ctx, exp, value):
     #       ctx vars
             for var in exp.varlist:
                 value_sub_inner = ctx.find_value_local(var.id, var.iter)
-                typ = var.typ.opt_of()
+                typ = var.typ.iterate(var.iter.append_opt())
                 value_sub = objects.OptV(value_sub_inner, typ)
                 ctx = ctx.add_value_local(var.id, var.iter.append_opt(), value_sub)
             return ctx
@@ -1249,7 +1288,8 @@ def assign_exp(ctx, exp, value):
         if len(values) == 0:
             for var in exp.varlist:
                 # create a ListV value for these
-                value_sub = objects.ListV.make0(var.typ)
+                listtyp = var.typ.iterate(var.iter.append_list())
+                value_sub = listtyp.empty_list_value()
                 ctx = ctx.add_value_local(var.id, var.iter.append_list(), value_sub)
             return ctx
         elif len(values) == 1:
@@ -1260,7 +1300,8 @@ def assign_exp(ctx, exp, value):
                 # collect elementwise values from each ctx in ctxs
                 newvalue = ctx_local.find_value_local(var.id, var.iter)
                 # create a ListV value for these
-                value_sub = objects.ListV.make1(newvalue, var.typ)
+                listtyp = var.typ.iterate(var.iter.append_list())
+                value_sub = objects.ListV.make1(newvalue, listtyp)
                 ctx = ctx.add_value_local(var.id, var.iter.append_list(), value_sub)
             return ctx
         else:
@@ -1286,7 +1327,8 @@ def assign_exp(ctx, exp, value):
             for i, var in enumerate(exp.varlist):
                 # collect elementwise values from each ctx in ctxs
                 # create a ListV value for these
-                value_sub = objects.ListV.make(values[i], var.typ)
+                listtyp = var.typ.iterate(var.iter.append_list())
+                value_sub = objects.ListV.make(values[i], listtyp)
                 ctx = ctx.add_value_local(var.id, var.iter.append_list(), value_sub)
             return ctx
 
@@ -1401,6 +1443,8 @@ class __extend__(p4specast.ResultI):
         # type: (p4specast.ResultI, context.Context) -> tuple[context.Context, Res]
         #  let ctx, values = eval_exps ctx exps in
         #  (ctx, Res values)
+        if not self.exps:
+            return Res.make0(ctx)
         ctx, values = eval_exps(ctx, self.exps)
         return Res.make(values, ctx)
 
@@ -1486,7 +1530,7 @@ class __extend__(p4specast.OptE):
         #     let vid = Value.fresh () in
         #     let typ = note in
         #     Il.Ast.(OptV value_opt $$$ { vid; typ })
-        value_res = objects.OptV(value, self.typ)
+        value_res = self.typ.make_opt_value(value)
         return ctx, value_res
         #   in
         #   Ctx.add_node ctx value_res;
@@ -1519,12 +1563,18 @@ class __extend__(p4specast.TupleE):
 class __extend__(p4specast.ListE):
     def eval_exp(self, ctx):
         #   let ctx, values = eval_exps ctx exps in
-        ctx, values = eval_exps(ctx, self.elts)
-        #   let value_res =
-        #     let vid = Value.fresh () in
-        #     let typ = note in
-        #     Il.Ast.(ListV values $$$ { vid; typ })
-        value_res = objects.ListV.make(values, self.typ)
+        if not self.elts:
+            return ctx, self.typ.empty_list_value()
+        if len(self.elts) == 1:
+            ctx, value = eval_exp(ctx, self.elts[0])
+            value_res = objects.ListV.make1(value, self.typ)
+        else:
+            ctx, values = eval_exps(ctx, self.elts)
+            #   let value_res =
+            #     let vid = Value.fresh () in
+            #     let typ = note in
+            #     Il.Ast.(ListV values $$$ { vid; typ })
+            value_res = objects.ListV.make(values, self.typ)
         #   in
         #   Ctx.add_node ctx value_res;
         #   if List.length values = 0 then
@@ -1904,12 +1954,18 @@ class __extend__(p4specast.CaseE):
         mixop = self.notexp.mixop
         exps = self.notexp.exps
         # let ctx, values = eval_exps ctx exps in
-        ctx, values = eval_exps(ctx, exps)
-        # let value_res =
-        #   let vid = Value.fresh () in
-        #   let typ = note in
-        #   Il.Ast.(CaseV (mixop, values) $$$ { vid; typ })
-        value_res = objects.CaseV.make(values, mixop, self.typ)
+        if len(exps) == 0:
+            value_res = objects.CaseV.make0(mixop, self.typ)
+        elif len(exps) == 1:
+            ctx, value = eval_exp(ctx, exps[0])
+            value_res = objects.CaseV.make1(value, mixop, self.typ)
+        else:
+            ctx, values = eval_exps(ctx, exps)
+            # let value_res =
+            #   let vid = Value.fresh () in
+            #   let typ = note in
+            #   Il.Ast.(CaseV (mixop, values) $$$ { vid; typ })
+            value_res = objects.CaseV.make(values, mixop, self.typ)
         # in
         # Ctx.add_node ctx value_res;
         # if List.length values = 0 then
@@ -2019,6 +2075,8 @@ class __extend__(p4specast.SliceE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(ListV values_slice $$$ { vid; typ })
+        if not values_slice:
+            return ctx, self.typ.empty_list_value()
         value_res = objects.ListV.make(values_slice, self.typ)
         return ctx, value_res
         # in
@@ -2102,7 +2160,7 @@ def eval_iter_exp_opt(note, ctx, exp, vars):
     #           Il.Ast.(OptV (Some value) $$$ { vid; typ })
     #         in
     #         (ctx, value_res)
-        value_res = objects.OptV(value, note)
+        value_res = note.make_opt_value(value)
         return ctx, value_res
     #     | None ->
     else:
@@ -2110,7 +2168,7 @@ def eval_iter_exp_opt(note, ctx, exp, vars):
     #           let vid = Value.fresh () in
     #           let typ = note in
     #           Il.Ast.(OptV None $$$ { vid; typ })
-        value_res = objects.OptV(None, note)
+        value_res = note.opt_none_value()
     #         in
     #         (ctx, value_res)
         return ctx, value_res
@@ -2127,7 +2185,7 @@ def eval_iter_exp_list(note, ctx, exp, vars):
     # let ctxs_sub = Ctx.sub_list ctx vars in
     ctxs_sub = ctx.sub_list(_make_varlist(vars))
     if ctxs_sub.length == 0:
-        value_res = objects.ListV.make0(note)
+        value_res = note.empty_list_value()
     elif ctxs_sub.length == 1:
         ctx_sub = next(ctxs_sub)
         ctx_sub, value = eval_exp(ctx_sub, exp)

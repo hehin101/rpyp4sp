@@ -195,6 +195,9 @@ class Id(AstBase):
         self.value = value # type: str
         self.region = region # type: Region
 
+    def tostring(self):
+        return self.value
+
     @staticmethod
     def fromjson(value, cache=None):
         """ example:{
@@ -1432,6 +1435,18 @@ class Type(AstBase):
             assert isinstance(iter, Opt)
             return self.opt_of()
 
+    @jit.elidable
+    def iterate(self, iterlist):
+        # let rec iterate (typ : t) (iters : iter list) : t =
+        #   match iters with
+        #   | [] -> typ
+        #   | iter :: iters -> iterate (IterT (typ, iter) $ typ.at) iters
+        res = self
+        for iter in iterlist.iterlist:
+            res = res.iter_of(iter)
+        return res
+
+
 class BoolT(Type):
     def __init__(self, region=None):
         self.region = region
@@ -1592,6 +1607,7 @@ class IterT(Type):
         self.typ = typ
         self.iter = iter
         self.region = region
+        self._empty_value_of = None # type: objects.ListV | objects.OptV | None
 
     def tostring(self):
         # | IterT (typ, iter) -> string_of_typ typ ^ string_of_iter iter
@@ -1615,6 +1631,37 @@ class IterT(Type):
             region=region
         )
         return res
+
+    @jit.elidable
+    def empty_list_value(self):
+        from rpyp4sp import objects
+        assert isinstance(self.iter, List)
+        if self._empty_value_of is not None:
+            res = self._empty_value_of
+            assert isinstance(self._empty_value_of, objects.ListV)
+            return res
+        res = objects.ListV._make0(self)
+        self._empty_value_of = res
+        return res
+
+    @jit.elidable
+    def opt_none_value(self):
+        from rpyp4sp import objects
+        assert isinstance(self.iter, Opt)
+        if self._empty_value_of is not None:
+            res = self._empty_value_of
+            assert isinstance(self._empty_value_of, objects.OptV)
+            return res
+        res = objects.OptV(None, self)
+        self._empty_value_of = res
+        return res
+
+    def make_opt_value(self, inner):
+        assert isinstance(self.iter, Opt)
+        from rpyp4sp import objects
+        if inner is None:
+            return self.opt_none_value()
+        return objects.OptV(inner, self)
 
 class FuncT(Type):
     def __init__(self, region=None):
