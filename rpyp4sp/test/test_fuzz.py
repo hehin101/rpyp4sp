@@ -90,7 +90,7 @@ class TestFuzzMainLoop(object):
         try:
             config = fuzz.FuzzConfig()
             ctx = MockContext()
-            value = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
+            value = objects.BoolV.TRUE
             
             result = fuzz.run_test_case(ctx, value, config)
         finally:
@@ -120,7 +120,7 @@ class TestFuzzMainLoop(object):
         try:
             config = fuzz.FuzzConfig()
             ctx = MockContext()
-            value = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
+            value = objects.BoolV.TRUE
             
             result = fuzz.run_test_case(ctx, value, config)
         finally:
@@ -161,7 +161,7 @@ class TestFuzzMainLoop(object):
         try:
             # Create a temporary seed file
             seed_file = os.path.join(self.temp_corpus_dir, "seed.json")
-            bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
+            bool_val = objects.BoolV.TRUE
             json_result = bool_val.tojson()
             json_content = rpyjson.dumps(json_result)
             
@@ -220,7 +220,7 @@ class TestFuzzMainLoop(object):
         try:
             # Create seed file
             seed_file = os.path.join(self.temp_corpus_dir, "seed.json")
-            bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
+            bool_val = objects.BoolV.TRUE
             json_result = bool_val.tojson()
             json_content = rpyjson.dumps(json_result)
             

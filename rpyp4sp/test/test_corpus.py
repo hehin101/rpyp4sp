@@ -30,7 +30,7 @@ class TestFuzzCorpus(object):
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
 
         # Create a simple test value
-        bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
+        bool_val = objects.BoolV.TRUE
 
         # Add test case
         coverage_hash = "12345678"  # String hash (printable ASCII, no underscores)
@@ -54,8 +54,8 @@ class TestFuzzCorpus(object):
         """Test that duplicate coverage hashes are rejected."""
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
 
-        bool_val1 = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
-        bool_val2 = objects.BoolV(False, typ=p4specast.BoolT.INSTANCE, vid=43)
+        bool_val1 = objects.BoolV.TRUE
+        bool_val2 = objects.BoolV.TRUE
 
         coverage_hash = "aabbccdd"
 
@@ -75,8 +75,8 @@ class TestFuzzCorpus(object):
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
 
         # Add several test cases
-        bool_val1 = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
-        bool_val2 = objects.BoolV(False, typ=p4specast.BoolT.INSTANCE, vid=43)
+        bool_val1 = objects.BoolV.TRUE
+        bool_val2 = objects.BoolV.FALSE
 
         hash1 = "1111"
         hash2 = "2222"
@@ -111,7 +111,7 @@ class TestFuzzCorpus(object):
             pass  # Expected
 
         # Add test case and select it
-        bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
+        bool_val = objects.BoolV.TRUE
         hash_val = "deadbeef"
         test_corpus.add_test_case(bool_val, coverage_hash=hash_val, generation=0)
 
@@ -133,7 +133,7 @@ class TestFuzzCorpus(object):
         assert stats.mutations == 0
 
         # Add some test cases
-        bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
+        bool_val = objects.BoolV.TRUE
         test_corpus.add_test_case(bool_val, coverage_hash="1111", generation=0)  # seed
         test_corpus.add_test_case(bool_val, coverage_hash="2222", generation=1)  # mutation
         test_corpus.add_test_case(bool_val, coverage_hash="3333", generation=2)  # mutation
@@ -150,7 +150,7 @@ class TestFuzzCorpus(object):
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
 
         # Create some valid files
-        bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
+        bool_val = objects.BoolV.TRUE
         valid_hash = "12345678"
         test_corpus.add_test_case(bool_val, coverage_hash=valid_hash, generation=0)
 
@@ -180,12 +180,12 @@ class TestFuzzCorpus(object):
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
 
         # Add seed (generation 0)
-        seed_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=1)
+        seed_val = objects.BoolV.TRUE
         filename1 = test_corpus.add_test_case(seed_val, coverage_hash="0064", generation=0)  # was 100
         assert "gen0" in filename1
 
         # Add mutation (generation 3)
-        mut_val = objects.BoolV(False, typ=p4specast.BoolT.INSTANCE, vid=2)
+        mut_val = objects.BoolV.FALSE
         filename2 = test_corpus.add_test_case(mut_val, coverage_hash="00c8", generation=3)  # was 200
         assert "gen3" in filename2
 
@@ -202,7 +202,7 @@ class TestFuzzCorpus(object):
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
 
         # Add test cases with different generations (out of order)
-        bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=1)
+        bool_val = objects.BoolV.TRUE
         test_corpus.add_test_case(bool_val, coverage_hash="gen1", generation=1)  # Gen 1
         test_corpus.add_test_case(bool_val, coverage_hash="gen5", generation=5)  # Gen 5
         test_corpus.add_test_case(bool_val, coverage_hash="gen0", generation=0)  # Gen 0 (seed)
@@ -225,7 +225,7 @@ class TestFuzzCorpus(object):
     def test_testcase_from_file_valid(self):
         """Test TestCase.from_file with valid files."""
         # Create a test case file manually
-        bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
+        bool_val = objects.BoolV.TRUE
         json_result = bool_val.tojson()
         json_content = rpyjson.dumps(json_result)
 
@@ -287,7 +287,7 @@ class TestFuzzCorpus(object):
 
     def test_testcase_from_file_different_generations(self):
         """Test TestCase.from_file with different generation numbers."""
-        bool_val = objects.BoolV(False, typ=p4specast.BoolT.INSTANCE, vid=99)
+        bool_val = objects.BoolV.FALSE
         json_content = rpyjson.dumps(bool_val.tojson())
 
         test_cases = [
@@ -307,7 +307,7 @@ class TestFuzzCorpus(object):
 
     def test_testcase_from_file_different_coverage_hashes(self):
         """Test TestCase.from_file with different coverage hash formats."""
-        bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=123)
+        bool_val = objects.BoolV.TRUE
         json_content = rpyjson.dumps(bool_val.tojson())
 
         valid_hashes = [
@@ -333,9 +333,9 @@ class TestFuzzCorpus(object):
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
 
         # Add test cases with different generations and coverage
-        bool_val1 = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=1)
-        bool_val2 = objects.BoolV(False, typ=p4specast.BoolT.INSTANCE, vid=2)
-        bool_val3 = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=3)
+        bool_val1 = objects.BoolV.TRUE
+        bool_val2 = objects.BoolV.FALSE
+        bool_val3 = objects.BoolV.TRUE
 
         # Add cases: older generation, unique coverage
         test_corpus.add_test_case(bool_val1, coverage_hash="old", generation=0)
@@ -380,7 +380,7 @@ class TestFuzzCorpus(object):
         """Test that duplicate coverage is properly handled."""
         test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
 
-        bool_val = objects.BoolV(True, typ=p4specast.BoolT.INSTANCE, vid=42)
+        bool_val = objects.BoolV.TRUE
 
         # Add cases with same coverage hash
         filename1 = test_corpus.add_test_case(bool_val, coverage_hash="common", generation=0)

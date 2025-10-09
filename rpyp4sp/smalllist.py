@@ -2,14 +2,15 @@ import py
 
 from rpython.rlib.unroll import unrolling_iterable
 from rpython.rlib        import jit, debug, objectmodel
+from rpython.annotator.model import SomeTuple
 
 def _not_null(s_arg, bookkeeper):
-    return not s_arg.can_be_None
+    return isinstance(s_arg, SomeTuple) or not s_arg.can_be_None
 
 def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                       attrname="list", factoryname="make", listgettername="_get_full_list",
                       listsizename="_get_size_list", gettername="_get_list",
-                      settername="_set_list"):
+                      settername="_set_list", append_list_unroll_safe=False):
     """
     This function is helpful if you have a class with a field storing a
     list and the list is often very small. Calling this function will inline
@@ -55,7 +56,11 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                         return result
                 raise IndexError
             def _get_full_list(self):
+                if not objectmodel.we_are_translated():
+                    assert not empty_list
                 return empty_list
+            def _get_full_list_copy(self):
+                return []
             def _set_list(self, i, val):
                 if nonull:
                     assert val is not None
@@ -79,7 +84,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                 listgettername : _get_full_list,
                 settername     : _set_list,
                 "_append_list" : _append_list0,
-                "_get_full_list_copy": _get_full_list,
+                "_get_full_list_copy": _get_full_list_copy,
                 "__init__"     : _init,
                 "_size_list"   : 0,
             }
@@ -176,9 +181,21 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             debug.make_sure_not_resized(elems)
             setattr(self, attrname, elems)
             cls.__init__(self, *args)
+
         def _append_list_arbitrary(self, value, *args):
-            reslist = getattr(self, attrname) + [value]
+            if nonull:
+                reslist = getattr(self, attrname) + [value]
+            else:
+                l = getattr(self, attrname)
+                reslist = [None] * (len(l) + 1)
+                i = 0
+                for i, oldvalue in enumerate(l):
+                    reslist[i] = oldvalue
+                reslist[i + 1] = value
             return cls_arbitrary(reslist, *args)
+
+        if append_list_unroll_safe:
+            _append_list_arbitrary = jit.unroll_safe(_append_list_arbitrary)
 
         methods = {
             gettername     : _get_arbitrary,

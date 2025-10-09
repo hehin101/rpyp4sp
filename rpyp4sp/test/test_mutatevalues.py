@@ -29,32 +29,20 @@ class TestBoolVMutation(object):
         rng = random.Random(42)
 
         # Test mutating True to False
-        true_val = BoolV(True)
+        true_val = BoolV.TRUE
         mutated = mutate_BoolV(true_val, rng)
 
         assert isinstance(mutated, BoolV)
         assert mutated.value is False
-        assert mutated.typ == true_val.typ
+        assert mutated.get_typ() == true_val.get_typ()
 
         # Test mutating False to True
-        false_val = BoolV(False)
+        false_val = BoolV.FALSE
         mutated = mutate_BoolV(false_val, rng)
 
         assert isinstance(mutated, BoolV)
         assert mutated.value is True
-        assert mutated.typ == false_val.typ
-
-    def test_preserves_type(self):
-        rng = random.Random(42)
-
-        # Create a BoolV with a specific type
-        bool_type = p4specast.BoolT.INSTANCE
-        typed_bool = BoolV(True, bool_type)
-
-        mutated = mutate_BoolV(typed_bool, rng)
-
-        assert mutated.typ is bool_type
-        assert mutated.value is False
+        assert mutated.get_typ() == false_val.get_typ()
 
 
 class TestNumVMutation(object):
@@ -63,7 +51,7 @@ class TestNumVMutation(object):
         # Test add/subtract strategy (strategy 0)
         rng = MockRng([0, 15])  # strategy=0, delta=5 (since -10 + (15 % 21) = 5)
 
-        original = NumV(integers.Integer.fromint(10), p4specast.IntT.INSTANCE)
+        original = NumV.make(integers.Integer.fromint(10), p4specast.IntT.INSTANCE)
         mutated = mutate_NumV(original, rng)
 
         assert isinstance(mutated, NumV)
@@ -74,7 +62,7 @@ class TestNumVMutation(object):
         # Test boundary values strategy (strategy 1)
         rng = MockRng([1, 0])  # strategy=1, boundary_choice=0 (zero)
 
-        original = NumV(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
+        original = NumV.make(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
         mutated = mutate_NumV(original, rng)
 
         assert mutated.value.toint() == 0
@@ -83,7 +71,7 @@ class TestNumVMutation(object):
         # Test bit flip strategy (strategy 2)
         rng = MockRng([2, 0])  # strategy=2, bit_pos=0 (flip LSB)
 
-        original = NumV(integers.Integer.fromint(10), p4specast.IntT.INSTANCE)  # 1010 in binary
+        original = NumV.make(integers.Integer.fromint(10), p4specast.IntT.INSTANCE)  # 1010 in binary
         mutated = mutate_NumV(original, rng)
 
         assert mutated.value.toint() == 11  # 1011 in binary (LSB flipped)
@@ -92,7 +80,7 @@ class TestNumVMutation(object):
         # Test new value generation for Nat
         rng = MockRng([3, 42])  # strategy=3, new_int=42
 
-        original = NumV(integers.Integer.fromint(100), p4specast.NatT.INSTANCE)
+        original = NumV.make(integers.Integer.fromint(100), p4specast.NatT.INSTANCE)
         mutated = mutate_NumV(original, rng)
 
         assert mutated.value.toint() == 42
@@ -102,7 +90,7 @@ class TestNumVMutation(object):
         # Test that Nat values stay non-negative even with negative operations
         rng = MockRng([1, 2])  # strategy=1, boundary_choice=2 (-1)
 
-        original = NumV(integers.Integer.fromint(5), p4specast.NatT.INSTANCE)
+        original = NumV.make(integers.Integer.fromint(5), p4specast.NatT.INSTANCE)
         mutated = mutate_NumV(original, rng)
 
         # Should be converted to positive
@@ -193,7 +181,7 @@ class TestTupleVMutation(object):
         # Single element tuple - mutate that element
         rng = MockRng([0])  # index=0 (only option), then BoolV will flip
 
-        elements = [BoolV(True)]
+        elements = [BoolV.TRUE]
         original = TupleV.make(elements)
         mutated = mutate_TupleV(original, rng)
 
@@ -207,8 +195,8 @@ class TestTupleVMutation(object):
         rng = MockRng([1, 0, 15])  # index=1, NumV strategy=0 (add/subtract), delta=5
 
         elements = [
-            BoolV(True),
-            NumV(integers.Integer.fromint(42), p4specast.IntT.INSTANCE),
+            BoolV.TRUE,
+            NumV.make(integers.Integer.fromint(42), p4specast.IntT.INSTANCE),
             TextV("hello")
         ]
         original = TupleV.make(elements)
@@ -230,7 +218,7 @@ class TestTupleVMutation(object):
         # Test that only the selected element changes
         rng = MockRng([0])  # index=0, mutate first element (BoolV)
 
-        bool_val = BoolV(False)
+        bool_val = BoolV.FALSE
         text_val = TextV("unchanged")
         elements = [bool_val, text_val]
         original = TupleV.make(elements)
@@ -259,7 +247,7 @@ class TestStructVMutation(object):
         rng = MockRng([0])  # index=0 (only option), then BoolV will flip
 
         struct_map = StructMap.EMPTY.add_field("flag")
-        field_values = [BoolV(True)]
+        field_values = [BoolV.TRUE]
         original = StructV.make(field_values, struct_map)
         mutated = mutate_StructV(original, rng)
 
@@ -276,8 +264,8 @@ class TestStructVMutation(object):
         struct_map = StructMap.EMPTY.add_field("name").add_field("age").add_field("active")
         field_values = [
             TextV("Alice"),
-            NumV(integers.Integer.fromint(25), p4specast.IntT.INSTANCE),
-            BoolV(True)
+            NumV.make(integers.Integer.fromint(25), p4specast.IntT.INSTANCE),
+            BoolV.TRUE
         ]
         original = StructV.make(field_values, struct_map)
         mutated = mutate_StructV(original, rng)
@@ -300,7 +288,7 @@ class TestStructVMutation(object):
         rng = MockRng([0, 0, 1, 33])  # index=0, TextV strategy=0 (insert), pos=1, char='A'
 
         struct_map = StructMap.EMPTY.add_field("message").add_field("count")
-        field_values = [TextV("hello"), NumV(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)]
+        field_values = [TextV("hello"), NumV.make(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)]
         original = StructV.make(field_values, struct_map)
         mutated = mutate_StructV(original, rng)
 
@@ -332,7 +320,7 @@ class TestCaseVMutation(object):
         # Create a simple mixop and case
         phrases = [[p4specast.AtomT("flag")]]
         mixop = p4specast.MixOp(phrases)
-        values = [BoolV(True)]
+        values = [BoolV.TRUE]
         original = CaseV.make(values, mixop)
         mutated = mutate_CaseV(original, rng)
 
@@ -355,8 +343,8 @@ class TestCaseVMutation(object):
         mixop = p4specast.MixOp(phrases)
         values = [
             TextV("Alice"),
-            NumV(integers.Integer.fromint(25), p4specast.IntT.INSTANCE),
-            BoolV(True)
+            NumV.make(integers.Integer.fromint(25), p4specast.IntT.INSTANCE),
+            BoolV.TRUE
         ]
         original = CaseV.make(values, mixop)
         mutated = mutate_CaseV(original, rng)
@@ -380,7 +368,7 @@ class TestCaseVMutation(object):
 
         phrases = [[p4specast.AtomT("message")], [p4specast.AtomT("count")]]
         mixop = p4specast.MixOp(phrases)
-        values = [TextV("hello"), NumV(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)]
+        values = [TextV("hello"), NumV.make(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)]
         original = CaseV.make(values, mixop)
         mutated = mutate_CaseV(original, rng)
 
@@ -407,7 +395,7 @@ class TestListVMutation(object):
         # Strategy 0: Mutate existing element
         rng = MockRng([0, 0])  # strategy=0, then BoolV will flip
 
-        elements = [BoolV(True), TextV("hello")]
+        elements = [BoolV.TRUE, TextV("hello")]
         original = ListV.make(elements)
         mutated = mutate_ListV(original, rng)
 
@@ -481,7 +469,7 @@ class TestListVMutation(object):
         # Strategy 3 on single element should fall back to mutation
         rng = MockRng([3, 0])  # strategy=3, then BoolV will flip
 
-        elements = [BoolV(True)]
+        elements = [BoolV.TRUE]
         original = ListV.make(elements)
         mutated = mutate_ListV(original, rng)
 
@@ -514,7 +502,7 @@ class TestOptVMutation(object):
         # Strategy 0: Mutate the contained value
         rng = MockRng([0])  # strategy=0, then BoolV will flip
 
-        inner_value = BoolV(True)
+        inner_value = BoolV.TRUE
         original = OptV(inner_value)
         mutated = mutate_OptV(original, rng)
 
@@ -522,7 +510,7 @@ class TestOptVMutation(object):
         assert mutated.value is not None
         assert isinstance(mutated.value, BoolV)
         assert mutated.value.value is False  # BoolV was flipped
-        assert mutated.typ == original.typ
+        assert mutated.get_typ() == original.get_typ()
 
     def test_make_none_strategy(self):
         # Strategy 1: Make it None
@@ -534,7 +522,7 @@ class TestOptVMutation(object):
 
         assert isinstance(mutated, OptV)
         assert mutated.value is None
-        assert mutated.typ == original.typ
+        assert mutated.get_typ() == original.get_typ()
 
 
 # ____________________________________________________________
@@ -552,7 +540,7 @@ class TestGenerateBoolV(object):
 
         assert isinstance(generated, BoolV)
         assert generated.value is True
-        assert generated.typ is bool_type
+        assert generated.get_typ() is bool_type
 
     def test_generate_false(self):
         # Test generating False
@@ -563,7 +551,7 @@ class TestGenerateBoolV(object):
 
         assert isinstance(generated, BoolV)
         assert generated.value is False
-        assert generated.typ is bool_type
+        assert generated.get_typ() is bool_type
 
     def test_random_distribution(self):
         # Test with real random to verify both values can be generated
@@ -592,7 +580,7 @@ class TestGenerateNumV(object):
         assert isinstance(generated, NumV)
         assert generated.value.toint() == 42
         assert generated.what is p4specast.NatT.INSTANCE
-        assert generated.typ is num_type
+        assert generated.get_typ() is num_type
 
     def test_generate_int(self):
         # Test generating integer (can be negative)
@@ -604,7 +592,7 @@ class TestGenerateNumV(object):
         assert isinstance(generated, NumV)
         assert generated.value.toint() == -458
         assert generated.what is p4specast.IntT.INSTANCE
-        assert generated.typ is num_type
+        assert generated.get_typ() is num_type
 
     def test_nat_range(self):
         # Test that Nat values are in expected range
@@ -638,7 +626,7 @@ class TestGenerateTextV(object):
 
         assert isinstance(generated, TextV)
         assert generated.value == ""
-        assert generated.typ is text_type
+        assert generated.get_typ() is text_type
 
     def test_generate_random_string(self):
         # Test strategy 1: random string
@@ -652,7 +640,7 @@ class TestGenerateTextV(object):
         assert isinstance(generated, TextV)
         assert len(generated.value) == 3
         assert generated.value == "ABC"
-        assert generated.typ is text_type
+        assert generated.get_typ() is text_type
 
     def test_generate_common_string(self):
         # Test strategy 2: common test strings
@@ -663,7 +651,7 @@ class TestGenerateTextV(object):
 
         assert isinstance(generated, TextV)
         assert generated.value == "hello"
-        assert generated.typ is text_type
+        assert generated.get_typ() is text_type
 
     def test_generate_special_char_only(self):
         # Test strategy 3: special character only
@@ -674,7 +662,7 @@ class TestGenerateTextV(object):
 
         assert isinstance(generated, TextV)
         assert generated.value == '"'
-        assert generated.typ is text_type
+        assert generated.get_typ() is text_type
 
     def test_generate_special_char_with_prefix(self):
         # Test strategy 3: special character with prefix
@@ -685,7 +673,7 @@ class TestGenerateTextV(object):
 
         assert isinstance(generated, TextV)
         assert generated.value == 'a"'
-        assert generated.typ is text_type
+        assert generated.get_typ() is text_type
 
     def test_random_distribution(self):
         # Test with real random to verify various strategies work
@@ -725,7 +713,7 @@ class TestGenerateOptV(object):
 
         assert isinstance(generated, OptV)
         assert generated.value is None
-        assert generated.typ is opt_type
+        assert generated.get_typ() is opt_type
 
     def test_generate_some_bool(self):
         # Test generating Some(BoolV) (choice=1, then BoolV=True)
@@ -739,7 +727,7 @@ class TestGenerateOptV(object):
         assert generated.value is not None
         assert isinstance(generated.value, BoolV)
         assert generated.value.value is True
-        assert generated.typ is opt_type
+        assert generated.get_typ() is opt_type
 
     def test_generate_some_num(self):
         # Test generating Some(NumV) (choice=1, then NumV=42)
@@ -753,7 +741,7 @@ class TestGenerateOptV(object):
         assert generated.value is not None
         assert isinstance(generated.value, NumV)
         assert generated.value.value.toint() == 42
-        assert generated.typ is opt_type
+        assert generated.get_typ() is opt_type
 
     def test_generate_some_text(self):
         # Test generating Some(TextV) (choice=1, then TextV="")
@@ -767,7 +755,7 @@ class TestGenerateOptV(object):
         assert generated.value is not None
         assert isinstance(generated.value, TextV)
         assert generated.value.value == ""
-        assert generated.typ is opt_type
+        assert generated.get_typ() is opt_type
 
     def test_random_distribution(self):
         # Test with real random to verify both None and Some values can be generated
@@ -798,7 +786,7 @@ class TestFindSubvalues(object):
 
     def test_simple_value(self):
         # Test with simple values that have no subvalues
-        bool_val = BoolV(True)
+        bool_val = BoolV.TRUE
         subvalues = find_subvalues(bool_val)
 
         assert len(subvalues) == 1
@@ -840,7 +828,7 @@ class TestFindSubvalues(object):
 
     def test_opt_some(self):
         # Test OptV with a value
-        inner_bool = BoolV(True)
+        inner_bool = BoolV.TRUE
         opt_some = OptV(inner_bool)
         subvalues = find_subvalues(opt_some)
 
@@ -850,7 +838,7 @@ class TestFindSubvalues(object):
 
     def test_tuple_flat(self):
         # Test flat tuple
-        bool_val = BoolV(True)
+        bool_val = BoolV.TRUE
         num_val = NumV(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
         text_val = TextV("hello")
 
@@ -865,7 +853,7 @@ class TestFindSubvalues(object):
 
     def test_list_flat(self):
         # Test flat list
-        bool_val = BoolV(True)
+        bool_val = BoolV.TRUE
         text_val = TextV("hello")
 
         list_val = ListV.make([bool_val, text_val])
@@ -878,7 +866,7 @@ class TestFindSubvalues(object):
 
     def test_struct_flat(self):
         # Test flat struct
-        bool_val = BoolV(True)
+        bool_val = BoolV.TRUE
         num_val = NumV(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
 
         struct_map = StructMap.EMPTY.add_field("flag").add_field("count")
@@ -892,7 +880,7 @@ class TestFindSubvalues(object):
 
     def test_nested_tuple_in_tuple(self):
         # Test nested structure: tuple containing tuple
-        inner_bool = BoolV(True)
+        inner_bool = BoolV.TRUE
         inner_text = TextV("inner")
         inner_tuple = TupleV.make([inner_bool, inner_text])
 
@@ -911,7 +899,7 @@ class TestFindSubvalues(object):
 
     def test_nested_opt_in_list(self):
         # Test nested structure: list containing OptV
-        inner_bool = BoolV(False)
+        inner_bool = BoolV.FALSE
         opt_val = OptV(inner_bool)
         text_val = TextV("hello")
 
@@ -928,7 +916,7 @@ class TestFindSubvalues(object):
     def test_deeply_nested(self):
         # Test deeply nested structure to verify breadth-first order
         # Structure: tuple([list([bool, opt(text)]), num])
-        inner_bool = BoolV(True)
+        inner_bool = BoolV.TRUE
         inner_text = TextV("deep")
         inner_opt = OptV(inner_text)
         inner_list = ListV.make([inner_bool, inner_opt])
@@ -954,7 +942,7 @@ class TestMutateSubvalueWithPath(object):
         # Empty path should mutate the root value itself
         rng = MockRng([0])
 
-        bool_val = BoolV(True)
+        bool_val = BoolV.TRUE
         mutated = mutate_subvalue_with_path(bool_val, [], rng)
 
         assert isinstance(mutated, BoolV)
@@ -964,7 +952,7 @@ class TestMutateSubvalueWithPath(object):
         # Test mutating a single element in a tuple
         rng = MockRng([0])  # BoolV will flip
 
-        bool_val = BoolV(True)
+        bool_val = BoolV.TRUE
         text_val = TextV("hello")
         tuple_val = TupleV.make([bool_val, text_val])
 
@@ -1021,7 +1009,7 @@ class TestMutateSubvalueWithPath(object):
         # Test mutating the value inside an OptV
         rng = MockRng([0])  # mutate=0, BoolV will flip
 
-        inner_bool = BoolV(True)
+        inner_bool = BoolV.TRUE
         opt_val = OptV(inner_bool)
 
         # Mutate the contained value (index 0)
@@ -1037,7 +1025,7 @@ class TestMutateSubvalueWithPath(object):
         rng = MockRng([0])  # BoolV will flip
 
         # Structure: tuple([list([bool, text]), num])
-        inner_bool = BoolV(True)
+        inner_bool = BoolV.TRUE
         inner_text = TextV("nested")
         inner_list = ListV.make([inner_bool, inner_text])
 
@@ -1069,7 +1057,7 @@ class TestMutateSubvalueWithPath(object):
 
         inner_text = TextV("deep")
         inner_opt = OptV(inner_text)
-        inner_bool = BoolV(True)
+        inner_bool = BoolV.TRUE
         inner_list = ListV.make([inner_bool, inner_opt])
 
         outer_num = NumV(integers.Integer.fromint(99), p4specast.IntT.INSTANCE)
@@ -1093,7 +1081,7 @@ class TestMutateSubvalueWithPath(object):
         # Test error handling for invalid paths
         rng = MockRng([])
 
-        tuple_val = TupleV.make([BoolV(True)])
+        tuple_val = TupleV.make([BoolV.TRUE])
 
         # Index 1 is out of bounds for single-element tuple
         try:
@@ -1106,7 +1094,7 @@ class TestMutateSubvalueWithPath(object):
         # Test error when trying to follow path into leaf value
         rng = MockRng([])
 
-        bool_val = BoolV(True)
+        bool_val = BoolV.TRUE
 
         # Can't follow path [0] into a BoolV
         try:
@@ -1135,7 +1123,7 @@ class TestMutate(object):
         # Test mutation of simple leaf values
         rng = MockRng([0, 0])  # mutate=0, select index 0 (the only subvalue), then BoolV will flip
 
-        bool_val = BoolV(True)
+        bool_val = BoolV.TRUE
         mutated = mutate(bool_val, rng)
 
         assert isinstance(mutated, BoolV)
@@ -1143,8 +1131,8 @@ class TestMutate(object):
 
     def test_tuple_random_selection(self):
         # Test that different elements can be selected in a tuple
-        # Create tuple with [BoolV(True), TextV("hello"), NumV(42)]
-        bool_val = BoolV(True)
+        # Create tuple with [BoolV.TRUE, TextV("hello"), NumV(42)]
+        bool_val = BoolV.TRUE
         text_val = TextV("hello")
         num_val = NumV(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
         tuple_val = TupleV.make([bool_val, text_val, num_val])
@@ -1172,7 +1160,7 @@ class TestMutate(object):
         inner_text = TextV("nested")
         inner_list = ListV.make([inner_text, deep_opt])
 
-        outer_bool = BoolV(True)
+        outer_bool = BoolV.TRUE
         outer_tuple = TupleV.make([outer_bool, inner_list])
 
         # Find all subvalues to understand the structure
@@ -1199,10 +1187,10 @@ class TestMutate(object):
         # Test that mutation can reach all depths with real randomness
         # Use a simpler structure that won't have structure-changing mutations
         # Structure: tuple([bool, opt(bool)])
-        inner_bool = BoolV(False, p4specast.BoolT.INSTANCE)
+        inner_bool = BoolV.FALSE
         inner_opt = OptV(inner_bool, p4specast.BoolT.INSTANCE.opt_of())
-        outer_bool = BoolV(True, p4specast.BoolT.INSTANCE)
-        outer_tuple = TupleV.make([outer_bool, inner_opt], p4specast.TupleT([outer_bool.typ, inner_opt.typ]))
+        outer_bool = BoolV.TRUE
+        outer_tuple = TupleV.make([outer_bool, inner_opt], p4specast.TupleT([outer_bool.get_typ(), inner_opt.get_typ()]))
 
         rng = random.Random(42)
         ctx = make_context()

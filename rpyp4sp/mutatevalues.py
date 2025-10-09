@@ -8,7 +8,7 @@ def mutate_BoolV(value, rng):
     """Mutate a BoolV by flipping its boolean value."""
     assert isinstance(value, BoolV)
     # Simple mutation: flip the boolean value
-    return BoolV(not value.value, value.typ)
+    return BoolV.make(not value.value, value.get_typ())
 
 
 def mutate_NumV(value, rng):
@@ -57,7 +57,7 @@ def mutate_NumV(value, rng):
     if isinstance(value.what, p4specast.NatT) and new_val.toint() < 0:
         new_val = new_val.abs()
 
-    return NumV(new_val, value.what, value.typ)
+    return NumV.make(new_val, value.what, value.get_typ())
 
 
 def mutate_TextV(value, rng):
@@ -280,7 +280,7 @@ def generate_BoolV(typ, rng):
     """Generate a fresh BoolV from a BoolT type."""
     assert isinstance(typ, p4specast.BoolT)
     value = rng.randint(0, 1) == 1
-    return BoolV(value, typ)
+    return BoolV.make(value, typ)
 
 
 def generate_NumV(typ, rng):
@@ -295,7 +295,7 @@ def generate_NumV(typ, rng):
         value_int = rng.randint(-500, 500)
 
     value = integers.Integer.fromint(value_int)
-    return NumV(value, typ.typ, typ)
+    return NumV.make(value, typ.typ, typ)
 
 
 def generate_TextV(typ, rng):
