@@ -1094,7 +1094,7 @@ class __extend__(p4specast.HoldI):
         #    (iterexps : iterexp list) (holdcase : holdcase) : Ctx.t * Sign.t =
         #  (* Copy the current coverage information *)
         #  let cover_backup = !(ctx.cover) in
-        cover_backup = ctx._cover
+        cover_backup = ctx.get_cover()
         #  (* Evaluate the hold condition *)
         #  let ctx, cond, value_cond = eval_hold_cond_iter ctx id notexp iterexps in
         ctx, cond = eval_hold_cond_iter(ctx, self)
@@ -1113,7 +1113,7 @@ class __extend__(p4specast.HoldI):
         #        eval_instrs ctx Cont instrs_not_hold)
                 return eval_instrs(ctx, Cont(), holdcase.hold_instrs)
             else:
-                ctx = ctx.copy_and_change(cover=cover_backup)
+                ctx = ctx.restore_cover(cover_backup)
                 return eval_instrs(ctx, holdcase.nothold_instrs)
         #  | HoldH (instrs_hold, phantom_opt) ->
         elif isinstance(holdcase, p4specast.HoldH):
@@ -1131,7 +1131,7 @@ class __extend__(p4specast.HoldI):
         #  | NotHoldH (instrs_not_hold, phantom_opt) ->
         elif isinstance(holdcase, p4specast.NotHoldH):
         #      ctx.cover := cover_backup;
-            ctx = ctx.copy_and_change(cover=cover_backup)
+            ctx = ctx.restore_cover(cover_backup)
         #      let ctx =
         #        match phantom_opt with
         #        | Some (pid, _) -> Ctx.cover ctx cond pid vid

@@ -49,7 +49,7 @@ class EnvKeys(object):
     @jit.elidable
     def add_key(self, var_name, var_iter):
         # type: (str, str) -> EnvKeys
-        if (self._next_var_name is not None and 
+        if (self._next_var_name is not None and
                 self._next_var_name == var_name and
                 self._next_var_iter == var_iter):
             return self._next_env_keys
@@ -202,26 +202,24 @@ FenvDict.EMPTY = FenvDict.make0()
 @smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
 class Context(sign.Sign):
     _immutable_fields_ = ['glbl', 'values_input[*]',
-                          'tdenv', 'fenv', 'venv_keys', 'cover']
-    def __init__(self, glbl=None, tdenv=None, fenv=None, venv_keys=None, cover=None):
+                          'tdenv', 'fenv', 'venv_keys']
+    _attrs_ = _immutable_fields_
+    def __init__(self, glbl=None, tdenv=None, fenv=None, venv_keys=None):
         self.glbl = GlobalContext() if glbl is None else glbl
         # the local context is inlined
         self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY # type: TDenvDict
         self.fenv = fenv if fenv is not None else FenvDict.EMPTY # type: FenvDict
         self.venv_keys = venv_keys if venv_keys is not None else EnvKeys.EMPTY # type: EnvKeys
-        self._cover = cover if cover is not None else Coverage.EMPTY
-        assert isinstance(self._cover, Coverage)
 
-    def copy_and_change(self, tdenv=None, fenv=None, venv_keys=None, venv_values=None, cover=None):
+    def copy_and_change(self, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
         tdenv = tdenv if tdenv is not None else self.tdenv
         fenv = fenv if fenv is not None else self.fenv
         venv_keys = venv_keys if venv_keys is not None else self.venv_keys
         venv_values = venv_values if venv_values is not None else self._get_full_list()
-        cover = cover if cover is not None else self._cover
-        return Context.make(venv_values, self.glbl, tdenv, fenv, venv_keys, cover)
+        return Context.make(venv_values, self.glbl, tdenv, fenv, venv_keys)
 
     def copy_and_change_append_venv(self, value, venv_keys):
-        return self._append_list(value, self.glbl, self.tdenv, self.fenv, venv_keys, self._cover)
+        return self._append_list(value, self.glbl, self.tdenv, self.fenv, venv_keys)
 
     def load_spec(self, spec, file_content, spec_dirname, filename, derive=False):
         self.glbl.file_content = file_content
@@ -235,7 +233,7 @@ class Context(sign.Sign):
                 assert isinstance(definition, p4specast.DecD)
                 self.glbl.fenv[definition.id.value] = definition
         self.glbl.filename = filename
-        self.derive = derive
+        self.glbl.derive = derive
 
     def localize(self):
         return self.copy_and_change(tdenv=TDenvDict.EMPTY, fenv=FenvDict.EMPTY, venv_keys=EnvKeys.EMPTY, venv_values=[])
@@ -330,15 +328,19 @@ class Context(sign.Sign):
         return func
 
     def commit(self, sub_ctx):
-        return self.copy_and_change(cover=self._cover.union(sub_ctx._cover))
+        return self
 
     def cover(self, is_hit, phantom, value=None):
-        if phantom is None:
-            return self
-        new_cover = self._cover.cover(is_hit, phantom, value)
-        if new_cover is self._cover:
-            return self
-        return self.copy_and_change(cover=new_cover)
+        return self
+
+    def get_cover(self):
+        return None
+
+    def restore_cover(self, cover_backup):
+        return self
+
+    def copy_and_change_cover(self, cover):
+        return self
 
     @jit.unroll_safe
     def sub_opt(self, vars):
@@ -436,6 +438,53 @@ class Context(sign.Sign):
 
     def sign_get_ctx(self):
         return self
+
+@smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
+class ContextWithCoverage(Context):
+    _immutable_fields_ = ['glbl', 'values_input[*]',
+                          'tdenv', 'fenv', 'venv_keys', '_cover']
+    def __init__(self, glbl=None, tdenv=None, fenv=None, venv_keys=None, cover=None):
+        self.glbl = GlobalContext() if glbl is None else glbl
+        # the local context is inlined
+        self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY # type: TDenvDict
+        self.fenv = fenv if fenv is not None else FenvDict.EMPTY # type: FenvDict
+        self.venv_keys = venv_keys if venv_keys is not None else EnvKeys.EMPTY # type: EnvKeys
+        self._cover = cover if cover is not None else Coverage.EMPTY
+        assert isinstance(self._cover, Coverage)
+
+    def copy_and_change(self, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
+        tdenv = tdenv if tdenv is not None else self.tdenv
+        fenv = fenv if fenv is not None else self.fenv
+        venv_keys = venv_keys if venv_keys is not None else self.venv_keys
+        venv_values = venv_values if venv_values is not None else self._get_full_list()
+        return ContextWithCoverage.make(venv_values, self.glbl, tdenv, fenv, venv_keys, self._cover)
+
+    def copy_and_change_append_venv(self, value, venv_keys):
+        return self._append_list(value, self.glbl, self.tdenv, self.fenv, venv_keys, self._cover)
+
+    def copy_and_change_cover(self, cover):
+        venv_values = self._get_full_list()
+        return ContextWithCoverage.make(venv_values, self.glbl, self.tdenv, self.fenv, self.venv_keys, cover)
+
+    def commit(self, sub_ctx):
+        if isinstance(sub_ctx, ContextWithCoverage):
+            return self.copy_and_change_cover(self._cover.union(sub_ctx._cover))
+        else:
+            return self
+
+    def cover(self, is_hit, phantom, value=None):
+        if phantom is None:
+            return self
+        new_cover = self._cover.cover(is_hit, phantom, value)
+        if new_cover is self._cover:
+            return self
+        return self.copy_and_change_cover(new_cover)
+
+    def get_cover(self):
+        return self._cover
+
+    def restore_cover(self, cover_backup):
+        return self.copy_and_change_cover(cover_backup)
 
 class SubListIter(object):
     def __init__(self, ctx, varlist, length, values_batch):

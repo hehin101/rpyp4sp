@@ -6,7 +6,7 @@ import sys
 import time
 from rpython.rlib import objectmodel, rarithmetic
 from rpython.rlib.rrandom import Random
-from rpyp4sp import objects, mutatevalues, corpus, interp, rpyjson, p4specast
+from rpyp4sp import objects, mutatevalues, corpus, interp, rpyjson, p4specast, context
 from rpyp4sp.interp import P4Error
 from rpyp4sp.corpus import EmptyCorpusError
 
@@ -115,7 +115,7 @@ def run_test_case(ctx, value, config):
 
         # Extract coverage from result context
         if resctx is not None:
-            coverage_hash = resctx._cover.tostr()
+            coverage_hash = resctx.get_cover().tostr()
         else:
             coverage_hash = 'failed'
 
@@ -129,7 +129,7 @@ def run_test_case(ctx, value, config):
         error_msg = str(e.msg)
         coverage_hash = 'exception' + hex(objectmodel.compute_hash(e.msg))[2:]
         if e.ctx:
-            coverage_hash += "Z" + e.ctx._cover.tostr_hit()
+            coverage_hash += "Z" + e.ctx.get_cover().tostr_hit()
         res = TestResult(coverage_hash, crashed=True, error_msg=error_msg)
         res.ctx = e.ctx
         return res
@@ -280,12 +280,12 @@ def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
                             if stats.seen_error_messages[result.error_msg] == 1:
                                 print("Saved crash as: %s" % crash_filename)
                         if result.ctx is not None:
-                            for pid in result.ctx._cover.pidset_hit.to_list():
+                            for pid in result.ctx.get_cover().pidset_hit.to_list():
                                 total = stats.if_new_return_total_size(pid, 'error hit')
                                 if total:
                                     print("NEW ERROR HIT at iteration %d: %s (total %s)" % (iteration, pid, total))
                                     selected.descendants_produced += 1
-                            for pid in result.ctx._cover.pidset_miss.to_list():
+                            for pid in result.ctx.get_cover().pidset_miss.to_list():
                                 total = stats.if_new_return_total_size(pid, 'error miss')
                                 if total:
                                     print("NEW ERROR MISS at iteration %d: %s (total %s)" % (iteration, pid, total))
@@ -296,12 +296,12 @@ def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
 
                     else:
                         if result.ctx is not None:
-                            for pid in result.ctx._cover.pidset_hit.to_list():
+                            for pid in result.ctx.get_cover().pidset_hit.to_list():
                                 total = stats.if_new_return_total_size(pid, 'hit')
                                 if total:
                                     print("NEW HIT at iteration %d: %s (total %s)" % (iteration, pid, total))
                                     selected.descendants_produced += 1
-                            for pid in result.ctx._cover.pidset_miss.to_list():
+                            for pid in result.ctx.get_cover().pidset_miss.to_list():
                                 total = stats.if_new_return_total_size(pid, 'miss')
                                 if total:
                                     print("NEW MISS at iteration %d: %s (total %s)" % (iteration, pid, total))
@@ -342,109 +342,3 @@ def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
     return stats
 
 
-# Example usage function
-def fuzz_example():
-    """Example of how to use the fuzzing system."""
-    import random
-
-    # Configuration
-    config = FuzzConfig(
-        corpus_dir="./example_corpus",
-        max_iterations=1000,
-        mutation_budget=10
-    )
-
-    # Mock components for demonstration
-    class MockContext:
-        class MockCover:
-            def tostr(self):
-                return "mockcoverage123"
-        def __init__(self):
-            self._cover = MockContext.MockCover()
-
-    ctx = MockContext()
-    rng = random.Random(42)  # Reproducible random seed
-
-    # No seed files for this example
-    seed_files = []
-
-    # Run fuzzing
-    stats = fuzz_main_loop(config, seed_files, ctx, rng)
-
-    return stats
-
-
-def main():
-    """Main entry point for the fuzzing system."""
-    import argparse
-    from rpyp4sp import context
-    from rpyp4sp.test.test_interp import make_context
-
-    parser = argparse.ArgumentParser(description="P4 Greybox Fuzzer")
-    parser.add_argument("--corpus-dir", default="./fuzz_corpus",
-                       help="Directory to store corpus files (default: ./fuzz_corpus)")
-    parser.add_argument("--max-iterations", type=int, default=10000,
-                       help="Maximum fuzzing iterations (default: 10000)")
-    parser.add_argument("--mutation-budget", type=int, default=50,
-                       help="Maximum mutations per iteration (default: 50)")
-    parser.add_argument("--corpus-max-size", type=int, default=1000,
-                       help="Maximum corpus size before minimization (default: 1000)")
-    parser.add_argument("--seed-files", nargs="*", default=[],
-                       help="JSON files containing seed test cases")
-    parser.add_argument("--random-seed", type=int, default=42,
-                       help="Random seed for reproducibility (default: 42)")
-
-    args = parser.parse_args()
-
-    print("=== P4 Greybox Fuzzer ===")
-    print("Corpus directory: %s" % args.corpus_dir)
-    print("Max iterations: %d" % args.max_iterations)
-    print("Mutation budget: %d" % args.mutation_budget)
-    print("Seed files: %s" % (args.seed_files if args.seed_files else "None"))
-    print("Random seed: %d" % args.random_seed)
-    print("")
-
-    # Create fuzzing configuration
-    config = FuzzConfig(
-        corpus_dir=args.corpus_dir,
-        max_iterations=args.max_iterations,
-        mutation_budget=args.mutation_budget,
-        corpus_max_size=args.corpus_max_size
-    )
-
-    # Initialize random number generator
-    import random
-    rng = random.Random(args.random_seed)
-
-    try:
-        # Create real interpreter context
-        print("Initializing interpreter context...")
-        ctx = make_context()
-        print("Real interpreter context initialized successfully")
-
-        # Run fuzzing
-        print("Starting fuzzing session...")
-        print("Press Ctrl+C to stop fuzzing and view results")
-        print("")
-
-        stats = fuzz_main_loop(config, args.seed_files, ctx, rng)
-
-        print("\n=== Final Results ===")
-        print("Fuzzing completed successfully!")
-        return 0
-
-    except KeyboardInterrupt:
-        print("\n=== Fuzzing Interrupted ===")
-        print("Fuzzing stopped by user")
-        return 0
-
-    except Exception as e:
-        print("\n=== Fuzzing Error ===")
-        print("Error: %s" % str(e))
-        import traceback
-        traceback.print_exc()
-        return 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())

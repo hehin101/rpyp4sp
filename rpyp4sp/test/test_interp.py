@@ -4,7 +4,7 @@ import pytest
 import os
 
 from rpyp4sp.rpyjson import loads
-from rpyp4sp.context import Context
+from rpyp4sp.context import Context, ContextWithCoverage
 from rpyp4sp import p4specast, objects, interp, rpyjson
 
 currfile = os.path.abspath(__file__)
@@ -32,13 +32,17 @@ def load():
         defs.append(p4specast.Def.fromjson(d, cache))
     return defs, file_content, spec_dirname
 
-def make_context(loaded=[]):
-    if loaded:
-        return loaded[0]
+def make_context(loaded={}, track_coverage=False):
+    key = track_coverage
+    if key in loaded:
+        return loaded[key]
     spec, file_content, spec_dirname = load()
-    ctx = Context.make0()
+    if track_coverage:
+        ctx = ContextWithCoverage.make0()
+    else:
+        ctx = Context.make0()
     ctx.load_spec(spec, file_content, spec_dirname, 'dummy')
-    loaded.append(ctx)
+    loaded[key] = ctx
     return ctx
 
 
@@ -164,7 +168,7 @@ def test_eval_num_expr():
 def test_type_alpha():
     input_values = [objects.CaseV.make([objects.TextV('metadata', p4specast.VarT(p4specast.Id('id', p4specast.NO_REGION), [])), objects.ListV.make([], p4specast.IterT(p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 35, 7), p4specast.Position('spec/1a-syntax-el.watsup', 35, 13))), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region(p4specast.Position('spec/2c3-runtime-type-subst.watsup', 16, 29), p4specast.Position('spec/2c3-runtime-type-subst.watsup', 16, 32))), [])]), p4specast.List()))], p4specast.MixOp([[p4specast.AtomT('StructT', p4specast.Region(p4specast.Position('spec/2c1-runtime-type.watsup', 66, 4), p4specast.Position('spec/2c1-runtime-type.watsup', 66, 11)))], [], []]), p4specast.VarT(p4specast.Id('datatyp', p4specast.Region(p4specast.Position('spec/2c1-runtime-type.watsup', 59, 7), p4specast.Position('spec/2c1-runtime-type.watsup', 59, 14))), [])), objects.CaseV.make([objects.TextV('metadata', p4specast.VarT(p4specast.Id('id', p4specast.NO_REGION), [])), objects.ListV.make([], p4specast.IterT(p4specast.TupleT([p4specast.VarT(p4specast.Id('member', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 35, 7), p4specast.Position('spec/1a-syntax-el.watsup', 35, 13))), []), p4specast.VarT(p4specast.Id('typ', p4specast.Region(p4specast.Position('spec/2c3-runtime-type-subst.watsup', 16, 29), p4specast.Position('spec/2c3-runtime-type-subst.watsup', 16, 32))), [])]), p4specast.List()))], p4specast.MixOp([[p4specast.AtomT('StructT', p4specast.Region(p4specast.Position('spec/2c1-runtime-type.watsup', 66, 4), p4specast.Position('spec/2c1-runtime-type.watsup', 66, 11)))], [], []]), p4specast.VarT(p4specast.Id('datatyp', p4specast.Region(p4specast.Position('spec/2c1-runtime-type.watsup', 59, 7), p4specast.Position('spec/2c1-runtime-type.watsup', 59, 14))), []))]
     name = 'Type_alpha'
-    ctx = make_context()
+    ctx = make_context(track_coverage=True)
     resctx, values = interp.invoke_rel(ctx, p4specast.AtomT(name, None), input_values)
     assert repr(resctx._cover) == 'Coverage(ImmutableIntSet.from_list([]), ImmutableIntSet.from_list([38, 39, 40, 41]))'
     assert values == []
