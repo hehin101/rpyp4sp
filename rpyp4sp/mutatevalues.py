@@ -276,16 +276,18 @@ def mutate_OptV(value, rng):
 # ____________________________________________________________
 # Fresh value generation from types
 
-def generate_BoolV(typ, rng):
+def generate_BoolV(typ, rng, storetyp=None):
     """Generate a fresh BoolV from a BoolT type."""
     assert isinstance(typ, p4specast.BoolT)
+    if storetyp is None: storetyp = typ
     value = rng.randint(0, 1) == 1
-    return BoolV.make(value, typ)
+    return BoolV.make(value, storetyp)
 
 
-def generate_NumV(typ, rng):
+def generate_NumV(typ, rng, storetyp=None):
     """Generate a fresh NumV from a NumT type."""
     assert isinstance(typ, p4specast.NumT)
+    if storetyp is None: storetyp = typ
 
     if isinstance(typ.typ, p4specast.NatT):
         # Natural numbers: generate 0 to reasonable upper bound
@@ -295,12 +297,13 @@ def generate_NumV(typ, rng):
         value_int = rng.randint(-500, 500)
 
     value = integers.Integer.fromint(value_int)
-    return NumV.make(value, typ.typ, typ)
+    return NumV.make(value, typ.typ, storetyp)
 
 
-def generate_TextV(typ, rng):
+def generate_TextV(typ, rng, storetyp=None):
     """Generate a fresh TextV from a TextT type."""
     assert isinstance(typ, p4specast.TextT)
+    if storetyp is None: storetyp = typ
 
     # Choose string generation strategy
     strategy = rng.randint(0, 3)
@@ -330,12 +333,13 @@ def generate_TextV(typ, rng):
             prefix = chr(rng.randint(97, 122))  # lowercase letter
             text = prefix + char
 
-    return TextV(text, typ)
+    return TextV(text, storetyp)
 
 
-def generate_OptV(typ, rng, ctx=None, maxdepth=10):
+def generate_OptV(typ, rng, ctx=None, maxdepth=10, storetyp=None):
     """Generate a fresh OptV from an OptT type (IterT with Opt.INSTANCE)."""
     assert isinstance(typ, p4specast.IterT) and typ.iter is p4specast.Opt.INSTANCE
+    if storetyp is None: storetyp = typ
 
     # Choose whether to generate None or a value
     if maxdepth <= 0 or rng.randint(0, 1) == 0:
@@ -344,58 +348,60 @@ def generate_OptV(typ, rng, ctx=None, maxdepth=10):
     else:
         # Generate a value of the inner type
         inner_value = generate_value(typ.typ, rng, ctx, maxdepth)
-        return OptV(inner_value, typ)
+        return OptV(inner_value, storetyp)
 
-def generation_CaseV(typ, rng, ctx, maxdepth=10):
+def generate_CaseV(typ, rng, ctx, maxdepth=10, storetyp=None):
+    if storetyp is None: storetyp = typ
     case = typ.cases[rng.randint(0, len(typ.cases) - 1)]
     values = []
     for typ in case.typs:
         values.append(generate_value(typ, rng, ctx, maxdepth))
-    return CaseV.make(values, case.mixop, typ)
+    return CaseV.make(values, case.mixop, storetyp)
 
-def generate_ListV(typ, rng, ctx=None, maxdepth=10):
+def generate_ListV(typ, rng, ctx=None, maxdepth=10, storetyp=None):
+    if storetyp is None: storetyp = typ
     if maxdepth <= 0:
         content = []
     else:
         length = rng.randint(0, 10)
         content = [generate_value(typ.typ, rng, ctx, maxdepth) for _ in range(length)]
-    return ListV.make(content, typ)
+    return ListV.make(content, storetyp)
 
-def generate_TupleV(typ, rng, ctx=None, maxdepth=10):
+def generate_TupleV(typ, rng, ctx=None, maxdepth=10, storetyp=None):
     """Generate a fresh TupleV from a TupleT type."""
+    if storetyp is None: storetyp = typ
     assert isinstance(typ, p4specast.TupleT)
 
     # Generate values for each element type
-    content = []
-    for element_typ in typ.elts:
-        content.append(generate_value(element_typ, rng, ctx, maxdepth))
+    content = [None] * len(typ.elts)
+    for i, element_typ in enumerate(typ.elts):
+        content[i] = generate_value(element_typ, rng, ctx, maxdepth)
 
-    return TupleV.make(content[:], typ)
+    return TupleV.make(content, storetyp)
 
-def generate_value(typ, rng, ctx=None, maxdepth=-sys.maxint):
+def generate_value(typ, rng, ctx=None, maxdepth=-sys.maxint, storetyp=None):
     """Dispatch to the appropriate generation function based on type."""
     if maxdepth == -sys.maxint:
         maxdepth = rng.randint(1, 7)
     if isinstance(typ, p4specast.BoolT):
-        return generate_BoolV(typ, rng)
+        return generate_BoolV(typ, rng, storetyp)
     elif isinstance(typ, p4specast.NumT):
-        return generate_NumV(typ, rng)
+        return generate_NumV(typ, rng, storetyp)
     elif isinstance(typ, p4specast.TextT):
-        return generate_TextV(typ, rng)
+        return generate_TextV(typ, rng, storetyp)
     elif isinstance(typ, p4specast.IterT) and isinstance(typ.iter, p4specast.Opt):
-        return generate_OptV(typ, rng, ctx, maxdepth - 1)
+        return generate_OptV(typ, rng, ctx, maxdepth - 1, storetyp)
     elif isinstance(typ, p4specast.IterT) and isinstance(typ.iter, p4specast.List):
-        return generate_ListV(typ, rng, ctx, maxdepth - 1)
+        return generate_ListV(typ, rng, ctx, maxdepth - 1, storetyp)
     elif isinstance(typ, p4specast.VariantT):
-        return generation_CaseV(typ, rng, ctx, maxdepth - 1)
+        return generate_CaseV(typ, rng, ctx, maxdepth - 1, storetyp)
     elif isinstance(typ, p4specast.PlainT):
-        return generate_value(typ.typ, rng, ctx, maxdepth)
+        return generate_value(typ.typ, rng, ctx, maxdepth, storetyp)
     elif isinstance(typ, p4specast.TupleT):
-        return generate_TupleV(typ, rng, ctx, maxdepth - 1)
+        return generate_TupleV(typ, rng, ctx, maxdepth - 1, storetyp)
     elif isinstance(typ, p4specast.VarT):
         _, plaintyp = ctx.find_typdef_local(typ.id)
-        res = generate_value(plaintyp, rng, ctx, maxdepth)
-        res.typ = typ
+        res = generate_value(plaintyp, rng, ctx, maxdepth, typ)
         return res
     else:
         # For unknown types, raise an error for now

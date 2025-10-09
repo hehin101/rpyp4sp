@@ -200,7 +200,7 @@ FenvDict.EMPTY = FenvDict()
 FenvDict.EMPTY = FenvDict.make0()
 
 @smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
-class Context(object):
+class Context(sign.Sign):
     _immutable_fields_ = ['glbl', 'values_input[*]',
                           'tdenv', 'fenv', 'venv_keys', 'cover']
     def __init__(self, glbl=None, tdenv=None, fenv=None, venv_keys=None, cover=None):
