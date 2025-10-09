@@ -385,8 +385,8 @@ class TestListVMutation(object):
     def test_empty_list_unchanged(self):
         # Empty list should return unchanged
         rng = MockRng([])
-
-        original = ListV.make0()
+        typ = p4specast.TextT.INSTANCE.list_of()
+        original = ListV.make0(typ)
         mutated = mutate_ListV(original, rng)
 
         assert mutated is original
@@ -395,8 +395,9 @@ class TestListVMutation(object):
         # Strategy 0: Mutate existing element
         rng = MockRng([0, 0])  # strategy=0, then BoolV will flip
 
-        elements = [BoolV.TRUE, TextV("hello")]
-        original = ListV.make(elements)
+        elements = [BoolV.TRUE, BoolV.FALSE]
+        typ = p4specast.BoolT.INSTANCE.list_of()
+        original = ListV.make(elements, typ)
         mutated = mutate_ListV(original, rng)
 
         assert isinstance(mutated, ListV)
@@ -409,7 +410,8 @@ class TestListVMutation(object):
         rng = MockRng([1, 1, 1])  # strategy=1, source_index=1, insert_pos=1
 
         elements = [TextV("a"), TextV("b")]
-        original = ListV.make(elements)
+        typ = p4specast.TextT.INSTANCE.list_of()
+        original = ListV.make(elements, typ)
         mutated = mutate_ListV(original, rng)
 
         assert mutated._get_size_list() == 3  # Length increased
@@ -421,8 +423,9 @@ class TestListVMutation(object):
         # Strategy 2: Remove element
         rng = MockRng([2, 0])  # strategy=2, remove_index=0
 
+        typ = p4specast.TextT.INSTANCE.list_of()
         elements = [TextV("a"), TextV("b"), TextV("c")]
-        original = ListV.make(elements)
+        original = ListV.make(elements, typ)
         mutated = mutate_ListV(original, rng)
 
         assert mutated._get_size_list() == 2  # Length decreased
@@ -433,8 +436,9 @@ class TestListVMutation(object):
         # Strategy 2 on single element should make empty
         rng = MockRng([2])  # strategy=2
 
+        typ = p4specast.TextT.INSTANCE.list_of()
         elements = [TextV("only")]
-        original = ListV.make(elements)
+        original = ListV.make(elements, typ)
         mutated = mutate_ListV(original, rng)
 
         assert mutated._get_size_list() == 0  # Empty list
@@ -444,7 +448,8 @@ class TestListVMutation(object):
         rng = MockRng([3, 0, 2])  # strategy=3, idx1=0, idx2=2
 
         elements = [TextV("a"), TextV("b"), TextV("c")]
-        original = ListV.make(elements)
+        typ = p4specast.TextT.INSTANCE.list_of()
+        original = ListV.make(elements, typ)
         mutated = mutate_ListV(original, rng)
 
         assert mutated._get_size_list() == 3  # Same length
@@ -457,7 +462,8 @@ class TestListVMutation(object):
         rng = MockRng([3, 1, 1])  # strategy=3, idx1=1, idx2=1 (will become 2)
 
         elements = [TextV("a"), TextV("b"), TextV("c")]
-        original = ListV.make(elements)
+        typ = p4specast.TextT.INSTANCE.list_of()
+        original = ListV.make(elements, typ)
         mutated = mutate_ListV(original, rng)
 
         assert mutated._get_size_list() == 3
@@ -470,7 +476,8 @@ class TestListVMutation(object):
         rng = MockRng([3, 0])  # strategy=3, then BoolV will flip
 
         elements = [BoolV.TRUE]
-        original = ListV.make(elements)
+        typ = p4specast.BoolT.INSTANCE.list_of()
+        original = ListV.make(elements, typ)
         mutated = mutate_ListV(original, rng)
 
         assert mutated._get_size_list() == 1  # Same length
@@ -480,8 +487,9 @@ class TestListVMutation(object):
         # Strategy 4: Clear list
         rng = MockRng([4])  # strategy=4
 
+        typ = p4specast.TextT.INSTANCE.list_of()
         elements = [TextV("a"), TextV("b"), TextV("c")]
-        original = ListV.make(elements)
+        original = ListV.make(elements, typ)
         mutated = mutate_ListV(original, rng)
 
         assert mutated._get_size_list() == 0  # Empty list
@@ -792,7 +800,7 @@ class TestFindSubvalues(object):
         assert len(subvalues) == 1
         assert subvalues[0] == (bool_val, [])
 
-        num_val = NumV(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
+        num_val = NumV.make(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
         subvalues = find_subvalues(num_val)
 
         assert len(subvalues) == 1
@@ -806,13 +814,14 @@ class TestFindSubvalues(object):
 
     def test_empty_containers(self):
         # Test with empty containers
-        empty_tuple = TupleV.make0()
+        empty_tuple = TupleV.make0(None)
         subvalues = find_subvalues(empty_tuple)
 
         assert len(subvalues) == 1
         assert subvalues[0] == (empty_tuple, [])
 
-        empty_list = ListV.make0()
+        typ = p4specast.TextT.INSTANCE.list_of()
+        empty_list = ListV.make0(typ)
         subvalues = find_subvalues(empty_list)
 
         assert len(subvalues) == 1
@@ -839,7 +848,7 @@ class TestFindSubvalues(object):
     def test_tuple_flat(self):
         # Test flat tuple
         bool_val = BoolV.TRUE
-        num_val = NumV(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
+        num_val = NumV.make(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
         text_val = TextV("hello")
 
         tuple_val = TupleV.make([bool_val, num_val, text_val])
@@ -854,20 +863,21 @@ class TestFindSubvalues(object):
     def test_list_flat(self):
         # Test flat list
         bool_val = BoolV.TRUE
-        text_val = TextV("hello")
+        bool_val2 = BoolV.FALSE
 
-        list_val = ListV.make([bool_val, text_val])
+        typ = p4specast.BoolT.INSTANCE.list_of()
+        list_val = ListV.make([bool_val, bool_val2], typ)
         subvalues = find_subvalues(list_val)
 
         assert len(subvalues) == 3
         assert subvalues[0] == (list_val, [])
         assert subvalues[1] == (bool_val, [0])
-        assert subvalues[2] == (text_val, [1])
+        assert subvalues[2] == (bool_val2, [1])
 
     def test_struct_flat(self):
         # Test flat struct
         bool_val = BoolV.TRUE
-        num_val = NumV(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
+        num_val = NumV.make(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
 
         struct_map = StructMap.EMPTY.add_field("flag").add_field("count")
         struct_val = StructV.make([bool_val, num_val], struct_map)
@@ -884,7 +894,7 @@ class TestFindSubvalues(object):
         inner_text = TextV("inner")
         inner_tuple = TupleV.make([inner_bool, inner_text])
 
-        outer_num = NumV(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
+        outer_num = NumV.make(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
         outer_tuple = TupleV.make([inner_tuple, outer_num])
 
         subvalues = find_subvalues(outer_tuple)
@@ -903,7 +913,7 @@ class TestFindSubvalues(object):
         opt_val = OptV(inner_bool)
         text_val = TextV("hello")
 
-        list_val = ListV.make([opt_val, text_val])
+        list_val = ListV.make([opt_val, text_val], None)
         subvalues = find_subvalues(list_val)
 
         # Should be breadth-first: list_val, opt_val, text_val, inner_bool
@@ -919,9 +929,9 @@ class TestFindSubvalues(object):
         inner_bool = BoolV.TRUE
         inner_text = TextV("deep")
         inner_opt = OptV(inner_text)
-        inner_list = ListV.make([inner_bool, inner_opt])
+        inner_list = ListV.make([inner_bool, inner_opt], None)
 
-        outer_num = NumV(integers.Integer.fromint(99), p4specast.IntT.INSTANCE)
+        outer_num = NumV.make(integers.Integer.fromint(99), p4specast.IntT.INSTANCE)
         outer_tuple = TupleV.make([inner_list, outer_num])
 
         subvalues = find_subvalues(outer_tuple)
@@ -972,7 +982,7 @@ class TestMutateSubvalueWithPath(object):
 
         text1 = TextV("hello")
         text2 = TextV("world")
-        list_val = ListV.make([text1, text2])
+        list_val = ListV.make([text1, text2], None)
 
         # Mutate the first element (index 0)
         mutated = mutate_subvalue_with_path(list_val, [0], rng)
@@ -989,7 +999,7 @@ class TestMutateSubvalueWithPath(object):
         rng = MockRng([0, 0, 15])  # NumV strategy=0 (add/subtract), delta=5
 
         name_val = TextV("Alice")
-        age_val = NumV(integers.Integer.fromint(25), p4specast.IntT.INSTANCE)
+        age_val = NumV.make(integers.Integer.fromint(25), p4specast.IntT.INSTANCE)
 
         struct_map = StructMap.EMPTY.add_field("name").add_field("age")
         struct_val = StructV.make([name_val, age_val], struct_map)
@@ -1027,9 +1037,9 @@ class TestMutateSubvalueWithPath(object):
         # Structure: tuple([list([bool, text]), num])
         inner_bool = BoolV.TRUE
         inner_text = TextV("nested")
-        inner_list = ListV.make([inner_bool, inner_text])
+        inner_list = ListV.make([inner_bool, inner_text], None)
 
-        outer_num = NumV(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
+        outer_num = NumV.make(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
         outer_tuple = TupleV.make([inner_list, outer_num])
 
         # Mutate the bool inside the list inside the tuple: path [0, 0]
@@ -1058,9 +1068,9 @@ class TestMutateSubvalueWithPath(object):
         inner_text = TextV("deep")
         inner_opt = OptV(inner_text)
         inner_bool = BoolV.TRUE
-        inner_list = ListV.make([inner_bool, inner_opt])
+        inner_list = ListV.make([inner_bool, inner_opt], None)
 
-        outer_num = NumV(integers.Integer.fromint(99), p4specast.IntT.INSTANCE)
+        outer_num = NumV.make(integers.Integer.fromint(99), p4specast.IntT.INSTANCE)
         outer_tuple = TupleV.make([inner_list, outer_num])
 
         # Mutate the text inside opt inside list inside tuple: path [0, 1, 0]
@@ -1134,7 +1144,7 @@ class TestMutate(object):
         # Create tuple with [BoolV.TRUE, TextV("hello"), NumV(42)]
         bool_val = BoolV.TRUE
         text_val = TextV("hello")
-        num_val = NumV(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
+        num_val = NumV.make(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)
         tuple_val = TupleV.make([bool_val, text_val, num_val])
 
         # Test selecting index 0 (the tuple itself) -> will call mutate_value which mutates first element
@@ -1155,10 +1165,10 @@ class TestMutate(object):
     def test_nested_structure_fair_selection(self):
         # Test that deeply nested values can be selected
         # Structure: tuple([bool, list([text, opt(num)])])
-        deep_num = NumV(integers.Integer.fromint(99), p4specast.IntT.INSTANCE)
+        deep_num = NumV.make(integers.Integer.fromint(99), p4specast.IntT.INSTANCE)
         deep_opt = OptV(deep_num)
         inner_text = TextV("nested")
-        inner_list = ListV.make([inner_text, deep_opt])
+        inner_list = ListV.make([inner_text, deep_opt], None)
 
         outer_bool = BoolV.TRUE
         outer_tuple = TupleV.make([outer_bool, inner_list])
@@ -1225,7 +1235,8 @@ class TestMutate(object):
         # Empty tuple should remain unchanged when mutated
         assert mutated is empty_tuple
 
-        empty_list = ListV.make0()
+        typ = p4specast.BoolT.INSTANCE.list_of()
+        empty_list = ListV.make0(typ)
         rng = MockRng([0, 0])  # Fresh MockRng for second test
         mutated = mutate(empty_list, rng)
         assert mutated is empty_list

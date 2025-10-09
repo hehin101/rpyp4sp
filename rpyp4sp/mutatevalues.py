@@ -113,7 +113,7 @@ def mutate_TextV(value, rng):
             assert pos >= 0
             new_text = text[:pos] + new_char + text[pos + 1:]
 
-    return TextV(new_text, value.typ)
+    return TextV(new_text, value.get_typ())
 
 
 def mutate_value(value, rng):
@@ -170,7 +170,7 @@ def mutate_TupleV(value, rng):
     if mutated_elements is elements:
         return value  # Empty tuple unchanged
 
-    return TupleV.make(mutated_elements, value.typ)
+    return TupleV.make(mutated_elements, value.get_typ())
 
 
 def mutate_StructV(value, rng):
@@ -182,7 +182,7 @@ def mutate_StructV(value, rng):
     if mutated_field_values is field_values:
         return value  # Empty struct unchanged
 
-    return StructV.make(mutated_field_values, value.map, value.typ)
+    return StructV.make(mutated_field_values, value.map, value.get_typ())
 
 
 def mutate_CaseV(value, rng):
@@ -194,7 +194,7 @@ def mutate_CaseV(value, rng):
     if mutated_values is values:
         return value  # Empty case unchanged
 
-    return CaseV.make(mutated_values, value.mixop, value.typ)
+    return CaseV.make(mutated_values, value.mixop, value.get_typ())
 
 
 def mutate_ListV(value, rng):
@@ -213,7 +213,7 @@ def mutate_ListV(value, rng):
     if strategy == 0:
         # Mutate existing element (preserve length)
         mutated_elements = _mutate_list_element(elements, rng)
-        return ListV.make(mutated_elements, value.typ)
+        return ListV.make(mutated_elements, value.get_typ())
     elif strategy == 1:
         # Insert duplicate element at random position
         source_index = rng.randint(0, len(elements) - 1)
@@ -221,23 +221,23 @@ def mutate_ListV(value, rng):
         duplicate = elements[source_index]
         assert insert_pos >= 0
         new_elements = elements[:insert_pos] + [duplicate] + elements[insert_pos:]
-        return ListV.make(new_elements, value.typ)
+        return ListV.make(new_elements, value.get_typ())
     elif strategy == 2:
         # Remove random element
         if len(elements) == 1:
             # Single element - make empty
-            return ListV.make0(value.typ)
+            return ListV.make0(value.get_typ())
         else:
             remove_index = rng.randint(0, len(elements) - 1)
             assert remove_index >= 0
             new_elements = elements[:remove_index] + elements[remove_index + 1:]
-            return ListV.make(new_elements, value.typ)
+            return ListV.make(new_elements, value.get_typ())
     elif strategy == 3:
         # Swap two elements (if list has at least 2 elements)
         if len(elements) < 2:
             # Not enough elements to swap, just mutate instead
             mutated_elements = _mutate_list_element(elements, rng)
-            return ListV.make(mutated_elements, value.typ)
+            return ListV.make(mutated_elements, value.get_typ())
         else:
             idx1 = rng.randint(0, len(elements) - 1)
             idx2 = rng.randint(0, len(elements) - 1)
@@ -247,10 +247,10 @@ def mutate_ListV(value, rng):
 
             new_elements = elements[:]
             new_elements[idx1], new_elements[idx2] = new_elements[idx2], new_elements[idx1]
-            return ListV.make(new_elements, value.typ)
+            return ListV.make(new_elements, value.get_typ())
     else:
         # Clear list (make empty)
-        return ListV.make0(value.typ)
+        return ListV.make0(value.get_typ())
 
 
 def mutate_OptV(value, rng):
@@ -267,7 +267,7 @@ def mutate_OptV(value, rng):
     if strategy == 0:
         # Mutate the contained value
         mutated_inner = mutate_value(value.value, rng)
-        return OptV(mutated_inner, value.typ)
+        return OptV(mutated_inner, value.get_typ())
     else:
         # Make it None
         return OptV(None, value.typ)
@@ -506,7 +506,7 @@ def mutate_subvalue_with_path(value, path, rng, ctx=None):
         # Empty path means mutate the value itself
         if rng.randint(0, 3) != 3:
             return mutate_value(value, rng)
-        res = generate_value(value.typ, rng, ctx)
+        res = generate_value(value.get_typ(), rng, ctx)
         return res
 
 
