@@ -413,6 +413,9 @@ class JsonAdapterRegion(JsonBase):
     def __init__(self, region):
         self.region = region
 
+    def _unpack_deep(self):
+        return self.region.tojson()._unpack_deep()
+
     def __repr__(self):
         return "rpyjson.JsonAdapterRegion(%r)" % (self.region, )
 
