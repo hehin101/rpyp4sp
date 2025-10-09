@@ -33,6 +33,7 @@ def load():
     return defs, file_content, spec_dirname
 
 def make_context(loaded=[]):
+    # type: (list[Context]) -> Context
     if loaded:
         return loaded[0]
     spec, file_content, spec_dirname = load()
@@ -44,8 +45,8 @@ def make_context(loaded=[]):
 
 def test_load_spec():
     ctx = make_context()
-    assert 'Program_ok' in ctx.glbl.renv
-    assert 'empty_map' in ctx.glbl.fenv
+    assert 'Program_ok' in ctx.venv_keys.glbl.renv
+    assert 'empty_map' in ctx.venv_keys.glbl.fenv
 
 def test_subtyp_nat():
     typ = p4specast.NumT.NAT
@@ -91,7 +92,7 @@ def test_coerce_binary():
     expected = objects.OptV(objects.TupleV.make([objects.CaseV.make([objects.CaseV.make([objects.NumV.fromstr('5', p4specast.IntT.INSTANCE, p4specast.NumT.INT, 2)], p4specast.MixOp([[p4specast.AtomT('INT', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 9, 4), p4specast.Position('spec/1a-syntax-el.watsup', 9, 7)))], []]), 99, p4specast.VarT(p4specast.Id('num', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 8, 7), p4specast.Position('spec/1a-syntax-el.watsup', 8, 10))), [])), objects.CaseV.make([objects.CaseV.make([], p4specast.MixOp([[p4specast.AtomT('IntT', p4specast.Region(p4specast.Position('spec/2c1-runtime-type.watsup', 36, 4), p4specast.Position('spec/2c1-runtime-type.watsup', 36, 8)))]]), 100, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region(p4specast.Position('spec/2c1-runtime-type.watsup', 35, 7), p4specast.Position('spec/2c1-runtime-type.watsup', 35, 13))), [])), objects.CaseV.make([], p4specast.MixOp([[p4specast.AtomT('LCTK', p4specast.Region(p4specast.Position('spec/2f-runtime-ctk.watsup', 5, 13), p4specast.Position('spec/2f-runtime-ctk.watsup', 5, 17)))]]), 101, p4specast.VarT(p4specast.Id('ctk', p4specast.Region(p4specast.Position('spec/2f-runtime-ctk.watsup', 5, 7), p4specast.Position('spec/2f-runtime-ctk.watsup', 5, 10))), []))], p4specast.MixOp([[p4specast.AtomT('(', p4specast.Region(p4specast.Position('spec/3-syntax-il.watsup', 123, 18), p4specast.Position('spec/3-syntax-il.watsup', 123, 19)))], [p4specast.AtomT(';', p4specast.Region(p4specast.Position('spec/3-syntax-il.watsup', 123, 22), p4specast.Position('spec/3-syntax-il.watsup', 123, 23)))], [p4specast.AtomT(')', p4specast.Region(p4specast.Position('spec/3-syntax-il.watsup', 123, 27), p4specast.Position('spec/3-syntax-il.watsup', 123, 28)))]]), 102, p4specast.VarT(p4specast.Id('annotIL', p4specast.Region(p4specast.Position('spec/3-syntax-il.watsup', 123, 7), p4specast.Position('spec/3-syntax-il.watsup', 123, 14))), []))], p4specast.MixOp([[p4specast.AtomT('NumE', p4specast.Region(p4specast.Position('spec/3-syntax-il.watsup', 128, 4), p4specast.Position('spec/3-syntax-il.watsup', 128, 8)))], [], []]), 103, p4specast.VarT(p4specast.Id('exprIL', p4specast.Region(p4specast.Position('spec/3-syntax-il.watsup', 124, 7), p4specast.Position('spec/3-syntax-il.watsup', 124, 13))), [])), objects.CaseV.make([objects.CaseV.make([objects.NumV.fromstr('3', p4specast.IntT.INSTANCE, p4specast.NumT.INT, 5)], p4specast.MixOp([[p4specast.AtomT('INT', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 9, 4), p4specast.Position('spec/1a-syntax-el.watsup', 9, 7)))], []]), 110, p4specast.VarT(p4specast.Id('num', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 8, 7), p4specast.Position('spec/1a-syntax-el.watsup', 8, 10))), [])), objects.CaseV.make([objects.CaseV.make([], p4specast.MixOp([[p4specast.AtomT('IntT', p4specast.Region(p4specast.Position('spec/2c1-runtime-type.watsup', 36, 4), p4specast.Position('spec/2c1-runtime-type.watsup', 36, 8)))]]), 111, p4specast.VarT(p4specast.Id('numtyp', p4specast.Region(p4specast.Position('spec/2c1-runtime-type.watsup', 35, 7), p4specast.Position('spec/2c1-runtime-type.watsup', 35, 13))), [])), objects.CaseV.make([], p4specast.MixOp([[p4specast.AtomT('LCTK', p4specast.Region(p4specast.Position('spec/2f-runtime-ctk.watsup', 5, 13), p4specast.Position('spec/2f-runtime-ctk.watsup', 5, 17)))]]), 112, p4specast.VarT(p4specast.Id('ctk', p4specast.Region(p4specast.Position('spec/2f-runtime-ctk.watsup', 5, 7), p4specast.Position('spec/2f-runtime-ctk.watsup', 5, 10))), []))], p4specast.MixOp([[p4specast.AtomT('(', p4specast.Region(p4specast.Position('spec/3-syntax-il.watsup', 123, 18), p4specast.Position('spec/3-syntax-il.watsup', 123, 19)))], [p4specast.AtomT(';', p4specast.Region(p4specast.Position('spec/3-syntax-il.watsup', 123, 22), p4specast.Position('spec/3-syntax-il.watsup', 123, 23)))], [p4specast.AtomT(')', p4specast.Region(p4specast.Position('spec/3-syntax-il.watsup', 123, 27), p4specast.Position('spec/3-syntax-il.watsup', 123, 28)))]]), 113, p4specast.VarT(p4specast.Id('annotIL', p4specast.Region(p4specast.Position('spec/3-syntax-il.watsup', 123, 7), p4specast.Position('spec/3-syntax-il.watsup', 123, 14))), []))], p4specast.MixOp([[p4specast.AtomT('NumE', p4specast.Region(p4specast.Position('spec/3-syntax-il.watsup', 128, 4), p4specast.Position('spec/3-syntax-il.watsup', 128, 8)))], [], []]), 114, p4specast.VarT(p4specast.Id('exprIL', p4specast.Region(p4specast.Position('spec/3-syntax-il.watsup', 124, 7), p4specast.Position('spec/3-syntax-il.watsup', 124, 13))), []))], 131, p4specast.TupleT([p4specast.VarT(p4specast.Id('exprIL', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 44, 7), p4specast.Position('spec/2b2-runtime-value.watsup', 44, 13))), []), p4specast.VarT(p4specast.Id('exprIL', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 44, 7), p4specast.Position('spec/2b2-runtime-value.watsup', 44, 13))), [])])), 132, p4specast.IterT(p4specast.TupleT([p4specast.VarT(p4specast.Id('exprIL', p4specast.Region(p4specast.Position('spec/4d2-typing-subtyping.watsup', 379, 38), p4specast.Position('spec/4d2-typing-subtyping.watsup', 379, 44))), []), p4specast.VarT(p4specast.Id('exprIL', p4specast.Region(p4specast.Position('spec/4d2-typing-subtyping.watsup', 379, 46), p4specast.Position('spec/4d2-typing-subtyping.watsup', 379, 52))), [])]), p4specast.Opt()))
 
     ctx = make_context()
-    func = ctx.glbl.fenv["coerce_binary"]
+    func = ctx.venv_keys.glbl.fenv["coerce_binary"]
     ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, [arg0, arg1])
     assert value.eq(expected)
 
@@ -99,7 +100,7 @@ def test_coerce_binary():
 
 def test_bin_plus():
     ctx = make_context()
-    func = ctx.glbl.fenv["bin_plus"]
+    func = ctx.venv_keys.glbl.fenv["bin_plus"]
     arg0 = objects.CaseV.make([objects.NumV.fromstr('5', p4specast.IntT.INSTANCE, p4specast.NumT.INT, 2)], p4specast.MixOp([[p4specast.AtomT('IntV', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 13, 4), p4specast.Position('spec/2b2-runtime-value.watsup', 13, 8)))], []]), 220, p4specast.VarT(p4specast.Id('val', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 7, 7), p4specast.Position('spec/2b2-runtime-value.watsup', 7, 10))), []))
 
     arg1 = objects.CaseV.make([objects.NumV.fromstr('3', p4specast.IntT.INSTANCE, p4specast.NumT.INT, 5)], p4specast.MixOp([[p4specast.AtomT('IntV', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 13, 4), p4specast.Position('spec/2b2-runtime-value.watsup', 13, 8)))], []]), 231, p4specast.VarT(p4specast.Id('val', p4specast.Region(p4specast.Position('spec/2b2-runtime-value.watsup', 7, 7), p4specast.Position('spec/2b2-runtime-value.watsup', 7, 10))), []))
@@ -122,7 +123,7 @@ def test_concat_text():
     expected = objects.TextV('CounterType.packets_and_bytes', 7689, p4specast.TextT())
 
     ctx = make_context()
-    func = ctx.glbl.fenv[name]
+    func = ctx.venv_keys.glbl.fenv[name]
     ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
     assert value.eq(expected)
 
@@ -131,7 +132,7 @@ def test_conse_fresh_tids():
     input_values = [objects.NumV.fromstr('1', p4specast.NatT.INSTANCE, p4specast.NumT.NAT, 8286)]
     res = objects.ListV.make([objects.TextV('FRESH__0', 8289, p4specast.VarT(p4specast.Id('tid', p4specast.Region(p4specast.Position('', 0, 0), p4specast.Position('', 0, 0))), []))], 8295, p4specast.IterT(p4specast.VarT(p4specast.Id('tid', p4specast.Region(p4specast.Position('spec/2a-runtime-domain.watsup', 13, 19), p4specast.Position('spec/2a-runtime-domain.watsup', 13, 22))), []), p4specast.List()))
     ctx = make_context()
-    func = ctx.glbl.fenv[name]
+    func = ctx.venv_keys.glbl.fenv[name]
     ctx, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
     assert value.eq(res)
 
@@ -140,7 +141,7 @@ def test_check_arity():
     input_values = [objects.ListV.make([], 4811, p4specast.IterT(p4specast.IterT(p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 21, 7), p4specast.Position('spec/1a-syntax-el.watsup', 21, 9))), []), p4specast.Opt()), p4specast.List())), objects.ListV.make([], 4812, p4specast.IterT(p4specast.VarT(p4specast.Id('id', p4specast.Region(p4specast.Position('spec/1a-syntax-el.watsup', 21, 7), p4specast.Position('spec/1a-syntax-el.watsup', 21, 9))), []), p4specast.List()))]
     res = objects.BoolV(True, p4specast.BoolT.INSTANCE, 4819)
     ctx = make_context()
-    func = ctx.glbl.fenv[name]
+    func = ctx.venv_keys.glbl.fenv[name]
     _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
     assert value.eq(res)
 
@@ -151,7 +152,7 @@ def test_check_arity():
 
     res = objects.BoolV(False, p4specast.BoolT.INSTANCE, 4803)
     name = 'check_arity_more'
-    func = ctx.glbl.fenv[name]
+    func = ctx.venv_keys.glbl.fenv[name]
     _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
     assert value.eq(res)
 
@@ -199,9 +200,9 @@ def test_all():
     error = 0
     for calltype, name, input_values, res in iter_all(os.path.join(os.path.dirname(__file__), 'interp_tests.json')):
         if calltype == "function":
-            if name not in ctx.glbl.fenv:
+            if name not in ctx.venv_keys.glbl.fenv:
                 continue
-            func = ctx.glbl.fenv[name]
+            func = ctx.venv_keys.glbl.fenv[name]
             try:
                 _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
                 if not value.eq(res):
