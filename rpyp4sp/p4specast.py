@@ -1660,7 +1660,7 @@ class IterT(Type):
         )
         return res
 
-    @jit.elidable
+    @jit.elidable_promote('0')
     def empty_list_value(self):
         from rpyp4sp import objects
         assert isinstance(self.iter, List)

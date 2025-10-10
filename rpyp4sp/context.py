@@ -30,6 +30,7 @@ class GlobalContext(object):
 
 
 class EnvKeys(object):
+    _immutable_fields_ = ['glbl']
     def __init__(self, keys, glbl=None):
         self.keys = keys # type: dict[tuple[str, str], int]
         self.next_env_keys = {} # type: dict[tuple[str, str], EnvKeys]
@@ -221,7 +222,7 @@ class Context(sign.Sign):
         return Context.make(values, self.tdenv, self.fenv, venv_keys)
 
     def try_append_case_values(self, notexp, case_value):
-        venv_keys = _notexp_compute_final_env_keys(notexp, self.venv_keys)
+        venv_keys = _notexp_compute_final_env_keys(notexp, jit.promote(self.venv_keys))
         if venv_keys is None:
             return None
         values = self._get_full_list() + case_value._get_full_list()
