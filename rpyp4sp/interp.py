@@ -1300,7 +1300,7 @@ def assign_exp(ctx, exp, value):
             return ctx
         elif len(values) == 1:
             value_elem, = values
-            ctx_local = ctx.localize_venv(venv_keys=context.EnvKeys.EMPTY, venv_values=[])
+            ctx_local = ctx.localize_empty_venv()
             ctx_local = assign_exp(ctx_local, exp.exp, value_elem)
             for var in exp.varlist:
                 # collect elementwise values from each ctx in ctxs

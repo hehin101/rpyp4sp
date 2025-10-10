@@ -14,6 +14,7 @@ class GlobalContext(object):
         self.tdenv = {}
         self.renv = {}
         self.fenv = {}
+        self.empty_envkeys = EnvKeys({}, self)
 
     @jit.elidable
     def _find_rel(self, name):
@@ -29,12 +30,13 @@ class GlobalContext(object):
 
 
 class EnvKeys(object):
-    def __init__(self, keys):
+    def __init__(self, keys, glbl=None):
         self.keys = keys # type: dict[tuple[str, str], int]
         self.next_env_keys = {} # type: dict[tuple[str, str], EnvKeys]
         self._next_var_name = None
         self._next_var_iter = None
         self._next_env_keys = None
+        self.glbl = glbl #type: GlobalContext
 
     # TODO: default für var_iter
     @jit.elidable
@@ -59,7 +61,7 @@ class EnvKeys(object):
         else:
             keys = self.keys.copy()
             keys[key] = len(keys)
-            res = EnvKeys(keys)
+            res = EnvKeys(keys, self.glbl)
             self.next_env_keys[key] = res
             if self._next_env_keys is None:
                 self._next_var_name = var_name
@@ -68,7 +70,7 @@ class EnvKeys(object):
             return res
 
     def __repr__(self):
-        l = ["context.EnvKeys.EMPTY"]
+        l = ["context.EnvKeys({}, %r)" % (self.glbl)]
         for var_name, var_iter in self.keys:
             l.append(".add_key(%r, %r)" % (var_name, var_iter))
         return "".join(l)
@@ -141,7 +143,6 @@ class TDenvDict(object):
                 l.append(", %r: %r" % (id_value, typdef))
         l.append(">")
         return "".join(l)
-TDenvDict.EMPTY = TDenvDict()
 
 TDenvDict.EMPTY = TDenvDict.make0()
 
@@ -194,51 +195,53 @@ class FenvDict(object):
                 l.append(", %r: %r" % (id_value, func))
         l.append(">")
         return "".join(l)
-FenvDict.EMPTY = FenvDict()
 
 FenvDict.EMPTY = FenvDict.make0()
 
 @smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
 class Context(sign.Sign):
-    _immutable_fields_ = ['glbl', 'values_input[*]',
-                          'tdenv', 'fenv', 'venv_keys']
-    def __init__(self, glbl=None, tdenv=None, fenv=None, venv_keys=None):
-        self.glbl = GlobalContext() if glbl is None else glbl
+    _immutable_fields_ = ['tdenv', 'fenv', 'venv_keys']
+    def __init__(self, tdenv=None, fenv=None, venv_keys=None):
         # the local context is inlined
         self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY # type: TDenvDict
         self.fenv = fenv if fenv is not None else FenvDict.EMPTY # type: FenvDict
-        self.venv_keys = venv_keys if venv_keys is not None else EnvKeys.EMPTY # type: EnvKeys
+        self.venv_keys = venv_keys if venv_keys is not None else GlobalContext().empty_envkeys # type: EnvKeys
+        assert self.venv_keys.glbl is not None
 
     def copy_and_change(self, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
         tdenv = tdenv if tdenv is not None else self.tdenv
         fenv = fenv if fenv is not None else self.fenv
         venv_keys = venv_keys if venv_keys is not None else self.venv_keys
         venv_values = venv_values if venv_values is not None else self._get_full_list()
-        return Context.make(venv_values, self.glbl, tdenv, fenv, venv_keys)
+        return Context.make(venv_values, tdenv, fenv, venv_keys)
 
     def copy_and_change_append_venv(self, value, venv_keys):
-        return self._append_list(value, self.glbl, self.tdenv, self.fenv, venv_keys)
+        return self._append_list(value, self.tdenv, self.fenv, venv_keys)
 
     def load_spec(self, spec, file_content, spec_dirname, filename, derive=False):
-        self.glbl.file_content = file_content
-        self.glbl.spec_dirname = spec_dirname
+        self.venv_keys.glbl.file_content = file_content
+        self.venv_keys.glbl.spec_dirname = spec_dirname
         for definition in spec:
             if isinstance(definition, p4specast.TypD):
-                self.glbl.tdenv[definition.id.value] = (definition.tparams, definition.deftyp)
+                self.venv_keys.glbl.tdenv[definition.id.value] = (definition.tparams, definition.deftyp)
             elif isinstance(definition, p4specast.RelD):
-                self.glbl.renv[definition.id.value] = definition
+                self.venv_keys.glbl.renv[definition.id.value] = definition
             else:
                 assert isinstance(definition, p4specast.DecD)
-                self.glbl.fenv[definition.id.value] = definition
-        self.glbl.filename = filename
+                self.venv_keys.glbl.fenv[definition.id.value] = definition
+        self.venv_keys.glbl.filename = filename
         self.derive = derive
 
     def localize(self):
-        return self.copy_and_change(tdenv=TDenvDict.EMPTY, fenv=FenvDict.EMPTY, venv_keys=EnvKeys.EMPTY, venv_values=[])
+        return self.copy_and_change(tdenv=TDenvDict.EMPTY, fenv=FenvDict.EMPTY, venv_keys=self.venv_keys.glbl.empty_envkeys, venv_values=[])
 
     def localize_venv(self, venv_keys, venv_values):
         # type: (EnvKeys, list[objects.BaseV]) -> Context
         return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
+
+    def localize_empty_venv(self):
+        # type: (Context) -> Context
+        return self.localize_venv(venv_keys=self.venv_keys.glbl.empty_envkeys, venv_values=[])
 
     def find_value_local(self, id, iterlist=p4specast.IterList.EMPTY, vare_cache=None):
         # type: (p4specast.Id, list[p4specast.IterList], p4specast.VarE | None) -> objects.BaseV
@@ -268,14 +271,14 @@ class Context(sign.Sign):
         if self.tdenv.has_key(id.value):
             typdef = self.tdenv.get(id.value)
         else:
-            typdef = jit.promote(self.glbl)._find_typdef(id.value)
+            typdef = jit.promote(self.venv_keys.glbl)._find_typdef(id.value)
             if not jit.we_are_jitted() and typ_cache:
                 typ_cache._ctx_tdenv_keys = self.tdenv._keys
                 typ_cache._ctx_typ_res = typdef
         return typdef
 
     def find_rel_local(self, id):
-        res = jit.promote(self.glbl)._find_rel(id.value)
+        res = jit.promote(self.venv_keys.glbl)._find_rel(id.value)
         if res is None:
             raise P4ContextError("rel %s not found" % id.value)
         return res
@@ -319,7 +322,7 @@ class Context(sign.Sign):
         if self.fenv.has_key(id.value):
             func = self.fenv.get(id.value)
         else:
-            func = jit.promote(self.glbl)._find_func(id.value)
+            func = jit.promote(self.venv_keys.glbl)._find_func(id.value)
             if not jit.we_are_jitted() and calle_cache:
                 calle_cache._ctx_fenv_keys = self.fenv._keys
                 calle_cache._ctx_func_res = func
