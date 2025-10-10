@@ -141,7 +141,6 @@ class TDenvDict(object):
                 l.append(", %r: %r" % (id_value, typdef))
         l.append(">")
         return "".join(l)
-TDenvDict.EMPTY = TDenvDict()
 
 TDenvDict.EMPTY = TDenvDict.make0()
 
@@ -194,13 +193,12 @@ class FenvDict(object):
                 l.append(", %r: %r" % (id_value, func))
         l.append(">")
         return "".join(l)
-FenvDict.EMPTY = FenvDict()
 
 FenvDict.EMPTY = FenvDict.make0()
 
 @smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
 class Context(object):
-    _immutable_fields_ = ['values_input[*]', 'tdenv', 'fenv', 'venv_keys']
+    _immutable_fields_ = ['tdenv', 'fenv', 'venv_keys']
     def __init__(self, tdenv=None, fenv=None, venv_keys=None):
         # the local context is inlined
         self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY # type: TDenvDict
