@@ -128,7 +128,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
         ctx_local = ctx.localize()
     # let ctx_local = Ctx.localize_inputs ctx_local values_input in
     # let ctx_local = assign_args ctx ctx_local args_input values_input in
-    ctx_local = assign_args(ctx, ctx_local, args_input, values_input)
+    ctx_local = assign_args(ctx, ctx_local, func, values_input)
     sign = _func_eval_instrs(ctx_local, func)
     # let ctx = Ctx.commit ctx ctx_local in
     # match sign with
@@ -1413,13 +1413,32 @@ def assign_arg(ctx_caller, ctx_callee, arg, value):
 #  List.fold_left2 (assign_arg ctx_caller) ctx_callee args values
 
 @jit.unroll_safe
-def assign_args(ctx_caller, ctx_callee, args, values):
-    if len(args) != len(values):
-        raise P4EvaluationError("mismatch in number of arguments while assigning, expected %d value(s) but got %d" % (len(args), len(values)))
-    for i, arg in enumerate(args):
-        value = values[i]
-        ctx_callee = assign_arg(ctx_caller, ctx_callee, arg, value)
+def assign_args(ctx_caller, ctx_callee, func, values):
+    if len(func.args) != len(values):
+        raise P4EvaluationError("mismatch in number of arguments while assigning, expected %d value(s) but got %d for func %s" % (len(func.args), len(values), func.id.value))
+    assert ctx_callee._get_size_list() == 0
+    if func._simple_args:
+        venv_keys = _compute_final_env_keys(func, jit.promote(ctx_callee.venv_keys))
+        ctx_callee = ctx_callee.copy_and_change_set_list(values, venv_keys)
+    else:
+        for i, arg in enumerate(func.args):
+            value = values[i]
+            ctx_callee = assign_arg(ctx_caller, ctx_callee, arg, value)
     return ctx_callee
+
+@jit.elidable
+def _compute_final_env_keys(func, venv_keys):
+    if func._ctx_env_args_start is venv_keys:
+        return func._ctx_env_args_end
+    func._ctx_env_args_start = venv_keys
+    for arg in func.args:
+        assert isinstance(arg, p4specast.ExpA)
+        exp = arg.exp
+        assert isinstance(exp, p4specast.VarE)
+        venv_keys = venv_keys.add_key(exp.id.value)
+    func._ctx_env_args_end = venv_keys
+    return venv_keys
+
 
 # and assign_arg_exp (ctx : Ctx.t) (exp : exp) (value : value) : Ctx.t =
 #   assign_exp ctx exp value

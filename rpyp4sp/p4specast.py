@@ -449,13 +449,27 @@ class RelD(Def):
         )
 
 class DecD(Def):
-    _immutable_fields_ = ['id', 'tparams[*]', 'args[*]', 'instrs[*]']
+    _immutable_fields_ = ['id', 'tparams[*]', 'args[*]', 'instrs[*]', '_simple_args']
 
     def __init__(self, id, tparams, args, instrs):
         self.id = id            # type: Id
         self.tparams = tparams  # type: list[TParam]
         self.args = args        # type: list[Arg]
         self.instrs = instrs    # type: list[Instr]
+        self._simple_args = True
+        for arg in args:
+            if not isinstance(arg, ExpA):
+                self._simple_args = False
+                break
+            else:
+                exp = arg.exp
+                if not isinstance(exp, VarE):
+                    self._simple_args = False
+                    break
+        if not args:
+            self._simple_args = False
+        self._ctx_env_args_start = None
+        self._ctx_env_args_end = None
 
     def __repr__(self):
         return "p4specast.DecD(%r, %r, %r, %r)" % (self.id, self.tparams, self.args, self.instrs)

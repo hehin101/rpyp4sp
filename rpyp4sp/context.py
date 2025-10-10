@@ -38,17 +38,15 @@ class EnvKeys(object):
         self._next_env_keys = None
         self.glbl = glbl #type: GlobalContext
 
-    # TODO: default für var_iter
     @jit.elidable
-    def get_pos(self, var_name, var_iter):
+    def get_pos(self, var_name, var_iter=''):
         # type: (str, str) -> int
         if not self.keys:
             return -1
         return self.keys.get((var_name, var_iter), -1)
 
-    # TODO: default für var_iter
     @jit.elidable
-    def add_key(self, var_name, var_iter):
+    def add_key(self, var_name, var_iter=''):
         # type: (str, str) -> EnvKeys
         if (self._next_var_name is not None and 
                 self._next_var_name == var_name and
@@ -217,6 +215,10 @@ class Context(sign.Sign):
 
     def copy_and_change_append_venv(self, value, venv_keys):
         return self._append_list(value, self.tdenv, self.fenv, venv_keys)
+
+    def copy_and_change_set_list(self, values, venv_keys):
+        assert self._get_size_list() == 0
+        return Context.make(values, self.glbl, self.tdenv, self.fenv, venv_keys)
 
     def load_spec(self, spec, file_content, spec_dirname, filename, derive=False):
         self.venv_keys.glbl.file_content = file_content
