@@ -1310,6 +1310,20 @@ class NotExp(AstBase):
     def __init__(self, mixop, exps):
         self.mixop = mixop
         self.exps = exps
+        self._is_simple_casev_assignment_target = '?'
+
+    @jit.elidable
+    def is_simple_casev_assignment_target(self):
+        if self._is_simple_casev_assignment_target == '?':
+            self._is_simple_casev_assignment_target = 'y'
+            for exp in self.exps:
+                if isinstance(exp, VarE):
+                    continue
+                if isinstance(exp, IterE) and exp.is_simple_list_expr():
+                    continue
+                self._is_simple_casev_assignment_target = 'n'
+                break
+        return self._is_simple_casev_assignment_target == 'y'
 
     def tostring(self, typ=None):
         # and string_of_notexp ?(typ = None) notexp =

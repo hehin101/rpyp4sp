@@ -1168,10 +1168,7 @@ def assign_exp(ctx, exp, value):
     #     ctx
     elif isinstance(exp, p4specast.CaseE) and\
          isinstance(value, objects.CaseV):
-        notexp = exp.notexp
-        exps_inner = notexp.exps
-        values_inner = value._get_full_list()
-        ctx = assign_exps(ctx, exps_inner, values_inner)
+        ctx = assign_exps_casev(ctx, exp.notexp, value)
         # for value_inner in values_inner:
         #    assert False, "ctx.add_edge(ctx, value_inner, value, dep.edges.Assign)"
         return ctx
@@ -1384,6 +1381,21 @@ def assign_exps(ctx, exps, values):
         "mismatch in number of expressions and values while assigning, expected %d value(s) but got %d" % (len(exps), len(values))
     for index, exp in enumerate(exps):
         value = values[index]
+        ctx = assign_exp(ctx, exp, value)
+    return ctx
+
+
+@jit.unroll_safe
+def assign_exps_casev(ctx, notexp, casev):
+    exps = notexp.exps
+    assert len(exps) == casev._get_size_list(), \
+        "mismatch in number of expressions and values while assigning, expected %d value(s) but got %d" % (len(exps), casev._get_size_list())
+    if notexp.is_simple_casev_assignment_target():
+        print("simple", len(notexp.exps))
+        return ctx.copy_and_change_append_case_values(notexp, casev)
+    print("complex", len(notexp.exps))
+    for index, exp in enumerate(exps):
+        value = casev._get_list(index)
         ctx = assign_exp(ctx, exp, value)
     return ctx
 

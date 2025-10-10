@@ -220,6 +220,11 @@ class Context(sign.Sign):
         assert self._get_size_list() == 0
         return Context.make(values, self.glbl, self.tdenv, self.fenv, venv_keys)
 
+    def copy_and_change_append_case_values(self, notexp, case_value):
+        values = self._get_full_list() + case_value._get_full_list()
+        venv_keys = _notexp_compute_final_env_keys(notexp, self.venv_keys)
+        return Context.make(values, self.glbl, self.tdenv, self.fenv, venv_keys)
+
     def load_spec(self, spec, file_content, spec_dirname, filename, derive=False):
         self.venv_keys.glbl.file_content = file_content
         self.venv_keys.glbl.spec_dirname = spec_dirname
@@ -498,6 +503,16 @@ def _varlist_compute_final_env_keys(varlist, env_keys):
         env_keys = env_keys.add_key(var.id.value, var.iter.to_key())
     varlist._ctx_env_key_cache = begin_env_keys
     varlist._ctx_env_key_result = env_keys
+    return env_keys
+
+@jit.elidable
+def _notexp_compute_final_env_keys(notexp, env_keys):
+    for exp in notexp.exps:
+        if isinstance(exp, p4specast.VarE):
+            env_keys = env_keys.add_key(exp.id.value)
+        else:
+            assert isinstance(exp, p4specast.IterE) and exp.is_simple_list_expr()
+            env_keys = env_keys.add_key(exp.varlist[0].id.value, exp.varlist[0].iter.append_list().to_key())
     return env_keys
 
 def transpose(value_matrix):
