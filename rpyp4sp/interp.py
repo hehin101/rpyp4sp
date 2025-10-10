@@ -1390,10 +1390,11 @@ def assign_exps_casev(ctx, notexp, casev):
     exps = notexp.exps
     assert len(exps) == casev._get_size_list(), \
         "mismatch in number of expressions and values while assigning, expected %d value(s) but got %d" % (len(exps), casev._get_size_list())
+    ctx2 = None
     if notexp.is_simple_casev_assignment_target():
-        print("simple", len(notexp.exps))
-        return ctx.copy_and_change_append_case_values(notexp, casev)
-    print("complex", len(notexp.exps))
+        ctx2 = ctx.try_append_case_values(notexp, casev)
+        if ctx2 is not None:
+            return ctx2
     for index, exp in enumerate(exps):
         value = casev._get_list(index)
         ctx = assign_exp(ctx, exp, value)
