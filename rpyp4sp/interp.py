@@ -128,7 +128,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
         ctx_local = ctx.localize()
     # let ctx_local = Ctx.localize_inputs ctx_local values_input in
     # let ctx_local = assign_args ctx ctx_local args_input values_input in
-    ctx_local = assign_args(ctx, ctx_local, args_input, values_input)
+    ctx_local = assign_args(ctx, ctx_local, func, values_input)
     sign = _func_eval_instrs(ctx_local, func)
     # let ctx = Ctx.commit ctx ctx_local in
     # match sign with
@@ -1168,10 +1168,7 @@ def assign_exp(ctx, exp, value):
     #     ctx
     elif isinstance(exp, p4specast.CaseE) and\
          isinstance(value, objects.CaseV):
-        notexp = exp.notexp
-        exps_inner = notexp.exps
-        values_inner = value._get_full_list()
-        ctx = assign_exps(ctx, exps_inner, values_inner)
+        ctx = assign_exps_casev(ctx, exp.notexp, value)
         # for value_inner in values_inner:
         #    assert False, "ctx.add_edge(ctx, value_inner, value, dep.edges.Assign)"
         return ctx
@@ -1388,6 +1385,22 @@ def assign_exps(ctx, exps, values):
     return ctx
 
 
+@jit.unroll_safe
+def assign_exps_casev(ctx, notexp, casev):
+    exps = notexp.exps
+    assert len(exps) == casev._get_size_list(), \
+        "mismatch in number of expressions and values while assigning, expected %d value(s) but got %d" % (len(exps), casev._get_size_list())
+    ctx2 = None
+    if notexp.is_simple_casev_assignment_target():
+        ctx2 = ctx.try_append_case_values(notexp, casev)
+        if ctx2 is not None:
+            return ctx2
+    for index, exp in enumerate(exps):
+        value = casev._get_list(index)
+        ctx = assign_exp(ctx, exp, value)
+    return ctx
+
+
 #and assign_arg (ctx_caller : Ctx.t) (ctx_callee : Ctx.t) (arg : arg)
 #    (value : value) : Ctx.t =
 #  match arg.it with
@@ -1413,13 +1426,32 @@ def assign_arg(ctx_caller, ctx_callee, arg, value):
 #  List.fold_left2 (assign_arg ctx_caller) ctx_callee args values
 
 @jit.unroll_safe
-def assign_args(ctx_caller, ctx_callee, args, values):
-    if len(args) != len(values):
-        raise P4EvaluationError("mismatch in number of arguments while assigning, expected %d value(s) but got %d" % (len(args), len(values)))
-    for i, arg in enumerate(args):
-        value = values[i]
-        ctx_callee = assign_arg(ctx_caller, ctx_callee, arg, value)
+def assign_args(ctx_caller, ctx_callee, func, values):
+    if len(func.args) != len(values):
+        raise P4EvaluationError("mismatch in number of arguments while assigning, expected %d value(s) but got %d for func %s" % (len(func.args), len(values), func.id.value))
+    assert ctx_callee._get_size_list() == 0
+    if func._simple_args:
+        venv_keys = _compute_final_env_keys(func, jit.promote(ctx_callee.venv_keys))
+        ctx_callee = ctx_callee.copy_and_change_set_list(values, venv_keys)
+    else:
+        for i, arg in enumerate(func.args):
+            value = values[i]
+            ctx_callee = assign_arg(ctx_caller, ctx_callee, arg, value)
     return ctx_callee
+
+@jit.elidable
+def _compute_final_env_keys(func, venv_keys):
+    if func._ctx_env_args_start is venv_keys:
+        return func._ctx_env_args_end
+    func._ctx_env_args_start = venv_keys
+    for arg in func.args:
+        assert isinstance(arg, p4specast.ExpA)
+        exp = arg.exp
+        assert isinstance(exp, p4specast.VarE)
+        venv_keys = venv_keys.add_key(exp.id.value)
+    func._ctx_env_args_end = venv_keys
+    return venv_keys
+
 
 # and assign_arg_exp (ctx : Ctx.t) (exp : exp) (value : value) : Ctx.t =
 #   assign_exp ctx exp value

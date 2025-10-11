@@ -449,13 +449,27 @@ class RelD(Def):
         )
 
 class DecD(Def):
-    _immutable_fields_ = ['id', 'tparams[*]', 'args[*]', 'instrs[*]']
+    _immutable_fields_ = ['id', 'tparams[*]', 'args[*]', 'instrs[*]', '_simple_args']
 
     def __init__(self, id, tparams, args, instrs):
         self.id = id            # type: Id
         self.tparams = tparams  # type: list[TParam]
         self.args = args        # type: list[Arg]
         self.instrs = instrs    # type: list[Instr]
+        self._simple_args = True
+        for arg in args:
+            if not isinstance(arg, ExpA):
+                self._simple_args = False
+                break
+            else:
+                exp = arg.exp
+                if not isinstance(exp, VarE):
+                    self._simple_args = False
+                    break
+        if not args:
+            self._simple_args = False
+        self._ctx_env_args_start = None
+        self._ctx_env_args_end = None
 
     def __repr__(self):
         return "p4specast.DecD(%r, %r, %r, %r)" % (self.id, self.tparams, self.args, self.instrs)
@@ -1296,6 +1310,20 @@ class NotExp(AstBase):
     def __init__(self, mixop, exps):
         self.mixop = mixop
         self.exps = exps
+        self._is_simple_casev_assignment_target = '?'
+
+    @jit.elidable
+    def is_simple_casev_assignment_target(self):
+        if self._is_simple_casev_assignment_target == '?':
+            self._is_simple_casev_assignment_target = 'y'
+            for exp in self.exps:
+                if isinstance(exp, VarE):
+                    continue
+                if isinstance(exp, IterE) and exp.is_simple_list_expr():
+                    continue
+                self._is_simple_casev_assignment_target = 'n'
+                break
+        return self._is_simple_casev_assignment_target == 'y'
 
     def tostring(self, typ=None):
         # and string_of_notexp ?(typ = None) notexp =
@@ -1632,7 +1660,7 @@ class IterT(Type):
         )
         return res
 
-    @jit.elidable
+    @jit.elidable_promote('0')
     def empty_list_value(self):
         from rpyp4sp import objects
         assert isinstance(self.iter, List)
