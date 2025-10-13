@@ -1268,6 +1268,8 @@ class CallE(Exp):
 
 
 class HoldE(Exp):
+    _immutable_fields_ = ['relid', 'notexp']
+
     def __init__(self, relid, notexp):
         self.relid = relid
         self.notexp = notexp
@@ -1279,8 +1281,8 @@ class HoldE(Exp):
     @staticmethod
     def fromjson(content, cache=None):
         return HoldE(
-            relid=Id.fromjson(content.get_list_item(0), cache),
-            notexp=NotExp.fromjson(content.get_list_item(1), cache)
+            relid=Id.fromjson(content.get_list_item(1), cache),
+            notexp=NotExp.fromjson(content.get_list_item(2), cache)
         )
 
 
