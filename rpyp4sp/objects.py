@@ -181,9 +181,11 @@ class NumV(BaseV):
 
     @staticmethod
     def make(value, what, typ):
-        if isinstance(typ, p4specast.IntT):
+        if isinstance(typ, p4specast.NumT) and isinstance(what, p4specast.IntT):
+            assert type(typ.typ) is type(what)
             return IntV(value, what)
-        elif isinstance(typ, p4specast.NatT):
+        elif isinstance(typ, p4specast.NumT) and isinstance(what, p4specast.NatT):
+            assert type(typ.typ) is type(what)
             return NatV(value, what)
         else:
             return NumVWithTyp(value, what, typ)
