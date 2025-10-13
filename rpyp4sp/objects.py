@@ -169,12 +169,15 @@ class BoolVWithTyp(BoolV):
         return self.typ
 
 class NumV(BaseV):
-    _attrs_ = ['value', 'what']
+    _attrs_ = ['value', '_what']
 
     def __init__(self, value, what):
         self.value = value # type: integers.Integer
         assert isinstance(what, p4specast.NumTyp)
-        self.what = what # type: p4specast.NumT
+        self._what = what # type: p4specast.NumT
+
+    def get_what(self):
+        return self._what
 
     @staticmethod
     def make(value, what, typ):
@@ -188,13 +191,13 @@ class NumV(BaseV):
     def compare(self, other):
         if not isinstance(other, NumV):
             return self._base_compare(other)
-        if self.what != other.what:
+        if self.get_what() != other.get_what():
             raise TypeError("cannot compare different kinds of numbers")
         return self.value.compare(other.value)
 
     def __repr__(self):
         return "objects.NumV.fromstr(%r, %r, %r)" % (
-            self.value.str(), self.what, self.get_typ())
+            self.value.str(), self.get_what(), self.get_typ())
 
     def get_num(self):
         return self.value

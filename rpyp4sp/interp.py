@@ -1569,7 +1569,7 @@ def eval_cmp_num(cmpop, value_l, value_r, typ):
     # let num_l = Value.get_num value_l in
     assert isinstance(value_l, objects.NumV)
     assert isinstance(value_r, objects.NumV)
-    assert value_l.what == value_r.what
+    assert value_l.get_what() == value_r.get_what()
     num_l = value_l.get_num()
     # let num_r = Value.get_num value_r in
     num_r = value_r.get_num()
@@ -1643,10 +1643,10 @@ def eval_binop_num(binop, value_l, value_r, typ):
     # Il.Ast.NumV (Num.bin binop num_l num_r)
     assert isinstance(value_l, objects.NumV)
     assert isinstance(value_r, objects.NumV)
-    assert type(value_l.what) is type(value_r.what)
+    assert type(value_l.get_what()) is type(value_r.get_what())
     num_l = value_l.get_num()
     num_r = value_r.get_num()
-    what = value_l.what
+    what = value_l.get_what()
     if binop == 'AddOp':
         res_num = num_l.add(num_r)
     elif binop == 'SubOp':
@@ -1712,9 +1712,9 @@ def eval_unop_num(unop, value, typ):
     num = value.get_num()
     # match unop with
     if unop == 'PlusOp':
-        return objects.NumV.make(num, value.what, typ=typ)
+        return objects.NumV.make(num, value.get_what(), typ=typ)
     elif unop == 'MinusOp':
-        return objects.NumV.make(num.neg(), value.what, typ=typ)
+        return objects.NumV.make(num.neg(), value.get_what(), typ=typ)
     else:
         assert 0, "Unknown numeric unary operator: %s" % unop
 
@@ -2263,9 +2263,9 @@ def subtyp(ctx, typ, value):
     jit.promote(typ)
     if isinstance(typ, p4specast.NumT) and isinstance(typ.typ, p4specast.NatT):
         assert isinstance(value, objects.NumV)
-        if value.what == p4specast.NatT.INSTANCE:
+        if value.get_what() == p4specast.NatT.INSTANCE:
             return True
-        elif value.what == p4specast.IntT.INSTANCE:
+        elif value.get_what() == p4specast.IntT.INSTANCE:
             return value.value.int_ge(0)
         else:
             assert 0
@@ -2327,9 +2327,9 @@ def downcast(ctx, typ, value):
     #         (ctx, value_res)
     #     | _ -> assert false)
         assert isinstance(value, objects.NumV)
-        if value.what == p4specast.NatT.INSTANCE:
+        if value.get_what() == p4specast.NatT.INSTANCE:
             return ctx, value
-        elif value.what == p4specast.IntT.INSTANCE:
+        elif value.get_what() == p4specast.IntT.INSTANCE:
             assert value.value.int_ge(0)
             return ctx, objects.NumV.make(value.value, p4specast.NatT.INSTANCE, typ=typ)
         else:
@@ -2382,7 +2382,7 @@ def upcast(ctx, typ, value):
     #   | NumT `IntT -> (
     if isinstance(typ, p4specast.NumT) and isinstance(typ.typ, p4specast.IntT):
     #       match value.it with
-        if isinstance(value, objects.NumV) and value.what == p4specast.NatT.INSTANCE:
+        if isinstance(value, objects.NumV) and value.get_what() == p4specast.NatT.INSTANCE:
     #       | NumV (`Nat n) ->
     #           let value_res =
     #             let vid = Value.fresh () in
