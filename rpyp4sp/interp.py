@@ -207,7 +207,7 @@ def invoke_rel(ctx, id, values_input):
     #   let ctx_local, sign = eval_instrs ctx_local Cont instrs in
     sign = _rel_eval_instrs(ctx_local, reld)
     #   let ctx = Ctx.commit ctx ctx_local in
-    ctx = ctx.commit(sign.sign_get_ctx())
+    #ctx = ctx.commit(sign.sign_get_ctx())
     #   match sign with
     #   | Res values_output ->
     if isinstance(sign, Res):
