@@ -1714,7 +1714,7 @@ def eval_unop_num(unop, value, typ):
     if unop == 'PlusOp':
         return objects.NumV.make(num, value.get_what(), typ=typ)
     elif unop == 'MinusOp':
-        return objects.NumV.make(num.neg(), value.get_what(), typ=typ)
+        return objects.NumV.make(num.neg(), p4specast.IntT.INSTANCE, typ=typ)
     else:
         assert 0, "Unknown numeric unary operator: %s" % unop
 
