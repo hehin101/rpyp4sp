@@ -3,6 +3,7 @@ from rpython.rlib import jit
 from rpyp4sp.smalllist import inline_small_list
 from rpyp4sp import p4specast, integers
 from rpyp4sp.error import P4UnknownTypeError, P4NotImplementedError, P4EvaluationError
+from rpyp4sp.base import SubBase, BaseV
 # and vid = int [@@deriving yojson]
 # and vnote = { vid : vid; typ : typ' } [@@deriving yojson]
 
@@ -25,84 +26,6 @@ from rpyp4sp.error import P4UnknownTypeError, P4NotImplementedError, P4Evaluatio
 
 def indent(level):
     return "  " * level
-
-class SubBase(object):
-    _attrs_ = []
-
-class BaseV(SubBase):
-    _attrs_ = []
-    @staticmethod
-    def fromjson(value):
-        typ = p4specast.Type.fromjson(value.get_dict_value('note').get_dict_value('typ'))
-        content = value.get_dict_value('it')
-        what = content.get_list_item(0).value_string()
-        if what == 'BoolV':
-            value = BoolV.fromjson(content, typ)
-        elif what == 'NumV':
-            value = NumV.fromjson(content, typ)
-        elif what == 'TextV':
-            value = TextV.fromjson(content, typ)
-        elif what == 'StructV':
-            value = StructV.fromjson(content, typ)
-        elif what == 'CaseV':
-            value = CaseV.fromjson(content, typ)
-        elif what == 'TupleV':
-            value = TupleV.fromjson(content, typ)
-        elif what == 'OptV':
-            value = OptV.fromjson(content, typ)
-        elif what == 'ListV':
-            value = ListV.fromjson(content, typ)
-        elif what == 'FuncV':
-            value = FuncV.fromjson(content, typ)
-        else:
-            raise P4UnknownTypeError("Unknown content type")
-        return value
-
-    def get_typ(self):
-        raise NotImplementedError("abstract base class")
-
-    def get_bool(self):
-        raise TypeError("not a bool")
-
-    def get_text(self):
-        raise TypeError("not a text")
-
-    def get_num(self):
-        raise TypeError("not a num")
-
-    def get_list(self):
-        raise TypeError("not a list")
-
-    def get_list_len(self):
-        raise TypeError("not a list")
-
-    def get_tuple(self):
-        raise TypeError("not a tuple")
-
-    def get_struct(self):
-        raise TypeError("not a struct")
-
-    def eq(self, other):
-        res = self.compare(other)
-        assert res in (-1, 0, 1)
-        return res == 0
-
-    def compare(self, other):
-        #import pdb;pdb.set_trace()
-        assert 0
-
-    def _base_compare(self, other):
-        if self._compare_tag == other._compare_tag:
-            return 0
-        if self._compare_tag < other._compare_tag:
-            return -1
-        return 1
-
-    def tostring(self, short=False, level=0):
-        assert 0
-
-    def __str__(self):
-        return self.tostring()
 
 class BaseVWithTyp(BaseV):
     _attrs_ = ['typ']
