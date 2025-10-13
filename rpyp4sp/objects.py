@@ -92,15 +92,13 @@ class BoolVWithTyp(BoolV):
         return self.typ
 
 class NumV(BaseV):
-    _attrs_ = ['value', '_what']
+    _attrs_ = ['value']
 
-    def __init__(self, value, what):
+    def __init__(self, value):
         self.value = value # type: integers.Integer
-        assert isinstance(what, p4specast.NumTyp)
-        self._what = what # type: p4specast.NumT
 
     def get_what(self):
-        return self._what
+        raise NotImplementedError("abstract method")
 
     @staticmethod
     def make(value, what, typ):
@@ -131,6 +129,65 @@ class NumV(BaseV):
         # | NumV n -> Num.string_of_num n
         return self.value.str()
 
+    def eval_unop(self, unop, typ):
+        # Evaluate unary numeric operations
+        if unop == 'PlusOp':
+            return NumV.make(self.value, self.get_what(), typ=typ)
+        elif unop == 'MinusOp':
+            return NumV.make(self.value.neg(), p4specast.IntT.INSTANCE, typ=typ)
+        else:
+            assert 0, "Unknown numeric unary operator: %s" % unop
+
+    def eval_binop(self, binop, other, typ):
+        # Evaluate binary numeric operations
+        from rpyp4sp.error import P4EvaluationError, P4NotImplementedError
+        assert isinstance(other, NumV)
+        assert type(self.get_what()) is type(other.get_what())
+        num_l = self.value
+        num_r = other.value
+        what = self.get_what()
+        if binop == 'AddOp':
+            res_num = num_l.add(num_r)
+        elif binop == 'SubOp':
+            res_num = num_l.sub(num_r)
+            what = p4specast.IntT.INSTANCE
+        elif binop == 'MulOp':
+            res_num = num_l.mul(num_r)
+        elif binop == 'DivOp':
+            if num_r.int_eq(0):
+                raise P4EvaluationError("Modulo with 0")
+            remainder = num_l.mod(num_r)
+            if not remainder.int_eq(0):
+                raise P4EvaluationError("division remainder isn't zero")
+            res_num = num_l.div(num_r)
+        elif binop == 'ModOp':
+            if num_r.int_eq(0):
+                raise P4EvaluationError("Modulo with 0")
+            res_num = num_l.mod(num_r)
+        elif binop == 'PowOp':
+            raise P4NotImplementedError("PowOp")
+        else:
+            assert 0, "should be unreachable"
+        return NumV.make(res_num, what, typ=typ)
+
+    def eval_cmpop(self, cmpop, other, typ):
+        # Evaluate comparison operations
+        assert isinstance(other, NumV)
+        assert self.get_what() == other.get_what()
+        num_l = self.value
+        num_r = other.value
+        if cmpop == 'LtOp':
+            res = num_l.lt(num_r)
+        elif cmpop == 'GtOp':
+            res = num_l.gt(num_r)
+        elif cmpop == 'LeOp':
+            res = num_l.le(num_r)
+        elif cmpop == 'GeOp':
+            res = num_l.ge(num_r)
+        else:
+            assert 0, "should be unreachable"
+        return BoolV.make(res, typ)
+
     @staticmethod
     def fromstr(value, what, typ=None):
         return NumV.make(integers.Integer.fromstr(value), what, typ)
@@ -149,24 +206,38 @@ class NumV(BaseV):
 
 class IntV(NumV):
     def __init__(self, value, what):
-        NumV.__init__(self, value, what)
+        assert isinstance(what, p4specast.IntT)
+        NumV.__init__(self, value)
+
+    def get_what(self):
+        return p4specast.IntT.INSTANCE
 
     def get_typ(self):
         return p4specast.IntT.INSTANCE
 
 class NatV(NumV):
     def __init__(self, value, what):
-        NumV.__init__(self, value, what)
+        assert isinstance(what, p4specast.NatT)
+        NumV.__init__(self, value)
+
+    def get_what(self):
+        return p4specast.NatT.INSTANCE
 
     def get_typ(self):
         return p4specast.NatT.INSTANCE
 
 class NumVWithTyp(NumV):
-    _attrs_ = ['typ']
+    _immutable_fields_ = ['_what', 'typ']
+    _attrs_ = ['_what', 'typ']
 
     def __init__(self, value, what, typ):
-        NumV.__init__(self, value, what)
+        NumV.__init__(self, value)
+        assert isinstance(what, p4specast.NumTyp)
+        self._what = what
         self.typ = typ
+
+    def get_what(self):
+        return self._what
 
     def get_typ(self):
         return self.typ

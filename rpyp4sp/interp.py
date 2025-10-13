@@ -1569,22 +1569,7 @@ def eval_cmp_num(cmpop, value_l, value_r, typ):
     # let num_l = Value.get_num value_l in
     assert isinstance(value_l, objects.NumV)
     assert isinstance(value_r, objects.NumV)
-    assert value_l.get_what() == value_r.get_what()
-    num_l = value_l.get_num()
-    # let num_r = Value.get_num value_r in
-    num_r = value_r.get_num()
-    if cmpop == 'LtOp':
-        res = num_l.lt(num_r)
-    elif cmpop == 'GtOp':
-        res = num_l.gt(num_r)
-    elif cmpop == 'LeOp':
-        res = num_l.le(num_r)
-    elif cmpop == 'GeOp':
-        res = num_l.ge(num_r)
-    else:
-        assert 0, "should be unreachable"
-    return objects.BoolV.make(res, typ)
-    # Il.Ast.BoolV (Num.cmp cmpop num_l num_r)
+    return value_l.eval_cmpop(cmpop, value_r, typ)
 
 
 class __extend__(p4specast.CmpE):
@@ -1643,33 +1628,7 @@ def eval_binop_num(binop, value_l, value_r, typ):
     # Il.Ast.NumV (Num.bin binop num_l num_r)
     assert isinstance(value_l, objects.NumV)
     assert isinstance(value_r, objects.NumV)
-    assert type(value_l.get_what()) is type(value_r.get_what())
-    num_l = value_l.get_num()
-    num_r = value_r.get_num()
-    what = value_l.get_what()
-    if binop == 'AddOp':
-        res_num = num_l.add(num_r)
-    elif binop == 'SubOp':
-        res_num = num_l.sub(num_r)
-        what = p4specast.IntT.INSTANCE
-    elif binop == 'MulOp':
-        res_num = num_l.mul(num_r)
-    elif binop == 'DivOp':
-        if num_r.int_eq(0):
-            raise P4EvaluationError("Modulo with 0")
-        remainder = num_l.mod(num_r)
-        if not remainder.int_eq(0):
-            raise P4EvaluationError("division remainder isn't zero")
-        res_num = num_l.div(num_r)
-    elif binop == 'ModOp':
-        if num_r.int_eq(0):
-            raise P4EvaluationError("Modulo with 0")
-        res_num = num_l.mod(num_r)
-    elif binop == 'PowOp':
-        raise P4NotImplementedError("PowOp")
-    else:
-        assert 0, "should be unreachable"
-    return objects.NumV.make(res_num, what, typ=typ)
+    return value_l.eval_binop(binop, value_r, typ)
 
 class __extend__(p4specast.BinE):
     def eval_exp(self, ctx):
@@ -1709,14 +1668,7 @@ def eval_unop_bool(unop, value, typ):
 def eval_unop_num(unop, value, typ):
     # let num = Value.get_num value in
     assert isinstance(value, objects.NumV)
-    num = value.get_num()
-    # match unop with
-    if unop == 'PlusOp':
-        return objects.NumV.make(num, value.get_what(), typ=typ)
-    elif unop == 'MinusOp':
-        return objects.NumV.make(num.neg(), p4specast.IntT.INSTANCE, typ=typ)
-    else:
-        assert 0, "Unknown numeric unary operator: %s" % unop
+    return value.eval_unop(unop, typ)
 
 class __extend__(p4specast.UnE):
     def eval_exp(self, ctx):
