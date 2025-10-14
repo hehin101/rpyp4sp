@@ -199,34 +199,21 @@ FenvDict.EMPTY = FenvDict.make0()
 
 @smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
 class Context(sign.Sign):
-    _immutable_fields_ = ['tdenv', 'fenv', 'venv_keys']
-    def __init__(self, tdenv=None, fenv=None, venv_keys=None):
+    _attrs_ = ['venv_keys']
+    _immutable_fields = ['venv_keys']
+
+    def __init__(self, venv_keys=None):
         # the local context is inlined
-        self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY # type: TDenvDict
-        self.fenv = fenv if fenv is not None else FenvDict.EMPTY # type: FenvDict
         self.venv_keys = venv_keys if venv_keys is not None else GlobalContext().empty_envkeys # type: EnvKeys
         assert self.venv_keys.glbl is not None
 
-    def copy_and_change(self, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
-        tdenv = tdenv if tdenv is not None else self.tdenv
-        fenv = fenv if fenv is not None else self.fenv
-        venv_keys = venv_keys if venv_keys is not None else self.venv_keys
-        venv_values = venv_values if venv_values is not None else self._get_full_list()
-        return Context.make(venv_values, tdenv, fenv, venv_keys)
-
-    def copy_and_change_append_venv(self, value, venv_keys):
-        return self._append_list(value, self.tdenv, self.fenv, venv_keys)
-
-    def copy_and_change_set_list(self, values, venv_keys):
-        assert self._get_size_list() == 0
-        return Context.make(values, self.tdenv, self.fenv, venv_keys)
-
-    def try_append_case_values(self, notexp, case_value):
-        venv_keys = _notexp_compute_final_env_keys(notexp, jit.promote(self.venv_keys))
-        if venv_keys is None:
-            return None
-        values = self._get_full_list() + case_value._get_full_list()
-        return Context.make(values, self.tdenv, self.fenv, venv_keys)
+    @staticmethod
+    def create(venv_values=[], tdenv=None, fenv=None, venv_keys=None):
+        # type: (list[objects.BaseV], TDenvDict, FenvDict, EnvKeys) -> Context | ContextWithEnvs
+        if (tdenv is None or tdenv._keys is EnvKeys.EMPTY) and (fenv is None or fenv._keys is EnvKeys.EMPTY):
+            return Context.make(venv_values, venv_keys)
+        else:
+            return ContextWithEnvs.make(venv_values, tdenv, fenv, venv_keys)
 
     def load_spec(self, spec, file_content, spec_dirname, filename, derive=False):
         self.venv_keys.glbl.file_content = file_content
@@ -241,6 +228,27 @@ class Context(sign.Sign):
                 self.venv_keys.glbl.fenv[definition.id.value] = definition
         self.venv_keys.glbl.filename = filename
         self.derive = derive
+
+    def copy_and_change(self, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
+        tdenv = tdenv if tdenv is not None else self.get_tdenv()
+        fenv = fenv if fenv is not None else self.get_fenv()
+        venv_keys = venv_keys if venv_keys is not None else self.venv_keys
+        venv_values = venv_values if venv_values is not None else self._get_full_list()
+        return Context.create(venv_values, tdenv, fenv, venv_keys)
+
+    def copy_and_change_append_venv(self, value, venv_keys):
+        return self._append_list(value, venv_keys)
+
+    def copy_and_change_set_list(self, values, venv_keys):
+        assert self._get_size_list() == 0
+        return Context.make(values, venv_keys)
+
+    def try_append_case_values(self, notexp, case_value):
+        venv_keys = _notexp_compute_final_env_keys(notexp, jit.promote(self.venv_keys))
+        if venv_keys is None:
+            return None
+        values = self._get_full_list() + case_value._get_full_list()
+        return Context.make(values, venv_keys)
 
     def localize(self):
         return self.copy_and_change(tdenv=TDenvDict.EMPTY, fenv=FenvDict.EMPTY, venv_keys=self.venv_keys.glbl.empty_envkeys, venv_values=[])
@@ -274,25 +282,6 @@ class Context(sign.Sign):
         pos = jit.promote(self.venv_keys).get_pos(id.value, iterlist.to_key())
         return pos >= 0
 
-    def find_typdef_local(self, id, typ_cache=None):
-        # type: (p4specast.Id) -> tuple[list[p4specast.TParam], p4specast.DefTyp]
-        if not jit.we_are_jitted() and typ_cache and typ_cache._ctx_tdenv_keys is self.tdenv._keys:
-            return typ_cache._ctx_typ_res
-        if self.tdenv.has_key(id.value):
-            typdef = self.tdenv.get(id.value)
-        else:
-            typdef = jit.promote(self.venv_keys.glbl)._find_typdef(id.value)
-            if not jit.we_are_jitted() and typ_cache:
-                typ_cache._ctx_tdenv_keys = self.tdenv._keys
-                typ_cache._ctx_typ_res = typdef
-        return typdef
-
-    def find_rel_local(self, id):
-        res = jit.promote(self.venv_keys.glbl)._find_rel(id.value)
-        if res is None:
-            raise P4ContextError("rel %s not found" % id.value)
-        return res
-
     def add_value_local(self, id, iterlist, value, vare_cache=None):
         # type: (p4specast.Id, p4specast.IterList, objects.BaseV, p4specast.VarE | None) -> Context
         if not jit.we_are_jitted() and vare_cache is not None and vare_cache._ctx_keys_add is self.venv_keys:
@@ -300,7 +289,7 @@ class Context(sign.Sign):
             return self.copy_and_change_append_venv(value, venv_keys)
         var_iter = iterlist.to_key()
         venv_keys = jit.promote(self.venv_keys)
-        length = jit.promote(self._get_size_list())
+        length = jit.promote(self._get_size_list()) # TODO: length not used?
         pos = venv_keys.get_pos(id.value, var_iter)
         if pos < 0:
             venv_keys = self.venv_keys.add_key(id.value, var_iter)
@@ -313,34 +302,29 @@ class Context(sign.Sign):
             venv_values[pos] = value
             return self.copy_and_change(venv_values=venv_values)
 
-    def add_func_local(self, id, func):
-        # type: (p4specast.Id, p4specast.DecD) -> Context
-        fenv = self.fenv.set(id.value, func)
-        result = self.copy_and_change(fenv=fenv)
-        return result
+    def _venv_str(self):
+        l = ["<venv "]
+        for index, (var_name, var_iter) in enumerate(self.venv_keys.keys):
+            pos = self.venv_keys.get_pos(var_name, var_iter)
+            value = self._get_list(i)
+            if index == 0:
+                l.append("%r: %r" % (var_name + var_iter, value))
+            else:
+                l.append(", %r: %r" % (var_name + var_iter, value))
+        l.append(">")
+        return "".join(l)
 
-    def add_typdef_local(self, id, typdef):
-        # type: (p4specast.TParam, tuple[list[p4specast.TParam], p4specast.DefTyp]) -> Context
-        tdenv = self.tdenv.set(id.value, typdef)
-        result = self.copy_and_change(tdenv=tdenv)
-        return result
+    def venv_items(self):
+        res = []
+        for key, index in self.venv_keys.keys.items():
+            res.append((key, self._get_list(index)))
+        return res
 
-    def find_func_local(self, id, calle_cache=None):
-        # type: (p4specast.Id) -> p4specast.DecD
-        if not jit.we_are_jitted() and calle_cache and calle_cache._ctx_fenv_keys is self.fenv._keys:
-            return calle_cache._ctx_func_res
-        if self.fenv.has_key(id.value):
-            func = self.fenv.get(id.value)
-        else:
-            func = jit.promote(self.venv_keys.glbl)._find_func(id.value)
-            if not jit.we_are_jitted() and calle_cache:
-                calle_cache._ctx_fenv_keys = self.fenv._keys
-                calle_cache._ctx_func_res = func
-        return func
-
-    def commit(self, sub_ctx):
-        # TODO: later add cover
-        return self
+    def find_rel_local(self, id):
+        res = jit.promote(self.venv_keys.glbl)._find_rel(id.value)
+        if res is None:
+            raise P4ContextError("rel %s not found" % id.value)
+        return res
 
     @jit.unroll_safe
     def sub_opt(self, vars):
@@ -415,29 +399,103 @@ class Context(sign.Sign):
         assert first_list is not None
         return SubListIter(self, varlist, first_list_length, values_batch)
 
-    def _venv_str(self):
-        l = ["<venv "]
-        for index, (var_name, var_iter) in enumerate(self.venv_keys.keys):
-            pos = self.venv_keys.get_pos(var_name, var_iter)
-            value = self._get_list(i)
-            if index == 0:
-                l.append("%r: %r" % (var_name + var_iter, value))
-            else:
-                l.append(", %r: %r" % (var_name + var_iter, value))
-        l.append(">")
-        return "".join(l)
-
-    def venv_items(self):
-        res = []
-        for key, index in self.venv_keys.keys.items():
-            res.append((key, self._get_list(index)))
-        return res
+    def commit(self, sub_ctx):
+        # TODO: later add cover
+        return self
 
     def sign_is_cont(self):
         return True
 
     def sign_get_ctx(self):
         return self
+
+    def get_tdenv(self):
+        return None
+
+    def find_typdef_local(self, id, typ_cache=None):
+        raise NotImplementedError("abstract base class")
+
+    def add_typdef_local(self, id, typdef):
+        raise NotImplementedError("abstract base class")
+
+    def get_fenv(self):
+        return None
+
+    def find_func_local(self, id, calle_cache=None):
+        raise NotImplementedError("abstract base class")
+
+    def add_func_local(self, id, func):
+        raise NotImplementedError("abstract base class")
+
+@smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
+class ContextWithEnvs(Context):
+    _attrs_ = ['tdenv', 'fenv']
+    _immutable_fields_ = ['tdenv', 'fenv', 'venv_keys']
+
+    def __init__(self, tdenv=None, fenv=None, venv_keys=None):
+        # the local context is inlined
+        self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY # type: TDenvDict
+        self.fenv = fenv if fenv is not None else FenvDict.EMPTY # type: FenvDict
+        self.venv_keys = venv_keys if venv_keys is not None else GlobalContext().empty_envkeys # type: EnvKeys
+        assert self.venv_keys.glbl is not None
+
+    def copy_and_change_append_venv(self, value, venv_keys):
+        return self._append_list(value, self.tdenv, self.fenv, venv_keys)
+
+    def copy_and_change_set_list(self, values, venv_keys):
+        assert self._get_size_list() == 0
+        return ContextWithEnvs.make(values, self.tdenv, self.fenv, venv_keys)
+
+    def try_append_case_values(self, notexp, case_value):
+        venv_keys = _notexp_compute_final_env_keys(notexp, jit.promote(self.venv_keys))
+        if venv_keys is None:
+            return None
+        values = self._get_full_list() + case_value._get_full_list()
+        return ContextWithEnvs.make(values, self.tdenv, self.fenv, venv_keys)
+
+    def get_tdenv(self):
+        return self.tdenv
+
+    def find_typdef_local(self, id, typ_cache=None):
+        # type: (p4specast.Id, p4specast.VarT) -> tuple[list[p4specast.TParam], p4specast.DefTyp]
+        if not jit.we_are_jitted() and typ_cache and typ_cache._ctx_tdenv_keys is self.tdenv._keys:
+            return typ_cache._ctx_typ_res
+        if self.tdenv.has_key(id.value):
+            typdef = self.tdenv.get(id.value)
+        else:
+            typdef = jit.promote(self.venv_keys.glbl)._find_typdef(id.value)
+            if not jit.we_are_jitted() and typ_cache:
+                typ_cache._ctx_tdenv_keys = self.tdenv._keys
+                typ_cache._ctx_typ_res = typdef
+        return typdef
+
+    def add_typdef_local(self, id, typdef):
+        # type: (p4specast.TParam, tuple[list[p4specast.TParam], p4specast.DefTyp]) -> Context
+        tdenv = self.tdenv.set(id.value, typdef)
+        result = self.copy_and_change(tdenv=tdenv)
+        return result
+
+    def get_fenv(self):
+        return self.fenv
+
+    def find_func_local(self, id, calle_cache=None):
+        # type: (p4specast.Id, p4specast.CallE) -> p4specast.DecD
+        if not jit.we_are_jitted() and calle_cache and calle_cache._ctx_fenv_keys is self.fenv._keys:
+            return calle_cache._ctx_func_res
+        if self.fenv.has_key(id.value):
+            func = self.fenv.get(id.value)
+        else:
+            func = jit.promote(self.venv_keys.glbl)._find_func(id.value)
+            if not jit.we_are_jitted() and calle_cache:
+                calle_cache._ctx_fenv_keys = self.fenv._keys
+                calle_cache._ctx_func_res = func
+        return func
+
+    def add_func_local(self, id, func):
+        # type: (p4specast.Id, p4specast.DecD) -> Context
+        fenv = self.fenv.set(id.value, func)
+        result = self.copy_and_change(fenv=fenv)
+        return result
 
 class SubListIter(object):
     def __init__(self, ctx, varlist, length, values_batch):
