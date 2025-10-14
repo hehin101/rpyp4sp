@@ -326,6 +326,48 @@ class Context(sign.Sign):
             raise P4ContextError("rel %s not found" % id.value)
         return res
 
+    def get_tdenv(self):
+        return None
+
+    def find_typdef_local(self, id, typ_cache=None):
+         # type: (p4specast.Id, p4specast.VarT) -> tuple[list[p4specast.TParam], p4specast.DefTyp]
+        if not jit.we_are_jitted() and typ_cache and typ_cache._ctx_tdenv_keys is EnvKeys.EMPTY:
+            return typ_cache._ctx_typ_res
+        typdef = jit.promote(self.venv_keys.glbl)._find_typdef(id.value)
+        if not jit.we_are_jitted() and typ_cache:
+            typ_cache._ctx_tdenv_keys = EnvKeys.EMPTY
+            typ_cache._ctx_typ_res = typdef
+        return typdef
+
+    def add_typdef_local(self, id, typdef):
+        # type: (p4specast.TParam, tuple[list[p4specast.TParam], p4specast.DefTyp]) -> ContextWithEnvs
+        tdenv = TDenvDict.EMPTY.set(id.value, typdef)
+        result = self.copy_and_change(tdenv=tdenv)
+        return result
+
+    def get_fenv(self):
+        return None
+
+    def find_func_local(self, id, calle_cache=None):
+        # type: (p4specast.Id, p4specast.CallE) -> p4specast.DecD
+        if not jit.we_are_jitted() and calle_cache and calle_cache._ctx_fenv_keys is EnvKeys.EMPTY:
+            return calle_cache._ctx_func_res
+        func = jit.promote(self.venv_keys.glbl)._find_func(id.value)
+        if not jit.we_are_jitted() and calle_cache:
+            calle_cache._ctx_fenv_keys = EnvKeys.EMPTY
+            calle_cache._ctx_func_res = func
+        return func
+
+    def add_func_local(self, id, func):
+        # type: (p4specast.Id, p4specast.DecD) -> Context
+        fenv = FenvDict.EMPTY.set(id.value, func)
+        result = self.copy_and_change(fenv=fenv)
+        return result
+
+    def commit(self, sub_ctx):
+        # TODO: later add cover
+        return self
+
     @jit.unroll_safe
     def sub_opt(self, vars):
         #   (* First collect the values that are to be iterated over *)
@@ -399,33 +441,11 @@ class Context(sign.Sign):
         assert first_list is not None
         return SubListIter(self, varlist, first_list_length, values_batch)
 
-    def commit(self, sub_ctx):
-        # TODO: later add cover
-        return self
-
     def sign_is_cont(self):
         return True
 
     def sign_get_ctx(self):
         return self
-
-    def get_tdenv(self):
-        return None
-
-    def find_typdef_local(self, id, typ_cache=None):
-        raise NotImplementedError("abstract base class")
-
-    def add_typdef_local(self, id, typdef):
-        raise NotImplementedError("abstract base class")
-
-    def get_fenv(self):
-        return None
-
-    def find_func_local(self, id, calle_cache=None):
-        raise NotImplementedError("abstract base class")
-
-    def add_func_local(self, id, func):
-        raise NotImplementedError("abstract base class")
 
 @smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
 class ContextWithEnvs(Context):
