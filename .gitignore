@@ -5,6 +5,12 @@
 /pypy/
 /pypy_binary/
 *.pyc
-ast.json
+*.json
 integrationtests/*.actual
 targetrpyp4sp-c*
+
+*.csv
+gcout
+
+# keep rpyp4sp/test/example_values.json
+!rpyp4sp/test/example_values.json
