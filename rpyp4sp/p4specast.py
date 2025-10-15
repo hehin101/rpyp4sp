@@ -2942,7 +2942,8 @@ def _rename_fromjson_staticmethods():
     while todo:
         cls = todo.pop()
         if hasattr(cls, 'fromjson'):
-            cls.fromjson.func_name += "_" + cls.__name__
+            if cls.fromjson.func_name == 'fromjson':
+                cls.fromjson.func_name += "_" + cls.__name__
         todo.extend(cls.__subclasses__())
 
 _rename_fromjson_staticmethods()

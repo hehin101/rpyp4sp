@@ -12,6 +12,7 @@ from pypy.interpreter.error import oefmt
 from pypy.interpreter import unicodehelper
 
 from rpyp4sp.error import P4ParseError, P4NotImplementedError
+from rpyp4sp.smalllist import inline_small_list
 
 # Union-Object to represent a json structure in a static way
 class JsonBase(object):
@@ -31,7 +32,7 @@ class JsonBase(object):
 
     def _unpack_deep(self):
         "NON_RPYTHON"
-        assert 0, 'base class'
+        assert 0, 'base class %s' % (self.__class__.__name__, )
 
     def __repr__(self):
         return "<json %r>" % (self._unpack_deep(), )
@@ -54,7 +55,7 @@ class JsonBase(object):
     def get_list_item(self, index):
         if self.is_array and isinstance(index, int):
             assert isinstance(self, JsonArray)
-            return self.value[index]
+            return self._get_list(index)
         raise TypeError("Invalid index access %s %s" % (self, index))
 
     @specialize.arg(1)
@@ -70,12 +71,12 @@ class JsonBase(object):
 
     def __iter__(self):
         assert isinstance(self, JsonArray)
-        return iter(self.value)
+        return iter(self._get_full_list())
 
     def unpack(self, n):
         assert isinstance(self, JsonArray)
-        assert len(self.value) == n
-        return self.value
+        assert self._get_size_list() == n
+        return self._get_full_list()
 
     def __repr__(self):
         import pdb;pdb.set_trace()
@@ -244,7 +245,7 @@ class JsonObject(JsonBase):
     def _unpack_deep(self):
         result = {}
         for key, index in self.map.attrs.iteritems():
-            result[key] = self.values[index]._unpack_deep()
+            result[key] = self._get_value(index)._unpack_deep()
         return result
 
     def __repr__(self):
@@ -351,24 +352,24 @@ class JsonAdapterRegion(JsonBase):
     def __repr__(self):
         return "rpyjson.JsonAdapterRegion(%r)" % (self.region, )
 
-
+@inline_small_list(immutable=True)
 class JsonArray(JsonBase):
     is_array = True
 
-    def __init__(self, lst):
-        self.value = lst
+    def __init__(self):
+        pass
 
     def tostring(self):
-        return "[%s]" % ", ".join([e.tostring() for e in self.value])
+        return "[%s]" % ", ".join([self._get_list(i).tostring() for i in range(self._get_size_list())])
 
     def _unpack_deep(self):
-        return [e._unpack_deep() for e in self.value]
+        return [self._get_list(i)._unpack_deep() for i in range(self._get_size_list())]
 
     def value_array(self):
-        return self.value
+        return self._get_full_list()
 
     def __repr__(self):
-        return "rpyjson.JsonArray(%r)" % (self.value,)
+        return "rpyjson.JsonArray.make(%r)" % (self._get_full_list(),)
 
 json_null = JsonNull()
 
@@ -377,6 +378,8 @@ json_true = JsonTrue()
 json_false = JsonFalse()
 
 json_empty_string = JsonString('')
+
+json_empty_list = JsonArray.make0()
 
 OVF_DIGITS = len(str(sys.maxint))
 
@@ -477,7 +480,10 @@ class JSONDecoder(object):
         # 1) we automatically get the '\0' sentinel at the end of the string,
         #    which means that we never have to check for the "end of string"
         # 2) we can pass the buffer directly to strtod
-        self.ll_chars = rffi.str2charp(s)
+        if not we_are_translated():
+            self.ll_chars = s + b"\0"
+        else:
+            self.ll_chars = rffi.str2charp(s)
         self.end_ptr = lltype.malloc(rffi.CCHARPP.TO, 1, flavor='raw')
         self.pos = 0
         self.cache_keys = {}
@@ -489,7 +495,8 @@ class JSONDecoder(object):
         self.str_lru_index = 0
 
     def close(self):
-        rffi.free_charp(self.ll_chars)
+        if we_are_translated():
+            rffi.free_charp(self.ll_chars)
         lltype.free(self.end_ptr, flavor='raw')
 
     def getslice(self, start, end):
@@ -663,14 +670,13 @@ class JSONDecoder(object):
         return i, ovf_maybe, sign * intval
 
     def decode_array(self, i):
-        lst = newlist_hint(4)
-        w_list = JsonArray(lst)
         start = i
         i = self.skip_whitespace(start)
         if self.ll_chars[i] == ']':
             self.pos = i+1
-            return w_list
+            return json_empty_list
         #
+        lst = newlist_hint(4)
         while True:
             w_item = self.decode_any(i)
             i = self.pos
@@ -680,7 +686,73 @@ class JSONDecoder(object):
             i += 1
             if ch == ']':
                 self.pos = i
-                return w_list
+                return JsonArray.make(lst[:])
+            elif ch == ',':
+                pass
+            elif ch == '\0':
+                self._raise("Unterminated array starting at char %d", start)
+            else:
+                self._raise("Unexpected '%s' when decoding array (char %d)",
+                            ch, i-1)
+
+    def decode_array(self, i):
+        start = i
+        i = self.skip_whitespace(start)
+        if self.ll_chars[i] == ']':
+            self.pos = i+1
+            return json_empty_list
+        #
+        w_item0 = self.decode_any(i)
+        i = self.pos
+        i = self.skip_whitespace(i)
+        ch = self.ll_chars[i]
+        i += 1
+        if ch == ']':
+            self.pos = i
+            return JsonArray.make1(w_item0)
+        elif ch == ',':
+            w_item1 = self.decode_any(i)
+            i = self.pos
+            i = self.skip_whitespace(i)
+            ch = self.ll_chars[i]
+            i += 1
+            if ch == ']':
+                self.pos = i
+                return JsonArray.make2(w_item0, w_item1)
+            elif ch == ',':
+                w_item2 = self.decode_any(i)
+                i = self.pos
+                i = self.skip_whitespace(i)
+                ch = self.ll_chars[i]
+                i += 1
+                if ch == ']':
+                    self.pos = i
+                    return JsonArray.make3(w_item0, w_item1, w_item2)
+                elif ch == ',':
+                    return self._decode_array_general(i, start, w_item0, w_item1, w_item2)
+        self._decode_array_general(start, start) # for error message
+        return
+        
+
+    def _decode_array_general(self, i, start, w_item0=None, w_item1=None, w_item2=None):
+        start = i
+        lst = newlist_hint(4)
+        if w_item0:
+            lst.append(w_item0)
+            if w_item1:
+                lst.append(w_item1)
+                if w_item2:
+                    lst.append(w_item2)
+        while True:
+            w_item = self.decode_any(i)
+            i = self.pos
+            lst.append(w_item)
+            i = self.skip_whitespace(i)
+            ch = self.ll_chars[i]
+            i += 1
+            if ch == ']':
+                self.pos = i
+                return JsonArray.make(lst[:])
             elif ch == ',':
                 pass
             elif ch == '\0':
@@ -926,7 +998,7 @@ class JSONDecoder(object):
 
 
 def loads(s):
-    if not we_are_translated():
+    if 0 and not we_are_translated():
         import json
         data = json.loads(s)
         return _convert(data)
@@ -956,7 +1028,7 @@ def _convert(data):
     if isinstance(data, unicode):
         return JsonString(data.encode("utf-8"))
     if isinstance(data, list):
-        return JsonArray([_convert(x) for x in data])
+        return JsonArray.make([_convert(x) for x in data])
     if isinstance(data, dict):
         curr_map = ROOT_MAP
         values = []
