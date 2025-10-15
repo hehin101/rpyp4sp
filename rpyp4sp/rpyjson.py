@@ -769,21 +769,18 @@ class JSONDecoder(object):
 
     def decode_object(self, i):
         start = i
+        ll_chars = self.ll_chars
 
         i = self.skip_whitespace(i)
-        if self.ll_chars[i] == '}':
+        if ll_chars[i] == '}':
             self.pos = i+1
             return JsonObject0(ROOT_MAP)
 
+        if ll_chars[i] == '"' and ll_chars[i + 1] == 'l' and ll_chars[i + 2] == 'e':
+            res = self.decode_region(i)
+            if res is not None:
+                return res
         curr_map = self.decode_key(ROOT_MAP, i)
-        if curr_map is file_map:
-            res = self.decode_position()
-            if res is not None:
-                return res
-        if curr_map is left_map:
-            res = self.decode_region()
-            if res is not None:
-                return res
         if self.scratch_lists:
             values = self.scratch_lists.pop()
         else:
@@ -792,7 +789,7 @@ class JSONDecoder(object):
         while True:
             # parse a key: value
             i = self.skip_whitespace(self.pos)
-            ch = self.ll_chars[i]
+            ch = ll_chars[i]
             if ch != ':':
                 self._raise("No ':' found at char %d", i)
             i += 1
@@ -804,7 +801,7 @@ class JSONDecoder(object):
             values[values_index] = w_value
             values_index += 1
             i = self.skip_whitespace(self.pos)
-            ch = self.ll_chars[i]
+            ch = ll_chars[i]
             i += 1
             if ch == '}':
                 self.pos = i
@@ -1065,13 +1062,12 @@ class JSONDecoder(object):
             return JsonAdapterPosition(res)
         return None
 
-    def decode_region(self):
+    def decode_region(self, i):
         # fast path, ignore whitespace, caller can deal with it
         from rpyp4sp.p4specast import Position, Region, NO_REGION
-        i = self.pos
         start = i
         ll_chars = self.ll_chars
-        for c in ':{"file"':
+        for c in '"left":{"file"':
             if ll_chars[i] != c:
                 self.pos = start
                 return None
