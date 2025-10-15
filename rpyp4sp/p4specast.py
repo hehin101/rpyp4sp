@@ -126,6 +126,8 @@ class Position(AstBase):
     def __repr__(self):
         return "p4specast.Position(%r, %d, %d)" % (self.file, self.line, self.column)
 
+Position.NO_POSITION = Position('', 0, 0)
+
 # type region = { left : pos; right : pos } [@@deriving yojson]
 
 class Region(AstBase):

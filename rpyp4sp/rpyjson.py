@@ -462,9 +462,11 @@ class MapLookupCache(object):
 ROOT_MAP = Map(None, {})
 
 # prime the root map with some common transitions
-position_map = ROOT_MAP.get_next("file").get_next("line").get_next("column")
+file_map = ROOT_MAP.get_next("file")
+position_map = file_map.get_next("line").get_next("column")
 it_note_at_map = ROOT_MAP.get_next("it").get_next("note").get_next("at")
-region_map = ROOT_MAP.get_next("left").get_next("right")
+left_map = ROOT_MAP.get_next("left")
+region_map = left_map.get_next("right")
 ROOT_MAP.get_next("vid").get_next("typ").get_next("at")
 
 TYPE_UNKNOWN = 0
@@ -773,7 +775,15 @@ class JSONDecoder(object):
             self.pos = i+1
             return JsonObject0(ROOT_MAP)
 
-        curr_map = ROOT_MAP
+        curr_map = self.decode_key(ROOT_MAP, i)
+        if curr_map is file_map:
+            res = self.decode_position()
+            if res is not None:
+                return res
+        if curr_map is left_map:
+            res = self.decode_region()
+            if res is not None:
+                return res
         if self.scratch_lists:
             values = self.scratch_lists.pop()
         else:
@@ -781,7 +791,6 @@ class JSONDecoder(object):
         values_index = 0
         while True:
             # parse a key: value
-            curr_map = self.decode_key(curr_map, i)
             i = self.skip_whitespace(self.pos)
             ch = self.ll_chars[i]
             if ch != ':':
@@ -809,6 +818,7 @@ class JSONDecoder(object):
             else:
                 self._raise("Unexpected '%s' when decoding object (char %d)",
                             ch, i-1)
+            curr_map = self.decode_key(curr_map, i)
 
     def decode_string(self, i):
         from pypy.module._pypyjson import simd
@@ -961,7 +971,6 @@ class JSONDecoder(object):
         ll_chars = self.ll_chars
 
         start = i
-        bits = 0
         strhash = ord(ll_chars[i]) << 7
         while True:
             ch = ll_chars[i]
@@ -972,7 +981,6 @@ class JSONDecoder(object):
                 self.pos = i-1
                 return self.decode_string_escaped(start).value_string()
             strhash = intmask((1000003 * strhash) ^ ord(ll_chars[i]))
-            bits |= ord(ch)
         length = i - start - 1
         if length == 0:
             strhash = -1
@@ -999,9 +1007,103 @@ class JSONDecoder(object):
         # collision, hopefully rare
         return self.getslice(start, start + length)
 
+    def _decode_position(self):
+        # fast path, ignore whitespace, caller can deal with it
+        from rpyp4sp.p4specast import Position
+        i = self.pos
+        start = i
+        ll_chars = self.ll_chars
+        if ll_chars[i] != ':' or ll_chars[i + 1] != '"':
+            self.pos = start
+            return None
+        i += 2
+        filename = self.decode_string(i).value_string()
+        i = self.pos
+        if ll_chars[i] != ',':
+            self.pos = start
+            return None
+        i += 1
+        for c in '"line":':
+            if ll_chars[i] != c:
+                self.pos = start
+                return None
+            i += 1
+        if not ll_chars[i].isdigit():
+            self.pos = start
+            return None
+        i, ovf_maybe, lineval = self.parse_integer(i)
+        if ovf_maybe:
+            self.pos = start
+            return None
+        if ll_chars[i] != ',':
+            self.pos = start
+            return None
+        i += 1
+        for c in '"column":':
+            if ll_chars[i] != c:
+                self.pos = start
+                return None
+            i += 1
+        i, ovf_maybe, columnval = self.parse_integer(i)
+        if ovf_maybe:
+            self.pos = start
+            return None
+        if ll_chars[i] != '}':
+            self.pos = start
+            return None
+        i += 1
+        self.pos = i
+        if len(filename) == 0 and lineval == 0 and columnval == 0:
+            position = Position.NO_POSITION
+        else:
+            position = Position(filename, lineval, columnval)
+        return position
 
-def loads(s):
-    if not we_are_translated():
+    def decode_position(self):
+        res = self._decode_position()
+        if res is not None:
+            return JsonAdapterPosition(res)
+        return None
+
+    def decode_region(self):
+        # fast path, ignore whitespace, caller can deal with it
+        from rpyp4sp.p4specast import Position, Region, NO_REGION
+        i = self.pos
+        start = i
+        ll_chars = self.ll_chars
+        for c in ':{"file"':
+            if ll_chars[i] != c:
+                self.pos = start
+                return None
+            i += 1
+        self.pos = i
+        left = self._decode_position()
+        if left is None:
+            return None
+        i = self.pos
+        for c in ',"right":{"file"':
+            if ll_chars[i] != c:
+                self.pos = start
+                return None
+            i += 1
+        self.pos = i
+        right = self._decode_position()
+        if right is None:
+            return None
+        i = self.pos
+        if ll_chars[i] != '}':
+            self.pos = start
+            return None
+        self.pos = i + 1
+        if left is Position.NO_POSITION and right is Position.NO_POSITION:
+            region = NO_REGION
+        else:
+            region = Region(left, right)
+        return JsonAdapterRegion(region)
+
+
+def loads(s, force=False):
+    if not we_are_translated() and not force:
         import json
         data = json.loads(s)
         return _convert(data)
