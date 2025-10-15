@@ -10,6 +10,7 @@ def _not_null(s_arg, bookkeeper):
 def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                       attrname="list", factoryname="make", listgettername="_get_full_list",
                       listsizename="_get_size_list", gettername="_get_list",
+                      appendname="_append_list",
                       settername="_set_list", append_list_unroll_safe=False):
     """
     This function is helpful if you have a class with a field storing a
@@ -33,6 +34,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
     """
     assert sizemin == 0
     def wrapper(cls):
+        cls_init = cls.__init__
 
         _immutable_ = getattr(cls, "_immutable_", False)
         empty_list = []
@@ -72,10 +74,10 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                         return
                 raise IndexError
             def _append_list0(self, value, *args):
-                return self.make1(value, *args)
+                return make1(value, *args)
             def _init(self, elems, *args):
                 assert len(elems) == 0
-                cls.__init__(self, *args)
+                cls_init(self, *args)
 
             # Methods for the new class being built
             methods = {
@@ -83,7 +85,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                 listsizename   : _get_size_list,
                 listgettername : _get_full_list,
                 settername     : _set_list,
-                "_append_list" : _append_list0,
+                appendname     : _append_list0,
                 "_get_full_list_copy": _get_full_list_copy,
                 "__init__"     : _init,
                 "_size_list"   : 0,
@@ -116,7 +118,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                     if nonull:
                         assert val is not None
                     setattr(self, attr, elems[i])
-                cls.__init__(self, *args)
+                cls_init(self, *args)
 
             def _append_list(self, value, *args):
                 if size + 1 >= len(classes):
@@ -132,7 +134,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                         oldvalue = getattr(self, attr)
                         setattr(res, attr, oldvalue)
                     setattr(res, "_%s_%s" % (attrname, size), value)
-                    cls.__init__(res, *args)
+                    cls_init(res, *args)
                     return res
 
 
@@ -140,7 +142,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             # Methods for the new class being built
             methods = {
                 listgettername : _get_full_list,
-                "_append_list" : _append_list,
+                appendname : _append_list,
                 "_get_full_list_copy": _get_full_list,
                 "__init__"     : _init,
                 "_size_list"   : size,
@@ -180,7 +182,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
         def _init(self, elems, *args):
             debug.make_sure_not_resized(elems)
             setattr(self, attrname, elems)
-            cls.__init__(self, *args)
+            cls_init(self, *args)
 
         def _append_list_arbitrary(self, value, *args):
             if nonull:
@@ -203,7 +205,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             listgettername : _get_list_arbitrary,
             "_get_full_list_copy" : _get_list_arbitrary_copy,
             settername     : _set_arbitrary,
-            "_append_list" : _append_list_arbitrary,
+            appendname     : _append_list_arbitrary,
             "__init__"     : _init,
         }
 
@@ -235,14 +237,14 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             if not classes: # no type specialization
                 return make([], *args)
             result = objectmodel.instantiate(classes[0])
-            cls.__init__(result, *args)
+            cls_init(result, *args)
             return result
         def make1(elem, *args):
             if len(classes) <= 1: # no type specialization
                 return make([elem], *args)
             result = objectmodel.instantiate(classes[1])
             result._set_list(0, elem)
-            cls.__init__(result, *args)
+            cls_init(result, *args)
             return result
         def make2(elem1, elem2, *args):
             if len(classes) <= 2: # no type specialization
@@ -250,7 +252,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             result = objectmodel.instantiate(classes[2])
             result._set_list(0, elem1)
             result._set_list(1, elem2)
-            cls.__init__(result, *args)
+            cls_init(result, *args)
             return result
 
         def make_n(size, *args):
@@ -262,7 +264,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             if subcls is cls_arbitrary:
                 assert isinstance(result, subcls)
                 setattr(result, attrname, [None] * size)
-            cls.__init__(result, *args)
+            cls_init(result, *args)
             return result
 
         setattr(cls, factoryname, staticmethod(make))

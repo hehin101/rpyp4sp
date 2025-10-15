@@ -200,7 +200,7 @@ FenvDict.EMPTY = FenvDict.make0()
 @smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
 class Context(sign.Sign):
     _attrs_ = ['venv_keys']
-    _immutable_fields = ['venv_keys']
+    _immutable_fields_ = ['venv_keys']
 
     def __init__(self, venv_keys=None):
         # the local context is inlined
@@ -289,7 +289,7 @@ class Context(sign.Sign):
             return self.copy_and_change_append_venv(value, venv_keys)
         var_iter = iterlist.to_key()
         venv_keys = jit.promote(self.venv_keys)
-        length = jit.promote(self._get_size_list()) # TODO: length not used?
+        jit.promote(self._get_size_list()) # tell the jit the length
         pos = venv_keys.get_pos(id.value, var_iter)
         if pos < 0:
             venv_keys = self.venv_keys.add_key(id.value, var_iter)
@@ -447,10 +447,10 @@ class Context(sign.Sign):
     def sign_get_ctx(self):
         return self
 
-@smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
+@smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True, appendname="_append_with_envs")
 class ContextWithEnvs(Context):
     _attrs_ = ['tdenv', 'fenv']
-    _immutable_fields_ = ['tdenv', 'fenv', 'venv_keys']
+    _immutable_fields_ = ['tdenv', 'fenv']
 
     def __init__(self, tdenv=None, fenv=None, venv_keys=None):
         # the local context is inlined
@@ -460,7 +460,10 @@ class ContextWithEnvs(Context):
         assert self.venv_keys.glbl is not None
 
     def copy_and_change_append_venv(self, value, venv_keys):
-        return self._append_list(value, self.tdenv, self.fenv, venv_keys)
+        # NB: the _append_list method needs to have a different name in the
+        # subclass, because their signature is incompatible from rpython's
+        # point of view
+        return self._append_with_envs(value, self.tdenv, self.fenv, venv_keys)
 
     def copy_and_change_set_list(self, values, venv_keys):
         assert self._get_size_list() == 0
