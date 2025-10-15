@@ -32,8 +32,12 @@ _pypy_binary/bin/python:  ## Download a PyPy binary
 	./_pypy_binary/bin/python -m ensurepip
 	./_pypy_binary/bin/python -mpip install "hypothesis<4.40" junit_xml coverage==5.5 "pdbpp==0.10.3"
 
+p4-spectec/p4spectec:
+	if [ ! -d p4-spectec ]; then git clone --recursive https://github.com/kaist-plrg/p4-spectec.git; fi
+	cd p4-spectec && make
+
 .PHONY: ast.json
-ast.json: _pypy_binary/bin/python ## regenerate the AST json file
+ast.json: _pypy_binary/bin/python p4-spectec/p4spectec ## regenerate the AST json file
 	_pypy_binary/bin/python prepare_ast.py
 
 
