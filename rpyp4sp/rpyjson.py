@@ -480,10 +480,7 @@ class JSONDecoder(object):
         # 1) we automatically get the '\0' sentinel at the end of the string,
         #    which means that we never have to check for the "end of string"
         # 2) we can pass the buffer directly to strtod
-        if not we_are_translated():
-            self.ll_chars = s + b"\0"
-        else:
-            self.ll_chars = rffi.str2charp(s)
+        self.ll_chars = rffi.str2charp(s)
         self.end_ptr = lltype.malloc(rffi.CCHARPP.TO, 1, flavor='raw')
         self.pos = 0
         self.cache_keys = {}
@@ -516,6 +513,13 @@ class JSONDecoder(object):
     @specialize.arg(1)
     def _raise(self, msg, *args):
         raise P4ParseError(msg % args)
+
+    def _raise_control_char_in_string(self, ch, startindex, currindex):
+        if ch == '\0':
+            self._raise("Unterminated string starting at char %d",
+                        startindex - 1)
+        else:
+            self._raise("Invalid control character at char %d", currindex-1)
 
     def decode_any(self, i):
         i = self.skip_whitespace(i)
@@ -807,37 +811,36 @@ class JSONDecoder(object):
                             ch, i-1)
 
     def decode_string(self, i):
+        from pypy.module._pypyjson import simd
         start = i
-        bits = 0
         ll_chars = self.ll_chars
-        strhash = ord(ll_chars[i]) << 7
-        while True:
-            # this loop is a fast path for strings which do not contain escape
-            # characters
-            ch = ll_chars[i]
-            i += 1
-            bits |= ord(ch)
-            if ch == '"':
-                self.pos = i
-                break
-            elif ch == '\\' or ch < '\x20':
-                self.pos = i-1
-                return self.decode_string_escaped(start)
-            strhash = intmask((1000003 * strhash) ^ ord(ll_chars[i]))
-        length = i - start - 1
+        strhash, nonascii, i = simd.find_end_of_string(ll_chars, i, len(self.s))
+        ch = ll_chars[i]
+        if ch == '\\':
+            self.pos = i
+            return self.decode_string_escaped(start)
+        if ch < '\x20':
+            self._raise_control_char_in_string(ch, start, i)
+        else:
+            assert ch == '"'
+
+        self.pos = i + 1
+
+        length = i - start
+
         if length == 0:
-            strhash = -1
             return json_empty_string
         else:
             strhash ^= length
             strhash = intmask(strhash)
+
         index = 0
         for index in range(self.LRU_SIZE):
             if self.str_lru_hashes[index] == strhash:
                 break
         else:
             # not found
-            return self._create_string_wrapped(start, i - 1, strhash)
+            return self._create_string_wrapped(start, i, strhash)
         cache_str = self.str_lru_jsonstrings[index]
         cache_str_unwrapped = cache_str.value_string()
         if length == len(cache_str_unwrapped):
@@ -849,7 +852,7 @@ class JSONDecoder(object):
             else:
                 return cache_str
         # rare: same hash, different string
-        return self._create_string_wrapped(start, i - 1, strhash)
+        return self._create_string_wrapped(start, i, strhash)
 
 
     def _create_string_wrapped(self, start, end, strhash):
@@ -998,7 +1001,7 @@ class JSONDecoder(object):
 
 
 def loads(s):
-    if 0 and not we_are_translated():
+    if not we_are_translated():
         import json
         data = json.loads(s)
         return _convert(data)
