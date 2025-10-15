@@ -195,6 +195,9 @@ class Id(AstBase):
         self.value = value # type: str
         self.region = region # type: Region
 
+    def tostring(self):
+        return self.value
+
     @staticmethod
     def fromjson(value, cache=None):
         """ example:{
@@ -446,13 +449,27 @@ class RelD(Def):
         )
 
 class DecD(Def):
-    _immutable_fields_ = ['id', 'tparams[*]', 'args[*]', 'instrs[*]']
+    _immutable_fields_ = ['id', 'tparams[*]', 'args[*]', 'instrs[*]', '_simple_args']
 
     def __init__(self, id, tparams, args, instrs):
         self.id = id            # type: Id
         self.tparams = tparams  # type: list[TParam]
         self.args = args        # type: list[Arg]
         self.instrs = instrs    # type: list[Instr]
+        self._simple_args = True
+        for arg in args:
+            if not isinstance(arg, ExpA):
+                self._simple_args = False
+                break
+            else:
+                exp = arg.exp
+                if not isinstance(exp, VarE):
+                    self._simple_args = False
+                    break
+        if not args:
+            self._simple_args = False
+        self._ctx_env_args_start = None
+        self._ctx_env_args_end = None
 
     def __repr__(self):
         return "p4specast.DecD(%r, %r, %r, %r)" % (self.id, self.tparams, self.args, self.instrs)
@@ -1293,6 +1310,20 @@ class NotExp(AstBase):
     def __init__(self, mixop, exps):
         self.mixop = mixop
         self.exps = exps
+        self._is_simple_casev_assignment_target = '?'
+
+    @jit.elidable
+    def is_simple_casev_assignment_target(self):
+        if self._is_simple_casev_assignment_target == '?':
+            self._is_simple_casev_assignment_target = 'y'
+            for exp in self.exps:
+                if isinstance(exp, VarE):
+                    continue
+                if isinstance(exp, IterE) and exp.is_simple_list_expr():
+                    continue
+                self._is_simple_casev_assignment_target = 'n'
+                break
+        return self._is_simple_casev_assignment_target == 'y'
 
     def tostring(self, typ=None):
         # and string_of_notexp ?(typ = None) notexp =
@@ -1431,6 +1462,18 @@ class Type(AstBase):
         else:
             assert isinstance(iter, Opt)
             return self.opt_of()
+
+    @jit.elidable
+    def iterate(self, iterlist):
+        # let rec iterate (typ : t) (iters : iter list) : t =
+        #   match iters with
+        #   | [] -> typ
+        #   | iter :: iters -> iterate (IterT (typ, iter) $ typ.at) iters
+        res = self
+        for iter in iterlist.iterlist:
+            res = res.iter_of(iter)
+        return res
+
 
 class BoolT(Type):
     def __init__(self, region=None):
@@ -1592,6 +1635,7 @@ class IterT(Type):
         self.typ = typ
         self.iter = iter
         self.region = region
+        self._empty_value_of = None # type: objects.ListV | objects.OptV | None
 
     def tostring(self):
         # | IterT (typ, iter) -> string_of_typ typ ^ string_of_iter iter
@@ -1615,6 +1659,37 @@ class IterT(Type):
             region=region
         )
         return res
+
+    @jit.elidable_promote('0')
+    def empty_list_value(self):
+        from rpyp4sp import objects
+        assert isinstance(self.iter, List)
+        if self._empty_value_of is not None:
+            res = self._empty_value_of
+            assert isinstance(self._empty_value_of, objects.ListV)
+            return res
+        res = objects.ListV._make0(self)
+        self._empty_value_of = res
+        return res
+
+    @jit.elidable
+    def opt_none_value(self):
+        from rpyp4sp import objects
+        assert isinstance(self.iter, Opt)
+        if self._empty_value_of is not None:
+            res = self._empty_value_of
+            assert isinstance(self._empty_value_of, objects.OptV)
+            return res
+        res = objects.OptV(None, self)
+        self._empty_value_of = res
+        return res
+
+    def make_opt_value(self, inner):
+        assert isinstance(self.iter, Opt)
+        from rpyp4sp import objects
+        if inner is None:
+            return self.opt_none_value()
+        return objects.OptV(inner, self)
 
 class FuncT(Type):
     def __init__(self, region=None):
