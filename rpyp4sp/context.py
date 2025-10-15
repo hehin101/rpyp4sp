@@ -8,6 +8,8 @@ class GlobalContext(object):
     file_content = {}
     spec_dirname = None
 
+    _immutable_fields_ = ['empty_envkeys', 'empty_simple_context']
+
     def __init__(self):
         self.filename = None
         self.derive = False
@@ -15,6 +17,7 @@ class GlobalContext(object):
         self.renv = {}
         self.fenv = {}
         self.empty_envkeys = EnvKeys({}, self)
+        self.empty_simple_context = Context.make0(self.empty_envkeys)
 
     @jit.elidable
     def _find_rel(self, name):
@@ -200,6 +203,7 @@ FenvDict.EMPTY = FenvDict.make0()
 @smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
 class Context(sign.Sign):
     _attrs_ = ['venv_keys']
+    _immutable_ = True
     _immutable_fields_ = ['venv_keys']
 
     def __init__(self, venv_keys=None):
@@ -251,7 +255,7 @@ class Context(sign.Sign):
         return Context.make(values, venv_keys)
 
     def localize(self):
-        return self.copy_and_change(tdenv=TDenvDict.EMPTY, fenv=FenvDict.EMPTY, venv_keys=self.venv_keys.glbl.empty_envkeys, venv_values=[])
+        return jit.promote(self.venv_keys).glbl.empty_simple_context
 
     def localize_venv(self, venv_keys, venv_values):
         # type: (EnvKeys, list[objects.BaseV]) -> Context
@@ -450,6 +454,7 @@ class Context(sign.Sign):
 @smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True, appendname="_append_with_envs")
 class ContextWithEnvs(Context):
     _attrs_ = ['tdenv', 'fenv']
+    _immutable_ = True
     _immutable_fields_ = ['tdenv', 'fenv']
 
     def __init__(self, tdenv=None, fenv=None, venv_keys=None):

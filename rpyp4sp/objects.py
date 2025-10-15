@@ -416,6 +416,7 @@ class StructV(BaseVWithTyp):
 
 @inline_small_list(immutable=True)
 class CaseV(BaseVWithTyp):
+    _immutable_ = True
     _immutable_fields_ = ['mixop']
     def __init__(self, mixop, typ=None):
         self.mixop = mixop # type: p4specast.MixOp

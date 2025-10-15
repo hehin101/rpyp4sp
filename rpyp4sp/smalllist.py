@@ -95,6 +95,8 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             if "_attrs_" in cls.__dict__:
                 setattr(newcls, "_attrs_", [])
 
+            if _immutable_:
+                setattr(newcls, "_immutable_", True)
             return newcls
 
         def make_class(size, base):
@@ -156,6 +158,8 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             if "_attrs_" in cls.__dict__:
                 setattr(newcls, "_attrs_", attrs)
 
+            if _immutable_:
+                setattr(newcls, "_immutable_", True)
             return newcls
 
         classes = []
