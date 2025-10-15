@@ -464,10 +464,15 @@ ROOT_MAP = Map(None, {})
 # prime the root map with some common transitions
 file_map = ROOT_MAP.get_next("file")
 position_map = file_map.get_next("line").get_next("column")
-it_note_at_map = ROOT_MAP.get_next("it").get_next("note").get_next("at")
+
+it_map = ROOT_MAP.get_next("it")
+it_note_at_map = it_map.get_next("note").get_next("at")
+
 left_map = ROOT_MAP.get_next("left")
 region_map = left_map.get_next("right")
-ROOT_MAP.get_next("vid").get_next("typ").get_next("at")
+
+vid_map = ROOT_MAP.get_next("vid")
+vid_map.get_next("typ").get_next("at")
 
 TYPE_UNKNOWN = 0
 TYPE_STRING = 1
@@ -960,6 +965,17 @@ class JSONDecoder(object):
             else:
                 self.pos = start
                 return nextmap
+        if curr_map is ROOT_MAP:
+            c = ll_chars[i]
+            if c == 'i':
+                if ll_chars[i + 1] == 't' and ll_chars[i + 2] == '"':
+                    self.pos = i + 3
+                    return it_map
+            elif c == 'v':
+                if ll_chars[i + 1] == 'i' and ll_chars[i + 2] == 'd' and ll_chars[i + 3] == '"':
+                    self.pos = i + 4
+                    return vid_map
+
         key = self._decode_key(i)
         return curr_map.get_next(key)
 
