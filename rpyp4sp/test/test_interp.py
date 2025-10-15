@@ -58,7 +58,7 @@ def test_downcast_nat():
     typ = p4specast.NumT.NAT
     value = objects.NumV.fromstr('32', p4specast.IntT.INSTANCE, p4specast.NumT.INT)
     _, res = interp.downcast(None, typ, value)
-    assert res.what == p4specast.NatT.INSTANCE
+    assert res.get_what() == p4specast.NatT.INSTANCE
 
 def test_upcast_list():
     typ = p4specast.IterT(p4specast.VarT(p4specast.Id('paramIL', p4specast.Region.line_span('spec/4g-typing-decl.watsup', 787, 32, 39)), []), p4specast.List())
@@ -78,7 +78,7 @@ def test_reversed_iters_list():
 def test_binop_num_sub_is_int():
     def mknat(val): return objects.NumV.fromstr(str(val), p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
     res = interp.eval_binop_num('SubOp', mknat(5), mknat(9), p4specast.NumT.INT)
-    assert res.what == p4specast.IntT.INSTANCE
+    assert res.get_what() == p4specast.IntT.INSTANCE
 
 def test_eval_arg():
     arg = p4specast.DefA(p4specast.Id('compatible_plusminusmult', p4specast.Region.line_span('spec/4e-typing-expr.watsup', 173, 84, 108)))

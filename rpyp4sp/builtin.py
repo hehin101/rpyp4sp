@@ -608,7 +608,7 @@ def numerics_to_int(targs, values_input):
     maxvalue = integers.Integer.fromint(1).lshift(width)
     num_num = num_num.mod(maxvalue) # normalize in range 0..2**width-1
     rightmost_bit = num_num.rshift(width - 1)
-    if rightmost_bit.eq(integers.Integer.fromint(0)):
+    if rightmost_bit.int_eq(0):
         return _integer_to_value(num_num)
     return _integer_to_value(num_num.sub(maxvalue))
 
@@ -673,17 +673,17 @@ def numerics_bitacc(targs, values_input):
     rawint_l = value_l.get_num()  # l (low bit)
 
     # let slice_width = Bigint.(m + one - l) in
-    slice_width = rawint_h.add(integers.Integer.fromint(1)).sub(rawint_l)
+    slice_width = rawint_h.int_add(1).sub(rawint_l)
 
     # if Bigint.(l < zero) then raise (Invalid_argument "bitslice x[y:z] must have y > z > 0");
-    if rawint_l.lt(integers.Integer.fromint(0)):
+    if rawint_l.int_lt(0):
         raise P4BuiltinError("bitslice x[y:z] must have y > z > 0")
 
     # let shifted = Bigint.(n asr to_int_exn l) in
     shifted = rawint_b.rshift(rawint_l.toint())
 
     # let mask = Bigint.(pow2' slice_width - one) in
-    mask = integers.Integer.fromint(1).lshift(slice_width.toint()).sub(integers.Integer.fromint(1))
+    mask = integers.Integer.fromint(1).lshift(slice_width.toint()).int_sub(1)
 
     # Bigint.bit_and shifted mask
     result = shifted.and_(mask)
