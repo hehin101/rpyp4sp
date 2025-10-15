@@ -135,14 +135,14 @@ def test_venv_vare_caching_add(monkeypatch):
     value1 = objects.TextV("abc")
     vare = p4specast.VarE(id1)
     empty_envkeys = GlobalContext().empty_envkeys
-    ctx = Context.make0(None, None, empty_envkeys).add_value_local(id1, p4specast.IterList.EMPTY, value1, vare_cache=vare)
+    ctx = Context.make0(empty_envkeys).add_value_local(id1, p4specast.IterList.EMPTY, value1, vare_cache=vare)
     assert vare._ctx_keys_add is ctx.venv_keys.glbl.empty_envkeys
     assert vare._ctx_keys_next is ctx.venv_keys
     value2 = ctx.find_value_local(id1, p4specast.IterList.EMPTY, vare_cache=vare)
     assert value1 is value2
     monkeypatch.setattr(type(ctx.venv_keys), 'get_pos', None)
     monkeypatch.setattr(type(ctx.venv_keys), 'add_key', None)
-    ctx2 = Context.make0(None, None, empty_envkeys).add_value_local(id1, p4specast.IterList.EMPTY, value1, vare_cache=vare)
+    ctx2 = Context.make0(empty_envkeys).add_value_local(id1, p4specast.IterList.EMPTY, value1, vare_cache=vare)
     value2 = ctx2.find_value_local(id1, p4specast.IterList.EMPTY, vare_cache=vare)
     assert value1 is value2
 
