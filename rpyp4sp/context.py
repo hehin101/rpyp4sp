@@ -227,7 +227,7 @@ class Context(sign.Sign):
                 assert isinstance(definition, p4specast.DecD)
                 self.venv_keys.glbl.fenv[definition.id.value] = definition
         self.venv_keys.glbl.filename = filename
-        self.derive = derive
+        self.venv_keys.glbl.derive = derive
 
     def copy_and_change(self, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
         tdenv = tdenv if tdenv is not None else self.get_tdenv()
