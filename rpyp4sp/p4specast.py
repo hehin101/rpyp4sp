@@ -1313,6 +1313,8 @@ class NotExp(AstBase):
         self.mixop = mixop
         self.exps = exps
         self._is_simple_casev_assignment_target = '?'
+        self._ctx_env_keys = None
+        self._ctx_env_keys_result = None
 
     @jit.elidable
     def is_simple_casev_assignment_target(self):
