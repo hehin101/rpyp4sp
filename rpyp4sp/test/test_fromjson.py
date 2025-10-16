@@ -18,6 +18,12 @@ def test_jsonparser():
         decoder.close()
     assert w_res.is_object
 
+
+def test_jsonparser_fast_path_position():
+    s = '{"calltype":"function","name":"check_func_name","inputs":[{"it":["TextV","pipe"],"note":{"vid":384,"typ":["VarT",{"it":"id","note":null,"at":{"left":{"file":"","line":0,"column":0},"right":{"file":"","line":0,"column":0}}},[]]},"at":null},{"it":["TextV","pipe"],"note":{"vid":322,"typ":["VarT",{"it":"id","note":null,"at":{"left":{"file":"","line":0,"column":0},"right":{"file":"","line":0,"column":0}}},[]]},"at":null}],"result":{"it":["BoolV",true],"note":{"vid":44492,"typ":["BoolT"]},"at":null}}'
+    res = loads(s, force=True)
+
+
 def test_full_ast_rpython():
     currfile = os.path.abspath(__file__)
     basedir = os.path.dirname(os.path.dirname(os.path.dirname(currfile)))

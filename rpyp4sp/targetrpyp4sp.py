@@ -168,8 +168,9 @@ def command_run_p4(argv):
     for fn in argv[1:]:
         t1 = time.time()
         print(fn)
+        stat = os.stat(fn)
         with open(fn, 'r') as f:
-            content = f.readline()
+            content = f.read(stat.st_size)
         assert content is not None
         if not content.startswith("{"):
             continue
@@ -251,8 +252,9 @@ def command_bench_p4(argv):
             os.write(2, "ctrl-c pressed\n")
             return 1
         t1 = time.time()
+        stat = os.stat(fn)
         with open(fn, 'r') as f:
-            content = f.readline()
+            content = f.read(stat.st_size)
         assert content is not None
         if not content.startswith("{"):
             continue

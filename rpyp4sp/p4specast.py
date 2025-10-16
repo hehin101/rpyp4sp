@@ -126,6 +126,8 @@ class Position(AstBase):
     def __repr__(self):
         return "p4specast.Position(%r, %d, %d)" % (self.file, self.line, self.column)
 
+Position.NO_POSITION = Position('', 0, 0)
+
 # type region = { left : pos; right : pos } [@@deriving yojson]
 
 class Region(AstBase):
@@ -2942,7 +2944,8 @@ def _rename_fromjson_staticmethods():
     while todo:
         cls = todo.pop()
         if hasattr(cls, 'fromjson'):
-            cls.fromjson.func_name += "_" + cls.__name__
+            if cls.fromjson.func_name == 'fromjson':
+                cls.fromjson.func_name += "_" + cls.__name__
         todo.extend(cls.__subclasses__())
 
 _rename_fromjson_staticmethods()
