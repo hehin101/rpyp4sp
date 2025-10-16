@@ -231,7 +231,7 @@ set_id = p4specast.Id('set', p4specast.NO_REGION)
 
 def _extract_set_elems(set_value):
     assert isinstance(set_value, objects.CaseV)
-    assert set_value.mixop.eq(map_mixop)
+    assert set_value.mixop.mixop_eq(map_mixop)
     assert set_value._get_size_list() == 1
     lst_value = set_value._get_list(0)
     assert isinstance(lst_value, objects.ListV)
@@ -404,25 +404,25 @@ def _sets_eq_set_bool(elems_l, elems_r):
 # _________________________________________________________________
 
 map_mixop = p4specast.MixOp(
-    [[p4specast.AtomT('{', p4specast.NO_REGION)],
-     [p4specast.AtomT('}', p4specast.NO_REGION)]])
+    [p4specast.AtomT('{', p4specast.NO_REGION), None,
+     p4specast.AtomT('}', p4specast.NO_REGION)])
 arrow_mixop = p4specast.MixOp(
-    [[],
-     [p4specast.AtomT('->', p4specast.NO_REGION)],
-     []])
+    [None,
+     p4specast.AtomT('->', p4specast.NO_REGION),
+     None])
 map_id = p4specast.Id('map', p4specast.NO_REGION)
 pair_id = p4specast.Id('pair', p4specast.NO_REGION)
 
 def _extract_map_content(map_value):
     assert isinstance(map_value, objects.CaseV)
-    assert map_value.mixop.eq(map_mixop)
+    assert map_value.mixop.mixop_eq(map_mixop)
     assert map_value._get_size_list() == 1
     content = map_value._get_list(0)
     return content.get_list()
 
 def _extract_map_item(el):
     assert isinstance(el, objects.CaseV)
-    assert el.mixop.eq(arrow_mixop)
+    assert el.mixop.mixop_eq(arrow_mixop)
     assert el._get_size_list() == 2
     key = el._get_list(0)
     value = el._get_list(1)
