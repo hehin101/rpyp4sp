@@ -1,5 +1,5 @@
 from __future__ import print_function
-from rpython.rlib import jit
+from rpython.rlib import jit, rstring
 from rpython.tool.pairtype import extendabletype
 from rpyp4sp import integers
 from rpyp4sp.error import P4UnknownTypeError, P4NotImplementedError
@@ -2819,11 +2819,15 @@ class MixOp(AstBase):
     @jit.elidable
     def tostring(self):
         if self._str is None:
-            mixop = self.phrases
-            smixop = "%".join(
-                ["".join([atom.value for atom in atoms]) for atoms in mixop]
-            )
-            self._str = "`" + smixop + "`"
+            builder = rstring.StringBuilder()
+            builder.append("`")
+            for i, atoms in enumerate(self.phrases):
+                if i:
+                    builder.append("%")
+                for atom in atoms:
+                    builder.append(atom.value)
+            builder.append("`")
+            self._str = builder.build()
         return self._str
 
     def __str__(self):

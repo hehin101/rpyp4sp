@@ -54,6 +54,10 @@ def test_subtyp_nat():
     res = interp.subtyp(None, typ, value)
     assert res is True
 
+def test_mixop_tostring():
+    mixop = p4specast.MixOp([[p4specast.AtomT.line_span('ConstD', 'spec/1-syntax.watsup', 391, 2, 8)], [], [], []])
+    assert mixop.tostring() == '`ConstD%%%`'
+
 def test_downcast_nat():
     typ = p4specast.NumT.NAT
     value = objects.NumV.fromstr('32', p4specast.IntT.INSTANCE, p4specast.NumT.INT)
