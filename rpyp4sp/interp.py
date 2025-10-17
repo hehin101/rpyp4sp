@@ -1500,9 +1500,6 @@ class __extend__(p4specast.ReturnI):
 def exp_tostring(exp):
     return "exp:" + exp.tostring()
 
-def eval_exp(ctx, exp):
-    return exp.eval_exp(ctx)
-
 @jit.unroll_safe
 def eval_exps(ctx, exps):
     # List.fold_left
