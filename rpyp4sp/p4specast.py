@@ -2781,7 +2781,6 @@ class MixOp(AstBase):
     def compare(self, other):
         # type: (MixOp, MixOp) -> int
         """ Compare two MixOp objects lexicographically by their atoms_with_holes
-        Each phrase is a list of AtomT
         Returns -1 if self < other, 0 if equal, 1 if self > other """
         if self._str is not None and other._str is not None and self._str == other._str:
             return 0
