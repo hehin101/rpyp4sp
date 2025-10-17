@@ -35,6 +35,8 @@ def make_subst_typ(func):
                     raise P4TypeSubstitutionError("higher-order substitution is disallowed")
                 return res
             else:
+                if not typ.targs:
+                    return typ
                 targs = [subst_typ(targ, *args) for targ in typ.targs]
                 return p4specast.VarT(typ.id, targs)
         #import pdb;pdb.set_trace()
