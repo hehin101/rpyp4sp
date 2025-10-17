@@ -1682,7 +1682,7 @@ class IterT(Type):
             res = self._empty_value_of
             assert isinstance(self._empty_value_of, objects.OptV)
             return res
-        res = objects.OptV(None, self)
+        res = objects.OptV(self)
         self._empty_value_of = res
         return res
 
@@ -1691,7 +1691,8 @@ class IterT(Type):
         from rpyp4sp import objects
         if inner is None:
             return self.opt_none_value()
-        return objects.OptV(inner, self)
+        return objects.OptVSome(inner, self)
+
 
 class FuncT(Type):
     def __init__(self, region=None):

@@ -1182,10 +1182,10 @@ def assign_exp(ctx, exp, value):
     #     | _ -> assert false)
     elif isinstance(exp, p4specast.OptE) and \
          isinstance(value, objects.OptV):
-        if exp.exp is not None and value.value is not None:
-            ctx = assign_exp(ctx, exp.exp, value.value)
+        if exp.exp is not None and not value.is_opt_none():
+            ctx = assign_exp(ctx, exp.exp, value.get_opt_value())
             return ctx
-        elif exp.exp is None and value.value is None:
+        elif exp.exp is None and value.is_opt_none():
             return ctx
         else:
             assert False, "mismatched OptE and OptV"
@@ -1225,7 +1225,7 @@ def assign_exp(ctx, exp, value):
     elif (isinstance(exp, p4specast.IterE) and
           isinstance(exp.iter, p4specast.Opt) and
           isinstance(value, objects.OptV)):
-        if value.value is None:
+        if value.is_opt_none():
     #     (* Per iterated variable, make an option out of the value *)
     #     List.fold_left
     #       (fun ctx (id, typ, iters) ->
@@ -1247,7 +1247,7 @@ def assign_exp(ctx, exp, value):
         else:
     #     (* Assign the value to the iterated expression *)
     #     let ctx = assign_exp ctx exp value in
-            ctx = assign_exp(ctx, exp.exp, value.value)
+            ctx = assign_exp(ctx, exp.exp, value.get_opt_value())
     #     (* Per iterated variable, make an option out of the value *)
     #     List.fold_left
     #       (fun ctx (id, typ, iters) ->
@@ -1264,7 +1264,7 @@ def assign_exp(ctx, exp, value):
             for var in exp.varlist:
                 value_sub_inner = ctx.find_value_local(var.id, var.iter)
                 typ = var.typ.iterate(var.iter.append_opt())
-                value_sub = objects.OptV(value_sub_inner, typ)
+                value_sub = typ.make_opt_value(value_sub_inner)
                 ctx = ctx.add_value_local(var.id, var.iter.append_opt(), value_sub)
             return ctx
     elif (isinstance(exp, p4specast.IterE) and
@@ -1889,7 +1889,7 @@ class __extend__(p4specast.MatchE):
         elif (isinstance(pattern, p4specast.OptP) and
               isinstance(value, objects.OptV)):
             assert pattern.kind in ('Some', 'None')
-            matches = (value.value is None) == (pattern.kind == 'None')
+            matches = value.is_opt_none() == (pattern.kind == 'None')
         #   | _ -> false
         else:
             #import pdb;pdb.set_trace()

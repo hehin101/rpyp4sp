@@ -521,42 +521,64 @@ class TupleV(BaseVWithTyp):
         return TupleV.make(elements, typ)
 
 class OptV(BaseVWithTyp):
-    def __init__(self, value, typ=None):
-        self.value = value # type: BaseV | None
+    """ Base class of OptV. Instances of this precise class always represent
+    "None". for "Some" variant, look at subclass OptVSome """
+
+    _attrs_ = []
+
+    def __init__(self, typ=None):
         self.typ = typ # type: p4specast.Type | None
+
+    def get_opt_value(self):
+        # type: () -> BaseV | None
+        return None
+
+    def is_opt_none(self):
+        return type(self) is OptV
 
     def compare(self, other):
         if not isinstance(other, OptV):
             return self._base_compare(other)
-        if self.value is not None and other.value is not None:
-            return self.value.compare(other.value)
-        elif self.value is not None and other.value is None:
+        if self.get_opt_value() is not None and other.get_opt_value() is not None:
+            return self.get_opt_value().compare(other.get_opt_value())
+        elif self.get_opt_value() is not None and other.get_opt_value() is None:
             return 1
-        elif self.value is None and other.value is not None:
+        elif self.get_opt_value() is None and other.get_opt_value() is not None:
             return -1
         else:  # both None
             return 0
 
 
     def __repr__(self):
-        return "objects.OptV(%r, %r)" % (self.value, self.typ)
+        return "%r.make_opt_value(%r)" % (self.typ, self.get_opt_value())
 
     def tostring(self, short=False, level=0):
         # | OptV (Some value) ->
         #     Format.asprintf "Some(%s)"
         #       (string_of_value ~short ~level:(level + 1) value)
         # | OptV None -> "None"
-        if self.value is None:
+        if self.get_opt_value() is None:
             return "None"
         else:
-            return "Some(%s)" % self.value.tostring(short, level + 1)
+            return "Some(%s)" % self.get_opt_value().tostring(short, level + 1)
 
     @staticmethod
     def fromjson(content, typ):
         value = None
         if not content.get_list_item(1).is_null:
             value = BaseV.fromjson(content.get_list_item(1))
-        return OptV(value, typ)
+        return typ.make_opt_value(value)
+
+class OptVSome(OptV):
+    _attrs_ = ['_value']
+
+    def __init__(self, value, typ=None):
+        self._value = value # type: BaseV
+        self.typ = typ # type: p4specast.Type | None
+
+    def get_opt_value(self):
+        return self._value
+    
 
 # just optimize lists of size 0, 1, arbitrary
 @inline_small_list(immutable=True, sizemax=2, factoryname='_make')
