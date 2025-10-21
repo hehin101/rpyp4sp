@@ -1865,7 +1865,7 @@ class __extend__(p4specast.MatchE):
         #   | CaseP mixop_p, CaseV (mixop_v, _) -> Mixop.eq mixop_p mixop_v
         if (isinstance(pattern, p4specast.CaseP) and
                 isinstance(value, objects.CaseV)):
-            matches = mixop_eq(pattern.mixop, value.mixop)
+            matches = mixop_eq(pattern.mixop, value.mixoptyp.mixop)
         #   | ListP listpattern, ListV values -> (
         elif (isinstance(pattern, p4specast.ListP) and
                 isinstance(value, objects.ListV)):
@@ -2335,7 +2335,7 @@ def subtyp(ctx, typ, value):
         if (isinstance(deftyp, p4specast.VariantT) and
                 isinstance(value, objects.CaseV)):
             for nottyp in deftyp.cases:
-                if mixop_eq(nottyp.mixop, value.mixop):
+                if mixop_eq(nottyp.mixop, value.mixoptyp.mixop):
                     return True
             else:
                 return False

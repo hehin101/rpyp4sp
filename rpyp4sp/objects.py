@@ -414,33 +414,44 @@ class StructV(BaseVWithTyp):
             return res
         return compares(self._get_full_list(), other._get_full_list())
 
-@inline_small_list(immutable=True)
-class CaseV(BaseVWithTyp):
-    _immutable_ = True
-    _immutable_fields_ = ['mixop']
+class MixopTyp(object):
+    _attrs_ = ['mixop', 'typ']
     def __init__(self, mixop, typ=None):
         self.mixop = mixop # type: p4specast.MixOp
         self.typ = typ # type: p4specast.Type | None
 
+MixopTyp.CACHE = {}
+
+@inline_small_list(immutable=True)
+class CaseV(BaseV):
+    _attrs_ = ['mixoptyp']
+    _immutable_ = True
+    _immutable_fields_ = ['mixoptyp']
+    def __init__(self, mixop, typ=None):
+        mixop_typ = (mixop, typ)
+        if mixop_typ not in MixopTyp.CACHE:
+            MixopTyp.CACHE[mixop_typ] = MixopTyp(mixop, typ)
+        self.mixoptyp = MixopTyp.CACHE[mixop_typ] # type: MixopTyp
+
     def __repr__(self):
         size = self._get_size_list()
         if size == 0:
-            return "objects.CaseV.make0(%r, %r)" % (self.mixop, self.typ)
+            return "objects.CaseV.make0(%r, %r)" % (self.mixoptyp.mixop, self.mixoptyp.typ)
         elif size == 1:
-            return "objects.CaseV.make1(%r, %r, %r)" % (self._get_list(0), self.mixop, self.typ)
+            return "objects.CaseV.make1(%r, %r, %r)" % (self._get_list(0), self.mixoptyp.mixop, self.mixoptyp.typ)
         elif size == 2:
-            return "objects.CaseV.make2(%r, %r, %r, %r)" % (self._get_list(0), self._get_list(1), self.mixop, self.typ)
+            return "objects.CaseV.make2(%r, %r, %r, %r)" % (self._get_list(0), self._get_list(1), self.mixoptyp.mixop, self.mixoptyp.typ)
         else:
-            return "objects.CaseV.make(%r, %r, %r)" % (self._get_full_list(), self.mixop, self.typ)
+            return "objects.CaseV.make(%r, %r, %r)" % (self._get_full_list(), self.mixoptyp.mixop, self.mixoptyp.typ)
 
     def tostring(self, short=False, level=0):
         # | CaseV (mixop, _) when short -> string_of_mixop mixop
         # | CaseV (mixop, values) -> "(" ^ string_of_notval (mixop, values) ^ ")"
         if short:
-            return self.mixop.tostring()
+            return self.mixoptyp.mixop.tostring()
 
         # Construct notation: mixop with values interspersed
-        mixop_phrases = self.mixop.phrases
+        mixop_phrases = self.mixoptyp.mixop.phrases
         result_parts = []
         value_idx = 0
 
@@ -468,7 +479,7 @@ class CaseV(BaseVWithTyp):
         if not isinstance(other, CaseV):
             return self._base_compare(other)
         # let cmp_mixop = Mixop.compare mixop_l mixop_r in
-        cmp_mixop = self.mixop.compare(other.mixop)
+        cmp_mixop = self.mixoptyp.mixop.compare(other.mixoptyp.mixop)
         # if cmp_mixop <> 0 then cmp_mixop else compares values_l values_r
         if cmp_mixop != 0:
             return cmp_mixop
@@ -480,6 +491,9 @@ class CaseV(BaseVWithTyp):
             return self._get_list(0).compare(other._get_list(0))
         else:
             return compares(self._get_full_list(), other._get_full_list())
+
+    def get_typ(self):
+        return self.mixoptyp.typ
 
 
 @inline_small_list(immutable=True)

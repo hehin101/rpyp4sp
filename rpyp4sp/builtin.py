@@ -231,7 +231,7 @@ set_id = p4specast.Id('set', p4specast.NO_REGION)
 
 def _extract_set_elems(set_value):
     assert isinstance(set_value, objects.CaseV)
-    assert set_value.mixop.eq(map_mixop)
+    assert set_value.mixoptyp.mixop.eq(map_mixop)
     assert set_value._get_size_list() == 1
     lst_value = set_value._get_list(0)
     assert isinstance(lst_value, objects.ListV)
@@ -240,7 +240,7 @@ def _extract_set_elems(set_value):
 def _wrap_set_elems(elems, set_value_for_types):
     assert isinstance(set_value_for_types, objects.CaseV)
     lst_value = objects.ListV.make(elems, set_value_for_types._get_list(0).get_typ())
-    return objects.CaseV.make1(lst_value, set_value_for_types.mixop, set_value_for_types.get_typ())
+    return objects.CaseV.make1(lst_value, set_value_for_types.mixoptyp.mixop, set_value_for_types.get_typ())
 
 @register_builtin("intersect_set")
 def sets_intersect_set(targs, values_input):
@@ -415,14 +415,14 @@ pair_id = p4specast.Id('pair', p4specast.NO_REGION)
 
 def _extract_map_content(map_value):
     assert isinstance(map_value, objects.CaseV)
-    assert map_value.mixop.eq(map_mixop)
+    assert map_value.mixoptyp.mixop.eq(map_mixop)
     assert map_value._get_size_list() == 1
     content = map_value._get_list(0)
     return content.get_list()
 
 def _extract_map_item(el):
     assert isinstance(el, objects.CaseV)
-    assert el.mixop.eq(arrow_mixop)
+    assert el.mixoptyp.mixop.eq(arrow_mixop)
     assert el._get_size_list() == 2
     key = el._get_list(0)
     value = el._get_list(1)
@@ -490,7 +490,7 @@ def maps_add_map(targs, values_input):
     content = _extract_map_content(map_value)
     if not content:
         new_pair = _build_map_item(key_value, value_value, key_typ, value_typ)
-        listtyp = new_pair.typ.list_of()
+        listtyp = new_pair.get_typ().list_of()
         list_value = objects.ListV.make1(new_pair, listtyp)
     else:
         res = _add_map(key_value, content, value_value, key_typ, value_typ)
@@ -500,7 +500,7 @@ def maps_add_map(targs, values_input):
 
 def _add_map(key_value, content, value_value, key_typ, value_typ):
     new_pair = _build_map_item(key_value, value_value, key_typ, value_typ)
-    listtyp = new_pair.typ.list_of()
+    listtyp = new_pair.get_typ().list_of()
     res = []
     index = 0
     for index, el in enumerate(content):

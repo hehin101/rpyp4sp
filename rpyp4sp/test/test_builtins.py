@@ -392,7 +392,7 @@ def test_add_map():
 def test_find_maps():
     map_value1 = make_map(("A", "a1"), ("B", "b"))
     map_value2 = make_map(("A", "a2"), ("C", "x"))
-    lst_value = objects.ListV.make([map_value1, map_value2], map_value1.typ.list_of())
+    lst_value = objects.ListV.make([map_value1, map_value2], map_value1.get_typ().list_of())
 
     res = builtin.maps_find_maps([p4specast.TextT(), p4specast.TextT()],
                                  [lst_value, mktext("C")])
