@@ -428,7 +428,7 @@ class CaseV(BaseV):
     _immutable_ = True
     _immutable_fields_ = ['mixoptyp']
     def __init__(self, mixop, typ=None):
-        mixop_typ = (mixop, typ)
+        mixop_typ = (mixop.tostring(), typ.tostring())
         if mixop_typ not in MixopTyp.CACHE:
             MixopTyp.CACHE[mixop_typ] = MixopTyp(mixop, typ)
         self.mixoptyp = MixopTyp.CACHE[mixop_typ] # type: MixopTyp
