@@ -692,15 +692,6 @@ class FuncV(BaseVWithTyp):
         id = p4specast.Id.fromjson(content.get_list_item(1))
         return FuncV(id, typ)
 
-def atom_compares(atoms_l, atoms_r):
-    len_l = len(atoms_l)
-    len_r = len(atoms_r)
-    min_len = min(len_l, len_r)
-    for i in range(min_len):
-        cmp = atoms_l[i].compare(atoms_r[i])
-        if cmp != 0:
-            return cmp
-    return intcmp(len_l, len_r)
 
 def intcmp(a, b):
     if a < b:
