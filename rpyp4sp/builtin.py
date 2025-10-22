@@ -255,8 +255,10 @@ def sets_intersect_set(targs, values_input):
     set_l, set_r = values_input
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
-    if len(elems_l) == 0 or len(elems_r) == 0:
-        res = []
+    if len(elems_l) == 0:
+        return set_l
+    elif len(elems_r) == 0:
+        return set_r
     else:
         res = _intersect_set(elems_l, elems_r)
     return _wrap_set_elems(res, set_l)
@@ -287,9 +289,9 @@ def sets_union_set(targs, values_input):
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
     if len(elems_l) == 0:
-        res = elems_r
+        return set_r
     elif len(elems_r) == 0:
-        res = elems_l
+        return set_l
     else:
         res = _set_union_elems(elems_l, elems_r)
     # TODO: I am not sure the order of elements in the result is exactly like in P4-spectec
@@ -315,6 +317,9 @@ def sets_unions_set(targs, values_input):
     else:
         startindex = 1
     curr = _unions_set_loop(curr, sets_l, startindex)
+    if not curr:
+        # all the sets are empty, return any of them
+        return first
     return _wrap_set_elems(curr, first)
 
 def _set_add_element(elems, elem):
@@ -346,7 +351,7 @@ def sets_diff_set(targs, values_input):
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
     if len(elems_l) == 0 or len(elems_r) == 0:
-        res = elems_l
+        return set_l
     else:
         res = _set_diff_elemens(elems_l, elems_r)
     return _wrap_set_elems(res, set_l)
