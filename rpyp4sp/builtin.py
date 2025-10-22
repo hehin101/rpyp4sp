@@ -477,8 +477,13 @@ def maps_find_maps(targs, values_input):
     list_maps_value, key_value = values_input
     assert isinstance(list_maps_value, objects.ListV)
     res_value = None
-    res_value = _maps_find_map(list_maps_value, key_value)
     typ = key_typ.opt_of()
+    if list_maps_value._get_size_list() == 0:
+        res_value = None
+    elif list_maps_value._get_size_list() == 1:
+        res_value = find_map(list_maps_value._get_list(0), key_value)
+    else:
+        res_value = _maps_find_map(list_maps_value, key_value)
     return typ.make_opt_value(res_value)
 
 @jit.elidable
