@@ -95,6 +95,8 @@ class BoolVWithTyp(BoolV):
         return self.typ
 
 class NumV(BaseV):
+    _compare_tag = 1
+
     _attrs_ = ['value']
 
     def __init__(self, value):
@@ -246,6 +248,8 @@ class NumVWithTyp(NumV):
         return self.typ
 
 class TextV(BaseVWithTyp):
+    _compare_tag = 2
+
     def __init__(self, value, typ=None):
         self.value = value #type: str
         self.typ = typ # type: p4specast.Type | None
@@ -327,6 +331,8 @@ StructMap.EMPTY = StructMap({})
 
 @inline_small_list(immutable=True)
 class StructV(BaseVWithTyp):
+    _compare_tag = 3
+
     _immutable_fields_ = ['map']
 
     @jit.unroll_safe
@@ -416,6 +422,8 @@ class StructV(BaseVWithTyp):
 
 @inline_small_list(immutable=True)
 class CaseV(BaseVWithTyp):
+    _compare_tag = 4
+
     _immutable_ = True
     _immutable_fields_ = ['mixop']
     def __init__(self, mixop, typ=None):
@@ -484,6 +492,8 @@ class CaseV(BaseVWithTyp):
 
 @inline_small_list(immutable=True)
 class TupleV(BaseVWithTyp):
+    _compare_tag = 5
+
     _immutable_fields_ = []
     def __init__(self, typ=None):
         self.typ = typ # type: p4specast.Type | None
@@ -523,6 +533,8 @@ class TupleV(BaseVWithTyp):
 class OptV(BaseVWithTyp):
     """ Base class of OptV. Instances of this precise class always represent
     "None". for "Some" variant, look at subclass OptVSome """
+
+    _compare_tag = 6
 
     _attrs_ = []
 
@@ -583,6 +595,8 @@ class OptVSome(OptV):
 # just optimize lists of size 0, 1, arbitrary
 @inline_small_list(immutable=True, sizemax=2, factoryname='_make')
 class ListV(BaseVWithTyp):
+    _compare_tag = 7
+
     _immutable_fields_ = []
     def __init__(self, typ=None):
         self.typ = typ # type: p4specast.Type | None
@@ -660,6 +674,8 @@ class ListV(BaseVWithTyp):
 
 
 class FuncV(BaseVWithTyp):
+    _compare_tag = 8
+
     def __init__(self, id, typ=None):
         self.id = id # type: p4specast.Id
         self.typ = typ # type: p4specast.Type | None
