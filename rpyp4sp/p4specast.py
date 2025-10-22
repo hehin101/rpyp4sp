@@ -1,5 +1,5 @@
 from __future__ import print_function
-from rpython.rlib import jit
+from rpython.rlib import jit, rstring, objectmodel
 from rpython.tool.pairtype import extendabletype
 from rpyp4sp import integers
 from rpyp4sp.error import P4UnknownTypeError, P4NotImplementedError
@@ -1313,6 +1313,8 @@ class NotExp(AstBase):
         self.mixop = mixop
         self.exps = exps
         self._is_simple_casev_assignment_target = '?'
+        self._ctx_env_keys = None
+        self._ctx_env_keys_result = None
 
     @jit.elidable
     def is_simple_casev_assignment_target(self):
@@ -2763,42 +2765,46 @@ class DotP(Path):
 # type Mixop.t = Atom.t phrase list list
 
 class MixOp(AstBase):
-    _immutable_fields_ = ['phrases[*]']
+    _immutable_fields_ = ['atoms_with_holes[*]']
 
-    def __init__(self, phrases):
-        self.phrases = phrases # type: list[list[AtomT]]
+    def __init__(self, atoms_with_holes):
+        if not objectmodel.we_are_translated():
+            for atom in atoms_with_holes:
+                assert not isinstance(atom, list)
+        self.atoms_with_holes = atoms_with_holes # type: list[AtomT | None]
         self._str = None
+
+    @jit.elidable_promote('0,1')
+    def mixop_eq(self, other):
+        return self.tostring() == other.tostring()
 
     @jit.elidable_promote('0,1')
     def compare(self, other):
         # type: (MixOp, MixOp) -> int
-        """ Compare two MixOp objects lexicographically by their phrases
-        Each phrase is a list of AtomT
+        """ Compare two MixOp objects lexicographically by their atoms_with_holes
         Returns -1 if self < other, 0 if equal, 1 if self > other """
+        if self._str is not None and other._str is not None and self._str == other._str:
+            return 0
 
-        def phrase_compare(phrase_a, phrase_b):
-            # Compare two lists of AtomT
-            len_a = len(phrase_a)
-            len_b = len(phrase_b)
-            for i in range(min(len_a, len_b)):
-                cmp = phrase_a[i].compare(phrase_b[i])
-                if cmp != 0:
-                    return cmp
-            if len_a < len_b:
-                return -1
-            elif len_a > len_b:
-                return 1
-            else:
-                return 0
-
-        phrases_a = self.phrases
-        phrases_b = other.phrases
-        len_a = len(phrases_a)
-        len_b = len(phrases_b)
+        atoms_with_holes_a = self.atoms_with_holes
+        atoms_with_holes_b = other.atoms_with_holes
+        len_a = len(atoms_with_holes_a)
+        len_b = len(atoms_with_holes_b)
         for i in range(min(len_a, len_b)):
-            cmp = phrase_compare(phrases_a[i], phrases_b[i])
-            if cmp != 0:
-                return cmp
+            pa = atoms_with_holes_a[i]
+            pb = atoms_with_holes_b[i]
+            if pa is None:
+                if pb is None:
+                    pass
+                else:
+                    return -1
+            else:
+                if pb is None:
+                    return 1
+                else:
+                    res = pa.compare(pb)
+                    if res != 0:
+                        return res
         if len_a < len_b:
             return -1
         elif len_a > len_b:
@@ -2808,21 +2814,37 @@ class MixOp(AstBase):
 
     @staticmethod
     def fromjson(content, cache=None):
-        return MixOp(
-            phrases=[[AtomT.fromjson(phrase, cache) for phrase in group.value_array()] for group in content.value_array()]
-        )
+        atoms_with_holes = []
+        builder = rstring.StringBuilder()
+        builder.append("`")
+        for i, group in enumerate(content.value_array()):
+            if i:
+                atoms_with_holes.append(None)
+                builder.append("%")
+            for atom in group.value_array():
+                atom = AtomT.fromjson(atom, cache)
+                atoms_with_holes.append(atom)
+                builder.append(atom.value)
+        builder.append("`")
+        res = MixOp(atoms_with_holes[:])
+        res._str = builder.build()
+        return res
 
     def __repr__(self):
-        return "p4specast.MixOp(%r)" % (self.phrases,)
+        return "p4specast.MixOp(%r)" % (self.atoms_with_holes,)
 
     @jit.elidable
     def tostring(self):
         if self._str is None:
-            mixop = self.phrases
-            smixop = "%".join(
-                ["".join([atom.value for atom in atoms]) for atoms in mixop]
-            )
-            self._str = "`" + smixop + "`"
+            builder = rstring.StringBuilder()
+            builder.append("`")
+            for atom in self.atoms_with_holes:
+                if atom is None:
+                    builder.append("%")
+                else:
+                    builder.append(atom.value)
+            builder.append("`")
+            self._str = builder.build()
         return self._str
 
     def __str__(self):

@@ -1862,7 +1862,7 @@ class __extend__(p4specast.MatchE):
         #   | CaseP mixop_p, CaseV (mixop_v, _) -> Mixop.eq mixop_p mixop_v
         if (isinstance(pattern, p4specast.CaseP) and
                 isinstance(value, objects.CaseV)):
-            matches = mixop_eq(pattern.mixop, value.mixop)
+            matches = pattern.mixop.mixop_eq(value.mixop)
         #   | ListP listpattern, ListV values -> (
         elif (isinstance(pattern, p4specast.ListP) and
                 isinstance(value, objects.ListV)):
@@ -2332,7 +2332,7 @@ def subtyp(ctx, typ, value):
         if (isinstance(deftyp, p4specast.VariantT) and
                 isinstance(value, objects.CaseV)):
             for nottyp in deftyp.cases:
-                if mixop_eq(nottyp.mixop, value.mixop):
+                if nottyp.mixop.mixop_eq(value.mixop):
                     return True
             else:
                 return False
@@ -2486,6 +2486,3 @@ def upcast(ctx, typ, value):
     return ctx, value
 
 
-@jit.elidable_promote('0,1')
-def mixop_eq(a, b):
-    return a.tostring() == b.tostring()

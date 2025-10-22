@@ -448,20 +448,19 @@ class CaseV(BaseVWithTyp):
             return self.mixop.tostring()
 
         # Construct notation: mixop with values interspersed
-        mixop_phrases = self.mixop.phrases
+        mixop_atoms_with_holes = self.mixop.atoms_with_holes
         result_parts = []
         value_idx = 0
 
-        for phrase in mixop_phrases:
-            # Add atoms from this phrase
-            phrase_str = "".join([atom.value for atom in phrase])
-            if phrase_str:
-                result_parts.append(phrase_str)
-
-            # Add corresponding value if available
-            if value_idx < self._get_size_list():
-                result_parts.append(self._get_list(value_idx).tostring(short, level + 1))
-                value_idx += 1
+        for atom in mixop_atoms_with_holes:
+            # Add atoms and fill holes with case values
+            if atom is not None:
+                result_parts.append(atom.value)
+            else:
+                # Add corresponding value if available
+                if value_idx < self._get_size_list():
+                    result_parts.append(self._get_list(value_idx).tostring(short, level + 1))
+                    value_idx += 1
 
         return "(" + " ".join(result_parts) + ")"
 

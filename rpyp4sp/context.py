@@ -596,17 +596,25 @@ def _varlist_compute_final_env_keys(varlist, env_keys):
 
 @jit.elidable
 def _notexp_compute_final_env_keys(notexp, env_keys):
+    if notexp._ctx_env_keys is env_keys:
+        return notexp._ctx_env_key_result
+    notexp._ctx_env_keys = env_keys
     for exp in notexp.exps:
         if isinstance(exp, p4specast.VarE):
             if env_keys.get_pos(exp.id.value) >= 0:
-                return None
+                env_keys = None
+                break
             env_keys = env_keys.add_key(exp.id.value)
         else:
             assert isinstance(exp, p4specast.IterE) and exp.is_simple_list_expr()
-            name, iter = exp.varlist[0].id.value, exp.varlist[0].iter.append_list().to_key()
-            if env_keys.get_pos(name, iter):
-                return None
+            var = exp.varlist[0]
+            name = var.id.value
+            iter = var.iter.append_list().to_key()
+            if env_keys.get_pos(name, iter) >= 0:
+                env_keys = None
+                break
             env_keys = env_keys.add_key(name, iter)
+    notexp._ctx_env_key_result = env_keys
     return env_keys
 
 def transpose(value_matrix):
