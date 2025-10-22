@@ -1,3 +1,4 @@
+from __future__ import print_function
 from rpython.rlib import jit
 from rpyp4sp import p4specast, objects, integers
 from rpyp4sp.error import P4NotImplementedError, P4BuiltinError
@@ -303,7 +304,7 @@ def sets_unions_set(targs, values_input):
         return objects.CaseV.make1(
             element_typ.list_of().empty_list_value(),
             map_mixop,
-            p4specast.VarT(set_id, targs))
+            _make_vart(set_id, element_typ))
     first = sets_l[0]
     if len(sets_l) == 1:
         return first

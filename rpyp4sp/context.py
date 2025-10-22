@@ -384,7 +384,7 @@ class Context(sign.Sign):
         for var in vars:
             value = self.find_value_local(var.id, var.iter.append_opt())
             assert isinstance(value, objects.OptV)
-            values.append(value.value)
+            values.append(value.get_opt_value())
         # check whether they are all None, all Some, or mixed
         noneness = values[0] is None
         for value in values:

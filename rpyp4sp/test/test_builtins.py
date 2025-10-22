@@ -169,7 +169,7 @@ def test_list_assoc():
     ], p4specast.TupleT([p4specast.TextT.INSTANCE, p4specast.TextT.INSTANCE]).list_of())
 
     input_values = [search_key, assoc_list]
-    expected = objects.OptV(mktext('32'), p4specast.TextT.INSTANCE.opt_of())
+    expected = p4specast.TextT.INSTANCE.opt_of().make_opt_value(mktext('32'))
     targs = [p4specast.TextT.INSTANCE, p4specast.TextT.INSTANCE]
     res = builtin.lists_assoc_(targs, input_values)
     assert res.eq(expected)
@@ -385,13 +385,13 @@ def test_find_maps():
 
     res = builtin.maps_find_maps([p4specast.TextT(), p4specast.TextT()],
                                  [lst_value, mktext("C")])
-    assert res.value.eq(mktext("x"))
+    assert res.get_opt_value().eq(mktext("x"))
     res = builtin.maps_find_maps([p4specast.TextT(), p4specast.TextT()],
                                  [lst_value, mktext("A")])
-    assert res.value.eq(mktext("a1"))
+    assert res.get_opt_value().eq(mktext("a1"))
     res = builtin.maps_find_maps([p4specast.TextT(), p4specast.TextT()],
                                  [lst_value, mktext("D")])
-    assert res.value is None
+    assert res.get_opt_value() is None
 
 def test_lists_partition():
     # Test partitioning an empty list
