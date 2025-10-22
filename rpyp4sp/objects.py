@@ -700,27 +700,26 @@ def atom_compares(atoms_l, atoms_r):
         cmp = atoms_l[i].compare(atoms_r[i])
         if cmp != 0:
             return cmp
-    if len_l == len_r:
-        return 0
-    elif len_l < len_r:
+    return intcmp(len_l, len_r)
+
+def intcmp(a, b):
+    if a < b:
         return -1
-    else:
+    if a > b:
         return 1
+    return 0
 
 def compares(values_l, values_r):
     # type: (list[BaseV], list[BaseV]) -> int
     # lexicographic ordering, iterative version
     len_l = len(values_l)
     len_r = len(values_r)
-    if len_l <= 1 and len_r <= 1:
-        if len_l == len_r == 0:
-            return 0
-        if len_l == len_r == 1:
-            return values_l[0].compare(values_r[0])
-        # if we reach here, one list is size 1, the other size 0
-        if len_l < len_r:
-            return -1
-        return 1
+    if len_l == 0:
+        return intcmp(0, len_r)
+    if len_r == 0:
+        return intcmp(len_l, 0)
+    if len_l == len_r == 1:
+        return values_l[0].compare(values_r[0])
     return _compares(values_l, values_r, len_l, len_r)
 
 def _compares(values_l, values_r, len_l, len_r):
@@ -729,12 +728,7 @@ def _compares(values_l, values_r, len_l, len_r):
         cmp = values_l[i].compare(values_r[i])
         if cmp != 0:
             return cmp
-    if len_l == len_r:
-        return 0
-    elif len_l < len_r:
-        return -1
-    else:
-        return 1
+    return intcmp(len_l, len_r)
     # match (values_l, values_r) with
     #   | [], [] -> 0
     #   | [], _ :: _ -> -1
