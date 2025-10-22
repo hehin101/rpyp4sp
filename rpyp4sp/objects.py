@@ -1,3 +1,4 @@
+from __future__ import print_function
 from rpython.rlib import jit
 
 from rpyp4sp.smalllist import inline_small_list

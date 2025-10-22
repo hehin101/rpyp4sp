@@ -2300,20 +2300,7 @@ del cls
 def subtyp(ctx, typ, value):
     # INCOMPLETE
     # match typ.it with
-    # | NumT `NatT -> (
-    #     match value.it with
-    #     | NumV (`Nat _) -> true
-    #     | NumV (`Int i) -> Bigint.(i >= zero)
-    #     | _ -> assert false)
     jit.promote(typ)
-    if isinstance(typ, p4specast.NumT) and isinstance(typ.typ, p4specast.NatT):
-        assert isinstance(value, objects.NumV)
-        if value.get_what() == p4specast.NatT.INSTANCE:
-            return True
-        elif value.get_what() == p4specast.IntT.INSTANCE:
-            return value.value.int_ge(0)
-        else:
-            assert 0
     # | VarT (tid, targs) -> (
     if isinstance(typ, p4specast.VarT):
     #     let tparams, deftyp = Ctx.find_typdef Local ctx tid in
@@ -2342,7 +2329,20 @@ def subtyp(ctx, typ, value):
     #             Mixop.eq mixop_t mixop_v)
     #           typcases
     #     | _ -> true)
-    #import pdb;pdb.set_trace()
+
+    # | NumT `NatT -> (
+    #     match value.it with
+    #     | NumV (`Nat _) -> true
+    #     | NumV (`Int i) -> Bigint.(i >= zero)
+    #     | _ -> assert false)
+    if isinstance(typ, p4specast.NumT) and isinstance(typ.typ, p4specast.NatT):
+        assert isinstance(value, objects.NumV)
+        if value.get_what() == p4specast.NatT.INSTANCE:
+            return True
+        elif value.get_what() == p4specast.IntT.INSTANCE:
+            return value.value.int_ge(0)
+        else:
+            assert 0
     raise P4EvaluationError("TODO subtyp")
 
     # | TupleT typs -> (
