@@ -279,6 +279,8 @@ def command_bench_p4(argv):
             else:
                 res = "passed"
             print_csv_line(fn, "run", str(i), str(t2 - t1), res, comment, str(t2), argv[0])
+    print(len(objects.MixopTyp.CACHE))
+    print(len(objects.MixopTyp.CACHE.items()))
     return 0
 
 JIT_HELP = ["Advanced JIT options:", '', '']

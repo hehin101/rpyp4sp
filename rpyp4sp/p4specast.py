@@ -1476,6 +1476,9 @@ class Type(AstBase):
             res = res.iter_of(iter)
         return res
 
+    def __hash__(self):
+        raise P4NotImplementedError('abstract base class')
+
 
 class BoolT(Type):
     def __init__(self, region=None):
@@ -1495,6 +1498,10 @@ class BoolT(Type):
         if region is None or region.eq(NO_REGION):
             return BoolT.INSTANCE
         return BoolT(region)
+
+    def __hash__(self):
+        return "bool".__hash__()
+
 BoolT.INSTANCE = BoolT(NO_REGION)
 
 
@@ -1537,6 +1544,10 @@ class NumT(Type):
             elif isinstance(typ, NatT):
                 return NumT.NAT
         return NumT(typ, region)
+
+    def __hash__(self):
+        return self.typ.__hash__()
+
 NumT.INT = NumT(IntT.INSTANCE, NO_REGION)
 NumT.NAT = NumT(NatT.INSTANCE, NO_REGION)
 
@@ -1560,6 +1571,10 @@ class TextT(Type):
         if region is None or region.eq(NO_REGION):
             return TextT.INSTANCE
         return TextT(region)
+
+    def __hash__(self):
+        return "text".__hash__()
+
 TextT.INSTANCE = TextT(NO_REGION)
 
 
@@ -1607,6 +1622,10 @@ class VarT(Type):
 
         return vart
 
+    def __hash__(self):
+        return (self.id, tuple(self.targs)).__hash__()
+
+
 class TupleT(Type):
     _immutable_fields_ = ['elts[*]']
     def __init__(self, elts, region=None):
@@ -1630,6 +1649,10 @@ class TupleT(Type):
             elts=[Type.fromjson(elt, cache) for elt in content.get_list_item(1).value_array()],
             region=region
         )
+
+    def __hash__(self):
+        return self.elts.__hash__()
+
 
 class IterT(Type):
     _immutable_fields_ = ['typ', 'iter']
@@ -1693,6 +1716,10 @@ class IterT(Type):
             return self.opt_none_value()
         return objects.OptV(inner, self)
 
+    def __hash__(self):
+        return (self.typ, self.iter).__hash__()
+
+
 class FuncT(Type):
     def __init__(self, region=None):
         self.region = region
@@ -1711,6 +1738,9 @@ class FuncT(Type):
         if region is None or region.eq(NO_REGION):
             return FuncT.INSTANCE
         return FuncT(region)
+
+    def __hash__(self):
+        return "func".__hash__()
 
 FuncT.INSTANCE = FuncT(NO_REGION)
 

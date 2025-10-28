@@ -422,16 +422,30 @@ class MixopTyp(object):
 
 MixopTyp.CACHE = {}
 
-@inline_small_list(immutable=True)
 class CaseV(BaseV):
+    def get_mixop(self):
+        raise NotImplementedError("abstract base class")
+    
+    def get_case_element(self, num):
+        raise NotImplementedError("abstract base class")
+
+    
+class EmptySetCaseV(CaseV):
+    def __init__()
+
+@inline_small_list(immutable=True)
+class RealCaseV(BaseV):
     _attrs_ = ['mixoptyp']
     _immutable_ = True
     _immutable_fields_ = ['mixoptyp']
     def __init__(self, mixop, typ=None):
-        mixop_typ = (mixop.tostring(), typ.tostring())
+        mixop_typ = (mixop.tostring(), typ)
         if mixop_typ not in MixopTyp.CACHE:
             MixopTyp.CACHE[mixop_typ] = MixopTyp(mixop, typ)
         self.mixoptyp = MixopTyp.CACHE[mixop_typ] # type: MixopTyp
+        if mixop.tostring() == "`{%}`" and self.get_typ().tostring().startswith('set'):
+            if self._get_list(0)._get_size_list() > 0:
+                import pdb; pdb.set_trace()
 
     def __repr__(self):
         size = self._get_size_list()
