@@ -644,6 +644,8 @@ class Exp(AstBase):
             ast = CallE.fromjson(content, cache)
         elif what == 'IterE':
             ast = IterE.fromjson(content, cache)
+        elif what == 'HoldE':
+            ast = HoldE.fromjson(content, cache)
         else:
             raise P4UnknownTypeError("Unknown Exp type: %s" % what)
         ast.typ = typ
@@ -1265,6 +1267,25 @@ class CallE(Exp):
 
     def __repr__(self):
         return "p4specast.CallE(%r, %r, %r)" % (self.func, self.targs, self.args)
+
+
+class HoldE(Exp):
+    _immutable_fields_ = ['relid', 'notexp']
+
+    def __init__(self, relid, notexp):
+        self.relid = relid
+        self.notexp = notexp
+
+    def tostring(self):
+        # | HoldE (relid, notexp) -> string_of_relid relid ^ ": " ^ string_of_notexp notexp ^ " holds"
+        return "%s: %s holds" % (self.relid.tostring(), self.notexp.tostring())
+
+    @staticmethod
+    def fromjson(content, cache=None):
+        return HoldE(
+            relid=Id.fromjson(content.get_list_item(1), cache),
+            notexp=NotExp.fromjson(content.get_list_item(2), cache)
+        )
 
 
 class IterE(Exp):
