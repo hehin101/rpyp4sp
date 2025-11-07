@@ -4,6 +4,86 @@ from rpyp4sp import p4specast, objects, builtin, context, integers
 from rpyp4sp.error import (P4EvaluationError, P4CastError, P4NotImplementedError,
                            P4RelationError)
 
+class BounceExp(Exception):
+    def __init__(self, ctx, exp):
+        self.ctx = ctx
+        self.exp = exp
+
+class BounceExpCont(Exception):
+    def __init__(self, ctx, exp, continuation):
+        self.ctx = ctx
+        self.exp = exp
+        self.continuation = continuation  # Function to call with (ctx, value)
+
+class BounceExps(Exception):
+    def __init__(self, ctx, exps):
+        self.ctx = ctx
+        self.exps = exps
+
+class BounceArg(Exception):
+    def __init__(self, ctx, arg):
+        self.ctx = ctx
+        self.arg = arg
+
+class BounceLetIterTick(Exception):
+    def __init__(self, ctx, exp_l, exp_r, iterexps):
+        self.ctx = ctx
+        self.exp_l = exp_l
+        self.exp_r = exp_r
+        self.iterexps = iterexps
+
+class BounceLetList(Exception):
+    def __init__(self, ctx, exp_l, exp_r, vars_h, iterexps_t):
+        self.ctx = ctx
+        self.exp_l = exp_l
+        self.exp_r = exp_r
+        self.vars_h = vars_h
+        self.iterexps_t = iterexps_t
+
+class BounceIfCondIterTick(Exception):
+    def __init__(self, ctx, exp_cond, iterexps):
+        self.ctx = ctx
+        self.exp_cond = exp_cond
+        self.iterexps = iterexps
+
+class BounceIfCondList(Exception):
+    def __init__(self, ctx, exp_cond, vars_h, iterexps_t):
+        self.ctx = ctx
+        self.exp_cond = exp_cond
+        self.vars_h = vars_h
+        self.iterexps_t = iterexps_t
+
+class BounceRuleIterTick(Exception):
+    def __init__(self, ctx, id, notexp, iterexps):
+        self.ctx = ctx
+        self.id = id
+        self.notexp = notexp
+        self.iterexps = iterexps
+
+class BounceRuleList(Exception):
+    def __init__(self, ctx, id, notexp, iter_h, iterexps_t):
+        self.ctx = ctx
+        self.id = id
+        self.notexp = notexp
+        self.iter_h = iter_h
+        self.iterexps_t = iterexps_t
+
+class BounceAssignExp(Exception):
+    def __init__(self, ctx, ctx_l, pat, value):
+        self.ctx = ctx
+        self.ctx_l = ctx_l
+        self.pat = pat
+        self.value = value
+
+class BounceAssignExps(Exception):
+    def __init__(self, ctx, ctx_l, pats, values):
+        self.ctx = ctx
+        self.ctx_l = ctx_l
+        self.pats = pats
+        self.values = values
+
+# ____________________________________________________________
+
 class Sign(object):
     # abstract base
     pass
@@ -32,6 +112,12 @@ class Continuation(object):
     def __repr__(self):
         return "Contiuation(%d, %s, %s)" % (
             self.index, self.instrs, self.next)
+
+class ContinueArgs(object):
+    def __init__(self, index, args, next):
+        self.index = index
+        self.args = args
+        self.next = next
 
 def invoke_func(ctx, calle):
     # if Builtin.is_builtin id then invoke_func_builtin ctx id targs args
@@ -147,21 +233,18 @@ def eval_args(ctx, args):
     #     let ctx, value = eval_arg ctx arg in
     #     (ctx, values @ [ value ]))
     #   (ctx, []) args
-    # values = []
     n = len(args)
     values = [None] * n
-    i = 0
-    while True:
-        if i >= n:
-            return ctx, values
-        arg = args[i]
-        ctx, value = eval_arg(ctx, arg)
-        values[i] = value
-        i += 1
-    # for arg in args:
-    #     ctx, value = eval_arg(ctx, arg)
-    #     values.append(value)
-    # return ctx, values
+    contarg = ContinueArgs(0, args, None)
+    while contarg is not None:
+        args_list = contarg.args
+        index = contarg.index
+        contarg = contarg.next  # pop from stack
+        for i in range(index, len(args_list)):
+            arg = args_list[i]
+            ctx, value = eval_arg(ctx, arg)
+            values[i] = value
+    return ctx, values
 
 # ____________________________________________________________
 # relations
@@ -265,7 +348,22 @@ def eval_if_cond_iter(ctx, instr):
     # let iterexps = List.rev iterexps in
     iterexps = instr._get_reverse_iters()
     # eval_if_cond_iter' ctx exp_cond iterexps
-    return eval_if_cond_iter_tick(ctx, instr.exp, iterexps)
+    exp_cond = instr.exp
+    while True:
+        try:
+            return eval_if_cond_iter_tick(ctx, exp_cond, iterexps)
+        except BounceIfCondIterTick as bounce:
+            ctx = bounce.ctx
+            exp_cond = bounce.exp_cond
+            iterexps = bounce.iterexps
+        except BounceIfCondList as bounce:
+            ctx = bounce.ctx
+            exp_cond = bounce.exp_cond
+            vars_h = bounce.vars_h
+            iterexps_t = bounce.iterexps_t
+            # Call eval_if_cond_list inline to avoid stack growth
+            ctx, cond, value_cond = eval_if_cond_list(ctx, exp_cond, vars_h, iterexps_t)
+            return ctx, cond, value_cond
 
 def eval_if_cond_list(ctx, exp_cond, vars, iterexps):
     #   let ctxs_sub = Ctx.sub_list ctx vars in
@@ -614,10 +712,12 @@ def eval_let_iter_tick(ctx, exp_l, exp_r, iterexps):
     #     match iter_h with
     #     | Opt -> eval_let_opt ctx exp_l exp_r vars_h iterexps_t
         if isinstance(iter_h, p4specast.Opt):
+            # Tail call - bounce to eval_let_opt (currently raises TODO)
             return eval_let_opt(ctx, exp_l, exp_r, vars_h, iterexps_t)
     #     | List -> eval_let_list ctx exp_l exp_r vars_h iterexps_t)
         elif isinstance(iter_h, p4specast.List):
-            return eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t)
+            # Tail call - use bounce instead of recursion
+            raise BounceLetList(ctx, exp_l, exp_r, vars_h, iterexps_t)
         else:
             assert 0, 'should be unreachable'
     #import pdb;pdb.set_trace()
@@ -627,7 +727,24 @@ def eval_let_iter(ctx, let_instr):
     # let iterexps = List.rev iterexps in
     iterexps = let_instr._get_reverse_iters()
     # eval_let_iter' ctx exp_l exp_r iterexps
-    return eval_let_iter_tick(ctx, let_instr.var, let_instr.value, iterexps)
+    exp_l = let_instr.var
+    exp_r = let_instr.value
+    while True:
+        try:
+            return eval_let_iter_tick(ctx, exp_l, exp_r, iterexps)
+        except BounceLetIterTick as bounce:
+            ctx = bounce.ctx
+            exp_l = bounce.exp_l
+            exp_r = bounce.exp_r
+            iterexps = bounce.iterexps
+        except BounceLetList as bounce:
+            ctx = bounce.ctx
+            exp_l = bounce.exp_l
+            exp_r = bounce.exp_r
+            vars_h = bounce.vars_h
+            iterexps_t = bounce.iterexps_t
+            ctx = eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t)
+            return ctx
 
 def eval_let(ctx, exp_l, exp_r):
     # let ctx, value = eval_exp ctx exp_r in
@@ -1328,7 +1445,13 @@ class SubExpressions(Exception):
         self.exps = exps
 
 def eval_exp(ctx, exp):
-    return exp.eval_exp(ctx)
+    while True:
+        try:
+            return exp.eval_exp(ctx)
+        except BounceExp as bounce:
+            # Tail call - replace ctx and exp, continue loop
+            ctx = bounce.ctx
+            exp = bounce.exp
 
 def eval_exps(ctx, exps):
     # List.fold_left
@@ -1339,11 +1462,11 @@ def eval_exps(ctx, exps):
     contexp = ContinueExps(0, exps, None)
     values = [None] * len(exps)
     while contexp is not None:
-        exps = contexp.exps
+        exps_list = contexp.exps
         index = contexp.index
-        contexp = contexp.next
-        for i in range(index, len(exps)):
-            exp = exps[i]
+        contexp = contexp.next  # pop from stack
+        for i in range(index, len(exps_list)):
+            exp = exps_list[i]
             ctx, value = eval_exp(ctx, exp)
             values[i] = value
     return ctx, values
