@@ -3,7 +3,7 @@ from rpython.rlib import objectmodel, jit
 from rpyp4sp import p4specast, objects, builtin, context, integers
 from rpyp4sp.error import (P4Error, P4EvaluationError, P4CastError,
                            P4NotImplementedError, P4RelationError)
-from rpyp4sp.sign import Res, Ret
+from rpyp4sp.sign import Res, Ret, Cont
 
 class VarList(object):
     _immutable_fields_ = ['vars[*]']
@@ -506,6 +506,25 @@ class __extend__(p4specast.CaseI):
 class __extend__(p4specast.OtherwiseI):
     def eval_instr(self, ctx):
         return self.instr.eval_instr(ctx)
+
+class __extend__(p4specast.GroupI):
+       def eval_instr(self, ctx):
+           # and eval_group_instr (ctx : Ctx.t) (id_group : id) (_exps_group : exp list)
+           #   (instrs_group : instr list) : Ctx.t * Sign.t =
+           #   let ctx_group, sign_group = eval_instrs ctx Cont instrs_group in
+           #   match sign_group with
+           #   | Cont -> (ctx, Cont)
+           #   | Res values_output -> (ctx_group, Res values_output)
+           #   | Ret _ -> error id_group.at "cannot return from try instruction"
+           sign_group = eval_instrs(ctx, self.instrs)
+           if sign_group.sign_is_cont():
+               return ctx
+           elif isinstance(sign_group, Res):
+               return sign_group
+           elif isinstance(sign_group, Ret):
+               raise P4EvaluationError("cannot return from try instruction", region=self.id.region)
+           else:
+               raise P4EvaluationError("unexpected sign type in GroupI")
 
 class __extend__(p4specast.LetI):
     def eval_instr(self, ctx):
@@ -2484,5 +2503,3 @@ def upcast(ctx, typ, value):
     #       | _ -> assert false)
     #   | _ -> (ctx, value)
     return ctx, value
-
-
