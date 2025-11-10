@@ -138,3 +138,85 @@ def test_vart_cache():
 
     assert vart5 is not vart6
     assert vart5.id.value == vart6.id.value == "test_type"
+
+
+def test_group_i():
+    from rpyp4sp.rpyjson import loads
+
+    # Test GroupI parsing with id, expressions, and instructions
+    cache = p4specast.FromjsonCache()
+
+    # Create JSON representation of GroupI with an id, list of expressions, and list of instructions
+    # GroupI structure: ["GroupI", id, [exps], [instrs]]
+    json_str = '''
+    {
+        "it": [
+            "GroupI",
+            {"it": "test_group", "note": null, "at": {"left": {"file": "", "line": 0, "column": 0}, "right": {"file": "", "line": 0, "column": 0}}},
+            [
+                {
+                    "it": ["BoolE", true],
+                    "note": ["BoolT"],
+                    "at": {"left": {"file": "", "line": 0, "column": 0}, "right": {"file": "", "line": 0, "column": 0}}
+                }
+            ],
+            [
+                {
+                    "it": ["ReturnI", {
+                        "it": ["BoolE", false],
+                        "note": ["BoolT"],
+                        "at": {"left": {"file": "", "line": 0, "column": 0}, "right": {"file": "", "line": 0, "column": 0}}
+                    }],
+                    "note": null,
+                    "at": {"left": {"file": "", "line": 0, "column": 0}, "right": {"file": "", "line": 0, "column": 0}}
+                }
+            ]
+        ],
+        "note": null,
+        "at": {"left": {"file": "", "line": 0, "column": 0}, "right": {"file": "", "line": 0, "column": 0}}
+    }
+    '''
+
+    value = loads(json_str)
+    group_i = p4specast.Instr.fromjson(value, cache)
+
+    # Verify it's a GroupI instance
+    assert isinstance(group_i, p4specast.GroupI)
+
+    # Verify the id
+    assert isinstance(group_i.id, p4specast.Id)
+    assert group_i.id.value == "test_group"
+
+    # Verify the expressions list
+    assert len(group_i.exps) == 1
+    assert isinstance(group_i.exps[0], p4specast.BoolE)
+    assert group_i.exps[0].value == True
+
+    # Verify the instructions list
+    assert len(group_i.instrs) == 1
+    assert isinstance(group_i.instrs[0], p4specast.ReturnI)
+    assert isinstance(group_i.instrs[0].exp, p4specast.BoolE)
+    assert group_i.instrs[0].exp.value == False
+
+    # Test with empty expressions and instructions
+    json_str_empty = '''
+    {
+        "it": [
+            "GroupI",
+            {"it": "empty_group", "note": null, "at": {"left": {"file": "", "line": 0, "column": 0}, "right": {"file": "", "line": 0, "column": 0}}},
+            [],
+            []
+        ],
+        "note": null,
+        "at": {"left": {"file": "", "line": 0, "column": 0}, "right": {"file": "", "line": 0, "column": 0}}
+    }
+    '''
+
+    value_empty = loads(json_str_empty)
+    group_i_empty = p4specast.Instr.fromjson(value_empty, cache)
+
+    assert isinstance(group_i_empty, p4specast.GroupI)
+    assert group_i_empty.id.value == "empty_group"
+    assert len(group_i_empty.exps) == 0
+    assert len(group_i_empty.instrs) == 0
+
