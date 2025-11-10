@@ -26,6 +26,13 @@ def main():
     os.chdir(p4spectec_dir)
 
     try:
+        if not os.path.isfile("p4-spectec/p4spectec"):
+            print("Building p4spectec...")
+            result = subprocess.call("make", shell=True)
+            if result != 0:
+                print("Error: p4spectec could not be successfully built with exit code: %d" % result)
+                return 1
+
         # Step 1: Run p4spectec command to generate temp_ast.json
         print("Running p4spectec to generate AST...")
         cmd = './p4spectec json-ast spec/*.watsup'
