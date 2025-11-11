@@ -111,6 +111,10 @@ typ=set<id>: 17430, 0.039395%
 typ=set<pair<id, typeIR>>: 1335, 0.003017%
 typ=set<pair<id, value>>: 310, 0.000701%
 typ=set<pair<id, varTypeIR>>: 75, 0.000170%
+total: 44254625
+typ=CaseE.eval_exp: 36492595, 82.460522%
+typ=sets_unions_set: 4113780, 9.295706%
+typ=_wrap_set_elems: 3648250, 8.243771%
 maps:
 total: 4435940
 size=1: 706355, 15.923457%
@@ -217,3 +221,31 @@ typ=map<id, varTypeIR>: 457240, 10.307624%
 typ=map<tid, typeDefIR>: 338920, 7.640320%
 typ=map<rid, routineTypeDefIR>: 176395, 3.976497%
 typ=map<cid, constructorTypeDefIR>: 65355, 1.473307%
+total: 4435940
+typ=maps_add_map: 4435940, 100.000000%
+
+sets in CaseE.eval_exp (exps-types and values-types):
+total: 36492595
+typ=[ListE][ListVSize0]: 18192285, 49.851991%
+typ=[IterE][ListVSize0]: 5117785, 14.024174%
+typ=[IterE][ListVSize1]: 835400, 2.289232%
+typ=[IterE][ListVArbitrary]: 2846520, 7.800267%
+typ=[CatE][ListVSize1]: 2280245, 6.248514%
+typ=[CatE][ListVSize0]: 3116405, 8.539828%
+typ=[ListE][ListVSize1]: 3595060, 9.851478%
+typ=[CatE][ListVArbitrary]: 499015, 1.367442%
+typ=[VarE][CaseVSize1]: 7350, 0.020141%
+typ=[VarE][CaseVSize2]: 1845, 0.005056%
+typ=[VarE][CaseVSize0]: 470, 0.001288%
+typ=[VarE][CaseVSize3]: 215, 0.000589%
+sets in CaseE.eval_exp (exps[0] types):
+total: 36492595
+typ=[]: 18192285, 49.851991%
+typ=(VarE * Var): 4258265, 11.668847%
+typ=IterE ++ IterE: 5895665, 16.155784%
+typ=(CaseE * Var Var): 4493315, 12.312950%
+typ=[VarE]: 3593970, 9.848491%
+typ=(CaseE * Var): 48125, 0.131876%
+typ=typeIR: 3565, 0.009769%
+typ=[CaseE]: 1090, 0.002987%
+typ=typeIR_key: 6315, 0.017305%
