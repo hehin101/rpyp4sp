@@ -45,7 +45,7 @@ def mutate_NumV(value, rng):
         new_val = integers.Integer.fromint(flipped)
     else:
         # Generate completely new value
-        if isinstance(value.what, p4specast.NatT):
+        if isinstance(value.get_what(), p4specast.NatT):
             # Natural numbers: 0 to reasonable upper bound
             new_int = rng.randint(0, 2**20)
         else:
@@ -54,10 +54,10 @@ def mutate_NumV(value, rng):
         new_val = integers.Integer.fromint(new_int)
 
     # For Nat type, ensure non-negative
-    if isinstance(value.what, p4specast.NatT) and new_val.toint() < 0:
+    if isinstance(value.get_what(), p4specast.NatT) and new_val.toint() < 0:
         new_val = new_val.abs()
 
-    return NumV.make(new_val, value.what, value.get_typ())
+    return NumV.make(new_val, value.get_what(), value.get_typ())
 
 
 def mutate_TextV(value, rng):
@@ -256,8 +256,9 @@ def mutate_ListV(value, rng):
 def mutate_OptV(value, rng):
     """Mutate an OptV by making it None or mutating its contained value."""
     assert isinstance(value, OptV)
+    inner_value = value.get_opt_value()
 
-    if value.value is None:
+    if inner_value is None:
         # Already None - nothing to mutate
         return value
 
@@ -266,11 +267,11 @@ def mutate_OptV(value, rng):
 
     if strategy == 0:
         # Mutate the contained value
-        mutated_inner = mutate_value(value.value, rng)
-        return OptV(mutated_inner, value.get_typ())
+        mutated_inner = mutate_value(inner_value, rng)
     else:
         # Make it None
-        return OptV(None, value.typ)
+        mutated_inner = None
+    return value.get_typ().make_opt_value(mutated_inner)
 
 
 # ____________________________________________________________
@@ -344,11 +345,13 @@ def generate_OptV(typ, rng, ctx=None, maxdepth=10, storetyp=None):
     # Choose whether to generate None or a value
     if maxdepth <= 0 or rng.randint(0, 1) == 0:
         # Generate None
-        return OptV(None, typ)
+        inner_value = None
+        return typ.make_opt_value(None)
     else:
         # Generate a value of the inner type
         inner_value = generate_value(typ.typ, rng, ctx, maxdepth)
-        return OptV(inner_value, storetyp)
+        assert isinstance(storetyp, p4specast.IterT) and storetyp.iter is p4specast.Opt.INSTANCE
+        return storetyp.make_opt_value(inner_value)
 
 def generate_CaseV(typ, rng, ctx, maxdepth=10, storetyp=None):
     if storetyp is None: storetyp = typ
@@ -471,8 +474,8 @@ def find_subvalues(value):
             for i, element in enumerate(elements):
                 queue.enqueue((element, current_path + [i]))
         elif isinstance(current_value, OptV):
-            if current_value.value is not None:
-                queue.enqueue((current_value.value, current_path + [0]))
+            if current_value.get_opt_value() is not None:
+                queue.enqueue((current_value.get_opt_value(), current_path + [0]))
 
     return result
 
@@ -543,11 +546,11 @@ def mutate_subvalue_with_path(value, path, rng, ctx=None):
     elif isinstance(value, OptV):
         if index != 0:
             raise IndexError("Path index %d invalid for OptV (only 0 allowed)" % index)
-        if value.value is None:
+        if value.get_opt_value() is None:
             raise IndexError("Cannot follow path into None OptV")
 
-        mutated_inner = mutate_subvalue_with_path(value.value, remaining_path, rng, ctx)
-        return OptV(mutated_inner, value.typ)
+        mutated_inner = mutate_subvalue_with_path(value.get_opt_value(), remaining_path, rng, ctx)
+        return value.get_typ().make_opt_value(mutated_inner)
 
     else:
         # Leaf value types (BoolV, NumV, TextV) don't have subvalues

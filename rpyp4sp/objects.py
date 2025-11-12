@@ -111,7 +111,12 @@ class NumV(BaseV):
         raise NotImplementedError("abstract method")
 
     @staticmethod
-    def make(value, what, typ):
+    def make(value, what, typ=None):
+        if typ is None:
+            if isinstance(what, p4specast.IntT):
+                typ = p4specast.NumT.INT
+            else:
+                typ = p4specast.NumT.NAT
         if isinstance(typ, p4specast.NumT) and isinstance(what, p4specast.IntT):
             assert type(typ.typ) is type(what)
             return IntV(value, what)
@@ -119,6 +124,7 @@ class NumV(BaseV):
             assert type(typ.typ) is type(what)
             return NatV(value, what)
         else:
+            assert isinstance(typ, p4specast.Type)
             return NumVWithTyp(value, what, typ)
 
     def compare(self, other):
@@ -232,7 +238,8 @@ class IntV(NumV):
         return p4specast.IntT.INSTANCE
 
     def get_typ(self):
-        return p4specast.IntT.INSTANCE
+        return p4specast.NumT.INT
+
 
 class NatV(NumV):
     def __init__(self, value, what):
@@ -243,7 +250,8 @@ class NatV(NumV):
         return p4specast.NatT.INSTANCE
 
     def get_typ(self):
-        return p4specast.NatT.INSTANCE
+        return p4specast.NumT.NAT
+
 
 class NumVWithTyp(NumV):
     _immutable_fields_ = ['_what', 'typ']

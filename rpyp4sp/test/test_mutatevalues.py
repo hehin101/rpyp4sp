@@ -56,7 +56,7 @@ class TestNumVMutation(object):
 
         assert isinstance(mutated, NumV)
         assert mutated.value.toint() == 15  # 10 + 5
-        assert mutated.what is p4specast.IntT.INSTANCE
+        assert mutated.get_what() is p4specast.IntT.INSTANCE
 
     def test_boundary_values_strategy(self):
         # Test boundary values strategy (strategy 1)
@@ -84,7 +84,7 @@ class TestNumVMutation(object):
         mutated = mutate_NumV(original, rng)
 
         assert mutated.value.toint() == 42
-        assert mutated.what is p4specast.NatT.INSTANCE
+        assert mutated.get_what() is p4specast.NatT.INSTANCE
 
     def test_nat_stays_positive(self):
         # Test that Nat values stay non-negative even with negative operations
@@ -95,7 +95,7 @@ class TestNumVMutation(object):
 
         # Should be converted to positive
         assert mutated.value.toint() == 1  # abs(-1)
-        assert mutated.what is p4specast.NatT.INSTANCE
+        assert mutated.get_what() is p4specast.NatT.INSTANCE
 
 
 class TestTextVMutation(object):
@@ -318,7 +318,7 @@ class TestCaseVMutation(object):
         rng = MockRng([0])  # index=0 (only option), then BoolV will flip
 
         # Create a simple mixop and case
-        phrases = [[p4specast.AtomT("flag")]]
+        phrases = [p4specast.AtomT("flag"), None]
         mixop = p4specast.MixOp(phrases)
         values = [BoolV.TRUE]
         original = CaseV.make(values, mixop)
@@ -336,9 +336,9 @@ class TestCaseVMutation(object):
 
         # Create mixop for a case with multiple values
         phrases = [
-            [p4specast.AtomT("name")],
-            [p4specast.AtomT("age")],
-            [p4specast.AtomT("active")]
+            p4specast.AtomT("name"), None,
+            p4specast.AtomT("age"), None,
+            p4specast.AtomT("active"), None,
         ]
         mixop = p4specast.MixOp(phrases)
         values = [
@@ -366,7 +366,7 @@ class TestCaseVMutation(object):
         # Test that the mixop is preserved
         rng = MockRng([0, 0, 1, 33])  # index=0, TextV strategy=0 (insert), pos=1, char='A'
 
-        phrases = [[p4specast.AtomT("message")], [p4specast.AtomT("count")]]
+        phrases = [p4specast.AtomT("message"), None, p4specast.AtomT("count"), None]
         mixop = p4specast.MixOp(phrases)
         values = [TextV("hello"), NumV.make(integers.Integer.fromint(42), p4specast.IntT.INSTANCE)]
         original = CaseV.make(values, mixop)
@@ -501,7 +501,8 @@ class TestOptVMutation(object):
         # OptV with None should return unchanged
         rng = MockRng([])
 
-        original = OptV(None)
+        typ = p4specast.BoolT.INSTANCE.opt_of()
+        original = typ.make_opt_value(None)
         mutated = mutate_OptV(original, rng)
 
         assert mutated is original
@@ -510,14 +511,16 @@ class TestOptVMutation(object):
         # Strategy 0: Mutate the contained value
         rng = MockRng([0])  # strategy=0, then BoolV will flip
 
+        typ = p4specast.IterT(p4specast.BoolT.INSTANCE, p4specast.Opt.INSTANCE)
+
         inner_value = BoolV.TRUE
-        original = OptV(inner_value)
+        original = typ.make_opt_value(inner_value)
         mutated = mutate_OptV(original, rng)
 
         assert isinstance(mutated, OptV)
-        assert mutated.value is not None
-        assert isinstance(mutated.value, BoolV)
-        assert mutated.value.value is False  # BoolV was flipped
+        assert mutated.get_opt_value() is not None
+        assert isinstance(mutated.get_opt_value(), BoolV)
+        assert mutated.get_opt_value().value is False  # BoolV was flipped
         assert mutated.get_typ() == original.get_typ()
 
     def test_make_none_strategy(self):
@@ -525,11 +528,12 @@ class TestOptVMutation(object):
         rng = MockRng([1])  # strategy=1
 
         inner_value = TextV("hello")
-        original = OptV(inner_value)
+        typ = p4specast.TextT.INSTANCE.opt_of()
+        original = typ.make_opt_value(inner_value)
         mutated = mutate_OptV(original, rng)
 
         assert isinstance(mutated, OptV)
-        assert mutated.value is None
+        assert mutated.get_opt_value() is None
         assert mutated.get_typ() == original.get_typ()
 
 
@@ -582,30 +586,30 @@ class TestGenerateNumV(object):
         # Test generating natural number
         rng = MockRng([42])  # Will generate 42
 
-        num_type = p4specast.NumT(p4specast.NatT.INSTANCE)
+        num_type = p4specast.NumT.NAT
         generated = generate_NumV(num_type, rng)
 
         assert isinstance(generated, NumV)
         assert generated.value.toint() == 42
-        assert generated.what is p4specast.NatT.INSTANCE
+        assert generated.get_what() is p4specast.NatT.INSTANCE
         assert generated.get_typ() is num_type
 
     def test_generate_int(self):
         # Test generating integer (can be negative)
         rng = MockRng([42])  # -500 + (42 % 1001) = -500 + 42 = -458
 
-        num_type = p4specast.NumT(p4specast.IntT.INSTANCE)
+        num_type = p4specast.NumT.INT
         generated = generate_NumV(num_type, rng)
 
         assert isinstance(generated, NumV)
         assert generated.value.toint() == -458
-        assert generated.what is p4specast.IntT.INSTANCE
+        assert generated.get_what() is p4specast.IntT.INSTANCE
         assert generated.get_typ() is num_type
 
     def test_nat_range(self):
         # Test that Nat values are in expected range
         rng = random.Random(42)
-        num_type = p4specast.NumT(p4specast.NatT.INSTANCE)
+        num_type = p4specast.NumT.NAT
 
         for _ in range(50):
             generated = generate_NumV(num_type, rng)
@@ -615,7 +619,7 @@ class TestGenerateNumV(object):
     def test_int_range(self):
         # Test that Int values are in expected range
         rng = random.Random(42)
-        num_type = p4specast.NumT(p4specast.IntT.INSTANCE)
+        num_type = p4specast.NumT.INT
 
         for _ in range(50):
             generated = generate_NumV(num_type, rng)
@@ -720,7 +724,7 @@ class TestGenerateOptV(object):
         generated = generate_OptV(opt_type, rng)
 
         assert isinstance(generated, OptV)
-        assert generated.value is None
+        assert generated.get_opt_value() is None
         assert generated.get_typ() is opt_type
 
     def test_generate_some_bool(self):
@@ -732,9 +736,9 @@ class TestGenerateOptV(object):
         generated = generate_OptV(opt_type, rng)
 
         assert isinstance(generated, OptV)
-        assert generated.value is not None
-        assert isinstance(generated.value, BoolV)
-        assert generated.value.value is True
+        assert generated.get_opt_value() is not None
+        assert isinstance(generated.get_opt_value(), BoolV)
+        assert generated.get_opt_value().value is True
         assert generated.get_typ() is opt_type
 
     def test_generate_some_num(self):
@@ -746,9 +750,9 @@ class TestGenerateOptV(object):
         generated = generate_OptV(opt_type, rng)
 
         assert isinstance(generated, OptV)
-        assert generated.value is not None
-        assert isinstance(generated.value, NumV)
-        assert generated.value.value.toint() == 42
+        assert generated.get_opt_value() is not None
+        assert isinstance(generated.get_opt_value(), NumV)
+        assert generated.get_opt_value().value.toint() == 42
         assert generated.get_typ() is opt_type
 
     def test_generate_some_text(self):
@@ -760,9 +764,9 @@ class TestGenerateOptV(object):
         generated = generate_OptV(opt_type, rng)
 
         assert isinstance(generated, OptV)
-        assert generated.value is not None
-        assert isinstance(generated.value, TextV)
-        assert generated.value.value == ""
+        assert generated.get_opt_value() is not None
+        assert isinstance(generated.get_opt_value(), TextV)
+        assert generated.get_opt_value().value == ""
         assert generated.get_typ() is opt_type
 
     def test_random_distribution(self):
@@ -776,7 +780,7 @@ class TestGenerateOptV(object):
 
         for _ in range(100):
             generated = generate_OptV(opt_type, rng)
-            if generated.value is None:
+            if generated.get_opt_value() is None:
                 has_none = True
             else:
                 has_some = True
@@ -829,7 +833,8 @@ class TestFindSubvalues(object):
 
     def test_opt_none(self):
         # Test OptV with None
-        opt_none = OptV(None)
+        typ = p4specast.BoolT.INSTANCE.opt_of()
+        opt_none = typ.make_opt_value(None)
         subvalues = find_subvalues(opt_none)
 
         assert len(subvalues) == 1
@@ -838,7 +843,8 @@ class TestFindSubvalues(object):
     def test_opt_some(self):
         # Test OptV with a value
         inner_bool = BoolV.TRUE
-        opt_some = OptV(inner_bool)
+        typ = p4specast.BoolT.INSTANCE.opt_of()
+        opt_some = typ.make_opt_value(inner_bool)
         subvalues = find_subvalues(opt_some)
 
         assert len(subvalues) == 2
@@ -910,7 +916,8 @@ class TestFindSubvalues(object):
     def test_nested_opt_in_list(self):
         # Test nested structure: list containing OptV
         inner_bool = BoolV.FALSE
-        opt_val = OptV(inner_bool)
+        typ = p4specast.BoolT.INSTANCE.opt_of()
+        opt_val = typ.make_opt_value(inner_bool)
         text_val = TextV("hello")
 
         list_val = ListV.make([opt_val, text_val], None)
@@ -928,7 +935,8 @@ class TestFindSubvalues(object):
         # Structure: tuple([list([bool, opt(text)]), num])
         inner_bool = BoolV.TRUE
         inner_text = TextV("deep")
-        inner_opt = OptV(inner_text)
+        typ = p4specast.TextT.INSTANCE.opt_of()
+        inner_opt = typ.make_opt_value(inner_text)
         inner_list = ListV.make([inner_bool, inner_opt], None)
 
         outer_num = NumV.make(integers.Integer.fromint(99), p4specast.IntT.INSTANCE)
@@ -1020,15 +1028,16 @@ class TestMutateSubvalueWithPath(object):
         rng = MockRng([0])  # mutate=0, BoolV will flip
 
         inner_bool = BoolV.TRUE
-        opt_val = OptV(inner_bool)
+        typ = p4specast.BoolT.INSTANCE.opt_of()
+        opt_val = typ.make_opt_value(inner_bool)
 
         # Mutate the contained value (index 0)
         mutated = mutate_subvalue_with_path(opt_val, [0], rng)
 
         assert isinstance(mutated, OptV)
-        assert mutated.value is not None
-        assert isinstance(mutated.value, BoolV)
-        assert mutated.value.value is False  # True -> False
+        assert mutated.get_opt_value() is not None
+        assert isinstance(mutated.get_opt_value(), BoolV)
+        assert mutated.get_opt_value().value is False  # True -> False
 
     def test_nested_path(self):
         # Test mutating with a multi-level path
@@ -1066,7 +1075,8 @@ class TestMutateSubvalueWithPath(object):
         rng = MockRng([0, 0, 1, 33])  # mutate=0, TextV strategy=0 (insert), pos=1, char='A'
 
         inner_text = TextV("deep")
-        inner_opt = OptV(inner_text)
+        typ = p4specast.TextT.INSTANCE.opt_of()
+        inner_opt = typ.make_opt_value(inner_text)
         inner_bool = BoolV.TRUE
         inner_list = ListV.make([inner_bool, inner_opt], None)
 
@@ -1079,7 +1089,7 @@ class TestMutateSubvalueWithPath(object):
         # Navigate down to verify the mutation
         mutated_list = mutated._get_list(0)
         mutated_opt = mutated_list._get_list(1)
-        mutated_text = mutated_opt.value
+        mutated_text = mutated_opt.get_opt_value()
 
         assert mutated_text.value == "dAeep"  # "deep" with 'A' inserted at pos 1
 
@@ -1117,7 +1127,8 @@ class TestMutateSubvalueWithPath(object):
         # Test error when trying to follow path into None OptV
         rng = MockRng([])
 
-        opt_none = OptV(None)
+        typ = p4specast.BoolT.INSTANCE.opt_of()
+        opt_none = typ.make_opt_value(None)
 
         # Can't follow path [0] into None OptV
         try:
@@ -1167,6 +1178,8 @@ class TestMutate(object):
         # Structure: tuple([bool, list([text, opt(num)])])
         deep_num = NumV.make(integers.Integer.fromint(99), p4specast.IntT.INSTANCE)
         deep_opt = OptV(deep_num)
+        typ = deep_num.get_typ().opt_of()
+        deep_opt = typ.make_opt_value(deep_num)
         inner_text = TextV("nested")
         inner_list = ListV.make([inner_text, deep_opt], None)
 
@@ -1185,7 +1198,7 @@ class TestMutate(object):
         # Navigate to the deeply nested value
         mutated_list = mutated._get_list(1)
         mutated_opt = mutated_list._get_list(1)
-        mutated_num = mutated_opt.value
+        mutated_num = mutated_opt.get_opt_value()
 
         assert mutated_num.value.toint() == 104  # 99 + 5
 
@@ -1198,7 +1211,8 @@ class TestMutate(object):
         # Use a simpler structure that won't have structure-changing mutations
         # Structure: tuple([bool, opt(bool)])
         inner_bool = BoolV.FALSE
-        inner_opt = OptV(inner_bool, p4specast.BoolT.INSTANCE.opt_of())
+        typ = p4specast.BoolT.INSTANCE.opt_of()
+        inner_opt = typ.make_opt_value(inner_bool)
         outer_bool = BoolV.TRUE
         outer_tuple = TupleV.make([outer_bool, inner_opt], p4specast.TupleT([outer_bool.get_typ(), inner_opt.get_typ()]))
 
@@ -1209,19 +1223,19 @@ class TestMutate(object):
         # Track which values get mutated over many iterations
         for _ in range(100):
             original_outer = outer_tuple._get_list(0).value
-            original_inner = outer_tuple._get_list(1).value.value
+            original_inner = outer_tuple._get_list(1).get_opt_value().value
 
             mutated = mutate(outer_tuple, rng, ctx)
 
             new_outer = mutated._get_list(0).value
-            new_inner = mutated._get_list(1).value.value if mutated._get_list(1).value is not None else None
+            new_inner = mutated._get_list(1).get_opt_value().value if mutated._get_list(1).get_opt_value() is not None else None
 
             # Determine what changed
             if original_outer != new_outer:
                 mutation_locations.add("outer_bool")
             if new_inner is not None and original_inner != new_inner:
                 mutation_locations.add("inner_bool")
-            if mutated._get_list(1).value is None and original_inner is not None:
+            if mutated._get_list(1).get_opt_value() is None and original_inner is not None:
                 mutation_locations.add("opt_to_none")
 
         # Should have mutated values at different locations
@@ -1245,7 +1259,8 @@ class TestMutate(object):
         # Test mutation when OptV contains None
         rng = MockRng([0, 0])  # Select the only subvalue (the OptV itself)
 
-        opt_none = OptV(None)
+        typ = p4specast.BoolT.INSTANCE.opt_of()
+        opt_none = typ.make_opt_value(None)
         mutated = mutate(opt_none, rng)
 
         # OptV with None should remain unchanged when mutated
