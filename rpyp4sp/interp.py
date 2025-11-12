@@ -131,7 +131,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     ctx_local = assign_args(ctx, ctx_local, func, values_input)
     sign = _func_eval_instrs(ctx_local, func)
     # let ctx = Ctx.commit ctx ctx_local in
-    ctx = ctx.commit(ctx_local)
+    ctx = ctx.commit_coverage_or_none(sign.sign_get_cover())
     # match sign with
     if isinstance(sign, Ret):
     # | Ret value_output ->
