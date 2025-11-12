@@ -39,6 +39,7 @@ class TestTojsonIntegration(object):
         # Check equality
         assert value1.eq(value2), "Values not equal after roundtrip for %s" % os.path.basename(json_file)
 
+
     def test_typ_with_right_amount_of_regions(self):
         s = """{"it":["ListV",[]],"note":{"vid":-1,"typ":["VarT",{"it":"p4program","note":null,"at":{"left":{"file":"","line":0,"column":0},"right":{"file":"","line":0,"column":0}}},[]]},"at":null}"""
         json_parsed = rpyjson.loads(s)

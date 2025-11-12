@@ -61,21 +61,21 @@ class TestJsonDumps(object):
     def test_json_empty_array(self):
         # Test empty array
         fragments = []
-        json_array = rpyjson.JsonArray([])
+        json_array = rpyjson.JsonArray.make([])
         json_array.dumps(fragments)
         assert "".join(fragments) == "[]"
 
     def test_json_array_single_element(self):
         # Test array with single element
         fragments = []
-        json_array = rpyjson.JsonArray([rpyjson.JsonInt(42)])
+        json_array = rpyjson.JsonArray.make([rpyjson.JsonInt(42)])
         json_array.dumps(fragments)
         assert "".join(fragments) == "[42]"
 
     def test_json_array_multiple_elements(self):
         # Test array with multiple elements
         fragments = []
-        json_array = rpyjson.JsonArray([
+        json_array = rpyjson.JsonArray.make([
             rpyjson.JsonInt(1),
             rpyjson.json_true,
             rpyjson.json_null,
@@ -117,7 +117,7 @@ class TestJsonDumps(object):
         fragments = []
 
         # Create inner array: [1, 2]
-        inner_array = rpyjson.JsonArray([rpyjson.JsonInt(1), rpyjson.JsonInt(2)])
+        inner_array = rpyjson.JsonArray.make([rpyjson.JsonInt(1), rpyjson.JsonInt(2)])
 
         # Create object with array: {"numbers": [1, 2]}
         map_with_numbers = rpyjson.ROOT_MAP.get_next("numbers")
@@ -131,7 +131,7 @@ class TestJsonDumps(object):
         fragments = []
 
         # Build: {"data": {"items": [true, false, null]}}
-        inner_array = rpyjson.JsonArray([rpyjson.json_true, rpyjson.json_false, rpyjson.json_null])
+        inner_array = rpyjson.JsonArray.make([rpyjson.json_true, rpyjson.json_false, rpyjson.json_null])
 
         items_map = rpyjson.ROOT_MAP.get_next("items")
         inner_obj = rpyjson.JsonObject1(items_map, inner_array)
@@ -151,7 +151,7 @@ class TestJsonDumps(object):
         obj1 = rpyjson.JsonObject1(id_map, rpyjson.JsonInt(1))
         obj2 = rpyjson.JsonObject1(id_map, rpyjson.JsonInt(2))
 
-        json_array = rpyjson.JsonArray([obj1, obj2])
+        json_array = rpyjson.JsonArray.make([obj1, obj2])
         json_array.dumps(fragments)
         assert "".join(fragments) == '[{"id": 1}, {"id": 2}]'
 
@@ -159,7 +159,7 @@ class TestJsonDumps(object):
         # Test array with many elements
         fragments = []
         elements = [rpyjson.JsonInt(i) for i in range(10)]
-        json_array = rpyjson.JsonArray(elements)
+        json_array = rpyjson.JsonArray.make(elements)
         json_array.dumps(fragments)
         expected = "[" + ", ".join(str(i) for i in range(10)) + "]"
         assert "".join(fragments) == expected
@@ -274,7 +274,7 @@ class TestJsonDumps(object):
 
     def test_dumps_convenience_function(self):
         # Test the module-level dumps() convenience function
-        json_obj = rpyjson.JsonArray([
+        json_obj = rpyjson.JsonArray.make([
             rpyjson.JsonInt(1),
             rpyjson.JsonString("hello"),
             rpyjson.json_true

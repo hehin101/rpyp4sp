@@ -84,7 +84,7 @@ def define_enum(basename, *names):
 
         def tojson(self):
             from rpyp4sp import rpyjson
-            return rpyjson.JsonArray([rpyjson.JsonString(self.__class__.__name__)])
+            return rpyjson.JsonArray.make([rpyjson.JsonString(self.__class__.__name__)])
 
         def __repr__(self):
             return "p4specast." + self.__class__.__name__ + ".INSTANCE"
@@ -1634,7 +1634,7 @@ class VarT(Type):
     def _tojson_content(self):
         from rpyp4sp import rpyjson
         targs_json = [targ.tojson() for targ in self.targs]
-        return [rpyjson.JsonString("VarT"), self.id.tojson(), rpyjson.JsonArray(targs_json)]
+        return [rpyjson.JsonString("VarT"), self.id.tojson(), rpyjson.JsonArray.make(targs_json)]
 
     @staticmethod
     def fromjson(content, region, cache=None):
@@ -1678,7 +1678,7 @@ class TupleT(Type):
     def _tojson_content(self):
         from rpyp4sp import rpyjson
         elts_json = [elt.tojson() for elt in self.elts]
-        return [rpyjson.JsonString("TupleT"), rpyjson.JsonArray(elts_json)]
+        return [rpyjson.JsonString("TupleT"), rpyjson.JsonArray.make(elts_json)]
 
     @staticmethod
     def fromjson(content, region, cache=None):
@@ -3099,11 +3099,21 @@ class MixOp(AstBase):
 
     def tojson(self):
         from rpyp4sp import rpyjson
+        phrases = []
+        curr = []
+        for atom_or_hole in self.atoms_with_holes:
+            if atom_or_hole is None:
+                phrases.append(curr)
+                curr = []
+            else:
+                curr.append(atom_or_hole)
+        phrases.append(curr)
+
         phrases_json = []
-        for phrase_group in self.phrases:
+        for phrase_group in phrases:
             group_json = [atom.tojson() for atom in phrase_group]
-            phrases_json.append(rpyjson.JsonArray(group_json))
-        return rpyjson.JsonArray(phrases_json)
+            phrases_json.append(rpyjson.JsonArray.make(group_json))
+        return rpyjson.JsonArray.make(phrases_json)
 
     def __repr__(self):
         return "p4specast.MixOp(%r)" % (self.atoms_with_holes,)
@@ -3193,9 +3203,9 @@ class AtomT(AstBase):
                 break
 
         if atom_type is not None:
-            content = rpyjson.JsonArray([rpyjson.JsonString(atom_type)])
+            content = rpyjson.JsonArray.make([rpyjson.JsonString(atom_type)])
         else:
-            content = rpyjson.JsonArray([rpyjson.JsonString('Atom'), rpyjson.JsonString(self.value)])
+            content = rpyjson.JsonArray.make([rpyjson.JsonString('Atom'), rpyjson.JsonString(self.value)])
 
         atom_map = rpyjson.ROOT_MAP.get_next("it").get_next("note").get_next("at")
         return rpyjson.JsonObject3(atom_map, content, rpyjson.json_null, self.region.tojson())
