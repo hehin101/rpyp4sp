@@ -15,6 +15,7 @@ from pypy.interpreter.error import oefmt
 from pypy.interpreter import unicodehelper
 
 from rpyp4sp.error import P4ParseError, P4NotImplementedError
+from rpyp4sp.smalllist import inline_small_list
 
 # Union-Object to represent a json structure in a static way
 class JsonBase(object):
@@ -37,7 +38,7 @@ class JsonBase(object):
 
     def _unpack_deep(self):
         "NON_RPYTHON"
-        assert 0, 'base class'
+        assert 0, 'base class %s' % (self.__class__.__name__, )
 
     def __repr__(self):
         return "<json %r>" % (self._unpack_deep(), )
@@ -60,7 +61,7 @@ class JsonBase(object):
     def get_list_item(self, index):
         if self.is_array and isinstance(index, int):
             assert isinstance(self, JsonArray)
-            return self.value[index]
+            return self._get_list(index)
         raise TypeError("Invalid index access %s %s" % (self, index))
 
     @specialize.arg(1)
@@ -76,12 +77,12 @@ class JsonBase(object):
 
     def __iter__(self):
         assert isinstance(self, JsonArray)
-        return iter(self.value)
+        return iter(self._get_full_list())
 
     def unpack(self, n):
         assert isinstance(self, JsonArray)
-        assert len(self.value) == n
-        return self.value
+        assert self._get_size_list() == n
+        return self._get_full_list()
 
     def __repr__(self):
         import pdb;pdb.set_trace()
@@ -419,32 +420,32 @@ class JsonAdapterRegion(JsonBase):
     def __repr__(self):
         return "rpyjson.JsonAdapterRegion(%r)" % (self.region, )
 
-
+@inline_small_list(immutable=True)
 class JsonArray(JsonBase):
     is_array = True
 
-    def __init__(self, lst):
-        self.value = lst
+    def __init__(self):
+        pass
 
     def tostring(self):
-        return "[%s]" % ", ".join([e.tostring() for e in self.value])
+        return "[%s]" % ", ".join([self._get_list(i).tostring() for i in range(self._get_size_list())])
 
     def dumps(self, strfragments):
         strfragments.append("[")
-        for i, element in enumerate(self.value):
+        for i, element in enumerate(self._get_full_list()):
             if i > 0:
                 strfragments.append(", ")
             element.dumps(strfragments)
         strfragments.append("]")
 
     def _unpack_deep(self):
-        return [e._unpack_deep() for e in self.value]
+        return [self._get_list(i)._unpack_deep() for i in range(self._get_size_list())]
 
     def value_array(self):
-        return self.value
+        return self._get_full_list()
 
     def __repr__(self):
-        return "rpyjson.JsonArray(%r)" % (self.value,)
+        return "rpyjson.JsonArray.make(%r)" % (self._get_full_list(),)
 
 json_null = JsonNull()
 
@@ -453,6 +454,8 @@ json_true = JsonTrue()
 json_false = JsonFalse()
 
 json_empty_string = JsonString('')
+
+json_empty_list = JsonArray.make0()
 
 OVF_DIGITS = len(str(sys.maxint))
 
@@ -535,10 +538,17 @@ class MapLookupCache(object):
 ROOT_MAP = Map(None, {})
 
 # prime the root map with some common transitions
-position_map = ROOT_MAP.get_next("file").get_next("line").get_next("column")
-it_note_at_map = ROOT_MAP.get_next("it").get_next("note").get_next("at")
-region_map = ROOT_MAP.get_next("left").get_next("right")
-ROOT_MAP.get_next("vid").get_next("typ").get_next("at")
+file_map = ROOT_MAP.get_next("file")
+position_map = file_map.get_next("line").get_next("column")
+
+it_map = ROOT_MAP.get_next("it")
+it_note_at_map = it_map.get_next("note").get_next("at")
+
+left_map = ROOT_MAP.get_next("left")
+region_map = left_map.get_next("right")
+
+vid_map = ROOT_MAP.get_next("vid")
+vid_map.get_next("typ").get_next("at")
 
 TYPE_UNKNOWN = 0
 TYPE_STRING = 1
@@ -565,7 +575,8 @@ class JSONDecoder(object):
         self.str_lru_index = 0
 
     def close(self):
-        rffi.free_charp(self.ll_chars)
+        if we_are_translated():
+            rffi.free_charp(self.ll_chars)
         lltype.free(self.end_ptr, flavor='raw')
 
     def getslice(self, start, end):
@@ -585,6 +596,13 @@ class JSONDecoder(object):
     @specialize.arg(1)
     def _raise(self, msg, *args):
         raise P4ParseError(msg % args)
+
+    def _raise_control_char_in_string(self, ch, startindex, currindex):
+        if ch == '\0':
+            self._raise("Unterminated string starting at char %d",
+                        startindex - 1)
+        else:
+            self._raise("Invalid control character at char %d", currindex-1)
 
     def decode_any(self, i):
         i = self.skip_whitespace(i)
@@ -739,14 +757,13 @@ class JSONDecoder(object):
         return i, ovf_maybe, sign * intval
 
     def decode_array(self, i):
-        lst = newlist_hint(4)
-        w_list = JsonArray(lst)
         start = i
         i = self.skip_whitespace(start)
         if self.ll_chars[i] == ']':
             self.pos = i+1
-            return w_list
+            return json_empty_list
         #
+        lst = newlist_hint(4)
         while True:
             w_item = self.decode_any(i)
             i = self.pos
@@ -756,7 +773,73 @@ class JSONDecoder(object):
             i += 1
             if ch == ']':
                 self.pos = i
-                return w_list
+                return JsonArray.make(lst[:])
+            elif ch == ',':
+                pass
+            elif ch == '\0':
+                self._raise("Unterminated array starting at char %d", start)
+            else:
+                self._raise("Unexpected '%s' when decoding array (char %d)",
+                            ch, i-1)
+
+    def decode_array(self, i):
+        start = i
+        i = self.skip_whitespace(start)
+        if self.ll_chars[i] == ']':
+            self.pos = i+1
+            return json_empty_list
+        #
+        w_item0 = self.decode_any(i)
+        i = self.pos
+        i = self.skip_whitespace(i)
+        ch = self.ll_chars[i]
+        i += 1
+        if ch == ']':
+            self.pos = i
+            return JsonArray.make1(w_item0)
+        elif ch == ',':
+            w_item1 = self.decode_any(i)
+            i = self.pos
+            i = self.skip_whitespace(i)
+            ch = self.ll_chars[i]
+            i += 1
+            if ch == ']':
+                self.pos = i
+                return JsonArray.make2(w_item0, w_item1)
+            elif ch == ',':
+                w_item2 = self.decode_any(i)
+                i = self.pos
+                i = self.skip_whitespace(i)
+                ch = self.ll_chars[i]
+                i += 1
+                if ch == ']':
+                    self.pos = i
+                    return JsonArray.make3(w_item0, w_item1, w_item2)
+                elif ch == ',':
+                    return self._decode_array_general(i, start, w_item0, w_item1, w_item2)
+        self._decode_array_general(start, start) # for error message
+        return
+        
+
+    def _decode_array_general(self, i, start, w_item0=None, w_item1=None, w_item2=None):
+        start = i
+        lst = newlist_hint(4)
+        if w_item0:
+            lst.append(w_item0)
+            if w_item1:
+                lst.append(w_item1)
+                if w_item2:
+                    lst.append(w_item2)
+        while True:
+            w_item = self.decode_any(i)
+            i = self.pos
+            lst.append(w_item)
+            i = self.skip_whitespace(i)
+            ch = self.ll_chars[i]
+            i += 1
+            if ch == ']':
+                self.pos = i
+                return JsonArray.make(lst[:])
             elif ch == ',':
                 pass
             elif ch == '\0':
@@ -767,13 +850,18 @@ class JSONDecoder(object):
 
     def decode_object(self, i):
         start = i
+        ll_chars = self.ll_chars
 
         i = self.skip_whitespace(i)
-        if self.ll_chars[i] == '}':
+        if ll_chars[i] == '}':
             self.pos = i+1
             return JsonObject0(ROOT_MAP)
 
-        curr_map = ROOT_MAP
+        if ll_chars[i] == '"' and ll_chars[i + 1] == 'l' and ll_chars[i + 2] == 'e':
+            res = self.decode_region(i)
+            if res is not None:
+                return res
+        curr_map = self.decode_key(ROOT_MAP, i)
         if self.scratch_lists:
             values = self.scratch_lists.pop()
         else:
@@ -781,9 +869,8 @@ class JSONDecoder(object):
         values_index = 0
         while True:
             # parse a key: value
-            curr_map = self.decode_key(curr_map, i)
             i = self.skip_whitespace(self.pos)
-            ch = self.ll_chars[i]
+            ch = ll_chars[i]
             if ch != ':':
                 self._raise("No ':' found at char %d", i)
             i += 1
@@ -795,7 +882,7 @@ class JSONDecoder(object):
             values[values_index] = w_value
             values_index += 1
             i = self.skip_whitespace(self.pos)
-            ch = self.ll_chars[i]
+            ch = ll_chars[i]
             i += 1
             if ch == '}':
                 self.pos = i
@@ -809,39 +896,39 @@ class JSONDecoder(object):
             else:
                 self._raise("Unexpected '%s' when decoding object (char %d)",
                             ch, i-1)
+            curr_map = self.decode_key(curr_map, i)
 
     def decode_string(self, i):
+        from pypy.module._pypyjson import simd
         start = i
-        bits = 0
         ll_chars = self.ll_chars
-        strhash = ord(ll_chars[i]) << 7
-        while True:
-            # this loop is a fast path for strings which do not contain escape
-            # characters
-            ch = ll_chars[i]
-            i += 1
-            bits |= ord(ch)
-            if ch == '"':
-                self.pos = i
-                break
-            elif ch == '\\' or ch < '\x20':
-                self.pos = i-1
-                return self.decode_string_escaped(start)
-            strhash = intmask((1000003 * strhash) ^ ord(ll_chars[i]))
-        length = i - start - 1
+        strhash, nonascii, i = simd.find_end_of_string(ll_chars, i, len(self.s))
+        ch = ll_chars[i]
+        if ch == '\\':
+            self.pos = i
+            return self.decode_string_escaped(start)
+        if ch < '\x20':
+            self._raise_control_char_in_string(ch, start, i)
+        else:
+            assert ch == '"'
+
+        self.pos = i + 1
+
+        length = i - start
+
         if length == 0:
-            strhash = -1
             return json_empty_string
         else:
             strhash ^= length
             strhash = intmask(strhash)
+
         index = 0
         for index in range(self.LRU_SIZE):
             if self.str_lru_hashes[index] == strhash:
                 break
         else:
             # not found
-            return self._create_string_wrapped(start, i - 1, strhash)
+            return self._create_string_wrapped(start, i, strhash)
         cache_str = self.str_lru_jsonstrings[index]
         cache_str_unwrapped = cache_str.value_string()
         if length == len(cache_str_unwrapped):
@@ -853,7 +940,7 @@ class JSONDecoder(object):
             else:
                 return cache_str
         # rare: same hash, different string
-        return self._create_string_wrapped(start, i - 1, strhash)
+        return self._create_string_wrapped(start, i, strhash)
 
 
     def _create_string_wrapped(self, start, end, strhash):
@@ -954,6 +1041,17 @@ class JSONDecoder(object):
             else:
                 self.pos = start
                 return nextmap
+        if curr_map is ROOT_MAP:
+            c = ll_chars[i]
+            if c == 'i':
+                if ll_chars[i + 1] == 't' and ll_chars[i + 2] == '"':
+                    self.pos = i + 3
+                    return it_map
+            elif c == 'v':
+                if ll_chars[i + 1] == 'i' and ll_chars[i + 2] == 'd' and ll_chars[i + 3] == '"':
+                    self.pos = i + 4
+                    return vid_map
+
         key = self._decode_key(i)
         return curr_map.get_next(key)
 
@@ -962,7 +1060,6 @@ class JSONDecoder(object):
         ll_chars = self.ll_chars
 
         start = i
-        bits = 0
         strhash = ord(ll_chars[i]) << 7
         while True:
             ch = ll_chars[i]
@@ -973,7 +1070,6 @@ class JSONDecoder(object):
                 self.pos = i-1
                 return self.decode_string_escaped(start).value_string()
             strhash = intmask((1000003 * strhash) ^ ord(ll_chars[i]))
-            bits |= ord(ch)
         length = i - start - 1
         if length == 0:
             strhash = -1
@@ -1000,9 +1096,102 @@ class JSONDecoder(object):
         # collision, hopefully rare
         return self.getslice(start, start + length)
 
+    def _decode_position(self):
+        # fast path, ignore whitespace, caller can deal with it
+        from rpyp4sp.p4specast import Position
+        i = self.pos
+        start = i
+        ll_chars = self.ll_chars
+        if ll_chars[i] != ':' or ll_chars[i + 1] != '"':
+            self.pos = start
+            return None
+        i += 2
+        filename = self.decode_string(i).value_string()
+        i = self.pos
+        if ll_chars[i] != ',':
+            self.pos = start
+            return None
+        i += 1
+        for c in '"line":':
+            if ll_chars[i] != c:
+                self.pos = start
+                return None
+            i += 1
+        if not ll_chars[i].isdigit():
+            self.pos = start
+            return None
+        i, ovf_maybe, lineval = self.parse_integer(i)
+        if ovf_maybe:
+            self.pos = start
+            return None
+        if ll_chars[i] != ',':
+            self.pos = start
+            return None
+        i += 1
+        for c in '"column":':
+            if ll_chars[i] != c:
+                self.pos = start
+                return None
+            i += 1
+        i, ovf_maybe, columnval = self.parse_integer(i)
+        if ovf_maybe:
+            self.pos = start
+            return None
+        if ll_chars[i] != '}':
+            self.pos = start
+            return None
+        i += 1
+        self.pos = i
+        if len(filename) == 0 and lineval == 0 and columnval == 0:
+            position = Position.NO_POSITION
+        else:
+            position = Position(filename, lineval, columnval)
+        return position
 
-def loads(s):
-    if not we_are_translated():
+    def decode_position(self):
+        res = self._decode_position()
+        if res is not None:
+            return JsonAdapterPosition(res)
+        return None
+
+    def decode_region(self, i):
+        # fast path, ignore whitespace, caller can deal with it
+        from rpyp4sp.p4specast import Position, Region, NO_REGION
+        start = i
+        ll_chars = self.ll_chars
+        for c in '"left":{"file"':
+            if ll_chars[i] != c:
+                self.pos = start
+                return None
+            i += 1
+        self.pos = i
+        left = self._decode_position()
+        if left is None:
+            return None
+        i = self.pos
+        for c in ',"right":{"file"':
+            if ll_chars[i] != c:
+                self.pos = start
+                return None
+            i += 1
+        self.pos = i
+        right = self._decode_position()
+        if right is None:
+            return None
+        i = self.pos
+        if ll_chars[i] != '}':
+            self.pos = start
+            return None
+        self.pos = i + 1
+        if left is Position.NO_POSITION and right is Position.NO_POSITION:
+            region = NO_REGION
+        else:
+            region = Region(left, right)
+        return JsonAdapterRegion(region)
+
+
+def loads(s, force=False):
+    if not we_are_translated() and not force:
         import json
         data = json.loads(s)
         return _convert(data)
@@ -1032,7 +1221,7 @@ def _convert(data):
     if isinstance(data, unicode):
         return JsonString(data.encode("utf-8"))
     if isinstance(data, list):
-        return JsonArray([_convert(x) for x in data])
+        return JsonArray.make([_convert(x) for x in data])
     if isinstance(data, dict):
         curr_map = ROOT_MAP
         values = []

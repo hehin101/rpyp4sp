@@ -128,7 +128,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
         ctx_local = ctx.localize()
     # let ctx_local = Ctx.localize_inputs ctx_local values_input in
     # let ctx_local = assign_args ctx ctx_local args_input values_input in
-    ctx_local = assign_args(ctx, ctx_local, args_input, values_input)
+    ctx_local = assign_args(ctx, ctx_local, func, values_input)
     sign = _func_eval_instrs(ctx_local, func)
     # let ctx = Ctx.commit ctx ctx_local in
     ctx = ctx.commit(ctx_local)
@@ -208,7 +208,7 @@ def invoke_rel(ctx, id, values_input):
     #   let ctx_local, sign = eval_instrs ctx_local Cont instrs in
     sign = _rel_eval_instrs(ctx_local, reld)
     #   let ctx = Ctx.commit ctx ctx_local in
-    ctx = ctx.commit(sign.sign_get_ctx())
+    #ctx = ctx.commit(sign.sign_get_ctx())
     #   match sign with
     #   | Res values_output ->
     if isinstance(sign, Res):
@@ -1177,10 +1177,7 @@ def assign_exp(ctx, exp, value):
     #     ctx
     elif isinstance(exp, p4specast.CaseE) and\
          isinstance(value, objects.CaseV):
-        notexp = exp.notexp
-        exps_inner = notexp.exps
-        values_inner = value._get_full_list()
-        ctx = assign_exps(ctx, exps_inner, values_inner)
+        ctx = assign_exps_casev(ctx, exp.notexp, value)
         # for value_inner in values_inner:
         #    assert False, "ctx.add_edge(ctx, value_inner, value, dep.edges.Assign)"
         return ctx
@@ -1194,10 +1191,10 @@ def assign_exp(ctx, exp, value):
     #     | _ -> assert false)
     elif isinstance(exp, p4specast.OptE) and \
          isinstance(value, objects.OptV):
-        if exp.exp is not None and value.value is not None:
-            ctx = assign_exp(ctx, exp.exp, value.value)
+        if exp.exp is not None and not value.is_opt_none():
+            ctx = assign_exp(ctx, exp.exp, value.get_opt_value())
             return ctx
-        elif exp.exp is None and value.value is None:
+        elif exp.exp is None and value.is_opt_none():
             return ctx
         else:
             assert False, "mismatched OptE and OptV"
@@ -1237,7 +1234,7 @@ def assign_exp(ctx, exp, value):
     elif (isinstance(exp, p4specast.IterE) and
           isinstance(exp.iter, p4specast.Opt) and
           isinstance(value, objects.OptV)):
-        if value.value is None:
+        if value.is_opt_none():
     #     (* Per iterated variable, make an option out of the value *)
     #     List.fold_left
     #       (fun ctx (id, typ, iters) ->
@@ -1259,7 +1256,7 @@ def assign_exp(ctx, exp, value):
         else:
     #     (* Assign the value to the iterated expression *)
     #     let ctx = assign_exp ctx exp value in
-            ctx = assign_exp(ctx, exp.exp, value.value)
+            ctx = assign_exp(ctx, exp.exp, value.get_opt_value())
     #     (* Per iterated variable, make an option out of the value *)
     #     List.fold_left
     #       (fun ctx (id, typ, iters) ->
@@ -1276,7 +1273,7 @@ def assign_exp(ctx, exp, value):
             for var in exp.varlist:
                 value_sub_inner = ctx.find_value_local(var.id, var.iter)
                 typ = var.typ.iterate(var.iter.append_opt())
-                value_sub = objects.OptV(value_sub_inner, typ)
+                value_sub = typ.make_opt_value(value_sub_inner)
                 ctx = ctx.add_value_local(var.id, var.iter.append_opt(), value_sub)
             return ctx
     elif (isinstance(exp, p4specast.IterE) and
@@ -1309,7 +1306,7 @@ def assign_exp(ctx, exp, value):
             return ctx
         elif len(values) == 1:
             value_elem, = values
-            ctx_local = ctx.localize_venv(venv_keys=context.EnvKeys.EMPTY, venv_values=[])
+            ctx_local = ctx.localize_empty_venv()
             ctx_local = assign_exp(ctx_local, exp.exp, value_elem)
             for var in exp.varlist:
                 # collect elementwise values from each ctx in ctxs
@@ -1397,6 +1394,22 @@ def assign_exps(ctx, exps, values):
     return ctx
 
 
+@jit.unroll_safe
+def assign_exps_casev(ctx, notexp, casev):
+    exps = notexp.exps
+    assert len(exps) == casev._get_size_list(), \
+        "mismatch in number of expressions and values while assigning, expected %d value(s) but got %d" % (len(exps), casev._get_size_list())
+    ctx2 = None
+    if notexp.is_simple_casev_assignment_target():
+        ctx2 = ctx.try_append_case_values(notexp, casev)
+        if ctx2 is not None:
+            return ctx2
+    for index, exp in enumerate(exps):
+        value = casev._get_list(index)
+        ctx = assign_exp(ctx, exp, value)
+    return ctx
+
+
 #and assign_arg (ctx_caller : Ctx.t) (ctx_callee : Ctx.t) (arg : arg)
 #    (value : value) : Ctx.t =
 #  match arg.it with
@@ -1422,13 +1435,32 @@ def assign_arg(ctx_caller, ctx_callee, arg, value):
 #  List.fold_left2 (assign_arg ctx_caller) ctx_callee args values
 
 @jit.unroll_safe
-def assign_args(ctx_caller, ctx_callee, args, values):
-    if len(args) != len(values):
-        raise P4EvaluationError("mismatch in number of arguments while assigning, expected %d value(s) but got %d" % (len(args), len(values)))
-    for i, arg in enumerate(args):
-        value = values[i]
-        ctx_callee = assign_arg(ctx_caller, ctx_callee, arg, value)
+def assign_args(ctx_caller, ctx_callee, func, values):
+    if len(func.args) != len(values):
+        raise P4EvaluationError("mismatch in number of arguments while assigning, expected %d value(s) but got %d for func %s" % (len(func.args), len(values), func.id.value))
+    assert ctx_callee._get_size_list() == 0
+    if func._simple_args:
+        venv_keys = _compute_final_env_keys(func, jit.promote(ctx_callee.venv_keys))
+        ctx_callee = ctx_callee.copy_and_change_set_list(values, venv_keys)
+    else:
+        for i, arg in enumerate(func.args):
+            value = values[i]
+            ctx_callee = assign_arg(ctx_caller, ctx_callee, arg, value)
     return ctx_callee
+
+@jit.elidable
+def _compute_final_env_keys(func, venv_keys):
+    if func._ctx_env_args_start is venv_keys:
+        return func._ctx_env_args_end
+    func._ctx_env_args_start = venv_keys
+    for arg in func.args:
+        assert isinstance(arg, p4specast.ExpA)
+        exp = arg.exp
+        assert isinstance(exp, p4specast.VarE)
+        venv_keys = venv_keys.add_key(exp.id.value)
+    func._ctx_env_args_end = venv_keys
+    return venv_keys
+
 
 # and assign_arg_exp (ctx : Ctx.t) (exp : exp) (value : value) : Ctx.t =
 #   assign_exp ctx exp value
@@ -1476,9 +1508,6 @@ class __extend__(p4specast.ReturnI):
 @jit.elidable
 def exp_tostring(exp):
     return "exp:" + exp.tostring()
-
-def eval_exp(ctx, exp):
-    return exp.eval_exp(ctx)
 
 @jit.unroll_safe
 def eval_exps(ctx, exps):
@@ -1634,22 +1663,7 @@ def eval_cmp_num(cmpop, value_l, value_r, typ):
     # let num_l = Value.get_num value_l in
     assert isinstance(value_l, objects.NumV)
     assert isinstance(value_r, objects.NumV)
-    assert value_l.what == value_r.what
-    num_l = value_l.get_num()
-    # let num_r = Value.get_num value_r in
-    num_r = value_r.get_num()
-    if cmpop == 'LtOp':
-        res = num_l.lt(num_r)
-    elif cmpop == 'GtOp':
-        res = num_l.gt(num_r)
-    elif cmpop == 'LeOp':
-        res = num_l.le(num_r)
-    elif cmpop == 'GeOp':
-        res = num_l.ge(num_r)
-    else:
-        assert 0, "should be unreachable"
-    return objects.BoolV.make(res, typ)
-    # Il.Ast.BoolV (Num.cmp cmpop num_l num_r)
+    return value_l.eval_cmpop(cmpop, value_r, typ)
 
 
 class __extend__(p4specast.CmpE):
@@ -1708,33 +1722,7 @@ def eval_binop_num(binop, value_l, value_r, typ):
     # Il.Ast.NumV (Num.bin binop num_l num_r)
     assert isinstance(value_l, objects.NumV)
     assert isinstance(value_r, objects.NumV)
-    assert type(value_l.what) is type(value_r.what)
-    num_l = value_l.get_num()
-    num_r = value_r.get_num()
-    what = value_l.what
-    if binop == 'AddOp':
-        res_num = num_l.add(num_r)
-    elif binop == 'SubOp':
-        res_num = num_l.sub(num_r)
-        what = p4specast.IntT.INSTANCE
-    elif binop == 'MulOp':
-        res_num = num_l.mul(num_r)
-    elif binop == 'DivOp':
-        if num_r.eq(integers.Integer.fromint(0)):
-            raise P4EvaluationError("Modulo with 0")
-        remainder = num_l.mod(num_r)
-        if not remainder.eq(integers.Integer.fromint(0)):
-            raise P4EvaluationError("division remainder isn't zero")
-        res_num = num_l.div(num_r)
-    elif binop == 'ModOp':
-        if num_r.eq(integers.Integer.fromint(0)):
-            raise P4EvaluationError("Modulo with 0")
-        res_num = num_l.mod(num_r)
-    elif binop == 'PowOp':
-        raise P4NotImplementedError("PowOp")
-    else:
-        assert 0, "should be unreachable"
-    return objects.NumV.make(res_num, what, typ=typ)
+    return value_l.eval_binop(binop, value_r, typ)
 
 class __extend__(p4specast.BinE):
     def eval_exp(self, ctx):
@@ -1774,14 +1762,7 @@ def eval_unop_bool(unop, value, typ):
 def eval_unop_num(unop, value, typ):
     # let num = Value.get_num value in
     assert isinstance(value, objects.NumV)
-    num = value.get_num()
-    # match unop with
-    if unop == 'PlusOp':
-        return objects.NumV.make(num, value.what, typ=typ)
-    elif unop == 'MinusOp':
-        return objects.NumV.make(num.neg(), value.what, typ=typ)
-    else:
-        assert 0, "Unknown numeric unary operator: %s" % unop
+    return value.eval_unop(unop, typ)
 
 class __extend__(p4specast.UnE):
     def eval_exp(self, ctx):
@@ -1890,7 +1871,7 @@ class __extend__(p4specast.MatchE):
         #   | CaseP mixop_p, CaseV (mixop_v, _) -> Mixop.eq mixop_p mixop_v
         if (isinstance(pattern, p4specast.CaseP) and
                 isinstance(value, objects.CaseV)):
-            matches = mixop_eq(pattern.mixop, value.mixop)
+            matches = pattern.mixop.mixop_eq(value.mixop)
         #   | ListP listpattern, ListV values -> (
         elif (isinstance(pattern, p4specast.ListP) and
                 isinstance(value, objects.ListV)):
@@ -1914,7 +1895,7 @@ class __extend__(p4specast.MatchE):
         elif (isinstance(pattern, p4specast.OptP) and
               isinstance(value, objects.OptV)):
             assert pattern.kind in ('Some', 'None')
-            matches = (value.value is None) == (pattern.kind == 'None')
+            matches = value.is_opt_none() == (pattern.kind == 'None')
         #   | _ -> false
         else:
             #import pdb;pdb.set_trace()
@@ -2048,7 +2029,7 @@ class __extend__(p4specast.LenE):
         # let ctx, value = eval_exp ctx exp in
         ctx, value = eval_exp(ctx, self.lst)
         # let len = value |> Value.get_list |> List.length |> Bigint.of_int in
-        value = integers.Integer.fromint(len(value.get_list()))
+        value = integers.Integer.fromint(value.get_list_len())
         # let value_res =
         #   let vid = Value.fresh () in
         #   let typ = note in
@@ -2328,20 +2309,7 @@ del cls
 def subtyp(ctx, typ, value):
     # INCOMPLETE
     # match typ.it with
-    # | NumT `NatT -> (
-    #     match value.it with
-    #     | NumV (`Nat _) -> true
-    #     | NumV (`Int i) -> Bigint.(i >= zero)
-    #     | _ -> assert false)
     jit.promote(typ)
-    if isinstance(typ, p4specast.NumT) and isinstance(typ.typ, p4specast.NatT):
-        assert isinstance(value, objects.NumV)
-        if value.what == p4specast.NatT.INSTANCE:
-            return True
-        elif value.what == p4specast.IntT.INSTANCE:
-            return value.value.ge(integers.Integer.fromint(0))
-        else:
-            assert 0
     # | VarT (tid, targs) -> (
     if isinstance(typ, p4specast.VarT):
     #     let tparams, deftyp = Ctx.find_typdef Local ctx tid in
@@ -2360,7 +2328,7 @@ def subtyp(ctx, typ, value):
         if (isinstance(deftyp, p4specast.VariantT) and
                 isinstance(value, objects.CaseV)):
             for nottyp in deftyp.cases:
-                if mixop_eq(nottyp.mixop, value.mixop):
+                if nottyp.mixop.mixop_eq(value.mixop):
                     return True
             else:
                 return False
@@ -2370,7 +2338,20 @@ def subtyp(ctx, typ, value):
     #             Mixop.eq mixop_t mixop_v)
     #           typcases
     #     | _ -> true)
-    #import pdb;pdb.set_trace()
+
+    # | NumT `NatT -> (
+    #     match value.it with
+    #     | NumV (`Nat _) -> true
+    #     | NumV (`Int i) -> Bigint.(i >= zero)
+    #     | _ -> assert false)
+    if isinstance(typ, p4specast.NumT) and isinstance(typ.typ, p4specast.NatT):
+        assert isinstance(value, objects.NumV)
+        if value.get_what() == p4specast.NatT.INSTANCE:
+            return True
+        elif value.get_what() == p4specast.IntT.INSTANCE:
+            return value.value.int_ge(0)
+        else:
+            assert 0
     raise P4EvaluationError("TODO subtyp")
 
     # | TupleT typs -> (
@@ -2400,10 +2381,10 @@ def downcast(ctx, typ, value):
     #         (ctx, value_res)
     #     | _ -> assert false)
         assert isinstance(value, objects.NumV)
-        if value.what == p4specast.NatT.INSTANCE:
+        if value.get_what() == p4specast.NatT.INSTANCE:
             return ctx, value
-        elif value.what == p4specast.IntT.INSTANCE:
-            assert value.value.ge(integers.Integer.fromint(0))
+        elif value.get_what() == p4specast.IntT.INSTANCE:
+            assert value.value.int_ge(0)
             return ctx, objects.NumV.make(value.value, p4specast.NatT.INSTANCE, typ=typ)
         else:
             assert 0
@@ -2455,7 +2436,7 @@ def upcast(ctx, typ, value):
     #   | NumT `IntT -> (
     if isinstance(typ, p4specast.NumT) and isinstance(typ.typ, p4specast.IntT):
     #       match value.it with
-        if isinstance(value, objects.NumV) and value.what == p4specast.NatT.INSTANCE:
+        if isinstance(value, objects.NumV) and value.get_what() == p4specast.NatT.INSTANCE:
     #       | NumV (`Nat n) ->
     #           let value_res =
     #             let vid = Value.fresh () in
@@ -2514,6 +2495,3 @@ def upcast(ctx, typ, value):
     return ctx, value
 
 
-@jit.elidable_promote('0,1')
-def mixop_eq(a, b):
-    return a.tostring() == b.tostring()

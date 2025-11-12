@@ -15,19 +15,19 @@ class Sign(object):
     def sign_get_ctx(self):
         raise NotImplementedError
 
-@smalllist.inline_small_list(immutable=True, sizemax=2)
+@smalllist.inline_small_list(immutable=True)
 class Res(Sign):
     def __init__(self, ctx):
-        self.ctx = ctx
+        #self.ctx = ctx
+        pass
 
     def sign_get_ctx(self):
-        return self.ctx
+        assert 0
 
 
 class Ret(Sign):
     def __init__(self, ctx, value):
-        self.ctx = ctx
         self.value = value
 
     def sign_get_ctx(self):
-        return self.ctx
+        assert 0, 'shouldn\'t be called'

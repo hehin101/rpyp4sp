@@ -9,12 +9,16 @@ class GlobalContext(object):
     file_content = {}
     spec_dirname = None
 
+    _immutable_fields_ = ['empty_envkeys', 'empty_simple_context']
+
     def __init__(self):
         self.filename = None
         self.derive = False
         self.tdenv = {}
         self.renv = {}
         self.fenv = {}
+        self.empty_envkeys = EnvKeys({}, self)
+        self.empty_simple_context = Context.make0(self.empty_envkeys)
 
     @jit.elidable
     def _find_rel(self, name):
@@ -30,24 +34,24 @@ class GlobalContext(object):
 
 
 class EnvKeys(object):
-    def __init__(self, keys):
+    _immutable_fields_ = ['glbl']
+    def __init__(self, keys, glbl=None):
         self.keys = keys # type: dict[tuple[str, str], int]
         self.next_env_keys = {} # type: dict[tuple[str, str], EnvKeys]
         self._next_var_name = None
         self._next_var_iter = None
         self._next_env_keys = None
+        self.glbl = glbl #type: GlobalContext
 
-    # TODO: default für var_iter
     @jit.elidable
-    def get_pos(self, var_name, var_iter):
+    def get_pos(self, var_name, var_iter=''):
         # type: (str, str) -> int
         if not self.keys:
             return -1
         return self.keys.get((var_name, var_iter), -1)
 
-    # TODO: default für var_iter
     @jit.elidable
-    def add_key(self, var_name, var_iter):
+    def add_key(self, var_name, var_iter=''):
         # type: (str, str) -> EnvKeys
         if (self._next_var_name is not None and
                 self._next_var_name == var_name and
@@ -60,7 +64,7 @@ class EnvKeys(object):
         else:
             keys = self.keys.copy()
             keys[key] = len(keys)
-            res = EnvKeys(keys)
+            res = EnvKeys(keys, self.glbl)
             self.next_env_keys[key] = res
             if self._next_env_keys is None:
                 self._next_var_name = var_name
@@ -69,7 +73,7 @@ class EnvKeys(object):
             return res
 
     def __repr__(self):
-        l = ["context.EnvKeys.EMPTY"]
+        l = ["context.EnvKeys({}, %r)" % (self.glbl)]
         for var_name, var_iter in self.keys:
             l.append(".add_key(%r, %r)" % (var_name, var_iter))
         return "".join(l)
@@ -142,7 +146,6 @@ class TDenvDict(object):
                 l.append(", %r: %r" % (id_value, typdef))
         l.append(">")
         return "".join(l)
-TDenvDict.EMPTY = TDenvDict()
 
 TDenvDict.EMPTY = TDenvDict.make0()
 
@@ -195,52 +198,73 @@ class FenvDict(object):
                 l.append(", %r: %r" % (id_value, func))
         l.append(">")
         return "".join(l)
-FenvDict.EMPTY = FenvDict()
 
 FenvDict.EMPTY = FenvDict.make0()
 
 @smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True)
 class Context(sign.Sign):
-    _immutable_fields_ = ['glbl', 'values_input[*]',
-                          'tdenv', 'fenv', 'venv_keys']
-    _attrs_ = _immutable_fields_
-    def __init__(self, glbl=None, tdenv=None, fenv=None, venv_keys=None):
-        self.glbl = GlobalContext() if glbl is None else glbl
+    _attrs_ = ['venv_keys']
+    _immutable_ = True
+    _immutable_fields_ = ['venv_keys']
+
+    def __init__(self, venv_keys=None):
         # the local context is inlined
-        self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY # type: TDenvDict
-        self.fenv = fenv if fenv is not None else FenvDict.EMPTY # type: FenvDict
-        self.venv_keys = venv_keys if venv_keys is not None else EnvKeys.EMPTY # type: EnvKeys
+        self.venv_keys = venv_keys if venv_keys is not None else GlobalContext().empty_envkeys # type: EnvKeys
+        assert self.venv_keys.glbl is not None
 
-    def copy_and_change(self, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
-        tdenv = tdenv if tdenv is not None else self.tdenv
-        fenv = fenv if fenv is not None else self.fenv
-        venv_keys = venv_keys if venv_keys is not None else self.venv_keys
-        venv_values = venv_values if venv_values is not None else self._get_full_list()
-        return Context.make(venv_values, self.glbl, tdenv, fenv, venv_keys)
-
-    def copy_and_change_append_venv(self, value, venv_keys):
-        return self._append_list(value, self.glbl, self.tdenv, self.fenv, venv_keys)
+    @staticmethod
+    def create(venv_values=[], tdenv=None, fenv=None, venv_keys=None):
+        # type: (list[objects.BaseV], TDenvDict, FenvDict, EnvKeys) -> Context | ContextWithEnvs
+        if (tdenv is None or tdenv._keys is EnvKeys.EMPTY) and (fenv is None or fenv._keys is EnvKeys.EMPTY):
+            return Context.make(venv_values, venv_keys)
+        else:
+            return ContextWithEnvs.make(venv_values, tdenv, fenv, venv_keys)
 
     def load_spec(self, spec, file_content, spec_dirname, filename, derive=False):
-        self.glbl.file_content = file_content
-        self.glbl.spec_dirname = spec_dirname
+        self.venv_keys.glbl.file_content = file_content
+        self.venv_keys.glbl.spec_dirname = spec_dirname
         for definition in spec:
             if isinstance(definition, p4specast.TypD):
-                self.glbl.tdenv[definition.id.value] = (definition.tparams, definition.deftyp)
+                self.venv_keys.glbl.tdenv[definition.id.value] = (definition.tparams, definition.deftyp)
             elif isinstance(definition, p4specast.RelD):
-                self.glbl.renv[definition.id.value] = definition
+                self.venv_keys.glbl.renv[definition.id.value] = definition
             else:
                 assert isinstance(definition, p4specast.DecD)
-                self.glbl.fenv[definition.id.value] = definition
-        self.glbl.filename = filename
-        self.glbl.derive = derive
+                self.venv_keys.glbl.fenv[definition.id.value] = definition
+        self.venv_keys.glbl.filename = filename
+        self.venv_keys.glbl.derive = derive
+
+    def copy_and_change(self, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
+        tdenv = tdenv if tdenv is not None else self.get_tdenv()
+        fenv = fenv if fenv is not None else self.get_fenv()
+        venv_keys = venv_keys if venv_keys is not None else self.venv_keys
+        venv_values = venv_values if venv_values is not None else self._get_full_list()
+        return Context.create(venv_values, tdenv, fenv, venv_keys)
+
+    def copy_and_change_append_venv(self, value, venv_keys):
+        return self._append_list(value, venv_keys)
+
+    def copy_and_change_set_list(self, values, venv_keys):
+        assert self._get_size_list() == 0
+        return Context.make(values, venv_keys)
+
+    def try_append_case_values(self, notexp, case_value):
+        venv_keys = _notexp_compute_final_env_keys(notexp, jit.promote(self.venv_keys))
+        if venv_keys is None:
+            return None
+        values = self._get_full_list() + case_value._get_full_list()
+        return Context.make(values, venv_keys)
 
     def localize(self):
-        return self.copy_and_change(tdenv=TDenvDict.EMPTY, fenv=FenvDict.EMPTY, venv_keys=EnvKeys.EMPTY, venv_values=[])
+        return jit.promote(self.venv_keys).glbl.empty_simple_context
 
     def localize_venv(self, venv_keys, venv_values):
         # type: (EnvKeys, list[objects.BaseV]) -> Context
         return self.copy_and_change(venv_keys=venv_keys, venv_values=venv_values)
+
+    def localize_empty_venv(self):
+        # type: (Context) -> Context
+        return self.localize_venv(venv_keys=self.venv_keys.glbl.empty_envkeys, venv_values=[])
 
     def find_value_local(self, id, iterlist=p4specast.IterList.EMPTY, vare_cache=None):
         # type: (p4specast.Id, list[p4specast.IterList], p4specast.VarE | None) -> objects.BaseV
@@ -263,25 +287,6 @@ class Context(sign.Sign):
         pos = jit.promote(self.venv_keys).get_pos(id.value, iterlist.to_key())
         return pos >= 0
 
-    def find_typdef_local(self, id, typ_cache=None):
-        # type: (p4specast.Id) -> tuple[list[p4specast.TParam], p4specast.DefTyp]
-        if not jit.we_are_jitted() and typ_cache and typ_cache._ctx_tdenv_keys is self.tdenv._keys:
-            return typ_cache._ctx_typ_res
-        if self.tdenv.has_key(id.value):
-            typdef = self.tdenv.get(id.value)
-        else:
-            typdef = jit.promote(self.glbl)._find_typdef(id.value)
-            if not jit.we_are_jitted() and typ_cache:
-                typ_cache._ctx_tdenv_keys = self.tdenv._keys
-                typ_cache._ctx_typ_res = typdef
-        return typdef
-
-    def find_rel_local(self, id):
-        res = jit.promote(self.glbl)._find_rel(id.value)
-        if res is None:
-            raise P4ContextError("rel %s not found" % id.value)
-        return res
-
     def add_value_local(self, id, iterlist, value, vare_cache=None):
         # type: (p4specast.Id, p4specast.IterList, objects.BaseV, p4specast.VarE | None) -> Context
         if not jit.we_are_jitted() and vare_cache is not None and vare_cache._ctx_keys_add is self.venv_keys:
@@ -289,7 +294,7 @@ class Context(sign.Sign):
             return self.copy_and_change_append_venv(value, venv_keys)
         var_iter = iterlist.to_key()
         venv_keys = jit.promote(self.venv_keys)
-        length = jit.promote(self._get_size_list())
+        jit.promote(self._get_size_list()) # tell the jit the length
         pos = venv_keys.get_pos(id.value, var_iter)
         if pos < 0:
             venv_keys = self.venv_keys.add_key(id.value, var_iter)
@@ -302,30 +307,67 @@ class Context(sign.Sign):
             venv_values[pos] = value
             return self.copy_and_change(venv_values=venv_values)
 
-    def add_func_local(self, id, func):
-        # type: (p4specast.Id, p4specast.DecD) -> Context
-        fenv = self.fenv.set(id.value, func)
-        result = self.copy_and_change(fenv=fenv)
-        return result
+    def _venv_str(self):
+        l = ["<venv "]
+        for index, (var_name, var_iter) in enumerate(self.venv_keys.keys):
+            pos = self.venv_keys.get_pos(var_name, var_iter)
+            value = self._get_list(i)
+            if index == 0:
+                l.append("%r: %r" % (var_name + var_iter, value))
+            else:
+                l.append(", %r: %r" % (var_name + var_iter, value))
+        l.append(">")
+        return "".join(l)
+
+    def venv_items(self):
+        res = []
+        for key, index in self.venv_keys.keys.items():
+            res.append((key, self._get_list(index)))
+        return res
+
+    def find_rel_local(self, id):
+        res = jit.promote(self.venv_keys.glbl)._find_rel(id.value)
+        if res is None:
+            raise P4ContextError("rel %s not found" % id.value)
+        return res
+
+    def get_tdenv(self):
+        return None
+
+    def find_typdef_local(self, id, typ_cache=None):
+         # type: (p4specast.Id, p4specast.VarT) -> tuple[list[p4specast.TParam], p4specast.DefTyp]
+        if not jit.we_are_jitted() and typ_cache and typ_cache._ctx_tdenv_keys is EnvKeys.EMPTY:
+            return typ_cache._ctx_typ_res
+        typdef = jit.promote(self.venv_keys.glbl)._find_typdef(id.value)
+        if not jit.we_are_jitted() and typ_cache:
+            typ_cache._ctx_tdenv_keys = EnvKeys.EMPTY
+            typ_cache._ctx_typ_res = typdef
+        return typdef
 
     def add_typdef_local(self, id, typdef):
-        # type: (p4specast.TParam, tuple[list[p4specast.TParam], p4specast.DefTyp]) -> Context
-        tdenv = self.tdenv.set(id.value, typdef)
+        # type: (p4specast.TParam, tuple[list[p4specast.TParam], p4specast.DefTyp]) -> ContextWithEnvs
+        tdenv = TDenvDict.EMPTY.set(id.value, typdef)
         result = self.copy_and_change(tdenv=tdenv)
         return result
 
+    def get_fenv(self):
+        return None
+
     def find_func_local(self, id, calle_cache=None):
-        # type: (p4specast.Id) -> p4specast.DecD
-        if not jit.we_are_jitted() and calle_cache and calle_cache._ctx_fenv_keys is self.fenv._keys:
+        # type: (p4specast.Id, p4specast.CallE) -> p4specast.DecD
+        if not jit.we_are_jitted() and calle_cache and calle_cache._ctx_fenv_keys is EnvKeys.EMPTY:
             return calle_cache._ctx_func_res
-        if self.fenv.has_key(id.value):
-            func = self.fenv.get(id.value)
-        else:
-            func = jit.promote(self.glbl)._find_func(id.value)
-            if not jit.we_are_jitted() and calle_cache:
-                calle_cache._ctx_fenv_keys = self.fenv._keys
-                calle_cache._ctx_func_res = func
+        func = jit.promote(self.venv_keys.glbl)._find_func(id.value)
+        if not jit.we_are_jitted() and calle_cache:
+            calle_cache._ctx_fenv_keys = EnvKeys.EMPTY
+            calle_cache._ctx_func_res = func
         return func
+
+    def add_func_local(self, id, func):
+        # type: (p4specast.Id, p4specast.DecD) -> Context
+        fenv = FenvDict.EMPTY.set(id.value, func)
+        result = self.copy_and_change(fenv=fenv)
+        return result
 
     def commit(self, sub_ctx):
         return self
@@ -354,7 +396,7 @@ class Context(sign.Sign):
         for var in vars:
             value = self.find_value_local(var.id, var.iter.append_opt())
             assert isinstance(value, objects.OptV)
-            values.append(value.value)
+            values.append(value.get_opt_value())
         # check whether they are all None, all Some, or mixed
         noneness = values[0] is None
         for value in values:
@@ -415,24 +457,6 @@ class Context(sign.Sign):
         assert first_list is not None
         return SubListIter(self, varlist, first_list_length, values_batch)
 
-    def _venv_str(self):
-        l = ["<venv "]
-        for index, (var_name, var_iter) in enumerate(self.venv_keys.keys):
-            pos = self.venv_keys.get_pos(var_name, var_iter)
-            value = self._get_list(i)
-            if index == 0:
-                l.append("%r: %r" % (var_name + var_iter, value))
-            else:
-                l.append(", %r: %r" % (var_name + var_iter, value))
-        l.append(">")
-        return "".join(l)
-
-    def venv_items(self):
-        res = []
-        for key, index in self.venv_keys.keys.items():
-            res.append((key, self._get_list(index)))
-        return res
-
     def sign_is_cont(self):
         return True
 
@@ -443,12 +467,11 @@ class Context(sign.Sign):
 class ContextWithCoverage(Context):
     _immutable_fields_ = ['glbl', 'values_input[*]',
                           'tdenv', 'fenv', 'venv_keys', '_cover']
-    def __init__(self, glbl=None, tdenv=None, fenv=None, venv_keys=None, cover=None):
-        self.glbl = GlobalContext() if glbl is None else glbl
+    def __init__(self, tdenv=None, fenv=None, venv_keys=None, cover=None):
         # the local context is inlined
         self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY # type: TDenvDict
         self.fenv = fenv if fenv is not None else FenvDict.EMPTY # type: FenvDict
-        self.venv_keys = venv_keys if venv_keys is not None else EnvKeys.EMPTY # type: EnvKeys
+        self.venv_keys = venv_keys if venv_keys is not None else GlobalContext().empty_envkeys # type: EnvKeys
         self._cover = cover if cover is not None else Coverage.EMPTY
         assert isinstance(self._cover, Coverage)
 
@@ -457,14 +480,14 @@ class ContextWithCoverage(Context):
         fenv = fenv if fenv is not None else self.fenv
         venv_keys = venv_keys if venv_keys is not None else self.venv_keys
         venv_values = venv_values if venv_values is not None else self._get_full_list()
-        return ContextWithCoverage.make(venv_values, self.glbl, tdenv, fenv, venv_keys, self._cover)
+        return ContextWithCoverage.make(venv_values, tdenv, fenv, venv_keys, self._cover)
 
     def copy_and_change_append_venv(self, value, venv_keys):
-        return self._append_list(value, self.glbl, self.tdenv, self.fenv, venv_keys, self._cover)
+        return self._append_list(value, self.tdenv, self.fenv, venv_keys, self._cover)
 
     def copy_and_change_cover(self, cover):
         venv_values = self._get_full_list()
-        return ContextWithCoverage.make(venv_values, self.glbl, self.tdenv, self.fenv, self.venv_keys, cover)
+        return ContextWithCoverage.make(venv_values, self.tdenv, self.fenv, self.venv_keys, cover)
 
     def commit(self, sub_ctx):
         if isinstance(sub_ctx, ContextWithCoverage):
@@ -485,6 +508,82 @@ class ContextWithCoverage(Context):
 
     def restore_cover(self, cover_backup):
         return self.copy_and_change_cover(cover_backup)
+
+
+@smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True, appendname="_append_with_envs")
+class ContextWithEnvs(Context):
+    _attrs_ = ['tdenv', 'fenv']
+    _immutable_ = True
+    _immutable_fields_ = ['tdenv', 'fenv']
+
+    def __init__(self, tdenv=None, fenv=None, venv_keys=None):
+        # the local context is inlined
+        self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY # type: TDenvDict
+        self.fenv = fenv if fenv is not None else FenvDict.EMPTY # type: FenvDict
+        self.venv_keys = venv_keys if venv_keys is not None else GlobalContext().empty_envkeys # type: EnvKeys
+        assert self.venv_keys.glbl is not None
+
+    def copy_and_change_append_venv(self, value, venv_keys):
+        # NB: the _append_list method needs to have a different name in the
+        # subclass, because their signature is incompatible from rpython's
+        # point of view
+        return self._append_with_envs(value, self.tdenv, self.fenv, venv_keys)
+
+    def copy_and_change_set_list(self, values, venv_keys):
+        assert self._get_size_list() == 0
+        return ContextWithEnvs.make(values, self.tdenv, self.fenv, venv_keys)
+
+    def try_append_case_values(self, notexp, case_value):
+        venv_keys = _notexp_compute_final_env_keys(notexp, jit.promote(self.venv_keys))
+        if venv_keys is None:
+            return None
+        values = self._get_full_list() + case_value._get_full_list()
+        return ContextWithEnvs.make(values, self.tdenv, self.fenv, venv_keys)
+
+    def get_tdenv(self):
+        return self.tdenv
+
+    def find_typdef_local(self, id, typ_cache=None):
+        # type: (p4specast.Id, p4specast.VarT) -> tuple[list[p4specast.TParam], p4specast.DefTyp]
+        if not jit.we_are_jitted() and typ_cache and typ_cache._ctx_tdenv_keys is self.tdenv._keys:
+            return typ_cache._ctx_typ_res
+        if self.tdenv.has_key(id.value):
+            typdef = self.tdenv.get(id.value)
+        else:
+            typdef = jit.promote(self.venv_keys.glbl)._find_typdef(id.value)
+            if not jit.we_are_jitted() and typ_cache:
+                typ_cache._ctx_tdenv_keys = self.tdenv._keys
+                typ_cache._ctx_typ_res = typdef
+        return typdef
+
+    def add_typdef_local(self, id, typdef):
+        # type: (p4specast.TParam, tuple[list[p4specast.TParam], p4specast.DefTyp]) -> Context
+        tdenv = self.tdenv.set(id.value, typdef)
+        result = self.copy_and_change(tdenv=tdenv)
+        return result
+
+    def get_fenv(self):
+        return self.fenv
+
+    def find_func_local(self, id, calle_cache=None):
+        # type: (p4specast.Id, p4specast.CallE) -> p4specast.DecD
+        if not jit.we_are_jitted() and calle_cache and calle_cache._ctx_fenv_keys is self.fenv._keys:
+            return calle_cache._ctx_func_res
+        if self.fenv.has_key(id.value):
+            func = self.fenv.get(id.value)
+        else:
+            func = jit.promote(self.venv_keys.glbl)._find_func(id.value)
+            if not jit.we_are_jitted() and calle_cache:
+                calle_cache._ctx_fenv_keys = self.fenv._keys
+                calle_cache._ctx_func_res = func
+        return func
+
+    def add_func_local(self, id, func):
+        # type: (p4specast.Id, p4specast.DecD) -> Context
+        fenv = self.fenv.set(id.value, func)
+        result = self.copy_and_change(fenv=fenv)
+        return result
+
 
 class SubListIter(object):
     def __init__(self, ctx, varlist, length, values_batch):
@@ -553,6 +652,29 @@ def _varlist_compute_final_env_keys(varlist, env_keys):
         env_keys = env_keys.add_key(var.id.value, var.iter.to_key())
     varlist._ctx_env_key_cache = begin_env_keys
     varlist._ctx_env_key_result = env_keys
+    return env_keys
+
+@jit.elidable
+def _notexp_compute_final_env_keys(notexp, env_keys):
+    if notexp._ctx_env_keys is env_keys:
+        return notexp._ctx_env_key_result
+    notexp._ctx_env_keys = env_keys
+    for exp in notexp.exps:
+        if isinstance(exp, p4specast.VarE):
+            if env_keys.get_pos(exp.id.value) >= 0:
+                env_keys = None
+                break
+            env_keys = env_keys.add_key(exp.id.value)
+        else:
+            assert isinstance(exp, p4specast.IterE) and exp.is_simple_list_expr()
+            var = exp.varlist[0]
+            name = var.id.value
+            iter = var.iter.append_list().to_key()
+            if env_keys.get_pos(name, iter) >= 0:
+                env_keys = None
+                break
+            env_keys = env_keys.add_key(name, iter)
+    notexp._ctx_env_key_result = env_keys
     return env_keys
 
 def transpose(value_matrix):

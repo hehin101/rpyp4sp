@@ -35,6 +35,8 @@ def make_subst_typ(func):
                     raise P4TypeSubstitutionError("higher-order substitution is disallowed")
                 return res
             else:
+                if not typ.targs:
+                    return typ
                 targs = [subst_typ(targ, *args) for targ in typ.targs]
                 return p4specast.VarT(typ.id, targs)
         #import pdb;pdb.set_trace()
@@ -51,13 +53,14 @@ def subst_typ(theta, typ):
     return _subst_typ_dict_key(typ, theta)
 
 def ctx_search(name, ctx):
-    a, b = jit.promote(ctx.glbl)._find_typdef(name)
+    a, b = jit.promote(ctx.venv_keys.glbl)._find_typdef(name)
     if a is not None and b is not None:
         deftyp = b
         if isinstance(deftyp, p4specast.PlainT):
             return deftyp.typ
-    if ctx.tdenv.has_key(name):
-        _, deftyp = ctx.tdenv.get(name)
+    tdenv = ctx.get_tdenv()
+    if tdenv is not None and tdenv.has_key(name):
+        _, deftyp = tdenv.get(name)
         if isinstance(deftyp, p4specast.PlainT):
             return deftyp.typ
     return None

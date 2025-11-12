@@ -68,9 +68,9 @@ def command_run_test_jsonl(argv):
             if what == 'function':
                 res_value = objects.BaseV.fromjson(callspec.get_dict_value('result'))
                 name = callspec.get_dict_value('name').value_string()
-                if name not in ctx.glbl.fenv:
+                if name not in ctx.venv_keys.glbl.fenv:
                     continue
-                func = ctx.glbl.fenv[name]
+                func = ctx.venv_keys.glbl.fenv[name]
                 try:
                     _, value = interp.invoke_func_def_attempt_clauses(ctx, func, input_values)
                     if not value.eq(res_value):
@@ -87,7 +87,7 @@ def command_run_test_jsonl(argv):
                     #import pdb; pdb.xpm()
                     error += 1
                     print("Function test exception:", name)
-                    print(format_p4error(e, ctx.glbl.file_content))
+                    print(format_p4error(e, ctx.venv_keys.glbl.file_content))
                     continue
                 except KeyError as e:
                     #import pdb; pdb.xpm()
@@ -120,7 +120,7 @@ def command_run_test_jsonl(argv):
                     #import pdb; pdb.xpm()
                     error += 1
                     print("Relation test exception:", name)
-                    print(format_p4error(e, ctx.glbl.file_content))
+                    print(format_p4error(e, ctx.venv_keys.glbl.file_content))
                     continue
                 except KeyError as e:
                     #import pdb; pdb.xpm()
@@ -144,7 +144,7 @@ def command_run_test_jsonl(argv):
                     #import pdb; pdb.xpm()
                     error += 1
                     print("Builtin test exception:", name)
-                    print(format_p4error(e, ctx.glbl.file_content))
+                    print(format_p4error(e, ctx.venv_keys.glbl.file_content))
                     continue
                 except KeyError as e:
                     #import pdb; pdb.xpm()
@@ -169,10 +169,9 @@ def command_run_p4(argv):
     for fn in argv[1:]:
         t1 = time.time()
         print(fn)
+        stat = os.stat(fn)
         with open(fn, 'r') as f:
-            if NonConstant(False):
-                f.read(10021) # weird rpython fix
-            content = f.readline()
+            content = f.read(stat.st_size)
         assert content is not None
         if not content.startswith("{"):
             continue
@@ -187,7 +186,7 @@ def command_run_p4(argv):
             resctx, values = interp.invoke_rel(ctx, p4specast.Id("Program_ok", p4specast.NO_REGION), [value])
         except P4Error as e:
             print("P4 execution exception:")
-            print(format_p4error(e, ctx.glbl.file_content, spec_dirname=ctx.glbl.spec_dirname))
+            print(format_p4error(e, ctx.venv_keys.glbl.file_content, spec_dirname=ctx.venv_keys.glbl.spec_dirname))
         except KeyError as e:
             print("KeyError")
         t3 = time.time()
@@ -254,8 +253,9 @@ def command_bench_p4(argv):
             os.write(2, "ctrl-c pressed\n")
             return 1
         t1 = time.time()
+        stat = os.stat(fn)
         with open(fn, 'r') as f:
-            content = f.readline()
+            content = f.read(stat.st_size)
         assert content is not None
         if not content.startswith("{"):
             continue

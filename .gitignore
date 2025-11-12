@@ -7,8 +7,13 @@
 /rpyp4sp/.hypothesis/
 .cache
 *.pyc
-ast.json
+*.json
 integrationtests/*.actual
 targetrpyp4sp-c*
 
 .vscode/
+*.csv
+gcout
+
+# keep rpyp4sp/test/example_values.json
+!rpyp4sp/test/example_values.json

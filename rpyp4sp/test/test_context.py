@@ -1,4 +1,4 @@
-from rpyp4sp.context import Context, FenvDict, TDenvDict, EnvKeys
+from rpyp4sp.context import Context, FenvDict, GlobalContext, TDenvDict
 from rpyp4sp.error import P4ContextError
 from rpyp4sp import objects, p4specast
 
@@ -134,14 +134,15 @@ def test_venv_vare_caching_add(monkeypatch):
     id1 = p4specast.Id('id1', None)
     value1 = objects.TextV("abc")
     vare = p4specast.VarE(id1)
-    ctx = Context.make0().add_value_local(id1, p4specast.IterList.EMPTY, value1, vare_cache=vare)
-    assert vare._ctx_keys_add is EnvKeys.EMPTY
+    empty_envkeys = GlobalContext().empty_envkeys
+    ctx = Context.make0(empty_envkeys).add_value_local(id1, p4specast.IterList.EMPTY, value1, vare_cache=vare)
+    assert vare._ctx_keys_add is ctx.venv_keys.glbl.empty_envkeys
     assert vare._ctx_keys_next is ctx.venv_keys
     value2 = ctx.find_value_local(id1, p4specast.IterList.EMPTY, vare_cache=vare)
     assert value1 is value2
     monkeypatch.setattr(type(ctx.venv_keys), 'get_pos', None)
     monkeypatch.setattr(type(ctx.venv_keys), 'add_key', None)
-    ctx2 = Context.make0().add_value_local(id1, p4specast.IterList.EMPTY, value1, vare_cache=vare)
+    ctx2 = Context.make0(empty_envkeys).add_value_local(id1, p4specast.IterList.EMPTY, value1, vare_cache=vare)
     value2 = ctx2.find_value_local(id1, p4specast.IterList.EMPTY, vare_cache=vare)
     assert value1 is value2
 

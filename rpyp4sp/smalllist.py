@@ -10,6 +10,7 @@ def _not_null(s_arg, bookkeeper):
 def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                       attrname="list", factoryname="make", listgettername="_get_full_list",
                       listsizename="_get_size_list", gettername="_get_list",
+                      appendname="_append_list",
                       settername="_set_list", append_list_unroll_safe=False):
     """
     This function is helpful if you have a class with a field storing a
@@ -84,7 +85,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
                 listsizename   : _get_size_list,
                 listgettername : _get_full_list,
                 settername     : _set_list,
-                "_append_list" : _append_list0,
+                appendname     : _append_list0,
                 "_get_full_list_copy": _get_full_list_copy,
                 "__init__"     : _init,
                 "_size_list"   : 0,
@@ -94,6 +95,8 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             if "_attrs_" in cls.__dict__:
                 setattr(newcls, "_attrs_", [])
 
+            if _immutable_:
+                setattr(newcls, "_immutable_", True)
             return newcls
 
         def make_class(size, base):
@@ -141,7 +144,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             # Methods for the new class being built
             methods = {
                 listgettername : _get_full_list,
-                "_append_list" : _append_list,
+                appendname : _append_list,
                 "_get_full_list_copy": _get_full_list,
                 "__init__"     : _init,
                 "_size_list"   : size,
@@ -155,6 +158,8 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             if "_attrs_" in cls.__dict__:
                 setattr(newcls, "_attrs_", attrs)
 
+            if _immutable_:
+                setattr(newcls, "_immutable_", True)
             return newcls
 
         classes = []
@@ -204,7 +209,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             listgettername : _get_list_arbitrary,
             "_get_full_list_copy" : _get_list_arbitrary_copy,
             settername     : _set_arbitrary,
-            "_append_list" : _append_list_arbitrary,
+            appendname     : _append_list_arbitrary,
             "__init__"     : _init,
         }
 
@@ -242,15 +247,24 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             if len(classes) <= 1: # no type specialization
                 return make([elem], *args)
             result = objectmodel.instantiate(classes[1])
-            result._set_list(0, elem)
+            setattr(result, "_%s_0" % (attrname, ), elem)
             cls_init(result, *args)
             return result
         def make2(elem1, elem2, *args):
             if len(classes) <= 2: # no type specialization
                 return make([elem1, elem2], *args)
             result = objectmodel.instantiate(classes[2])
-            result._set_list(0, elem1)
-            result._set_list(1, elem2)
+            setattr(result, "_%s_0" % (attrname, ), elem1)
+            setattr(result, "_%s_1" % (attrname, ), elem2)
+            cls_init(result, *args)
+            return result
+        def make3(elem1, elem2, elem3, *args):
+            if len(classes) <= 3: # no type specialization
+                return make([elem1, elem2, elem3], *args)
+            result = objectmodel.instantiate(classes[3])
+            setattr(result, "_%s_0" % (attrname, ), elem1)
+            setattr(result, "_%s_1" % (attrname, ), elem2)
+            setattr(result, "_%s_2" % (attrname, ), elem3)
             cls_init(result, *args)
             return result
 
@@ -270,6 +284,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
         setattr(cls, factoryname + "0", staticmethod(make0))
         setattr(cls, factoryname + "1", staticmethod(make1))
         setattr(cls, factoryname + "2", staticmethod(make2))
+        setattr(cls, factoryname + "3", staticmethod(make3))
         setattr(cls, factoryname + "_n", staticmethod(make_n))
         return cls
     return wrapper

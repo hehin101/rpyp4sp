@@ -1,3 +1,4 @@
+from __future__ import print_function
 from rpython.rlib import jit
 from rpyp4sp import p4specast, objects, integers
 from rpyp4sp.error import P4NotImplementedError, P4BuiltinError
@@ -231,7 +232,7 @@ set_id = p4specast.Id('set', p4specast.NO_REGION)
 
 def _extract_set_elems(set_value):
     assert isinstance(set_value, objects.CaseV)
-    assert set_value.mixop.eq(map_mixop)
+    assert set_value.mixop.mixop_eq(map_mixop)
     assert set_value._get_size_list() == 1
     lst_value = set_value._get_list(0)
     assert isinstance(lst_value, objects.ListV)
@@ -254,8 +255,10 @@ def sets_intersect_set(targs, values_input):
     set_l, set_r = values_input
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
-    if len(elems_l) == 0 or len(elems_r) == 0:
-        res = []
+    if len(elems_l) == 0:
+        return set_l
+    elif len(elems_r) == 0:
+        return set_r
     else:
         res = _intersect_set(elems_l, elems_r)
     return _wrap_set_elems(res, set_l)
@@ -286,9 +289,9 @@ def sets_union_set(targs, values_input):
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
     if len(elems_l) == 0:
-        res = elems_r
+        return set_r
     elif len(elems_r) == 0:
-        res = elems_l
+        return set_l
     else:
         res = _set_union_elems(elems_l, elems_r)
     # TODO: I am not sure the order of elements in the result is exactly like in P4-spectec
@@ -303,7 +306,7 @@ def sets_unions_set(targs, values_input):
         return objects.CaseV.make1(
             element_typ.list_of().empty_list_value(),
             map_mixop,
-            p4specast.VarT(set_id, targs))
+            _make_vart(set_id, element_typ))
     first = sets_l[0]
     if len(sets_l) == 1:
         return first
@@ -314,6 +317,9 @@ def sets_unions_set(targs, values_input):
     else:
         startindex = 1
     curr = _unions_set_loop(curr, sets_l, startindex)
+    if not curr:
+        # all the sets are empty, return any of them
+        return first
     return _wrap_set_elems(curr, first)
 
 def _set_add_element(elems, elem):
@@ -345,7 +351,7 @@ def sets_diff_set(targs, values_input):
     elems_l = _extract_set_elems(set_l)
     elems_r = _extract_set_elems(set_r)
     if len(elems_l) == 0 or len(elems_r) == 0:
-        res = elems_l
+        return set_l
     else:
         res = _set_diff_elemens(elems_l, elems_r)
     return _wrap_set_elems(res, set_l)
@@ -404,25 +410,25 @@ def _sets_eq_set_bool(elems_l, elems_r):
 # _________________________________________________________________
 
 map_mixop = p4specast.MixOp(
-    [[p4specast.AtomT('{', p4specast.NO_REGION)],
-     [p4specast.AtomT('}', p4specast.NO_REGION)]])
+    [p4specast.AtomT('{', p4specast.NO_REGION), None,
+     p4specast.AtomT('}', p4specast.NO_REGION)])
 arrow_mixop = p4specast.MixOp(
-    [[],
-     [p4specast.AtomT('->', p4specast.NO_REGION)],
-     []])
+    [None,
+     p4specast.AtomT('->', p4specast.NO_REGION),
+     None])
 map_id = p4specast.Id('map', p4specast.NO_REGION)
 pair_id = p4specast.Id('pair', p4specast.NO_REGION)
 
 def _extract_map_content(map_value):
     assert isinstance(map_value, objects.CaseV)
-    assert map_value.mixop.eq(map_mixop)
+    assert map_value.mixop.mixop_eq(map_mixop)
     assert map_value._get_size_list() == 1
     content = map_value._get_list(0)
     return content.get_list()
 
 def _extract_map_item(el):
     assert isinstance(el, objects.CaseV)
-    assert el.mixop.eq(arrow_mixop)
+    assert el.mixop.mixop_eq(arrow_mixop)
     assert el._get_size_list() == 2
     key = el._get_list(0)
     value = el._get_list(1)
@@ -471,8 +477,13 @@ def maps_find_maps(targs, values_input):
     list_maps_value, key_value = values_input
     assert isinstance(list_maps_value, objects.ListV)
     res_value = None
-    res_value = _maps_find_map(list_maps_value, key_value)
     typ = key_typ.opt_of()
+    if list_maps_value._get_size_list() == 0:
+        res_value = None
+    elif list_maps_value._get_size_list() == 1:
+        res_value = find_map(list_maps_value._get_list(0), key_value)
+    else:
+        res_value = _maps_find_map(list_maps_value, key_value)
     return typ.make_opt_value(res_value)
 
 @jit.elidable
@@ -614,7 +625,7 @@ def numerics_to_int(targs, values_input):
     maxvalue = integers.Integer.fromint(1).lshift(width)
     num_num = num_num.mod(maxvalue) # normalize in range 0..2**width-1
     rightmost_bit = num_num.rshift(width - 1)
-    if rightmost_bit.eq(integers.Integer.fromint(0)):
+    if rightmost_bit.int_eq(0):
         return _integer_to_value(num_num)
     return _integer_to_value(num_num.sub(maxvalue))
 
@@ -679,17 +690,17 @@ def numerics_bitacc(targs, values_input):
     rawint_l = value_l.get_num()  # l (low bit)
 
     # let slice_width = Bigint.(m + one - l) in
-    slice_width = rawint_h.add(integers.Integer.fromint(1)).sub(rawint_l)
+    slice_width = rawint_h.int_add(1).sub(rawint_l)
 
     # if Bigint.(l < zero) then raise (Invalid_argument "bitslice x[y:z] must have y > z > 0");
-    if rawint_l.lt(integers.Integer.fromint(0)):
+    if rawint_l.int_lt(0):
         raise P4BuiltinError("bitslice x[y:z] must have y > z > 0")
 
     # let shifted = Bigint.(n asr to_int_exn l) in
     shifted = rawint_b.rshift(rawint_l.toint())
 
     # let mask = Bigint.(pow2' slice_width - one) in
-    mask = integers.Integer.fromint(1).lshift(slice_width.toint()).sub(integers.Integer.fromint(1))
+    mask = integers.Integer.fromint(1).lshift(slice_width.toint()).int_sub(1)
 
     # Bigint.bit_and shifted mask
     result = shifted.and_(mask)

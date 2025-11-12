@@ -1,8 +1,10 @@
+from __future__ import print_function
 from rpython.rlib import jit
 
 from rpyp4sp.smalllist import inline_small_list
 from rpyp4sp import p4specast, integers
 from rpyp4sp.error import P4UnknownTypeError, P4NotImplementedError, P4EvaluationError
+from rpyp4sp.base import SubBase, BaseV
 # and vid = int [@@deriving yojson]
 # and vnote = { vid : vid; typ : typ' } [@@deriving yojson]
 
@@ -25,98 +27,6 @@ from rpyp4sp.error import P4UnknownTypeError, P4NotImplementedError, P4Evaluatio
 
 def indent(level):
     return "  " * level
-
-class SubBase(object):
-    _attrs_ = []
-
-class BaseV(SubBase):
-    _attrs_ = []
-
-    def tojson(self):
-        from rpyp4sp import rpyjson
-        note_map = rpyjson.ROOT_MAP.get_next("typ").get_next("vid")
-        typ = self.get_typ()
-        assert isinstance(typ, p4specast.Type)
-        note_obj = rpyjson.JsonObject2(note_map, typ.tojson(as_bare_typ=True), rpyjson.JsonInt(-1))
-        it_array = rpyjson.JsonArray(self._tojson_content())
-        root_map = rpyjson.ROOT_MAP.get_next("note").get_next("it").get_next("at")
-        return rpyjson.JsonObject3(root_map, note_obj, it_array, rpyjson.json_null)
-
-    def _tojson_content(self):
-        assert 0, "subclasses must implement _tojson_content"
-
-    @staticmethod
-    def fromjson(value):
-        typ = p4specast.Type.fromjson(value.get_dict_value('note').get_dict_value('typ'))
-        content = value.get_dict_value('it')
-        what = content.get_list_item(0).value_string()
-        if what == 'BoolV':
-            value = BoolV.fromjson(content, typ)
-        elif what == 'NumV':
-            value = NumV.fromjson(content, typ)
-        elif what == 'TextV':
-            value = TextV.fromjson(content, typ)
-        elif what == 'StructV':
-            value = StructV.fromjson(content, typ)
-        elif what == 'CaseV':
-            value = CaseV.fromjson(content, typ)
-        elif what == 'TupleV':
-            value = TupleV.fromjson(content, typ)
-        elif what == 'OptV':
-            value = OptV.fromjson(content, typ)
-        elif what == 'ListV':
-            value = ListV.fromjson(content, typ)
-        elif what == 'FuncV':
-            value = FuncV.fromjson(content, typ)
-        else:
-            raise P4UnknownTypeError("Unknown content type")
-        return value
-
-    def get_typ(self):
-        raise NotImplementedError("abstract base class")
-
-    def get_bool(self):
-        raise TypeError("not a bool")
-
-    def get_text(self):
-        raise TypeError("not a text")
-
-    def get_num(self):
-        raise TypeError("not a num")
-
-    def get_list(self):
-        raise TypeError("not a list")
-
-    def get_list_len(self):
-        raise TypeError("not a list")
-
-    def get_tuple(self):
-        raise TypeError("not a tuple")
-
-    def get_struct(self):
-        raise TypeError("not a struct")
-
-    def eq(self, other):
-        res = self.compare(other)
-        assert res in (-1, 0, 1)
-        return res == 0
-
-    def compare(self, other):
-        #import pdb;pdb.set_trace()
-        assert 0
-
-    def _base_compare(self, other):
-        if self._compare_tag == other._compare_tag:
-            return 0
-        if self._compare_tag < other._compare_tag:
-            return -1
-        return 1
-
-    def tostring(self, short=False, level=0):
-        assert 0
-
-    def __str__(self):
-        return self.tostring()
 
 class BaseVWithTyp(BaseV):
     _attrs_ = ['typ']
@@ -190,24 +100,23 @@ class BoolVWithTyp(BoolV):
         return self.typ
 
 class NumV(BaseV):
-    _attrs_ = ['value', 'what']
+    _compare_tag = 1
 
-    def __init__(self, value, what):
+    _attrs_ = ['value']
+
+    def __init__(self, value):
         self.value = value # type: integers.Integer
-        assert isinstance(what, p4specast.NumTyp)
-        self.what = what # type: p4specast.NumT
+
+    def get_what(self):
+        raise NotImplementedError("abstract method")
 
     @staticmethod
-    def make(value, what, typ=None):
-        if typ is None:
-            if isinstance(what, p4specast.IntT):
-                typ = p4specast.NumT.INT
-            else:
-                assert isinstance(what, p4specast.NatT)
-                typ = p4specast.NumT.NAT
-        if isinstance(typ, p4specast.IntT):
+    def make(value, what, typ):
+        if isinstance(typ, p4specast.NumT) and isinstance(what, p4specast.IntT):
+            assert type(typ.typ) is type(what)
             return IntV(value, what)
-        elif isinstance(typ, p4specast.NatT):
+        elif isinstance(typ, p4specast.NumT) and isinstance(what, p4specast.NatT):
+            assert type(typ.typ) is type(what)
             return NatV(value, what)
         else:
             return NumVWithTyp(value, what, typ)
@@ -215,13 +124,13 @@ class NumV(BaseV):
     def compare(self, other):
         if not isinstance(other, NumV):
             return self._base_compare(other)
-        if self.what != other.what:
+        if self.get_what() != other.get_what():
             raise TypeError("cannot compare different kinds of numbers")
         return self.value.compare(other.value)
 
     def __repr__(self):
         return "objects.NumV.fromstr(%r, %r, %r)" % (
-            self.value.str(), self.what, self.get_typ())
+            self.value.str(), self.get_what(), self.get_typ())
 
     def get_num(self):
         return self.value
@@ -229,6 +138,65 @@ class NumV(BaseV):
     def tostring(self, short=False, level=0):
         # | NumV n -> Num.string_of_num n
         return self.value.str()
+
+    def eval_unop(self, unop, typ):
+        # Evaluate unary numeric operations
+        if unop == 'PlusOp':
+            return NumV.make(self.value, self.get_what(), typ=typ)
+        elif unop == 'MinusOp':
+            return NumV.make(self.value.neg(), p4specast.IntT.INSTANCE, typ=typ)
+        else:
+            assert 0, "Unknown numeric unary operator: %s" % unop
+
+    def eval_binop(self, binop, other, typ):
+        # Evaluate binary numeric operations
+        from rpyp4sp.error import P4EvaluationError, P4NotImplementedError
+        assert isinstance(other, NumV)
+        assert type(self.get_what()) is type(other.get_what())
+        num_l = self.value
+        num_r = other.value
+        what = self.get_what()
+        if binop == 'AddOp':
+            res_num = num_l.add(num_r)
+        elif binop == 'SubOp':
+            res_num = num_l.sub(num_r)
+            what = p4specast.IntT.INSTANCE
+        elif binop == 'MulOp':
+            res_num = num_l.mul(num_r)
+        elif binop == 'DivOp':
+            if num_r.int_eq(0):
+                raise P4EvaluationError("Modulo with 0")
+            remainder = num_l.mod(num_r)
+            if not remainder.int_eq(0):
+                raise P4EvaluationError("division remainder isn't zero")
+            res_num = num_l.div(num_r)
+        elif binop == 'ModOp':
+            if num_r.int_eq(0):
+                raise P4EvaluationError("Modulo with 0")
+            res_num = num_l.mod(num_r)
+        elif binop == 'PowOp':
+            raise P4NotImplementedError("PowOp")
+        else:
+            assert 0, "should be unreachable"
+        return NumV.make(res_num, what, typ=typ)
+
+    def eval_cmpop(self, cmpop, other, typ):
+        # Evaluate comparison operations
+        assert isinstance(other, NumV)
+        assert self.get_what() == other.get_what()
+        num_l = self.value
+        num_r = other.value
+        if cmpop == 'LtOp':
+            res = num_l.lt(num_r)
+        elif cmpop == 'GtOp':
+            res = num_l.gt(num_r)
+        elif cmpop == 'LeOp':
+            res = num_l.le(num_r)
+        elif cmpop == 'GeOp':
+            res = num_l.ge(num_r)
+        else:
+            assert 0, "should be unreachable"
+        return BoolV.make(res, typ)
 
     @staticmethod
     def fromstr(value, what, typ=None):
@@ -257,29 +225,45 @@ class NumV(BaseV):
 
 class IntV(NumV):
     def __init__(self, value, what):
-        NumV.__init__(self, value, what)
+        assert isinstance(what, p4specast.IntT)
+        NumV.__init__(self, value)
+
+    def get_what(self):
+        return p4specast.IntT.INSTANCE
 
     def get_typ(self):
         return p4specast.IntT.INSTANCE
 
 class NatV(NumV):
     def __init__(self, value, what):
-        NumV.__init__(self, value, what)
+        assert isinstance(what, p4specast.NatT)
+        NumV.__init__(self, value)
+
+    def get_what(self):
+        return p4specast.NatT.INSTANCE
 
     def get_typ(self):
         return p4specast.NatT.INSTANCE
 
 class NumVWithTyp(NumV):
-    _attrs_ = ['typ']
+    _immutable_fields_ = ['_what', 'typ']
+    _attrs_ = ['_what', 'typ']
 
     def __init__(self, value, what, typ):
-        NumV.__init__(self, value, what)
+        NumV.__init__(self, value)
+        assert isinstance(what, p4specast.NumTyp)
+        self._what = what
         self.typ = typ
+
+    def get_what(self):
+        return self._what
 
     def get_typ(self):
         return self.typ
 
 class TextV(BaseVWithTyp):
+    _compare_tag = 2
+
     def __init__(self, value, typ=None):
         self.value = value #type: str
         self.typ = typ # type: p4specast.Type | None
@@ -365,6 +349,8 @@ StructMap.EMPTY = StructMap({})
 
 @inline_small_list(immutable=True)
 class StructV(BaseVWithTyp):
+    _compare_tag = 3
+
     _immutable_fields_ = ['map']
 
     @jit.unroll_safe
@@ -464,6 +450,9 @@ class StructV(BaseVWithTyp):
 
 @inline_small_list(immutable=True)
 class CaseV(BaseVWithTyp):
+    _compare_tag = 4
+
+    _immutable_ = True
     _immutable_fields_ = ['mixop']
     def __init__(self, mixop, typ=None):
         self.mixop = mixop # type: p4specast.MixOp
@@ -487,20 +476,19 @@ class CaseV(BaseVWithTyp):
             return self.mixop.tostring()
 
         # Construct notation: mixop with values interspersed
-        mixop_phrases = self.mixop.phrases
+        mixop_atoms_with_holes = self.mixop.atoms_with_holes
         result_parts = []
         value_idx = 0
 
-        for phrase in mixop_phrases:
-            # Add atoms from this phrase
-            phrase_str = "".join([atom.value for atom in phrase])
-            if phrase_str:
-                result_parts.append(phrase_str)
-
-            # Add corresponding value if available
-            if value_idx < self._get_size_list():
-                result_parts.append(self._get_list(value_idx).tostring(short, level + 1))
-                value_idx += 1
+        for atom in mixop_atoms_with_holes:
+            # Add atoms and fill holes with case values
+            if atom is not None:
+                result_parts.append(atom.value)
+            else:
+                # Add corresponding value if available
+                if value_idx < self._get_size_list():
+                    result_parts.append(self._get_list(value_idx).tostring(short, level + 1))
+                    value_idx += 1
 
         return "(" + " ".join(result_parts) + ")"
 
@@ -537,6 +525,8 @@ class CaseV(BaseVWithTyp):
 
 @inline_small_list(immutable=True)
 class TupleV(BaseVWithTyp):
+    _compare_tag = 5
+
     _immutable_fields_ = []
     def __init__(self, typ=None):
         self.typ = typ # type: p4specast.Type | None
@@ -579,35 +569,48 @@ class TupleV(BaseVWithTyp):
         return TupleV.make(elements, typ)
 
 class OptV(BaseVWithTyp):
-    def __init__(self, value, typ=None):
-        self.value = value # type: BaseV | None
+    """ Base class of OptV. Instances of this precise class always represent
+    "None". for "Some" variant, look at subclass OptVSome """
+
+    _compare_tag = 6
+
+    _attrs_ = []
+
+    def __init__(self, typ=None):
         self.typ = typ # type: p4specast.Type | None
+
+    def get_opt_value(self):
+        # type: () -> BaseV | None
+        return None
+
+    def is_opt_none(self):
+        return type(self) is OptV
 
     def compare(self, other):
         if not isinstance(other, OptV):
             return self._base_compare(other)
-        if self.value is not None and other.value is not None:
-            return self.value.compare(other.value)
-        elif self.value is not None and other.value is None:
+        if self.get_opt_value() is not None and other.get_opt_value() is not None:
+            return self.get_opt_value().compare(other.get_opt_value())
+        elif self.get_opt_value() is not None and other.get_opt_value() is None:
             return 1
-        elif self.value is None and other.value is not None:
+        elif self.get_opt_value() is None and other.get_opt_value() is not None:
             return -1
         else:  # both None
             return 0
 
 
     def __repr__(self):
-        return "objects.OptV(%r, %r)" % (self.value, self.typ)
+        return "%r.make_opt_value(%r)" % (self.typ, self.get_opt_value())
 
     def tostring(self, short=False, level=0):
         # | OptV (Some value) ->
         #     Format.asprintf "Some(%s)"
         #       (string_of_value ~short ~level:(level + 1) value)
         # | OptV None -> "None"
-        if self.value is None:
+        if self.get_opt_value() is None:
             return "None"
         else:
-            return "Some(%s)" % self.value.tostring(short, level + 1)
+            return "Some(%s)" % self.get_opt_value().tostring(short, level + 1)
 
     def _tojson_content(self):
         from rpyp4sp import rpyjson
@@ -621,11 +624,24 @@ class OptV(BaseVWithTyp):
         value = None
         if not content.get_list_item(1).is_null:
             value = BaseV.fromjson(content.get_list_item(1))
-        return OptV(value, typ)
+        return typ.make_opt_value(value)
+
+class OptVSome(OptV):
+    _attrs_ = ['_value']
+
+    def __init__(self, value, typ=None):
+        self._value = value # type: BaseV
+        self.typ = typ # type: p4specast.Type | None
+
+    def get_opt_value(self):
+        return self._value
+    
 
 # just optimize lists of size 0, 1, arbitrary
 @inline_small_list(immutable=True, sizemax=2, factoryname='_make')
 class ListV(BaseVWithTyp):
+    _compare_tag = 7
+
     _immutable_fields_ = []
     def __init__(self, typ=None):
         self.typ = typ # type: p4specast.Type | None
@@ -708,6 +724,8 @@ class ListV(BaseVWithTyp):
 
 
 class FuncV(BaseVWithTyp):
+    _compare_tag = 8
+
     def __init__(self, id, typ=None):
         self.id = id # type: p4specast.Id
         self.typ = typ # type: p4specast.Type | None
@@ -728,35 +746,25 @@ class FuncV(BaseVWithTyp):
         id = p4specast.Id.fromjson(content.get_list_item(1))
         return FuncV(id, typ)
 
-def atom_compares(atoms_l, atoms_r):
-    len_l = len(atoms_l)
-    len_r = len(atoms_r)
-    min_len = min(len_l, len_r)
-    for i in range(min_len):
-        cmp = atoms_l[i].compare(atoms_r[i])
-        if cmp != 0:
-            return cmp
-    if len_l == len_r:
-        return 0
-    elif len_l < len_r:
+
+def intcmp(a, b):
+    if a < b:
         return -1
-    else:
+    if a > b:
         return 1
+    return 0
 
 def compares(values_l, values_r):
     # type: (list[BaseV], list[BaseV]) -> int
     # lexicographic ordering, iterative version
     len_l = len(values_l)
     len_r = len(values_r)
-    if len_l <= 1 and len_r <= 1:
-        if len_l == len_r == 0:
-            return 0
-        if len_l == len_r == 1:
-            return values_l[0].compare(values_r[0])
-        # if we reach here, one list is size 1, the other size 0
-        if len_l < len_r:
-            return -1
-        return 1
+    if len_l == 0:
+        return intcmp(0, len_r)
+    if len_r == 0:
+        return intcmp(len_l, 0)
+    if len_l == len_r == 1:
+        return values_l[0].compare(values_r[0])
     return _compares(values_l, values_r, len_l, len_r)
 
 def _compares(values_l, values_r, len_l, len_r):
@@ -765,12 +773,7 @@ def _compares(values_l, values_r, len_l, len_r):
         cmp = values_l[i].compare(values_r[i])
         if cmp != 0:
             return cmp
-    if len_l == len_r:
-        return 0
-    elif len_l < len_r:
-        return -1
-    else:
-        return 1
+    return intcmp(len_l, len_r)
     # match (values_l, values_r) with
     #   | [], [] -> 0
     #   | [], _ :: _ -> -1

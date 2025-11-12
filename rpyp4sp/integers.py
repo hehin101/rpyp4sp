@@ -118,20 +118,34 @@ class SmallInteger(Integer):
         assert isinstance(other, BigInteger)
         return other.rval.int_le(self.val)
 
+    def int_eq(self, iother):
+        return self.val == iother
+
+    def int_lt(self, iother):
+        return self.val < iother
+
+    def int_le(self, iother):
+        return self.val <= iother.val
+
+    def int_gt(self, iother):
+        return self.val > iother
+
+    def int_ge(self, iother):
+        return self.val >= iother
+
     def abs(self):
         if self.val == MININT:
             return BigInteger(rbigint.fromint(self.val).abs())
         return SmallInteger(abs(self.val))
 
     def add(self, other):
-        if isinstance(other, SmallInteger):
-            return SmallInteger.add_i_i(self.val, other.val)
-        else:
-            assert isinstance(other, BigInteger)
-            return BigInteger(other.rval.int_add(self.val))
+        return other.int_add(self.val)
 
     def int_add(self, other):
         return SmallInteger.add_i_i(self.val, other)
+
+    def bigint_add(self, big_rval):
+        return BigInteger(big_rval.int_add(self.val))
 
     def int_sub(self, other):
         return SmallInteger.sub_i_i(self.val, other)
@@ -140,19 +154,28 @@ class SmallInteger(Integer):
         return SmallInteger.mul_i_i(self.val, other)
 
     def sub(self, other):
-        if isinstance(other, SmallInteger):
-            return SmallInteger.sub_i_i(self.val, other.val)
-        return BigInteger((other.tobigint().int_sub(self.val)).neg()) # XXX can do better
+        return other.int_rsub(self.val)
+
+    def int_rsub(self, val):
+        return SmallInteger.sub_i_i(val, self.val)
+
+    def bigint_rsub(self, big_rval):
+        return BigInteger(big_rval.int_sub(self.val))
 
     def mul(self, other):
-        if isinstance(other, SmallInteger):
-            try:
-                return SmallInteger(ovfcheck(self.val * other.val))
-            except OverflowError:
-                return BigInteger(self.tobigint().int_mul(other.val))
-        else:
-            assert isinstance(other, BigInteger)
-            return other.mul(self)
+        return other.int_mul(self.val)
+
+    def bigint_mul(self, big_rval):
+        val = self.val
+        if not val:
+            return SmallInteger(0)
+        if val == 1:
+            return BigInteger(big_rval)
+        if val & (val - 1) == 0:
+            # power of two, replace by lshift
+            shift = BigInteger._shift_amount(val)
+            return BigInteger(big_rval.lshift(shift))
+        return BigInteger(big_rval.int_mul(val))
 
     def rshift(self, i):
         if i < 0:
@@ -165,41 +188,57 @@ class SmallInteger(Integer):
         return self.lshift_i_i(self.val, i)
 
     def mod(self, other):
-        if isinstance(other, SmallInteger):
-            return SmallInteger.mod_i_i(self.val, other.val)
-        else:
-            assert isinstance(other, BigInteger)
-            return BigInteger(self.tobigint().mod(other.rval))
+        return other.int_rmod(self.val)
+
+    def int_rmod(self, val):
+        return SmallInteger.mod_i_i(val, self.val)
+
+    def bigint_rmod(self, big_rval):
+        if self.val == 0:
+            raise ZeroDivisionError("integer division or modulo by zero")
+        return SmallInteger(big_rval.int_mod_int_result(self.val))
 
     def div(self, other):
-        if isinstance(other, SmallInteger):
-            if self.val == MININT and other.val == -1:
-                return self.abs()
-            return SmallInteger.div_i_i(self.val, other.val)
-        else:
-            assert isinstance(other, BigInteger)
-            return BigInteger(self.tobigint().div(other.rval))
+        return other.int_rdiv(self.val)
+
+    def int_rdiv(self, val):
+        if self.val == 0:
+            raise ZeroDivisionError("integer division by zero")
+        if val == MININT and self.val == -1:
+            return BigInteger(rbigint.fromint(val).abs())
+        return SmallInteger.div_i_i(val, self.val)
+
+    def bigint_rdiv(self, big_rval):
+        if self.val == 0:
+            raise ZeroDivisionError("integer division by zero")
+        return BigInteger(big_rval.int_div(self.val))
 
     def and_(self, other):
-        if isinstance(other, SmallInteger):
-            return SmallInteger(self.val & other.val)
-        else:
-            assert isinstance(other, BigInteger)
-            return BigInteger(self.tobigint().and_(other.rval))
+        return other.int_and(self.val)
+
+    def int_and(self, other):
+        return SmallInteger(self.val & other)
+
+    def bigint_and(self, big_rval):
+        return BigInteger(big_rval.int_and_(self.val))
 
     def or_(self, other):
-        if isinstance(other, SmallInteger):
-            return SmallInteger(self.val | other.val)
-        else:
-            assert isinstance(other, BigInteger)
-            return BigInteger(self.tobigint().or_(other.rval))
+        return other.int_or(self.val)
+
+    def int_or(self, other):
+        return SmallInteger(self.val | other)
+
+    def bigint_or(self, big_rval):
+        return BigInteger(big_rval.int_or_(self.val))
 
     def xor(self, other):
-        if isinstance(other, SmallInteger):
-            return SmallInteger(self.val ^ other.val)
-        else:
-            assert isinstance(other, BigInteger)
-            return BigInteger(self.tobigint().xor(other.rval))
+        return other.int_xor(self.val)
+
+    def int_xor(self, other):
+        return SmallInteger(self.val ^ other)
+
+    def bigint_xor(self, big_rval):
+        return BigInteger(big_rval.int_xor(self.val))
 
     def invert(self):
         return SmallInteger(~self.val)
@@ -311,17 +350,32 @@ class BigInteger(Integer):
         assert isinstance(other, BigInteger)
         return self.rval.ge(other.rval)
 
+    def int_eq(self, iother):
+        return self.rval.int_eq(iother)
+
+    def int_lt(self, iother):
+        return self.rval.int_lt(iother)
+
+    def int_le(self, iother):
+        return self.rval.int_le(iother)
+
+    def int_gt(self, iother):
+        return self.rval.int_gt(iother)
+
+    def int_ge(self, iother):
+        return self.rval.int_ge(iother)
+
     def abs(self):
         return BigInteger(self.rval.abs())
 
     def add(self, other):
-        if isinstance(other, SmallInteger):
-            return BigInteger(self.rval.int_add(other.val))
-        assert isinstance(other, BigInteger)
-        return BigInteger(self.rval.add(other.rval))
+        return other.bigint_add(self.rval)
 
     def int_add(self, other):
         return BigInteger(self.rval.int_add(other))
+
+    def bigint_add(self, big_rval):
+        return BigInteger(big_rval.add(self.rval))
 
     def int_sub(self, other):
         return BigInteger(self.rval.int_sub(other))
@@ -330,25 +384,19 @@ class BigInteger(Integer):
         return BigInteger(self.rval.int_mul(other))
 
     def sub(self, other):
-        if isinstance(other, SmallInteger):
-            return BigInteger(self.rval.int_sub(other.val))
-        assert isinstance(other, BigInteger)
-        return BigInteger(self.rval.sub(other.rval))
+        return other.bigint_rsub(self.rval)
+
+    def int_rsub(self, val):
+        return BigInteger(rbigint.fromint(val).sub(self.rval))
+
+    def bigint_rsub(self, big_rval):
+        return BigInteger(big_rval.sub(self.rval))
 
     def mul(self, other):
-        if isinstance(other, SmallInteger):
-            val = other.val
-            if not val:
-                return SmallInteger(0)
-            if val == 1:
-                return self
-            if val & (val - 1) == 0:
-                # power of two, replace by lshift
-                shift = self._shift_amount(val)
-                return self.lshift(shift)
-            return BigInteger(self.rval.int_mul(other.val))
-        assert isinstance(other, BigInteger)
-        return BigInteger(self.rval.mul(other.rval))
+        return other.bigint_mul(self.rval)
+
+    def bigint_mul(self, big_rval):
+        return BigInteger(big_rval.mul(self.rval))
 
     @staticmethod
     @jit.elidable
@@ -371,45 +419,57 @@ class BigInteger(Integer):
         return BigInteger(self.rval.lshift(i))
 
     def mod(self, other):
-        if isinstance(other, SmallInteger):
-            if other.val == 0:
-                raise ZeroDivisionError("integer division or modulo by zero")
-            return SmallInteger(self.rval.int_mod_int_result(other.val))
-        assert isinstance(other, BigInteger)
-        if other.eq(SmallInteger(0)):
+        return other.bigint_rmod(self.rval)
+
+    def int_rmod(self, val):
+        if self.rval.int_eq(0):
             raise ZeroDivisionError("integer division or modulo by zero")
-        return BigInteger(self.rval.mod(other.rval))
+        return BigInteger(rbigint.fromint(val).mod(self.rval))
+
+    def bigint_rmod(self, big_rval):
+        if self.rval.int_eq(0):
+            raise ZeroDivisionError("integer division or modulo by zero")
+        return BigInteger(big_rval.mod(self.rval))
 
     def div(self, other):
-        if isinstance(other, SmallInteger):
-            if other.val == 0:
-                raise ZeroDivisionError("integer division by zero")
-            return BigInteger(self.rval.int_div(other.val))
-        assert isinstance(other, BigInteger)
-        if other.eq(SmallInteger(0)):
+        return other.bigint_rdiv(self.rval)
+
+    def int_rdiv(self, val):
+        if self.rval.int_eq(0):
             raise ZeroDivisionError("integer division by zero")
-        return BigInteger(self.rval.div(other.rval))
+        return BigInteger(rbigint.fromint(val).div(self.rval))
+
+    def bigint_rdiv(self, big_rval):
+        if self.rval.int_eq(0):
+            raise ZeroDivisionError("integer division by zero")
+        return BigInteger(big_rval.div(self.rval))
 
     def and_(self, other):
-        if isinstance(other, SmallInteger):
-            return BigInteger(self.rval.int_and_(other.val))
-        else:
-            assert isinstance(other, BigInteger)
-            return BigInteger(self.rval.and_(other.rval))
+        return other.bigint_and(self.rval)
+
+    def int_and(self, other):
+        return BigInteger(self.rval.int_and_(other))
+
+    def bigint_and(self, big_rval):
+        return BigInteger(big_rval.and_(self.rval))
 
     def or_(self, other):
-        if isinstance(other, SmallInteger):
-            return BigInteger(self.rval.int_or_(other.val))
-        else:
-            assert isinstance(other, BigInteger)
-            return BigInteger(self.rval.or_(other.rval))
+        return other.bigint_or(self.rval)
+
+    def int_or(self, other):
+        return BigInteger(self.rval.int_or_(other))
+
+    def bigint_or(self, big_rval):
+        return BigInteger(big_rval.or_(self.rval))
 
     def xor(self, other):
-        if isinstance(other, SmallInteger):
-            return BigInteger(self.rval.int_xor(other.val))
-        else:
-            assert isinstance(other, BigInteger)
-            return BigInteger(self.rval.xor(other.rval))
+        return other.bigint_xor(self.rval)
+
+    def int_xor(self, other):
+        return BigInteger(self.rval.int_xor(other))
+
+    def bigint_xor(self, big_rval):
+        return BigInteger(big_rval.xor(self.rval))
 
     def invert(self):
         return BigInteger(self.rval.invert())
