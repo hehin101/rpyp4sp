@@ -23,7 +23,7 @@ class Res(Sign):
     def make(values, ctx):
         from rpyp4sp import context
         if isinstance(ctx, context.ContextWithCoverage):
-            return ResWithCover.make(values, ctx)
+            return ResWithCover.make(values, ctx.get_cover())
         else:
             return ResNoCover.make(values)
 
@@ -37,7 +37,8 @@ class Res(Sign):
 
 @smalllist.inline_small_list(immutable=True)
 class ResNoCover(Res):
-    pass
+    def __init__(self):
+        pass
 
 
 @smalllist.inline_small_list(immutable=True)
