@@ -208,7 +208,7 @@ def invoke_rel(ctx, id, values_input):
     #   let ctx_local, sign = eval_instrs ctx_local Cont instrs in
     sign = _rel_eval_instrs(ctx_local, reld)
     #   let ctx = Ctx.commit ctx ctx_local in
-    #ctx = ctx.commit(sign.sign_get_ctx())
+    ctx = ctx.commit_coverage_or_none(sign.sign_get_cover())
     #   match sign with
     #   | Res values_output ->
     if isinstance(sign, Res):
@@ -1500,7 +1500,7 @@ class __extend__(p4specast.ReturnI):
         # let ctx, value = eval_exp ctx exp in
         # (ctx, Ret value)
         ctx, value = eval_exp(ctx, self.exp)
-        return Ret(ctx, value)
+        return Ret.make(ctx, value)
 
 # ____________________________________________________________
 # expressions

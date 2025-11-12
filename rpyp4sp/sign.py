@@ -15,19 +15,55 @@ class Sign(object):
     def sign_get_ctx(self):
         raise NotImplementedError
 
-@smalllist.inline_small_list(immutable=True)
-class Res(Sign):
-    def __init__(self, ctx):
-        #self.ctx = ctx
-        pass
+    def sign_get_cover(self):
+        return None
 
-    def sign_get_ctx(self):
-        assert 0
+class Res(Sign):
+    @staticmethod
+    def make(values, ctx):
+        from rpyp4sp import context
+        if isinstance(ctx, context.ContextWithCoverage):
+            return ResWithCover.make(values, ctx)
+        else:
+            return ResNoCover.make(values)
+
+    @staticmethod
+    def make0(ctx):
+        from rpyp4sp import context
+        if isinstance(ctx, context.ContextWithCoverage):
+            return ResWithCover.make0(ctx.get_cover())
+        else:
+            return ResNoCover.make0()
+
+@smalllist.inline_small_list(immutable=True)
+class ResNoCover(Res):
+    pass
+
+
+@smalllist.inline_small_list(immutable=True)
+class ResWithCover(Res):
+    def __init__(self, cover):
+        self.cover = cover
+
+    def sign_get_cover(self):
+        return self.cover
 
 
 class Ret(Sign):
-    def __init__(self, ctx, value):
+    def __init__(self, value):
         self.value = value
 
-    def sign_get_ctx(self):
-        assert 0, 'shouldn\'t be called'
+    @staticmethod
+    def make(ctx, value):
+        from rpyp4sp import context
+        if isinstance(ctx, context.ContextWithCoverage):
+            return RetWithCover(value, ctx.get_cover())
+        return Ret(value)
+
+class RetWithCover(Ret):
+    def __init__(self, value, cover):
+        self.value = value
+        self.cover = cover
+
+    def sign_get_cover(self):
+        return self.cover

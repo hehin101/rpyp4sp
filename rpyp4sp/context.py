@@ -19,6 +19,7 @@ class GlobalContext(object):
         self.fenv = {}
         self.empty_envkeys = EnvKeys({}, self)
         self.empty_simple_context = Context.make0(self.empty_envkeys)
+        self.empty_context_with_coverage = Context.make0(self.empty_envkeys)
 
     @jit.elidable
     def _find_rel(self, name):
@@ -372,6 +373,9 @@ class Context(sign.Sign):
     def commit(self, sub_ctx):
         return self
 
+    def commit_coverage_or_none(self, cover_or_none):
+        return self
+
     def cover(self, is_hit, phantom, value=None):
         return self
 
@@ -472,6 +476,7 @@ class ContextWithCoverage(Context):
         self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY # type: TDenvDict
         self.fenv = fenv if fenv is not None else FenvDict.EMPTY # type: FenvDict
         self.venv_keys = venv_keys if venv_keys is not None else GlobalContext().empty_envkeys # type: EnvKeys
+        assert isinstance(self.venv_keys, EnvKeys)
         self._cover = cover if cover is not None else Coverage.EMPTY
         assert isinstance(self._cover, Coverage)
 
@@ -489,11 +494,19 @@ class ContextWithCoverage(Context):
         venv_values = self._get_full_list()
         return ContextWithCoverage.make(venv_values, self.tdenv, self.fenv, self.venv_keys, cover)
 
+    def localize(self):
+        return ContextWithCoverage.make0(self.tdenv, self.fenv, self.venv_keys.glbl.empty_envkeys, Coverage.EMPTY)
+
     def commit(self, sub_ctx):
         if isinstance(sub_ctx, ContextWithCoverage):
             return self.copy_and_change_cover(self._cover.union(sub_ctx._cover))
         else:
             return self
+
+    def commit_coverage_or_none(self, cover_or_none):
+        if cover_or_none:
+            return self.copy_and_change_cover(self._cover.union(cover_or_none))
+        return self
 
     def cover(self, is_hit, phantom, value=None):
         if phantom is None:
