@@ -1287,7 +1287,7 @@ class SliceE(Exp):
 
     @staticmethod
     def fromjson(content, typ, region, cache=None):
-        SliceE(
+        return SliceE(
             lst=Exp.fromjson(content.get_list_item(1), cache),
             start=Exp.fromjson(content.get_list_item(2), cache),
             length=Exp.fromjson(content.get_list_item(3), cache),
