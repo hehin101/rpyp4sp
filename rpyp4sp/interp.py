@@ -1518,6 +1518,10 @@ class __extend__(p4specast.Exp):
         #import pdb;pdb.set_trace()
         raise P4NotImplementedError("abstract base class %s" % self)
 
+class __extend__(p4specast.LiteralE):
+    def eval_exp(self, ctx):
+        return ctx, self.value
+
 class __extend__(p4specast.BoolE):
     def eval_exp(self, ctx):
         # let value_res =

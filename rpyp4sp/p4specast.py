@@ -652,6 +652,23 @@ class Exp(AstBase):
         assert 0
 
 
+class LiteralE(Exp):
+    _attrs_ = ['value']
+    _immutable_fields_ = ['value']
+
+    def __init__(self, value, typ=None, region=None):
+        from rpyp4sp import objects
+        self.value = value # type: objects.BaseV
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
+
+    def __repr__(self):
+        return "p4specast.LiteralE(%r)" % (self.value)
+
+    def tostring(self):
+        return self.value.tostring()
+
+
 class BoolE(Exp):
     _attrs_ = ['value']
     _immutable_fields_ = ['value']
@@ -1107,8 +1124,16 @@ class ListE(Exp):
 
     @staticmethod
     def fromjson(content, typ, region, cache=None):
+        elts = [Exp.fromjson(elt, cache) for elt in content.get_list_item(1).value_array()]
+        if elts == []:
+            from rpyp4sp import objects
+            return LiteralE(
+                value=objects.ListV.make0(typ),
+                typ=typ,
+                region=region
+            )
         return ListE(
-            elts=[Exp.fromjson(elt, cache) for elt in content.get_list_item(1).value_array()],
+            elts=elts,
             typ=typ,
             region=region
         )
