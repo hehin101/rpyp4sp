@@ -1046,8 +1046,16 @@ class CaseE(Exp):
 
     @staticmethod
     def fromjson(content, typ, region, cache=None):
+        notexp=NotExp.fromjson(content.get_list_item(1), cache)
+        if len(notexp.exps) == 1 and isinstance(notexp.exps[0], LiteralE):
+            from rpyp4sp import objects
+            return LiteralE(
+                value=objects.CaseV.make1(notexp.exps[0].eval_exp(None)[1], notexp.mixop, typ),
+                typ=typ,
+                region=region
+            )
         return CaseE(
-            notexp=NotExp.fromjson(content.get_list_item(1), cache),
+            notexp=notexp,
             typ=typ,
             region=region
         )
