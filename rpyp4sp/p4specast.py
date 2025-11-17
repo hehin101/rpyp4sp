@@ -1128,9 +1128,12 @@ class OptE(Exp):
     @staticmethod
     def fromjson(content, typ, region, cache=None):
         if content.get_list_item(1).is_null:
-            return OptE(exp=None, typ=typ, region=region)
+            return LiteralE(typ.make_opt_value(None), typ, region)
+        exp = Exp.fromjson(content.get_list_item(1), cache)
+        if isinstance(exp, LiteralE):
+            return LiteralE(typ.make_opt_value(exp.value), typ, region)
         return OptE(
-                    exp=Exp.fromjson(content.get_list_item(1), cache),
+                    exp=exp,
                     typ=typ,
                     region=region
                 )
@@ -1155,10 +1158,10 @@ class ListE(Exp):
     @staticmethod
     def fromjson(content, typ, region, cache=None):
         elts = [Exp.fromjson(elt, cache) for elt in content.get_list_item(1).value_array()]
-        if elts == []:
+        if LiteralE.all_literals(elts):
             from rpyp4sp import objects
             return LiteralE(
-                value=objects.ListV.make0(typ),
+                value=objects.ListV.make(LiteralE.get_values(elts), typ),
                 typ=typ,
                 region=region
             )
