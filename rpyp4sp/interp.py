@@ -2039,12 +2039,18 @@ class __extend__(p4specast.LenE):
         # let ctx, value = eval_exp ctx exp in
         ctx, value = eval_exp(ctx, self.lst)
         # let len = value |> Value.get_list |> List.length |> Bigint.of_int in
-        value = integers.Integer.fromint(value.get_list_len())
+        assert isinstance(value, objects.ListV)
+        if value._get_size_list() == 0:
+            value_res = objects.NumV.NAT_ZERO
+        elif value._get_size_list() == 1:
+            value_res = objects.NumV.NAT_ONE
+        else:
+            value = integers.Integer.fromint(value.get_list_len())
         # let value_res =
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(NumV (`Nat len) $$$ { vid; typ })
-        value_res = objects.NumV.make(value, p4specast.NatT.INSTANCE, typ=self.typ)
+            value_res = objects.NumV.make(value, p4specast.NatT.INSTANCE, typ=self.typ)
         # in
         # Ctx.add_node ctx value_res;
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op LenOp);
