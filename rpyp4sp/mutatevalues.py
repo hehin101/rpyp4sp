@@ -226,7 +226,7 @@ def mutate_ListV(value, rng):
         # Remove random element
         if len(elements) == 1:
             # Single element - make empty
-            return ListV.make0(value.get_typ())
+            return ListV.make([], value.get_typ())
         else:
             remove_index = rng.randint(0, len(elements) - 1)
             assert remove_index >= 0
@@ -250,7 +250,7 @@ def mutate_ListV(value, rng):
             return ListV.make(new_elements, value.get_typ())
     else:
         # Clear list (make empty)
-        return ListV.make0(value.get_typ())
+        return ListV.make([], value.get_typ())
 
 
 def mutate_OptV(value, rng):
