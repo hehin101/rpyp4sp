@@ -667,6 +667,21 @@ class LiteralE(Exp):
 
     def tostring(self):
         return self.value.tostring()
+    
+    @staticmethod
+    def all_literals(l):
+        for exp in l:
+            if not isinstance(exp, LiteralE):
+                return False
+        return True
+    
+    @staticmethod
+    def get_values(l):
+        res = []
+        for exp in l:
+            assert isinstance(exp, LiteralE)
+            res.append(exp.value)
+        return res
 
 
 class BoolE(Exp):
@@ -1047,6 +1062,13 @@ class CaseE(Exp):
     @staticmethod
     def fromjson(content, typ, region, cache=None):
         notexp=NotExp.fromjson(content.get_list_item(1), cache)
+        if LiteralE.all_literals(notexp.exps):
+            from rpyp4sp import objects
+            return LiteralE(
+                value=objects.CaseV.make(LiteralE.get_values(notexp.exps), notexp.mixop, typ),
+                typ=typ,
+                region=region
+            )
         if len(notexp.exps) == 1 and isinstance(notexp.exps[0], LiteralE):
             from rpyp4sp import objects
             return LiteralE(
