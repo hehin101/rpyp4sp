@@ -1510,6 +1510,12 @@ class Type(AstBase):
             res = res.iter_of(iter)
         return res
 
+    def empty_list_value(self):
+        assert 0
+
+    def opt_none_value(self):
+        assert 0
+
 
 class BoolT(Type):
     def __init__(self, region=None):
