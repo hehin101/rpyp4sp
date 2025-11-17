@@ -2040,7 +2040,6 @@ class __extend__(p4specast.LenE):
         ctx, value = eval_exp(ctx, self.lst)
         # let len = value |> Value.get_list |> List.length |> Bigint.of_int in
         assert isinstance(value, objects.ListV)
-        jit.jit_debug("LenE", value.get_list_len())
         if value._get_size_list() == 0:
             value_res = objects.NumV.NAT_ZERO
         elif value._get_size_list() == 1:
