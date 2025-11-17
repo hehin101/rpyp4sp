@@ -2050,7 +2050,6 @@ class __extend__(p4specast.LenE):
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(NumV (`Nat len) $$$ { vid; typ })
-            print("LenE", value)
             value_res = objects.NumV.make(value, p4specast.NatT.INSTANCE, typ=self.typ)
         # in
         # Ctx.add_node ctx value_res;
