@@ -1069,13 +1069,6 @@ class CaseE(Exp):
                 typ=typ,
                 region=region
             )
-        if len(notexp.exps) == 1 and isinstance(notexp.exps[0], LiteralE):
-            from rpyp4sp import objects
-            return LiteralE(
-                value=objects.CaseV.make1(notexp.exps[0].eval_exp(None)[1], notexp.mixop, typ),
-                typ=typ,
-                region=region
-            )
         return CaseE(
             notexp=notexp,
             typ=typ,
