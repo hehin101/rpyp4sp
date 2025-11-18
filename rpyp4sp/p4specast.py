@@ -1044,8 +1044,16 @@ class TupleE(Exp):
 
     @staticmethod
     def fromjson(content, typ, region, cache=None):
+        elts=[Exp.fromjson(elt, cache) for elt in content.get_list_item(1).value_array()]
+        if LiteralE.all_literals(elts):
+            from rpyp4sp import objects
+            return LiteralE(
+                value=objects.TupleV.make(LiteralE.get_values(elts), typ),
+                typ=typ,
+                region=region
+            )
         return TupleE(
-            elts=[Exp.fromjson(elt, cache) for elt in content.get_list_item(1).value_array()],
+            elts=elts,
             typ=typ,
             region=region
         )
