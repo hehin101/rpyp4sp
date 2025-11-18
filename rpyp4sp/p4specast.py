@@ -696,8 +696,9 @@ class BoolE(Exp):
 
     @staticmethod
     def fromjson(content, typ, region, cache=None):
-        return BoolE(
-            value=content.get_list_item(1).value_bool(),
+        from rpyp4sp import objects
+        return LiteralE(
+            value=objects.BoolV.make(content.get_list_item(1).value_bool(), typ),
             typ=typ,
             region=region
         )
@@ -730,7 +731,12 @@ class NumE(Exp):
 
     @staticmethod
     def fromstr(valuestr, what, typ=None, region=None):
-        return NumE(integers.Integer.fromstr(valuestr), what, typ, region)
+        from rpyp4sp import objects
+        return LiteralE(
+                value=objects.NumV.make(integers.Integer.fromstr(valuestr), what, typ),
+                typ=typ,
+                region=region
+            )
 
     def __repr__(self):
         return "p4specast.NumE.fromstr(%r, %r)" % (self.value.str(), self.what)
@@ -750,11 +756,12 @@ class TextE(Exp):
 
     @staticmethod
     def fromjson(content, typ, region, cache=None):
-        return TextE(
-            value=content.get_list_item(1).value_string(),
-            typ=typ,
-            region=region
-        )
+        from rpyp4sp import objects
+        return LiteralE(
+                value=objects.TextV(content.get_list_item(1).value_string(), typ),
+                typ=typ,
+                region=region
+            )
 
     def __repr__(self):
         return "p4specast.TextE(%r)" % (self.value,)
