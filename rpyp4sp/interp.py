@@ -1108,11 +1108,10 @@ class __extend__(p4specast.HoldI):
         #      if cond then eval_instrs ctx Cont instrs_hold
             if cond:
                 return eval_instrs(ctx, holdcase.hold_instrs)
+            else:
         #      else (
         #        ctx.cover := cover_backup;
         #        eval_instrs ctx Cont instrs_not_hold)
-                return eval_instrs(ctx, Cont(), holdcase.hold_instrs)
-            else:
                 ctx = ctx.restore_cover(cover_backup)
                 return eval_instrs(ctx, holdcase.nothold_instrs)
         #  | HoldH (instrs_hold, phantom_opt) ->
