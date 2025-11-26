@@ -248,6 +248,9 @@ class NumVWithTyp(NumV):
     def get_typ(self):
         return self.typ
 
+NumV.NAT_ZERO = NumV.fromstr('0', p4specast.NatT.INSTANCE, p4specast.NatT.INSTANCE)
+NumV.NAT_ONE = NumV.fromstr('1', p4specast.NatT.INSTANCE, p4specast.NatT.INSTANCE)
+
 class TextV(BaseVWithTyp):
     _compare_tag = 2
 

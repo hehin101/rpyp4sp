@@ -2046,6 +2046,8 @@ class Instr(AstBase):
             ast = CaseI.fromjson(content, cache)
         elif what == 'OtherwiseI':
             ast = OtherwiseI.fromjson(content, cache)
+        elif what == 'GroupI':
+            ast = GroupI.fromjson(content, cache)
         elif what == 'LetI':
             ast = LetI.fromjson(content, cache)
         elif what == 'RuleI':
@@ -2278,6 +2280,28 @@ class OtherwiseI(Instr):
 
     def __repr__(self):
         return "p4specast.OtherwiseI(%r)" % (self.instr,)
+
+class GroupI(Instr):
+    # | GroupI of id * exp list * instr list
+    _immutable_fields_ = ['id', 'exps[*]', 'instrs[*]']
+
+    def __init__(self, id, exps, instrs, region=None):
+        self.id = id
+        self.exps = exps
+        self.instrs = instrs
+        self.region = region
+
+    @staticmethod
+    def fromjson(content, cache=None):
+        return GroupI(
+            id=Id.fromjson(content.get_list_item(1), cache),
+            exps=[Exp.fromjson(exp) for exp in content.get_list_item(2).value_array()],
+            instrs=[Instr.fromjson(instr) for instr in content.get_list_item(3).value_array()]
+        )
+
+    def __repr__(self):
+        return "p4specast.GroupI(%r, %s, %r)" % (self.id, self.cases, self.instrs)
+
 
 class LetI(InstrWithIters):
     _immutable_fields_ = ['var', 'value']

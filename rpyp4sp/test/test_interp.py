@@ -194,6 +194,54 @@ def iter_all(fn):
             else:
                 assert 0
 
+def test_groupi_with_resultI():
+    ctx = make_context()
+
+    num_exp = p4specast.NumE.fromstr('5', p4specast.NatT.INSTANCE)
+    num_exp.typ = p4specast.NumT.NAT
+
+    result_instr = p4specast.ResultI([num_exp])
+
+    group_id = p4specast.Id('test_group', p4specast.NO_REGION)
+    group_instr = p4specast.GroupI(group_id, [], [result_instr])
+
+    result = interp.eval_instr(ctx, group_instr)
+
+    from rpyp4sp.sign import Res
+    assert isinstance(result, Res)
+    assert result._size_list == 1
+    assert result._get_list(0).eq(objects.NumV.fromstr('5', p4specast.NatT.INSTANCE, p4specast.NumT.NAT))
+
+def test_groupi_empty():
+    ctx = make_context()
+
+    # Create a GroupI with no instructions
+    group_id = p4specast.Id('empty_group', p4specast.NO_REGION)
+    group_instr = p4specast.GroupI(group_id, [], [])
+
+    result = interp.eval_instr(ctx, group_instr)
+
+    from rpyp4sp.context import Context
+    assert isinstance(result, Context)
+    assert result is ctx
+
+def test_groupi_with_return_raises_error():
+    ctx = make_context()
+
+    bool_exp = p4specast.BoolE(True)
+    bool_exp.typ = p4specast.BoolT.INSTANCE
+
+    return_instr = p4specast.ReturnI(bool_exp)
+
+    # Create a GroupI with the ReturnI
+    group_id = p4specast.Id('test_group', p4specast.NO_REGION)
+    group_instr = p4specast.GroupI(group_id, [], [return_instr])
+
+    from rpyp4sp.error import P4EvaluationError
+    with pytest.raises(P4EvaluationError) as e:
+        interp.eval_instr(ctx, group_instr)
+
+
 def test_all():
     # load test cases from line-based json file
     # check if file exists
