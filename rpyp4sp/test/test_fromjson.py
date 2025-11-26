@@ -189,14 +189,14 @@ def test_group_i():
 
     # Verify the expressions list
     assert len(group_i.exps) == 1
-    assert isinstance(group_i.exps[0], p4specast.BoolE)
-    assert group_i.exps[0].value == True
+    assert isinstance(group_i.exps[0], p4specast.LiteralE)
+    assert group_i.exps[0].value.value == True
 
     # Verify the instructions list
     assert len(group_i.instrs) == 1
     assert isinstance(group_i.instrs[0], p4specast.ReturnI)
-    assert isinstance(group_i.instrs[0].exp, p4specast.BoolE)
-    assert group_i.instrs[0].exp.value == False
+    assert isinstance(group_i.instrs[0].exp, p4specast.LiteralE)
+    assert group_i.instrs[0].exp.value.value == False
 
     # Test with empty expressions and instructions
     json_str_empty = '''
