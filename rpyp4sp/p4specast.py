@@ -593,79 +593,114 @@ class Exp(AstBase):
         content = value.get_dict_value('it')
         what = content.get_list_item(0).value_string()
         if what == 'BoolE':
-            ast = BoolE.fromjson(content, cache)
+            ast = BoolE.fromjson(content, typ, region, cache)
         elif what == 'NumE':
-            ast = NumE.fromjson(content, cache)
+            ast = NumE.fromjson(content, typ, region, cache)
         elif what == 'TextE':
-            ast = TextE.fromjson(content, cache)
+            ast = TextE.fromjson(content, typ, region, cache)
         elif what == 'VarE':
-            ast = VarE.fromjson(content, cache)
+            ast = VarE.fromjson(content, typ, region, cache)
         elif what == 'UnE':
-            ast = UnE.fromjson(content, cache)
+            ast = UnE.fromjson(content, typ, region, cache)
         elif what == 'BinE':
-            ast = BinE.fromjson(content, cache)
+            ast = BinE.fromjson(content, typ, region, cache)
         elif what == 'CmpE':
-            ast = CmpE.fromjson(content, cache)
+            ast = CmpE.fromjson(content, typ, region, cache)
         elif what == 'UpCastE':
-            ast = UpCastE.fromjson(content, cache)
+            ast = UpCastE.fromjson(content, typ, region, cache)
         elif what == 'DownCastE':
-            ast = DownCastE.fromjson(content, cache)
+            ast = DownCastE.fromjson(content, typ, region, cache)
         elif what == 'SubE':
-            ast = SubE.fromjson(content, cache)
+            ast = SubE.fromjson(content, typ, region, cache)
         elif what == 'MatchE':
-            ast = MatchE.fromjson(content, cache)
+            ast = MatchE.fromjson(content, typ, region, cache)
         elif what == 'TupleE':
-            ast = TupleE.fromjson(content, cache)
+            ast = TupleE.fromjson(content, typ, region, cache)
         elif what == 'CaseE':
-            ast = CaseE.fromjson(content, cache)
+            ast = CaseE.fromjson(content, typ, region, cache)
         elif what == 'StrE':
-            ast = StrE.fromjson(content, cache)
+            ast = StrE.fromjson(content, typ, region, cache)
         elif what == 'OptE':
-            ast = OptE.fromjson(content, cache)
+            ast = OptE.fromjson(content, typ, region, cache)
         elif what == 'ListE':
-            ast = ListE.fromjson(content, cache)
+            ast = ListE.fromjson(content, typ, region, cache)
         elif what == 'ConsE':
-            ast = ConsE.fromjson(content, cache)
+            ast = ConsE.fromjson(content, typ, region, cache)
         elif what == 'CatE':
-            ast = CatE.fromjson(content, cache)
+            ast = CatE.fromjson(content, typ, region, cache)
         elif what == 'MemE':
-            ast = MemE.fromjson(content, cache)
+            ast = MemE.fromjson(content, typ, region, cache)
         elif what == 'LenE':
-            ast = LenE.fromjson(content, cache)
+            ast = LenE.fromjson(content, typ, region, cache)
         elif what == 'DotE':
-            ast = DotE.fromjson(content, cache)
+            ast = DotE.fromjson(content, typ, region, cache)
         elif what == 'IdxE':
-            ast = IdxE.fromjson(content, cache)
+            ast = IdxE.fromjson(content, typ, region, cache)
         elif what == 'SliceE':
-            ast = SliceE.fromjson(content, cache)
+            ast = SliceE.fromjson(content, typ, region, cache)
         elif what == 'UpdE':
-            ast = UpdE.fromjson(content, cache)
+            ast = UpdE.fromjson(content, typ, region, cache)
         elif what == 'CallE':
-            ast = CallE.fromjson(content, cache)
+            ast = CallE.fromjson(content, typ, region, cache)
         elif what == 'IterE':
-            ast = IterE.fromjson(content, cache)
+            ast = IterE.fromjson(content, typ, region, cache)
         else:
             raise P4UnknownTypeError("Unknown Exp type: %s" % what)
-        ast.typ = typ
-        ast.region = region
         return ast
 
     def tostring(self):
         assert 0
 
 
+class LiteralE(Exp):
+    _attrs_ = ['value']
+    _immutable_fields_ = ['value']
+
+    def __init__(self, value, typ=None, region=None):
+        from rpyp4sp import objects
+        self.value = value # type: objects.BaseV
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
+
+    def __repr__(self):
+        return "p4specast.LiteralE(%r)" % (self.value)
+
+    def tostring(self):
+        return self.value.tostring()
+    
+    @staticmethod
+    def all_literals(l):
+        for exp in l:
+            if not isinstance(exp, LiteralE):
+                return False
+        return True
+    
+    @staticmethod
+    def get_values(l):
+        res = []
+        for exp in l:
+            assert isinstance(exp, LiteralE)
+            res.append(exp.value)
+        return res
+
+
 class BoolE(Exp):
     _attrs_ = ['value']
     _immutable_fields_ = ['value']
 
-    def __init__(self, value):
+    def __init__(self, value, typ=None, region=None):
         assert isinstance(value, bool)
         self.value = value # type: bool
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     @staticmethod
-    def fromjson(content, cache=None):
-        return BoolE(
-            value=content.get_list_item(1).value_bool()
+    def fromjson(content, typ, region, cache=None):
+        from rpyp4sp import objects
+        return LiteralE(
+            value=objects.BoolV.make(content.get_list_item(1).value_bool(), typ),
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -678,25 +713,30 @@ class BoolE(Exp):
 
 class NumE(Exp):
     _immutable_fields_ = ['value', 'what']
-    def __init__(self, value, what, typ=None):
+    def __init__(self, value, what, typ=None, region=None):
         self.value = value # type: integers.Integer
         self.what = what # type: IntType
-        self.typ = typ # type: Type
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         what = content.get_list_item(1).get_list_item(0).value_string()
         if what == 'Int':
             what = IntT.INSTANCE
         else:
             assert what == 'Nat'
             what = NatT.INSTANCE
-        return NumE.fromstr(content.get_list_item(1).get_list_item(1).value_string(), what)
+        return NumE.fromstr(content.get_list_item(1).get_list_item(1).value_string(), what, typ, region)
 
     @staticmethod
-    def fromstr(valuestr, what, typ=None):
-        return NumE(integers.Integer.fromstr(valuestr),
-                    what, typ)
+    def fromstr(valuestr, what, typ=None, region=None):
+        from rpyp4sp import objects
+        return LiteralE(
+                value=objects.NumV.make(integers.Integer.fromstr(valuestr), what, typ),
+                typ=typ,
+                region=region
+            )
 
     def __repr__(self):
         return "p4specast.NumE.fromstr(%r, %r)" % (self.value.str(), self.what)
@@ -709,14 +749,19 @@ class NumE(Exp):
 class TextE(Exp):
     _immutable_fields_ = ['value']
 
-    def __init__(self, value):
-        self.value = value # typ: str
+    def __init__(self, value, typ=None, region=None):
+        self.value = value # type: str
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     @staticmethod
-    def fromjson(content, cache=None):
-        return TextE(
-            value=content.get_list_item(1).value_string()
-        )
+    def fromjson(content, typ, region, cache=None):
+        from rpyp4sp import objects
+        return LiteralE(
+                value=objects.TextV(content.get_list_item(1).value_string(), typ),
+                typ=typ,
+                region=region
+            )
 
     def __repr__(self):
         return "p4specast.TextE(%r)" % (self.value,)
@@ -729,17 +774,21 @@ class TextE(Exp):
 class VarE(Exp):
     _immutable_fields_ = ['id']
 
-    def __init__(self, id):
-        self.id = id # typ: id
+    def __init__(self, id, typ=None, region=None):
+        self.id = id # type: Id
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
         self._ctx_keys = None
         self._ctx_index = -1
         self._ctx_keys_add = None
         self._ctx_keys_next = None
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return VarE(
-            id=Id.fromjson(content.get_list_item(1), cache)
+            id=Id.fromjson(content.get_list_item(1), cache),
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -753,10 +802,12 @@ class UnE(Exp):
     _immutable_fields_ = ['op', 'optyp', 'exp']
     #   | UnE of unop * optyp * exp             (* unop exp *)
 
-    def __init__(self, op, optyp, exp):
+    def __init__(self, op, optyp, exp, typ=None, region=None):
         self.op = op # typ: unop
         self.optyp = optyp # typ: optyp
-        self.exp = exp # typ: Exp
+        self.exp = exp # type: Exp
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def __repr__(self):
         return "p4specast.UnE(%r, %r, %r)" % (self.op, self.optyp, self.exp)
@@ -775,21 +826,25 @@ class UnE(Exp):
         return "%s%s" % (unop_str, self.exp.tostring())
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return UnE(
             op=content.get_list_item(1).get_list_item(0).value_string(),
             optyp=content.get_list_item(2).get_list_item(0).value_string(),
-            exp=Exp.fromjson(content.get_list_item(3), cache)
+            exp=Exp.fromjson(content.get_list_item(3), cache),
+            typ=typ,
+            region=region
         )
 
 class BinE(Exp):
     _immutable_fields_ = ['binop', 'optyp', 'left', 'right']
     #   | BinE of binop * optyp * exp * exp     (* exp binop exp *)
-    def __init__(self, binop, optyp, left, right):
+    def __init__(self, binop, optyp, left, right, typ=None, region=None):
         self.binop = binop # typ: binop
         self.optyp = optyp # typ: optyp
-        self.left = left # typ: Exp
-        self.right = right # typ: Exp
+        self.left = left # type: Exp
+        self.right = right # type: Exp
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def __repr__(self):
         return "p4specast.BinE(%r, %r, %r, %r)" % (self.binop, self.optyp, self.left, self.right)
@@ -817,22 +872,26 @@ class BinE(Exp):
         return "(%s %s %s)" % (self.left.tostring(), binop_str, self.right.tostring())
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return BinE(
             binop=content.get_list_item(1).get_list_item(0).value_string(),
             optyp=content.get_list_item(2).get_list_item(0).value_string(),
             left=Exp.fromjson(content.get_list_item(3), cache),
-            right=Exp.fromjson(content.get_list_item(4), cache)
+            right=Exp.fromjson(content.get_list_item(4), cache),
+            typ=typ,
+            region=region
         )
 
 class CmpE(Exp):
     _immutable_fields_ = ['cmpop', 'optyp', 'left', 'right']
 #   | CmpE of cmpop * optyp * exp * exp     (* exp cmpop exp *)
-    def __init__(self, cmpop, optyp, left, right):
+    def __init__(self, cmpop, optyp, left, right, typ=None, region=None):
         self.cmpop = cmpop # typ: cmpop
         self.optyp = optyp # typ: optyp
-        self.left = left # typ: Exp
-        self.right = right # typ: Exp
+        self.left = left # type: Exp
+        self.right = right # type: Exp
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def __repr__(self):
         return "p4specast.CmpE(%r, %r, %r, %r)" % (self.cmpop, self.optyp, self.left, self.right)
@@ -855,21 +914,25 @@ class CmpE(Exp):
         return "(%s %s %s)" % (self.left.tostring(), cmpop_str, self.right.tostring())
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return CmpE(
             cmpop=content.get_list_item(1).get_list_item(0).value_string(),
             optyp=content.get_list_item(2).get_list_item(0).value_string(),
             left=Exp.fromjson(content.get_list_item(3), cache),
-            right=Exp.fromjson(content.get_list_item(4), cache)
+            right=Exp.fromjson(content.get_list_item(4), cache),
+            typ=typ,
+            region=region
         )
 
 class UpCastE(Exp):
     _immutable_fields_ = ['check_typ', 'exp']
 
 #   | UpCastE of typ * exp                  (* exp as typ *)
-    def __init__(self, check_typ, exp):
-        self.check_typ = check_typ # typ: Typ
-        self.exp = exp # typ: Exp
+    def __init__(self, check_typ, exp, typ=None, region=None):
+        self.check_typ = check_typ # type: Type
+        self.exp = exp # type: Exp
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.UpCastE (e, t) -> string_of_exp e ^ " : " ^ string_of_typ t
@@ -879,19 +942,23 @@ class UpCastE(Exp):
         return "p4specast.UpCastE(%r, %r)" % (self.check_typ, self.exp)
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return UpCastE(
             check_typ=Type.fromjson(content.get_list_item(1), cache),
             exp=Exp.fromjson(content.get_list_item(2), cache),
+            typ=typ,
+            region=region
         )
 
 class DownCastE(Exp):
     _immutable_fields_ = ['check_typ', 'exp']
 
 #   | DownCastE of typ * exp                (* exp as typ *)
-    def __init__(self, check_typ, exp):
-        self.check_typ = check_typ # typ: typ
-        self.exp = exp # typ: exp
+    def __init__(self, check_typ, exp, typ=None, region=None):
+        self.check_typ = check_typ # type: Type
+        self.exp = exp # type: Exp
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.DownCastE (e, t) -> string_of_exp e ^ " as " ^ string_of_typ t
@@ -901,29 +968,35 @@ class DownCastE(Exp):
         return "p4specast.DownCastE(%r, %r)" % (self.check_typ, self.exp)
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return DownCastE(
             check_typ=Type.fromjson(content.get_list_item(1), cache),
             exp=Exp.fromjson(content.get_list_item(2), cache),
+            typ=typ,
+            region=region
         )
 
 class SubE(Exp):
     _immutable_fields_ = ['exp', 'check_typ']
 
 #   | SubE of exp * typ                     (* exp `<:` typ *)
-    def __init__(self, exp, check_typ):
-        self.exp = exp
-        self.check_typ = check_typ
+    def __init__(self, exp, check_typ, typ=None, region=None):
+        self.exp = exp # type: Exp
+        self.check_typ = check_typ # type: Type
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.SubE (e, _, ds) -> string_of_exp e ^ " with " ^ concat_map_nl "\n  " string_of_defn ds
         return "%s <: %s" % (self.exp.tostring(), self.check_typ.tostring())
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return SubE(
             exp=Exp.fromjson(content.get_list_item(1), cache),
-            check_typ=Type.fromjson(content.get_list_item(2), cache)
+            check_typ=Type.fromjson(content.get_list_item(2), cache),
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -933,19 +1006,23 @@ class MatchE(Exp):
     _immutable_fields_ = ['exp', 'pattern']
 
 #   | MatchE of exp * pattern               (* exp `matches` pattern *)
-    def __init__(self, exp, pattern):
-        self.exp = exp
+    def __init__(self, exp, pattern, typ=None, region=None):
+        self.exp = exp # type: Exp
         self.pattern = pattern
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.MatchE (e, cs) -> "match " ^ string_of_exp e ^ " with" ^ concat_map_nl "\n  | " string_of_clause cs
         return "%s matches %s" % (self.exp.tostring(), self.pattern.tostring())
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return MatchE(
             exp=Exp.fromjson(content.get_list_item(1), cache),
-            pattern=Pattern.fromjson(content.get_list_item(2), cache)
+            pattern=Pattern.fromjson(content.get_list_item(2), cache),
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -955,8 +1032,10 @@ class TupleE(Exp):
     _immutable_fields_ = ['elts[*]']
 
 #   | TupleE of exp list                    (* `(` exp* `)` *)
-    def __init__(self, elts):
-        self.elts = elts # typ: exp list
+    def __init__(self, elts, typ=None, region=None):
+        self.elts = elts # type: list[Exp]
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.TupleE es -> "(" ^ concat_map ", " string_of_exp es ^ ")"
@@ -964,9 +1043,19 @@ class TupleE(Exp):
         return "(%s)" % elts_str
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
+        elts=[Exp.fromjson(elt, cache) for elt in content.get_list_item(1).value_array()]
+        if LiteralE.all_literals(elts):
+            from rpyp4sp import objects
+            return LiteralE(
+                value=objects.TupleV.make(LiteralE.get_values(elts), typ),
+                typ=typ,
+                region=region
+            )
         return TupleE(
-            elts=[Exp.fromjson(elt, cache) for elt in content.get_list_item(1).value_array()]
+            elts=elts,
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -976,17 +1065,29 @@ class CaseE(Exp):
     _immutable_fields_ = ['notexp']
 
 #   | CaseE of notexp                       (* notexp *)
-    def __init__(self, notexp):
-        self.notexp = notexp
+    def __init__(self, notexp, typ=None, region=None):
+        self.notexp = notexp # type: NotExp
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.CaseE (op, es) -> string_of_mixop_with_exp op es
         return self.notexp.tostring()
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
+        notexp=NotExp.fromjson(content.get_list_item(1), cache)
+        if LiteralE.all_literals(notexp.exps):
+            from rpyp4sp import objects
+            return LiteralE(
+                value=objects.CaseV.make(LiteralE.get_values(notexp.exps), notexp.mixop, typ),
+                typ=typ,
+                region=region
+            )
         return CaseE(
-            notexp=NotExp.fromjson(content.get_list_item(1), cache)
+            notexp=notexp,
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -996,8 +1097,10 @@ class StrE(Exp):
     _immutable_fields_ = ['fields[*]']
 
 #   | StrE of (atom * exp) list             (* { expfield* } *)
-    def __init__(self, fields):
+    def __init__(self, fields, typ=None, region=None):
         self.fields = fields
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.StrE efs -> "{" ^ concat_map "; " string_of_expfield efs ^ "}"
@@ -1005,9 +1108,11 @@ class StrE(Exp):
         return "{%s}" % fields_str
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return StrE(
-            fields=[(AtomT.fromjson(field.get_list_item(0), cache), Exp.fromjson(field.get_list_item(1), cache)) for field in content.get_list_item(1).value_array()]
+            fields=[(AtomT.fromjson(field.get_list_item(0), cache), Exp.fromjson(field.get_list_item(1), cache)) for field in content.get_list_item(1).value_array()],
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -1017,8 +1122,10 @@ class OptE(Exp):
     _immutable_fields_ = ['exp']
 
 #   | OptE of exp option                    (* exp? *)
-    def __init__(self, exp):
-        self.exp = exp # typ: Exp | None
+    def __init__(self, exp, typ=None, region=None):
+        self.exp = exp # type: Exp | None
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.OptE eo -> (match eo with None -> "" | Some e -> string_of_exp e ^ "?")
@@ -1027,12 +1134,17 @@ class OptE(Exp):
         return "%s?" % self.exp.tostring()
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         if content.get_list_item(1).is_null:
-            return OptE(exp=None)
+            return LiteralE(typ.make_opt_value(None), typ, region)
+        exp = Exp.fromjson(content.get_list_item(1), cache)
+        if isinstance(exp, LiteralE):
+            return LiteralE(typ.make_opt_value(exp.value), typ, region)
         return OptE(
-            exp=Exp.fromjson(content.get_list_item(1), cache)
-        )
+                    exp=exp,
+                    typ=typ,
+                    region=region
+                )
 
     def __repr__(self):
         return "p4specast.OptE(%r)" % (self.exp,)
@@ -1041,8 +1153,10 @@ class ListE(Exp):
     _immutable_fields_ = ['elts[*]']
 
 #   | ListE of exp list                     (* `[` exp* `]` *)
-    def __init__(self, elts):
-        self.elts = elts # typ: exp list
+    def __init__(self, elts, typ=None, region=None):
+        self.elts = elts # type: list[Exp]
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.ListE es -> "[" ^ concat_map "; " string_of_exp es ^ "]"
@@ -1050,9 +1164,19 @@ class ListE(Exp):
         return "[%s]" % elts_str
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
+        elts = [Exp.fromjson(elt, cache) for elt in content.get_list_item(1).value_array()]
+        if LiteralE.all_literals(elts):
+            from rpyp4sp import objects
+            return LiteralE(
+                value=objects.ListV.make(LiteralE.get_values(elts), typ),
+                typ=typ,
+                region=region
+            )
         return ListE(
-            elts=[Exp.fromjson(elt, cache) for elt in content.get_list_item(1).value_array()]
+            elts=elts,
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -1062,19 +1186,23 @@ class ConsE(Exp):
     _immutable_fields_ = ['head', 'tail']
 
 #   | ConsE of exp * exp                    (* exp `::` exp *)
-    def __init__(self, head, tail):
-        self.head = head # typ: exp
-        self.tail = tail # typ: exp
+    def __init__(self, head, tail, typ=None, region=None):
+        self.head = head # type: Exp
+        self.tail = tail # type: Exp
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.ConsE (e1, e2) -> string_of_exp e1 ^ " :: " ^ string_of_exp e2
         return "%s :: %s" % (self.head.tostring(), self.tail.tostring())
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return ConsE(
             head=Exp.fromjson(content.get_list_item(1), cache),
-            tail=Exp.fromjson(content.get_list_item(2), cache)
+            tail=Exp.fromjson(content.get_list_item(2), cache),
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -1084,19 +1212,23 @@ class CatE(Exp):
     _immutable_fields_ = ['left', 'right']
 
 #   | CatE of exp * exp                     (* exp `++` exp *)
-    def __init__(self, left, right):
-        self.left = left # typ: exp
-        self.right = right # typ: exp
+    def __init__(self, left, right, typ=None, region=None):
+        self.left = left # type: Exp
+        self.right = right # type: Exp
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.CatE (e1, e2) -> string_of_exp e1 ^ " ++ " ^ string_of_exp e2
         return "%s ++ %s" % (self.left.tostring(), self.right.tostring())
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return CatE(
             left=Exp.fromjson(content.get_list_item(1), cache),
-            right=Exp.fromjson(content.get_list_item(2), cache)
+            right=Exp.fromjson(content.get_list_item(2), cache),
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -1106,19 +1238,23 @@ class MemE(Exp):
     _immutable_fields_ = ['elem', 'lst']
 
 #   | MemE of exp * exp                     (* exp `<-` exp *)
-    def __init__(self, elem, lst):
-        self.elem = elem # typ: exp
-        self.lst = lst # typ: exp
+    def __init__(self, elem, lst, typ=None, region=None):
+        self.elem = elem # type: Exp
+        self.lst = lst # type: Exp
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.MemE (e1, e2) -> string_of_exp e1 ^ " <- " ^ string_of_exp e2
         return "%s <- %s" % (self.elem.tostring(), self.lst.tostring())
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return MemE(
             elem=Exp.fromjson(content.get_list_item(1), cache),
-            lst=Exp.fromjson(content.get_list_item(2), cache)
+            lst=Exp.fromjson(content.get_list_item(2), cache),
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -1128,17 +1264,21 @@ class LenE(Exp):
     _immutable_fields_ = ['lst']
 
 #   | LenE of exp                           (* `|` exp `|` *)
-    def __init__(self, lst):
-        self.lst = lst # typ: exp
+    def __init__(self, lst, typ=None, region=None):
+        self.lst = lst # type: Exp
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.LenE e -> "|" ^ string_of_exp e ^ "|"
         return "|%s|" % self.lst.tostring()
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return LenE(
-            lst=Exp.fromjson(content.get_list_item(1), cache)
+            lst=Exp.fromjson(content.get_list_item(1), cache),
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -1148,19 +1288,23 @@ class DotE(Exp):
     _immutable_fields_ = ['obj', 'field']
 
 #   | DotE of exp * atom                    (* exp.atom *)
-    def __init__(self, obj, field):
-        self.obj = obj # typ: exp
+    def __init__(self, obj, field, typ=None, region=None):
+        self.obj = obj # type: Exp
         self.field = field # typ: string
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.DotE (e, atom) -> string_of_exp e ^ "." ^ string_of_atom atom
         return "%s.%s" % (self.obj.tostring(), self.field.tostring())
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return DotE(
             obj=Exp.fromjson(content.get_list_item(1), cache),
-            field=AtomT.fromjson(content.get_list_item(2), cache)
+            field=AtomT.fromjson(content.get_list_item(2), cache),
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -1170,19 +1314,23 @@ class IdxE(Exp):
     _immutable_fields_ = ['lst', 'idx']
 
 #   | IdxE of exp * exp                     (* exp `[` exp `]` *)
-    def __init__(self, lst, idx):
-        self.lst = lst # typ: exp
-        self.idx = idx # typ: exp
+    def __init__(self, lst, idx, typ=None, region=None):
+        self.lst = lst # type: Exp
+        self.idx = idx # type: Exp
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.IdxE (e1, e2) -> string_of_exp e1 ^ "[" ^ string_of_exp e2 ^ "]"
         return "%s[%s]" % (self.lst.tostring(), self.idx.tostring())
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return IdxE(
             lst=Exp.fromjson(content.get_list_item(1), cache),
-            idx=Exp.fromjson(content.get_list_item(2), cache)
+            idx=Exp.fromjson(content.get_list_item(2), cache),
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -1192,21 +1340,25 @@ class SliceE(Exp):
     _immutable_fields_ = ['lst', 'start', 'length']
 
 #   | SliceE of exp * exp * exp             (* exp `[` exp `:` exp `]` *)
-    def __init__(self, lst, start, length):
-        self.lst = lst # typ: exp
-        self.start = start # typ: exp
-        self.length = length # typ: exp
+    def __init__(self, lst, start, length, typ=None, region=None):
+        self.lst = lst # type: Exp
+        self.start = start # type: Exp
+        self.length = length # typ: Exp
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.SliceE (e1, e2, e3) -> string_of_exp e1 ^ "[" ^ string_of_exp e2 ^ " : " ^ string_of_exp e3 ^ "]"
         return "%s[%s : %s]" % (self.lst.tostring(), self.start.tostring(), self.length.tostring())
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return SliceE(
             lst=Exp.fromjson(content.get_list_item(1), cache),
             start=Exp.fromjson(content.get_list_item(2), cache),
-            length=Exp.fromjson(content.get_list_item(3), cache)
+            length=Exp.fromjson(content.get_list_item(3), cache),
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -1216,21 +1368,25 @@ class UpdE(Exp):
     _immutable_fields_ = ['exp', 'path', 'value']
 
 #   | UpdE of exp * path * exp              (* exp `[` path `=` exp `]` *)
-    def __init__(self, exp, path, value):
-        self.exp = exp
+    def __init__(self, exp, path, value, typ=None, region=None):
+        self.exp = exp # type: Exp
         self.path = path
         self.value = value
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def tostring(self):
         # | Il.Ast.UpdE (e1, p, e2) -> string_of_exp e1 ^ "[" ^ string_of_path p ^ " = " ^ string_of_exp e2 ^ "]"
         return "%s[%s = %s]" % (self.exp.tostring(), self.path.tostring(), self.value.tostring())  # TODO: implement Path.tostring
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return UpdE(
             exp=Exp.fromjson(content.get_list_item(1), cache),
             path=Path.fromjson(content.get_list_item(2), cache),
-            value=Exp.fromjson(content.get_list_item(3), cache)
+            value=Exp.fromjson(content.get_list_item(3), cache),
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -1240,10 +1396,12 @@ class CallE(Exp):
     _immutable_fields_ = ['func', 'targs[*]', 'args[*]']
 
 #   | CallE of id * targ list * arg list    (* $id`<` targ* `>``(` arg* `)` *)
-    def __init__(self, func, targs, args):
-        self.func = func # typ: Id
+    def __init__(self, func, targs, args, typ=None, region=None):
+        self.func = func # type: Id
         self.targs = targs
-        self.args = args # typ: exp list
+        self.args = args # type: list[Exp]
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
         self._ctx_fenv_keys = None
         self._ctx_func_res = None
 
@@ -1256,11 +1414,13 @@ class CallE(Exp):
         return "$%s%s(%s)" % (self.func.value, targs_str, args_str)
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return CallE(
             func=Id.fromjson(content.get_list_item(1), cache),
             targs=[Type.fromjson(targ, cache) for targ in content.get_list_item(2).value_array()],
-            args=[Arg.fromjson(arg, cache) for arg in content.get_list_item(3).value_array()]
+            args=[Arg.fromjson(arg, cache) for arg in content.get_list_item(3).value_array()],
+            typ=typ,
+            region=region
         )
 
     def __repr__(self):
@@ -1271,10 +1431,12 @@ class IterE(Exp):
     _immutable_fields_ = ['exp', 'iter', 'varlist[*]']
 #   | IterE of exp * iterexp                (* exp iterexp *)
 # iterexp = iter * var list
-    def __init__(self, exp, iter, varlist):
-        self.exp = exp
+    def __init__(self, exp, iter, varlist, typ=None, region=None):
+        self.exp = exp # type: Exp
         self.iter = iter
         self.varlist = varlist
+        self.typ = typ # type: Type | None
+        self.region = region # type: Region | None
 
     def is_simple_list_expr(self):
         # tostring of the form var * var
@@ -1297,11 +1459,13 @@ class IterE(Exp):
         return "p4specast.IterE(%r, %r, %r)" % (self.exp, self.iter, self.varlist)
 
     @staticmethod
-    def fromjson(content, cache=None):
+    def fromjson(content, typ, region, cache=None):
         return IterE(
             exp=Exp.fromjson(content.get_list_item(1), cache),
             iter=Iter.fromjson(content.get_list_item(2).get_list_item(0), cache),
             varlist=[Var.fromjson(value, cache) for value in content.get_list_item(2).get_list_item(1).value_array()],
+            typ=typ,
+            region=region
         )
 
 # and notexp = mixop * exp list

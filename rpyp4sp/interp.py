@@ -1549,6 +1549,10 @@ class __extend__(p4specast.Exp):
         #import pdb;pdb.set_trace()
         raise P4NotImplementedError("abstract base class %s" % self)
 
+class __extend__(p4specast.LiteralE):
+    def eval_exp(self, ctx):
+        return ctx, self.value
+
 class __extend__(p4specast.BoolE):
     def eval_exp(self, ctx):
         # let value_res =
@@ -1672,10 +1676,8 @@ class __extend__(p4specast.ConsE):
         #   in
         #   Ctx.add_node ctx value_res;
         #   (ctx, value_res)
-        exp_h = self.head
-        exp_t = self.tail
-        ctx, value_h = eval_exp(ctx, exp_h)
-        ctx, value_t = eval_exp(ctx, exp_t)
+        ctx, value_h = eval_exp(ctx, self.head)
+        ctx, value_t = eval_exp(ctx, self.tail)
         assert isinstance(value_t, objects.ListV)
         values_t = value_t.get_list()
         value_res = objects.ListV.make([value_h] + values_t, self.typ)
@@ -2027,24 +2029,6 @@ class __extend__(p4specast.CatE):
         #   Ctx.add_edge ctx value_res value_r (Dep.Edges.Op CatOp);
         #   (ctx, value_res)
         return ctx, value_res
-
-class __extend__(p4specast.ConsE):
-    def eval_exp(self, ctx):
-        # let ctx, value_h = eval_exp ctx exp_h in
-        ctx, value_h = eval_exp(ctx, self.head)
-        # let ctx, value_t = eval_exp ctx exp_t in
-        ctx, value_t = eval_exp(ctx, self.tail)
-        # let values_t = Value.get_list value_t in
-        values_t = value_t.get_list()
-        # let value_res =
-        #   let vid = Value.fresh () in
-        #   let typ = note in
-        #   Il.Ast.(ListV (value_h :: values_t) $$$ { vid; typ })
-        value_res = objects.ListV.make([value_h] + values_t, self.typ)
-        return ctx, value_res
-        # in
-        # Ctx.add_node ctx value_res;
-        # (ctx, value_res)
 
 class __extend__(p4specast.LenE):
     def eval_exp(self, ctx):
