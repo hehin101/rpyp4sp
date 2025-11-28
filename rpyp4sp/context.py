@@ -1,6 +1,7 @@
 from __future__ import print_function
 from rpython.rlib import jit
 from rpyp4sp import p4specast, objects, smalllist, sign
+from rpyp4sp.cover import Coverage
 from rpyp4sp.error import P4ContextError
 from rpython.rlib import jit
 
@@ -18,6 +19,7 @@ class GlobalContext(object):
         self.fenv = {}
         self.empty_envkeys = EnvKeys({}, self)
         self.empty_simple_context = Context.make0(self.empty_envkeys)
+        self.empty_context_with_coverage = Context.make0(self.empty_envkeys)
 
     @jit.elidable
     def _find_rel(self, name):
@@ -52,7 +54,7 @@ class EnvKeys(object):
     @jit.elidable
     def add_key(self, var_name, var_iter=''):
         # type: (str, str) -> EnvKeys
-        if (self._next_var_name is not None and 
+        if (self._next_var_name is not None and
                 self._next_var_name == var_name and
                 self._next_var_iter == var_iter):
             return self._next_env_keys
@@ -369,7 +371,21 @@ class Context(sign.Sign):
         return result
 
     def commit(self, sub_ctx):
-        # TODO: later add cover
+        return self
+
+    def commit_coverage_or_none(self, cover_or_none):
+        return self
+
+    def cover(self, is_hit, phantom, value=None):
+        return self
+
+    def get_cover(self):
+        return None
+
+    def restore_cover(self, cover_backup):
+        return self
+
+    def copy_and_change_cover(self, cover):
         return self
 
     @jit.unroll_safe
@@ -451,6 +467,121 @@ class Context(sign.Sign):
     def sign_get_ctx(self):
         return self
 
+@smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True, appendname="_append_with_cover")
+class ContextWithCoverage(Context):
+    _immutable_fields_ = ['glbl', 'values_input[*]',
+                          'tdenv', 'fenv', 'venv_keys', '_cover']
+    _immutable_ = True
+    def __init__(self, tdenv=None, fenv=None, venv_keys=None, cover=None):
+        # the local context is inlined
+        self.tdenv = tdenv if tdenv is not None else TDenvDict.EMPTY # type: TDenvDict
+        assert isinstance(self.tdenv, TDenvDict)
+        self.fenv = fenv if fenv is not None else FenvDict.EMPTY # type: FenvDict
+        assert isinstance(self.fenv, FenvDict)
+        self.venv_keys = venv_keys if venv_keys is not None else GlobalContext().empty_envkeys # type: EnvKeys
+        assert isinstance(self.venv_keys, EnvKeys)
+        self._cover = cover if cover is not None else Coverage.EMPTY
+        assert isinstance(self._cover, Coverage)
+
+    def copy_and_change(self, tdenv=None, fenv=None, venv_keys=None, venv_values=None):
+        tdenv = tdenv if tdenv is not None else self.tdenv
+        fenv = fenv if fenv is not None else self.fenv
+        venv_keys = venv_keys if venv_keys is not None else self.venv_keys
+        venv_values = venv_values if venv_values is not None else self._get_full_list()
+        return ContextWithCoverage.make(venv_values, tdenv, fenv, venv_keys, self._cover)
+
+    def copy_and_change_append_venv(self, value, venv_keys):
+        # see comment in ContextWithEnvs.copy_and_change_append_venv
+        return self._append_with_cover(value, self.tdenv, self.fenv, venv_keys, self._cover)
+
+    def copy_and_change_set_list(self, values, venv_keys):
+        assert self._get_size_list() == 0
+        return ContextWithCoverage.make(values, self.tdenv, self.fenv, venv_keys)
+
+    def copy_and_change_cover(self, cover):
+        venv_values = self._get_full_list()
+        return ContextWithCoverage.make(venv_values, self.tdenv, self.fenv, self.venv_keys, cover)
+
+    def localize(self):
+        return ContextWithCoverage.make0(self.tdenv, self.fenv, self.venv_keys.glbl.empty_envkeys, Coverage.EMPTY)
+
+    def try_append_case_values(self, notexp, case_value):
+        venv_keys = _notexp_compute_final_env_keys(notexp, jit.promote(self.venv_keys))
+        if venv_keys is None:
+            return None
+        values = self._get_full_list() + case_value._get_full_list()
+        return ContextWithCoverage.make(values, self.tdenv, self.fenv, venv_keys, self._cover)
+
+    def commit(self, sub_ctx):
+        if isinstance(sub_ctx, ContextWithCoverage):
+            return self.copy_and_change_cover(self._cover.union(sub_ctx._cover))
+        else:
+            return self
+
+    def commit_coverage_or_none(self, cover_or_none):
+        if cover_or_none:
+            return self.copy_and_change_cover(self._cover.union(cover_or_none))
+        return self
+
+    def cover(self, is_hit, phantom, value=None):
+        if phantom is None:
+            return self
+        new_cover = self._cover.cover(is_hit, phantom, value)
+        if new_cover is self._cover:
+            return self
+        return self.copy_and_change_cover(new_cover)
+
+    def get_cover(self):
+        return self._cover
+
+    def restore_cover(self, cover_backup):
+        return self.copy_and_change_cover(cover_backup)
+
+    def get_tdenv(self):
+        return self.tdenv
+
+    def find_typdef_local(self, id, typ_cache=None):
+        # type: (p4specast.Id, p4specast.VarT) -> tuple[list[p4specast.TParam], p4specast.DefTyp]
+        if not jit.we_are_jitted() and typ_cache and typ_cache._ctx_tdenv_keys is self.tdenv._keys:
+            return typ_cache._ctx_typ_res
+        if self.tdenv.has_key(id.value):
+            typdef = self.tdenv.get(id.value)
+        else:
+            typdef = jit.promote(self.venv_keys.glbl)._find_typdef(id.value)
+            if not jit.we_are_jitted() and typ_cache:
+                typ_cache._ctx_tdenv_keys = self.tdenv._keys
+                typ_cache._ctx_typ_res = typdef
+        return typdef
+
+    def add_typdef_local(self, id, typdef):
+        # type: (p4specast.TParam, tuple[list[p4specast.TParam], p4specast.DefTyp]) -> Context
+        tdenv = self.tdenv.set(id.value, typdef)
+        result = self.copy_and_change(tdenv=tdenv)
+        return result
+
+    def get_fenv(self):
+        return self.fenv
+
+    def find_func_local(self, id, calle_cache=None):
+        # type: (p4specast.Id, p4specast.CallE) -> p4specast.DecD
+        if not jit.we_are_jitted() and calle_cache and calle_cache._ctx_fenv_keys is self.fenv._keys:
+            return calle_cache._ctx_func_res
+        if self.fenv.has_key(id.value):
+            func = self.fenv.get(id.value)
+        else:
+            func = jit.promote(self.venv_keys.glbl)._find_func(id.value)
+            if not jit.we_are_jitted() and calle_cache:
+                calle_cache._ctx_fenv_keys = self.fenv._keys
+                calle_cache._ctx_func_res = func
+        return func
+
+    def add_func_local(self, id, func):
+        # type: (p4specast.Id, p4specast.DecD) -> Context
+        fenv = self.fenv.set(id.value, func)
+        result = self.copy_and_change(fenv=fenv)
+        return result
+
+
 @smalllist.inline_small_list(immutable=True, append_list_unroll_safe=True, appendname="_append_with_envs")
 class ContextWithEnvs(Context):
     _attrs_ = ['tdenv', 'fenv']
@@ -524,6 +655,7 @@ class ContextWithEnvs(Context):
         fenv = self.fenv.set(id.value, func)
         result = self.copy_and_change(fenv=fenv)
         return result
+
 
 class SubListIter(object):
     def __init__(self, ctx, varlist, length, values_batch):

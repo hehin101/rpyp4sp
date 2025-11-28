@@ -3,12 +3,15 @@
 .vscode/
 
 /pypy/
-/pypy_binary/
+/_pypy_binary/
+/rpyp4sp/.hypothesis/
+.cache
 *.pyc
 *.json
 integrationtests/*.actual
 targetrpyp4sp-c*
 
+.vscode/
 *.csv
 gcout
 

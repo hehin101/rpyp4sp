@@ -590,12 +590,18 @@ def _integer_to_value(integer):
 @register_builtin("shl")
 def numerics_shl(targs, values_input):
     left, right = values_input
-    return _integer_to_value(left.get_num().lshift(right.get_num().toint()))
+    shamount = right.get_num().toint()
+    if shamount < 0:
+        raise P4BuiltinError("shift amount cannot be negative (shl)")
+    return _integer_to_value(left.get_num().lshift(shamount))
 
 @register_builtin("shr")
 def numerics_shr(targs, values_input):
     left, right = values_input
-    return _integer_to_value(left.get_num().rshift(right.get_num().toint()))
+    shamount = right.get_num().toint()
+    if shamount < 0:
+        raise P4BuiltinError("shift amount cannot be negative (shr)")
+    return _integer_to_value(left.get_num().rshift(shamount))
 
 @register_builtin("shr_arith")
 def numerics_shr_arith(targs, values_input):

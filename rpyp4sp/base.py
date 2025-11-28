@@ -32,6 +32,19 @@ class BaseV(SubBase):
             raise P4UnknownTypeError("Unknown content type")
         return value
 
+    def tojson(self):
+        from rpyp4sp import rpyjson, p4specast
+        note_map = rpyjson.ROOT_MAP.get_next("typ").get_next("vid")
+        typ = self.get_typ()
+        assert isinstance(typ, p4specast.Type)
+        note_obj = rpyjson.JsonObject2(note_map, typ.tojson(as_bare_typ=True), rpyjson.JsonInt(-1))
+        it_array = rpyjson.JsonArray.make(self._tojson_content())
+        root_map = rpyjson.ROOT_MAP.get_next("note").get_next("it").get_next("at")
+        return rpyjson.JsonObject3(root_map, note_obj, it_array, rpyjson.json_null)
+
+    def _tojson_content(self):
+        assert 0, "subclasses must implement _tojson_content"
+
     def get_typ(self):
         raise NotImplementedError("abstract base class")
 

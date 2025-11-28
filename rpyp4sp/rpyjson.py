@@ -3,6 +3,9 @@ from rpython.rlib.rarithmetic import intmask
 from rpython.tool.pairtype import extendabletype
 
 import sys
+
+# Hexadecimal digits for explicit formatting
+HEX = '0123456789abcdef'
 from rpython.rlib.rstring import StringBuilder
 from rpython.rlib.objectmodel import specialize, always_inline, r_dict
 from rpython.rlib import rfloat, rutf8
@@ -25,6 +28,9 @@ class JsonBase(object):
         raise P4NotImplementedError("abstract base class")
 
     def tostring(self):
+        raise P4NotImplementedError("abstract base class")
+
+    def dumps(self, strfragments):
         raise P4NotImplementedError("abstract base class")
 
     def is_primitive(self):
@@ -95,6 +101,9 @@ class JsonNull(JsonPrimitive):
     def tostring(self):
         return "null"
 
+    def dumps(self, strfragments):
+        strfragments.append("null")
+
     def _unpack_deep(self):
         return None
 
@@ -106,6 +115,9 @@ class JsonFalse(JsonPrimitive):
 
     def tostring(self):
         return "false"
+
+    def dumps(self, strfragments):
+        strfragments.append("false")
 
     def value_bool(self):
         return False
@@ -122,6 +134,9 @@ class JsonTrue(JsonPrimitive):
 
     def tostring(self):
         return "true"
+
+    def dumps(self, strfragments):
+        strfragments.append("true")
 
     def value_bool(self):
         return True
@@ -141,6 +156,9 @@ class JsonInt(JsonPrimitive):
     def tostring(self):
         return str(self.value)
 
+    def dumps(self, strfragments):
+        strfragments.append(str(self.value))
+
     def _unpack_deep(self):
         return self.value
 
@@ -158,6 +176,9 @@ class JsonFloat(JsonPrimitive):
 
     def tostring(self):
         return str(self.value)
+
+    def dumps(self, strfragments):
+        strfragments.append(str(self.value))
 
     def value_float(self):
         return self.value
@@ -179,6 +200,36 @@ class JsonString(JsonPrimitive):
         # this function should really live in a slightly more accessible place
         from pypy.objspace.std.bytesobject import string_escape_encode
         return string_escape_encode(self.value, '"')
+
+    def dumps(self, strfragments):
+        strfragments.append('"')
+        # Escape special characters according to JSON spec
+        for char in self.value:
+            if char == '"':
+                strfragments.append('\\"')
+            elif char == '\\':
+                strfragments.append('\\\\')
+            elif char == '\b':
+                strfragments.append('\\b')
+            elif char == '\f':
+                strfragments.append('\\f')
+            elif char == '\n':
+                strfragments.append('\\n')
+            elif char == '\r':
+                strfragments.append('\\r')
+            elif char == '\t':
+                strfragments.append('\\t')
+            elif ord(char) < 32:
+                # Control characters must be escaped as \uXXXX
+                c = ord(char)
+                strfragments.append('\\u')
+                strfragments.append(HEX[c >> 12])
+                strfragments.append(HEX[(c >> 8) & 0x0f])
+                strfragments.append(HEX[(c >> 4) & 0x0f])
+                strfragments.append(HEX[c & 0x0f])
+            else:
+                strfragments.append(char)
+        strfragments.append('"')
 
     def _unpack_deep(self):
         return self.value
@@ -241,6 +292,20 @@ class JsonObject(JsonBase):
 
     def tostring(self):
         return "{%s}" % ", ".join(["\"%s\": %s" % (key, self._get_value(index).tostring()) for key, index in self.map.attrs.iteritems()])
+
+    def dumps(self, strfragments):
+        strfragments.append("{")
+        first = True
+        for key, index in self.map.attrs.iteritems():
+            if not first:
+                strfragments.append(", ")
+            first = False
+            # Create a temporary JsonString to handle key escaping
+            key_string = JsonString(key)
+            key_string.dumps(strfragments)
+            strfragments.append(": ")
+            self._get_value(index).dumps(strfragments)
+        strfragments.append("}")
 
     def _unpack_deep(self):
         result = {}
@@ -349,6 +414,9 @@ class JsonAdapterRegion(JsonBase):
     def __init__(self, region):
         self.region = region
 
+    def _unpack_deep(self):
+        return self.region.tojson()._unpack_deep()
+
     def __repr__(self):
         return "rpyjson.JsonAdapterRegion(%r)" % (self.region, )
 
@@ -361,6 +429,14 @@ class JsonArray(JsonBase):
 
     def tostring(self):
         return "[%s]" % ", ".join([self._get_list(i).tostring() for i in range(self._get_size_list())])
+
+    def dumps(self, strfragments):
+        strfragments.append("[")
+        for i, element in enumerate(self._get_full_list()):
+            if i > 0:
+                strfragments.append(", ")
+            element.dumps(strfragments)
+        strfragments.append("]")
 
     def _unpack_deep(self):
         return [self._get_list(i)._unpack_deep() for i in range(self._get_size_list())]
@@ -1153,4 +1229,19 @@ def _convert(data):
             curr_map = curr_map.get_next(key.encode("utf-8"))
             values.append(_convert(value))
         return JsonObject.make(curr_map, values)
+
+
+def dumps(json_obj):
+    """
+    Serialize a JsonBase object to a JSON string.
+
+    Args:
+        json_obj: A JsonBase instance to serialize
+
+    Returns:
+        A JSON string representation
+    """
+    fragments = []
+    json_obj.dumps(fragments)
+    return "".join(fragments)
 
