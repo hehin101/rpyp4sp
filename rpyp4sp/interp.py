@@ -4,6 +4,7 @@ from rpyp4sp import p4specast, objects, builtin, context, integers
 from rpyp4sp.error import (P4Error, P4EvaluationError, P4CastError,
                            P4NotImplementedError, P4RelationError)
 from rpyp4sp.sign import Res, Ret
+from rpyp4sp.continuation import Cont, Next, Done
 
 class VarList(object):
     _immutable_fields_ = ['vars[*]']
@@ -1553,6 +1554,12 @@ class __extend__(p4specast.LiteralE):
     def eval_exp(self, ctx):
         return ctx, self.value
 
+    def eval_cps(self, ctx, k):
+        return Done(k, self.value)
+
+    def apply(self, cont, value):
+        assert False
+
 class __extend__(p4specast.BoolE):
     def eval_exp(self, ctx):
         # let value_res =
@@ -1568,13 +1575,31 @@ class __extend__(p4specast.BoolE):
         # (ctx, value_res)
         return ctx, objects.BoolV.make(self.value, self.typ)
 
+    def eval_cps(self, ctx, k):
+        return Done(k, objects.BoolV.make(self.value, self.typ))
+
+    def apply(self, cont, value):
+        assert False
+
 class __extend__(p4specast.NumE):
     def eval_exp(self, ctx):
         return ctx, objects.NumV.make(self.value, self.what, typ=self.typ)
 
+    def eval_cps(self, ctx, k):
+        return Done(k, objects.NumV.make(self.value, self.what, typ=self.typ))
+
+    def apply(self, cont, value):
+        assert False
+
 class __extend__(p4specast.TextE):
     def eval_exp(self, ctx):
         return ctx, objects.TextV(self.value, self.typ)
+
+    def eval_cps(self, ctx, k):
+        return Done(k, objects.TextV(self.value, self.typ))
+
+    def apply(self, cont, value):
+        assert False
 
 class __extend__(p4specast.VarE):
     def eval_exp(self, ctx):
