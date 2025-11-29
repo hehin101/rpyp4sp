@@ -1607,6 +1607,13 @@ class __extend__(p4specast.VarE):
         value = ctx.find_value_local(self.id, vare_cache=self)
         return ctx, value
 
+    def eval_cps(self, ctx, k):
+        value = ctx.find_value_local(self.id, vare_cache=self)
+        return Done(k, value)
+
+    def apply(self, cont, value):
+        assert False
+
 class __extend__(p4specast.OptE):
     def eval_exp(self, ctx):
         #     Ctx.t * value =
@@ -1635,6 +1642,17 @@ class __extend__(p4specast.OptE):
         #         Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
         #       ctx.local.values_input;
         #   (ctx, value_res)
+
+    def eval_cps(self, ctx, k):
+        if self.exp is not None:
+            return Next(ctx, self.exp, Cont(self, ctx, k))
+        else:
+            value_res = self.typ.make_opt_value(None)
+            return Done(ctx, value_res)
+
+    def apply(self, cont, value):
+        result = self.typ.make_opt_value(value)
+        return Done(cont.k, result)
 
 class __extend__(p4specast.TupleE):
     def eval_exp(self, ctx):
