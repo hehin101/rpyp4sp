@@ -222,12 +222,10 @@ def test_tuple_single_cps():
     assert isinstance(result, Next), "Expected Next object for tuple with one element"
     assert result.exp is inner_exp, "Should evaluate the inner expression"
 
-    # Verify the continuation
-    assert isinstance(result.k, Cont), "Continuation should be wrapped in Cont"
+    # Verify the continuation is Cont (no ValCont yet since no elements evaluated)
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
     assert result.k.exp is exp, "Cont should reference the TupleE expression"
     assert result.k.k is k, "Cont should preserve the original continuation"
-    assert result.k.index == 0, "Index should be 0"
-    assert result.k.values is not None, "Values list should be initialized"
 
 
 def test_tuple_multiple_cps():
@@ -244,8 +242,8 @@ def test_tuple_multiple_cps():
     # Should return Next to evaluate the first element
     assert isinstance(result, Next), "Expected Next object"
     assert result.exp is exp1, "Should evaluate the first expression"
-    assert result.k.index == 0, "Index should be 0"
-    assert len(result.k.values) == 3, "Values list should have 3 slots"
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert result.k.k is k, "Cont should preserve the original continuation"
 
 
 def test_tuple_apply_single_cps():
@@ -257,8 +255,8 @@ def test_tuple_apply_single_cps():
     k = MockCont()
     inner_value = make_num(42)
 
-    values = [None]
-    cont = ListCont(exp, ctx, k, 0, values)
+    # Create continuation (no ValCont yet - first element)
+    cont = Cont(exp, ctx, k)
     result = exp.apply(cont, inner_value)
 
     # Single element tuple should be done after first apply
@@ -283,26 +281,29 @@ def test_tuple_apply_multiple_cps():
     val2 = make_num(2)
     val3 = make_num(3)
 
-    # First apply - index 0
-    values = [None, None, None]
-    cont = ListCont(exp, ctx, k, 0, values)
+    # First apply - no ValCont yet
+    from rpyp4sp.continuation import ValCont
+    cont = Cont(exp, ctx, k)
     result = exp.apply(cont, val1)
 
     assert isinstance(result, Next), "Expected Next after first apply"
     assert result.exp is exp2, "Should evaluate second expression"
-    assert result.k.index == 1, "Index should be 1"
-    assert result.k.values[0] is val1, "First value should be stored"
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert isinstance(result.k.k, ValCont), "Cont.k should be ValCont"
+    assert result.k.k.value is val1, "ValCont should store val1"
 
-    # Second apply - index 1
+    # Second apply - one ValCont
     cont2 = result.k
     result2 = exp.apply(cont2, val2)
 
     assert isinstance(result2, Next), "Expected Next after second apply"
     assert result2.exp is exp3, "Should evaluate third expression"
-    assert result2.k.index == 2, "Index should be 2"
-    assert result2.k.values[1] is val2, "Second value should be stored"
+    assert isinstance(result2.k.k, ValCont), "Cont.k should be ValCont"
+    assert result2.k.k.value is val2, "ValCont should store val2"
+    assert isinstance(result2.k.k.k, ValCont), "Nested ValCont for val1"
+    assert result2.k.k.k.value is val1, "Nested ValCont should store val1"
 
-    # Third apply - index 2 (final)
+    # Third apply - two ValConts (final)
     cont3 = result2.k
     result3 = exp.apply(cont3, val3)
 
@@ -354,12 +355,10 @@ def test_list_single_cps():
     assert isinstance(result, Next), "Expected Next object for list with one element"
     assert result.exp is inner_exp, "Should evaluate the inner expression"
 
-    # Verify the continuation
-    assert isinstance(result.k, Cont), "Continuation should be wrapped in Cont"
+    # Verify the continuation is Cont (no ValCont yet since no elements evaluated)
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
     assert result.k.exp is exp, "Cont should reference the ListE expression"
     assert result.k.k is k, "Cont should preserve the original continuation"
-    assert result.k.index == 0, "Index should be 0"
-    assert result.k.values is not None, "Values list should be initialized"
 
 
 def test_list_multiple_cps():
@@ -376,8 +375,8 @@ def test_list_multiple_cps():
     # Should return Next to evaluate the first element
     assert isinstance(result, Next), "Expected Next object"
     assert result.exp is exp1, "Should evaluate the first expression"
-    assert result.k.index == 0, "Index should be 0"
-    assert len(result.k.values) == 3, "Values list should have 3 slots"
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert result.k.k is k, "Cont should preserve the original continuation"
 
 
 def test_list_apply_single_cps():
@@ -389,8 +388,8 @@ def test_list_apply_single_cps():
     k = MockCont()
     inner_value = make_num(42)
 
-    values = [None]
-    cont = ListCont(exp, ctx, k, 0, values)
+    # Create continuation (no ValCont yet - first element)
+    cont = Cont(exp, ctx, k)
     result = exp.apply(cont, inner_value)
 
     # Single element list should be done after first apply
@@ -415,26 +414,29 @@ def test_list_apply_multiple_cps():
     val2 = make_num(2)
     val3 = make_num(3)
 
-    # First apply - index 0
-    values = [None, None, None]
-    cont = ListCont(exp, ctx, k, 0, values)
+    # First apply - no ValCont yet
+    from rpyp4sp.continuation import ValCont
+    cont = Cont(exp, ctx, k)
     result = exp.apply(cont, val1)
 
     assert isinstance(result, Next), "Expected Next after first apply"
     assert result.exp is exp2, "Should evaluate second expression"
-    assert result.k.index == 1, "Index should be 1"
-    assert result.k.values[0] is val1, "First value should be stored"
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert isinstance(result.k.k, ValCont), "Cont.k should be ValCont"
+    assert result.k.k.value is val1, "ValCont should store val1"
 
-    # Second apply - index 1
+    # Second apply - one ValCont
     cont2 = result.k
     result2 = exp.apply(cont2, val2)
 
     assert isinstance(result2, Next), "Expected Next after second apply"
     assert result2.exp is exp3, "Should evaluate third expression"
-    assert result2.k.index == 2, "Index should be 2"
-    assert result2.k.values[1] is val2, "Second value should be stored"
+    assert isinstance(result2.k.k, ValCont), "Cont.k should be ValCont"
+    assert result2.k.k.value is val2, "ValCont should store val2"
+    assert isinstance(result2.k.k.k, ValCont), "Nested ValCont for val1"
+    assert result2.k.k.k.value is val1, "Nested ValCont should store val1"
 
-    # Third apply - index 2 (final)
+    # Third apply - two ValConts (final)
     cont3 = result2.k
     result3 = exp.apply(cont3, val3)
 
@@ -474,12 +476,10 @@ def test_cons_cps():
     assert isinstance(result, Next), "Expected Next object for ConsE"
     assert result.exp is head_exp, "Should evaluate head expression first"
 
-    # Verify the continuation is BinCont with left=None
-    from rpyp4sp.continuation import BinCont
-    assert isinstance(result.k, BinCont), "Continuation should be BinCont"
+    # Verify the continuation is Cont
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
     assert result.k.exp is exp, "Cont should reference the ConsE expression"
     assert result.k.k is k, "Cont should preserve the original continuation"
-    assert result.k.left is None, "left should be None initially"
 
 
 def test_cons_apply_head_cps():
@@ -492,16 +492,17 @@ def test_cons_apply_head_cps():
     k = MockCont()
     head_value = make_num(1)
 
-    # Create continuation with left=None (just evaluated head)
-    from rpyp4sp.continuation import BinCont
-    cont = BinCont(exp, ctx, k, None)
+    # Create continuation (just evaluated head)
+    cont = Cont(exp, ctx, k)
     result = exp.apply(cont, head_value)
 
     # Should return Next to evaluate the tail expression
+    from rpyp4sp.continuation import ValCont
     assert isinstance(result, Next), "Expected Next after applying head"
     assert result.exp is tail_exp, "Should evaluate tail expression"
-    assert isinstance(result.k, BinCont), "Continuation should be BinCont"
-    assert result.k.left is head_value, "left should store the head value"
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert isinstance(result.k.k, ValCont), "Cont.k should be ValCont"
+    assert result.k.k.value is head_value, "ValCont should store the head value"
 
 
 def test_cons_apply_tail_cps():
@@ -515,9 +516,10 @@ def test_cons_apply_tail_cps():
     head_value = make_num(1)
     tail_value = objects.ListV.make([make_num(2), make_num(3)], tail_exp.typ)
 
-    # Create continuation with left=head_value (just evaluated tail)
-    from rpyp4sp.continuation import BinCont
-    cont = BinCont(exp, ctx, k, head_value)
+    # Create continuation with ValCont wrapping head_value (just evaluated tail)
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(head_value, k)
+    cont = Cont(exp, ctx, val_k)
     result = exp.apply(cont, tail_value)
 
     # Should return Done with the consed list
@@ -551,12 +553,10 @@ def test_cmp_cps():
     assert isinstance(result, Next), "Expected Next object for CmpE"
     assert result.exp is left_exp, "Should evaluate left expression first"
 
-    # Verify the continuation is BinCont with left=None
-    from rpyp4sp.continuation import BinCont
-    assert isinstance(result.k, BinCont), "Continuation should be BinCont"
+    # Verify the continuation is Cont
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
     assert result.k.exp is exp, "Cont should reference the CmpE expression"
     assert result.k.k is k, "Cont should preserve the original continuation"
-    assert result.k.left is None, "left should be None initially"
 
 
 def test_cmp_apply_left_cps():
@@ -569,16 +569,17 @@ def test_cmp_apply_left_cps():
     k = MockCont()
     left_value = make_num(1)
 
-    # Create continuation with left=None (just evaluated left)
-    from rpyp4sp.continuation import BinCont
-    cont = BinCont(exp, ctx, k, None)
+    # Create continuation (just evaluated left)
+    cont = Cont(exp, ctx, k)
     result = exp.apply(cont, left_value)
 
     # Should return Next to evaluate the right expression
+    from rpyp4sp.continuation import ValCont
     assert isinstance(result, Next), "Expected Next after applying left"
     assert result.exp is right_exp, "Should evaluate right expression"
-    assert isinstance(result.k, BinCont), "Continuation should be BinCont"
-    assert result.k.left is left_value, "left should store the left value"
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert isinstance(result.k.k, ValCont), "Cont.k should be ValCont"
+    assert result.k.k.value is left_value, "ValCont should store the left value"
 
 
 def test_cmp_apply_right_eq_cps():
@@ -592,9 +593,10 @@ def test_cmp_apply_right_eq_cps():
     left_value = make_num(42)
     right_value = make_num(42)
 
-    # Create continuation with left=left_value (just evaluated right)
-    from rpyp4sp.continuation import BinCont
-    cont = BinCont(exp, ctx, k, left_value)
+    # Create continuation with ValCont wrapping left_value (just evaluated right)
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(left_value, k)
+    cont = Cont(exp, ctx, val_k)
     result = exp.apply(cont, right_value)
 
     # Should return Done with boolean result
@@ -615,9 +617,10 @@ def test_cmp_apply_right_ne_cps():
     left_value = make_num(1)
     right_value = make_num(2)
 
-    # Create continuation with left=left_value (just evaluated right)
-    from rpyp4sp.continuation import BinCont
-    cont = BinCont(exp, ctx, k, left_value)
+    # Create continuation with ValCont wrapping left_value (just evaluated right)
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(left_value, k)
+    cont = Cont(exp, ctx, val_k)
     result = exp.apply(cont, right_value)
 
     # Should return Done with boolean result
@@ -638,9 +641,10 @@ def test_cmp_apply_right_lt_cps():
     left_value = make_num(1)
     right_value = make_num(2)
 
-    # Create continuation with left=left_value (just evaluated right)
-    from rpyp4sp.continuation import BinCont
-    cont = BinCont(exp, ctx, k, left_value)
+    # Create continuation with ValCont wrapping left_value (just evaluated right)
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(left_value, k)
+    cont = Cont(exp, ctx, val_k)
     result = exp.apply(cont, right_value)
 
     # Should return Done with boolean result
@@ -674,12 +678,10 @@ def test_bin_cps():
     assert isinstance(result, Next), "Expected Next object for BinE"
     assert result.exp is left_exp, "Should evaluate left expression first"
 
-    # Verify the continuation is BinCont with left=None
-    from rpyp4sp.continuation import BinCont
-    assert isinstance(result.k, BinCont), "Continuation should be BinCont"
+    # Verify the continuation is Cont (not ValCont wrapped yet)
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
     assert result.k.exp is exp, "Cont should reference the BinE expression"
     assert result.k.k is k, "Cont should preserve the original continuation"
-    assert result.k.left is None, "left should be None initially"
 
 
 def test_bin_apply_left_cps():
@@ -692,16 +694,18 @@ def test_bin_apply_left_cps():
     k = MockCont()
     left_value = make_num(1)
 
-    # Create continuation with left=None (just evaluated left)
-    from rpyp4sp.continuation import BinCont
-    cont = BinCont(exp, ctx, k, None)
+    # Create continuation (just evaluated left)
+    cont = Cont(exp, ctx, k)
     result = exp.apply(cont, left_value)
 
     # Should return Next to evaluate the right expression
     assert isinstance(result, Next), "Expected Next after applying left"
     assert result.exp is right_exp, "Should evaluate right expression"
-    assert isinstance(result.k, BinCont), "Continuation should be BinCont"
-    assert result.k.left is left_value, "left should store the left value"
+    # New continuation should be Cont with ValCont wrapping the left value
+    from rpyp4sp.continuation import ValCont
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert isinstance(result.k.k, ValCont), "Cont.k should be ValCont"
+    assert result.k.k.value is left_value, "ValCont should store the left value"
 
 
 def test_bin_apply_right_add_cps():
@@ -715,9 +719,10 @@ def test_bin_apply_right_add_cps():
     left_value = make_num(1)
     right_value = make_num(2)
 
-    # Create continuation with left=left_value (just evaluated right)
-    from rpyp4sp.continuation import BinCont
-    cont = BinCont(exp, ctx, k, left_value)
+    # Create continuation with ValCont wrapping left_value (just evaluated right)
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(left_value, k)
+    cont = Cont(exp, ctx, val_k)
     result = exp.apply(cont, right_value)
 
     # Should return Done with numeric result
@@ -738,9 +743,10 @@ def test_bin_apply_right_sub_cps():
     left_value = make_num(5)
     right_value = make_num(3)
 
-    # Create continuation with left=left_value (just evaluated right)
-    from rpyp4sp.continuation import BinCont
-    cont = BinCont(exp, ctx, k, left_value)
+    # Create continuation with ValCont wrapping left_value (just evaluated right)
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(left_value, k)
+    cont = Cont(exp, ctx, val_k)
     result = exp.apply(cont, right_value)
 
     # Should return Done with numeric result
@@ -761,9 +767,10 @@ def test_bin_apply_right_mul_cps():
     left_value = make_num(3)
     right_value = make_num(4)
 
-    # Create continuation with left=left_value (just evaluated right)
-    from rpyp4sp.continuation import BinCont
-    cont = BinCont(exp, ctx, k, left_value)
+    # Create continuation with ValCont wrapping left_value (just evaluated right)
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(left_value, k)
+    cont = Cont(exp, ctx, val_k)
     result = exp.apply(cont, right_value)
 
     # Should return Done with numeric result
@@ -784,9 +791,10 @@ def test_bin_apply_right_and_cps():
     left_value = make_bool(True)
     right_value = make_bool(False)
 
-    # Create continuation with left=left_value (just evaluated right)
-    from rpyp4sp.continuation import BinCont
-    cont = BinCont(exp, ctx, k, left_value)
+    # Create continuation with ValCont wrapping left_value (just evaluated right)
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(left_value, k)
+    cont = Cont(exp, ctx, val_k)
     result = exp.apply(cont, right_value)
 
     # Should return Done with boolean result
@@ -807,9 +815,10 @@ def test_bin_apply_right_or_cps():
     left_value = make_bool(True)
     right_value = make_bool(False)
 
-    # Create continuation with left=left_value (just evaluated right)
-    from rpyp4sp.continuation import BinCont
-    cont = BinCont(exp, ctx, k, left_value)
+    # Create continuation with ValCont wrapping left_value (just evaluated right)
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(left_value, k)
+    cont = Cont(exp, ctx, val_k)
     result = exp.apply(cont, right_value)
 
     # Should return Done with boolean result
@@ -963,11 +972,10 @@ def test_mem_cps():
     assert isinstance(result, Next), "Expected Next object for MemE"
     assert result.exp is elem_exp, "Should evaluate elem expression first"
 
-    # Verify the continuation is BinCont with left=None
-    assert isinstance(result.k, BinCont), "Continuation should be BinCont"
+    # Verify the continuation is Cont
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
     assert result.k.exp is exp, "Cont should reference the MemE expression"
     assert result.k.k is k, "Cont should preserve the original continuation"
-    assert result.k.left is None, "left should be None initially"
 
 
 def test_mem_apply_elem_cps():
@@ -980,15 +988,17 @@ def test_mem_apply_elem_cps():
     k = MockCont()
     elem_value = make_num(1)
 
-    # Create continuation with left=None (just evaluated elem)
-    cont = BinCont(exp, ctx, k, None)
+    # Create continuation (just evaluated elem)
+    cont = Cont(exp, ctx, k)
     result = exp.apply(cont, elem_value)
 
     # Should return Next to evaluate the lst expression
+    from rpyp4sp.continuation import ValCont
     assert isinstance(result, Next), "Expected Next after applying elem"
     assert result.exp is lst_exp, "Should evaluate lst expression"
-    assert isinstance(result.k, BinCont), "Continuation should be BinCont"
-    assert result.k.left is elem_value, "left should store the elem value"
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert isinstance(result.k.k, ValCont), "Cont.k should be ValCont"
+    assert result.k.k.value is elem_value, "ValCont should store the elem value"
 
 
 def test_mem_apply_lst_found_cps():
@@ -1002,8 +1012,10 @@ def test_mem_apply_lst_found_cps():
     elem_value = make_num(2)
     lst_value = objects.ListV.make([make_num(1), make_num(2), make_num(3)], lst_exp.typ)
 
-    # Create continuation with left=elem_value (just evaluated lst)
-    cont = BinCont(exp, ctx, k, elem_value)
+    # Create continuation with ValCont wrapping elem_value (just evaluated lst)
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(elem_value, k)
+    cont = Cont(exp, ctx, val_k)
     result = exp.apply(cont, lst_value)
 
     # Should return Done with True (elem is in list)
@@ -1024,7 +1036,9 @@ def test_mem_apply_lst_not_found_cps():
     elem_value = make_num(5)
     lst_value = objects.ListV.make([make_num(1), make_num(2), make_num(3)], lst_exp.typ)
 
-    cont = BinCont(exp, ctx, k, elem_value)
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(elem_value, k)
+    cont = Cont(exp, ctx, val_k)
     result = exp.apply(cont, lst_value)
 
     assert isinstance(result, Done), "Expected Done after applying lst"
@@ -1044,7 +1058,9 @@ def test_mem_apply_empty_list_cps():
     elem_value = make_num(1)
     lst_value = objects.ListV.make([], lst_exp.typ)
 
-    cont = BinCont(exp, ctx, k, elem_value)
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(elem_value, k)
+    cont = Cont(exp, ctx, val_k)
     result = exp.apply(cont, lst_value)
 
     assert isinstance(result, Done), "Expected Done after applying lst"
@@ -1064,7 +1080,9 @@ def test_mem_apply_single_elem_list_cps():
     elem_value = make_num(42)
     lst_value = objects.ListV.make([make_num(42)], lst_exp.typ)
 
-    cont = BinCont(exp, ctx, k, elem_value)
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(elem_value, k)
+    cont = Cont(exp, ctx, val_k)
     result = exp.apply(cont, lst_value)
 
     assert isinstance(result, Done), "Expected Done after applying lst"

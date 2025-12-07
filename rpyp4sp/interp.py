@@ -4,7 +4,7 @@ from rpyp4sp import p4specast, objects, builtin, context, integers
 from rpyp4sp.error import (P4Error, P4EvaluationError, P4CastError,
                            P4NotImplementedError, P4RelationError)
 from rpyp4sp.sign import Res, Ret
-from rpyp4sp.continuation import (Cont, Next, Done, ListCont, BinCont)
+from rpyp4sp.continuation import (Cont, Next, Done, ValCont)
 
 class VarList(object):
     _immutable_fields_ = ['vars[*]']
@@ -1654,6 +1654,30 @@ class __extend__(p4specast.OptE):
         result = self.typ.make_opt_value(value)
         return Done(cont.k, result)
 
+
+def _count_val_conts(k):
+    """Count the depth of nested ValCont objects."""
+    count = 0
+    while isinstance(k, ValCont):
+        count += 1
+        k = k.k
+    return count
+
+
+def _collect_values_from_val_conts(k, count):
+    """Collect values from nested ValConts in order (first evaluated first).
+
+    Returns (values, original_k) where original_k is the continuation after all ValConts.
+    """
+    values = []
+    for _ in range(count):
+        values.append(k.value)
+        k = k.k
+    # Reverse to get original order (innermost ValCont has last value)
+    values.reverse()
+    return values, k
+
+
 class __extend__(p4specast.TupleE):
     def eval_exp(self, ctx):
         #   let ctx, values = eval_exps ctx exps in
@@ -1677,19 +1701,23 @@ class __extend__(p4specast.TupleE):
         if not self.elts:
             value_res = objects.TupleV.make([], self.typ)
             return Done(k, value_res)
-        values = [None] * len(self.elts)
-        cont = ListCont(self, ctx, k, 0, values)
+        cont = Cont(self, ctx, k)
         return Next(ctx, self.elts[0], cont)
 
     def apply(self, cont, value):
-        cont.values[cont.index] = value
-        next_index = cont.index + 1
+        # Count how many values we already have (depth of ValCont nesting)
+        index = _count_val_conts(cont.k)
+        next_index = index + 1
+        # Wrap the new value
+        new_k = ValCont(value, cont.k)
         if next_index < len(self.elts):
-            new_cont = ListCont(self, cont.ctx, cont.k, next_index, cont.values)
+            new_cont = Cont(self, cont.ctx, new_k)
             return Next(cont.ctx, self.elts[next_index], new_cont)
         else:
-            value_res = objects.TupleV.make(cont.values, self.typ)
-            return Done(cont.k, value_res)
+            # Collect all values from nested ValConts
+            values, original_k = _collect_values_from_val_conts(new_k, next_index)
+            value_res = objects.TupleV.make(values, self.typ)
+            return Done(original_k, value_res)
 
 
 class __extend__(p4specast.ListE):
@@ -1721,22 +1749,26 @@ class __extend__(p4specast.ListE):
         if not self.elts:
             value_res = self.typ.empty_list_value()
             return Done(k, value_res)
-        values = [None] * len(self.elts)
-        cont = ListCont(self, ctx, k, 0, values)
+        cont = Cont(self, ctx, k)
         return Next(ctx, self.elts[0], cont)
 
     def apply(self, cont, value):
-        cont.values[cont.index] = value
-        next_index = cont.index + 1
+        # Count how many values we already have (depth of ValCont nesting)
+        index = _count_val_conts(cont.k)
+        next_index = index + 1
+        # Wrap the new value
+        new_k = ValCont(value, cont.k)
         if next_index < len(self.elts):
-            new_cont = ListCont(self, cont.ctx, cont.k, next_index, cont.values)
+            new_cont = Cont(self, cont.ctx, new_k)
             return Next(cont.ctx, self.elts[next_index], new_cont)
         else:
-            if len(cont.values) == 1:
-                value_res = objects.ListV.make1(cont.values[0], self.typ)
+            # Collect all values from nested ValConts
+            values, original_k = _collect_values_from_val_conts(new_k, next_index)
+            if len(values) == 1:
+                value_res = objects.ListV.make1(values[0], self.typ)
             else:
-                value_res = objects.ListV.make(cont.values, self.typ)
-            return Done(cont.k, value_res)
+                value_res = objects.ListV.make(values, self.typ)
+            return Done(original_k, value_res)
 
 def eval_cmp_bool(cmpop, value_l, value_r, typ):
     # let eq = Value.eq value_l value_r in
@@ -1768,22 +1800,23 @@ class __extend__(p4specast.ConsE):
 
     def eval_cps(self, ctx, k):
         # First evaluate head, then tail
-        cont = BinCont(self, ctx, k, None)
+        cont = Cont(self, ctx, k)
         return Next(ctx, self.head, cont)
 
     def apply(self, cont, value):
-        if cont.left is None:
-            # We just evaluated head, now evaluate tail
-            new_cont = BinCont(self, cont.ctx, cont.k, value)
-            return Next(cont.ctx, self.tail, new_cont)
-        else:
+        if isinstance(cont.k, ValCont):
             # We evaluated tail, now build the result
-            head_value = cont.left
+            head_value = cont.k.value
             tail_value = value
             assert isinstance(tail_value, objects.ListV)
             values_t = tail_value.get_list()
             value_res = objects.ListV.make([head_value] + values_t, self.typ)
-            return Done(cont.k, value_res)
+            return Done(cont.k.k, value_res)
+        else:
+            # We just evaluated head, now evaluate tail
+            val_k = ValCont(value, cont.k)
+            new_cont = Cont(self, cont.ctx, val_k)
+            return Next(cont.ctx, self.tail, new_cont)
 
 def eval_cmp_num(cmpop, value_l, value_r, typ):
     # let num_l = Value.get_num value_l in
@@ -1822,26 +1855,26 @@ class __extend__(p4specast.CmpE):
 
     def eval_cps(self, ctx, k):
         # First evaluate left, then right
-        cont = BinCont(self, ctx, k, None)
+        cont = Cont(self, ctx, k)
         return Next(ctx, self.left, cont)
 
     def apply(self, cont, value):
-        if cont.left is None:
-            # We just evaluated left, now evaluate right
-            new_cont = BinCont(self, cont.ctx, cont.k, value)
-            return Next(cont.ctx, self.right, new_cont)
-        else:
+        if isinstance(cont.k, ValCont):
             # We evaluated right, now compute the comparison
-            value_l = cont.left
+            value_l = cont.k.value
             value_r = value
-            value_res = None
             if self.cmpop in ('EqOp', 'NeOp'):
                 value_res = eval_cmp_bool(self.cmpop, value_l, value_r, self.typ)
             elif self.cmpop in ('LtOp', 'GtOp', 'LeOp', 'GeOp'):
                 value_res = eval_cmp_num(self.cmpop, value_l, value_r, self.typ)
             else:
                 assert 0, 'should be unreachable'
-            return Done(cont.k, value_res)
+            return Done(cont.k.k, value_res)
+        else:
+            # We just evaluated left, now evaluate right
+            val_k = ValCont(value, cont.k)
+            new_cont = Cont(self, cont.ctx, val_k)
+            return Next(cont.ctx, self.right, new_cont)
 
 def eval_binop_bool(binop, value_l, value_r, typ):
     # let bool_l = Value.get_bool value_l in
@@ -1903,17 +1936,13 @@ class __extend__(p4specast.BinE):
 
     def eval_cps(self, ctx, k):
         # First evaluate left, then right
-        cont = BinCont(self, ctx, k, None)
+        cont = Cont(self, ctx, k)
         return Next(ctx, self.left, cont)
 
     def apply(self, cont, value):
-        if cont.left is None:
-            # We just evaluated left, now evaluate right
-            new_cont = BinCont(self, cont.ctx, cont.k, value)
-            return Next(cont.ctx, self.right, new_cont)
-        else:
-            # We evaluated right, now compute the binary operation
-            value_l = cont.left
+        if isinstance(cont.k, ValCont):
+            # cont.k is ValCont - we have left value, just got right value
+            value_l = cont.k.value
             value_r = value
             if self.binop in ('AndOp', 'OrOp', 'ImplOp', 'EquivOp'):
                 value_res = eval_binop_bool(self.binop, value_l, value_r, self.typ)
@@ -1921,7 +1950,12 @@ class __extend__(p4specast.BinE):
                 value_res = eval_binop_num(self.binop, value_l, value_r, self.typ)
             else:
                 assert 0, "should be unreachable"
-            return Done(cont.k, value_res)
+            return Done(cont.k.k, value_res)
+        else:
+            # Just evaluated left - wrap the value and evaluate right
+            val_k = ValCont(value, cont.k)
+            new_cont = Cont(self, cont.ctx, val_k)
+            return Next(cont.ctx, self.right, new_cont)
 
 def eval_unop_bool(unop, value, typ):
     # match unop with `NotOp -> Il.Ast.BoolV (not (Value.get_bool value))
@@ -1991,17 +2025,13 @@ class __extend__(p4specast.MemE):
 
     def eval_cps(self, ctx, k):
         # First evaluate elem, then lst
-        cont = BinCont(self, ctx, k, None)
+        cont = Cont(self, ctx, k)
         return Next(ctx, self.elem, cont)
 
     def apply(self, cont, value):
-        if cont.left is None:
-            # just evaluated elem, now evaluate lst
-            new_cont = BinCont(self, cont.ctx, cont.k, value)
-            return Next(cont.ctx, self.lst, new_cont)
-        else:
+        if isinstance(cont.k, ValCont):
             # now compute membership
-            value_e = cont.left
+            value_e = cont.k.value
             value_s = value
             assert isinstance(value_s, objects.ListV)
             if value_s._get_size_list() == 0:
@@ -2012,7 +2042,12 @@ class __extend__(p4specast.MemE):
                 values_s = value_s.get_list()
                 res = _mem_list(value_e, values_s)
             value_res = objects.BoolV.make(res, self.typ)
-            return Done(cont.k, value_res)
+            return Done(cont.k.k, value_res)
+        else:
+            # just evaluated elem, now evaluate lst
+            val_k = ValCont(value, cont.k)
+            new_cont = Cont(self, cont.ctx, val_k)
+            return Next(cont.ctx, self.lst, new_cont)
 
 def _mem_list(value_e, values_s):
     for v in values_s:

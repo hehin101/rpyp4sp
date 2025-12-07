@@ -7,7 +7,11 @@
 from rpython.rlib import jit
 
 
-class Cont(object):
+class AbstractCont(object):
+    pass
+
+
+class Cont(AbstractCont):
     _immutable_fields_ = ['exp', 'ctx', 'k',]
 
     def __init__(self, exp, ctx, k):
@@ -30,14 +34,13 @@ class ListCont(Cont):
         self.values = values
 
 
-class BinCont(Cont):
-    """Continuation for binary expressions (BinE, CmpE, ConsE, etc.) that stores the left operand."""
-    _immutable_fields_ = ['exp', 'ctx', 'k', 'left']
-    def __init__(self, exp, ctx, k, left):
-        self.exp = exp
-        self.ctx = ctx
+class ValCont(AbstractCont):
+    """A continuation that captures a value."""
+    _immutable_fields_ = ['value', 'k']
+
+    def __init__(self, value, k):
+        self.value = value
         self.k = k
-        self.left = left
 
 
 # ==============
