@@ -1673,6 +1673,25 @@ class __extend__(p4specast.TupleE):
         #   (ctx, value_res)
         return ctx, value_res
 
+    def eval_cps(self, ctx, k):
+        if not self.elts:
+            value_res = objects.TupleV.make([], self.typ)
+            return Done(k, value_res)
+        values = [None] * len(self.elts)
+        cont = ListCont(self, ctx, k, 0, values)
+        return Next(ctx, self.elts[0], cont)
+
+    def apply(self, cont, value):
+        cont.values[cont.index] = value
+        next_index = cont.index + 1
+        if next_index < len(self.elts):
+            new_cont = ListCont(self, cont.ctx, cont.k, next_index, cont.values)
+            return Next(cont.ctx, self.elts[next_index], new_cont)
+        else:
+            value_res = objects.TupleV.make(cont.values, self.typ)
+            return Done(cont.k, value_res)
+
+
 class __extend__(p4specast.ListE):
     def eval_exp(self, ctx):
         #   let ctx, values = eval_exps ctx exps in
@@ -1697,6 +1716,27 @@ class __extend__(p4specast.ListE):
         #       ctx.local.values_input;
         #   (ctx, value_res)
         return ctx, value_res
+
+    def eval_cps(self, ctx, k):
+        if not self.elts:
+            value_res = self.typ.empty_list_value()
+            return Done(k, value_res)
+        values = [None] * len(self.elts)
+        cont = ListCont(self, ctx, k, 0, values)
+        return Next(ctx, self.elts[0], cont)
+
+    def apply(self, cont, value):
+        cont.values[cont.index] = value
+        next_index = cont.index + 1
+        if next_index < len(self.elts):
+            new_cont = ListCont(self, cont.ctx, cont.k, next_index, cont.values)
+            return Next(cont.ctx, self.elts[next_index], new_cont)
+        else:
+            if len(cont.values) == 1:
+                value_res = objects.ListV.make1(cont.values[0], self.typ)
+            else:
+                value_res = objects.ListV.make(cont.values, self.typ)
+            return Done(cont.k, value_res)
 
 def eval_cmp_bool(cmpop, value_l, value_r, typ):
     # let eq = Value.eq value_l value_r in
