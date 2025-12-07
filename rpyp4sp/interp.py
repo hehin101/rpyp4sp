@@ -1766,6 +1766,25 @@ class __extend__(p4specast.ConsE):
         value_res = objects.ListV.make([value_h] + values_t, self.typ)
         return ctx, value_res
 
+    def eval_cps(self, ctx, k):
+        # First evaluate head, then tail
+        cont = BinCont(self, ctx, k, None)
+        return Next(ctx, self.head, cont)
+
+    def apply(self, cont, value):
+        if cont.left is None:
+            # We just evaluated head, now evaluate tail
+            new_cont = BinCont(self, cont.ctx, cont.k, value)
+            return Next(cont.ctx, self.tail, new_cont)
+        else:
+            # We evaluated tail, now build the result
+            head_value = cont.left
+            tail_value = value
+            assert isinstance(tail_value, objects.ListV)
+            values_t = tail_value.get_list()
+            value_res = objects.ListV.make([head_value] + values_t, self.typ)
+            return Done(cont.k, value_res)
+
 def eval_cmp_num(cmpop, value_l, value_r, typ):
     # let num_l = Value.get_num value_l in
     assert isinstance(value_l, objects.NumV)
@@ -1800,6 +1819,29 @@ class __extend__(p4specast.CmpE):
         # Ctx.add_edge ctx value_res value_r (Dep.Edges.Op (CmpOp cmpop));
         # (ctx, value_res)
         return ctx, value_res
+
+    def eval_cps(self, ctx, k):
+        # First evaluate left, then right
+        cont = BinCont(self, ctx, k, None)
+        return Next(ctx, self.left, cont)
+
+    def apply(self, cont, value):
+        if cont.left is None:
+            # We just evaluated left, now evaluate right
+            new_cont = BinCont(self, cont.ctx, cont.k, value)
+            return Next(cont.ctx, self.right, new_cont)
+        else:
+            # We evaluated right, now compute the comparison
+            value_l = cont.left
+            value_r = value
+            value_res = None
+            if self.cmpop in ('EqOp', 'NeOp'):
+                value_res = eval_cmp_bool(self.cmpop, value_l, value_r, self.typ)
+            elif self.cmpop in ('LtOp', 'GtOp', 'LeOp', 'GeOp'):
+                value_res = eval_cmp_num(self.cmpop, value_l, value_r, self.typ)
+            else:
+                assert 0, 'should be unreachable'
+            return Done(cont.k, value_res)
 
 def eval_binop_bool(binop, value_l, value_r, typ):
     # let bool_l = Value.get_bool value_l in
@@ -1859,6 +1901,28 @@ class __extend__(p4specast.BinE):
         # (ctx, value_res)
         return ctx, value_res
 
+    def eval_cps(self, ctx, k):
+        # First evaluate left, then right
+        cont = BinCont(self, ctx, k, None)
+        return Next(ctx, self.left, cont)
+
+    def apply(self, cont, value):
+        if cont.left is None:
+            # We just evaluated left, now evaluate right
+            new_cont = BinCont(self, cont.ctx, cont.k, value)
+            return Next(cont.ctx, self.right, new_cont)
+        else:
+            # We evaluated right, now compute the binary operation
+            value_l = cont.left
+            value_r = value
+            if self.binop in ('AndOp', 'OrOp', 'ImplOp', 'EquivOp'):
+                value_res = eval_binop_bool(self.binop, value_l, value_r, self.typ)
+            elif self.binop in ('AddOp', 'SubOp', 'MulOp', 'DivOp', 'ModOp', 'PowOp'):
+                value_res = eval_binop_num(self.binop, value_l, value_r, self.typ)
+            else:
+                assert 0, "should be unreachable"
+            return Done(cont.k, value_res)
+
 def eval_unop_bool(unop, value, typ):
     # match unop with `NotOp -> Il.Ast.BoolV (not (Value.get_bool value))
     if unop == 'NotOp':
@@ -1883,6 +1947,20 @@ class __extend__(p4specast.UnE):
         else:
             assert 0, "Unknown unary operator: %s" % unop
         return ctx, value_res
+
+    def eval_cps(self, ctx, k):
+        return Next(ctx, self.exp, Cont(self, ctx, k))
+
+    def apply(self, cont, value):
+        unop = self.op
+        if unop in ('NotOp',):
+            value_res = eval_unop_bool(unop, value, self.typ)
+        elif unop in ('PlusOp', 'MinusOp'):
+            value_res = eval_unop_num(unop, value, self.typ)
+        else:
+            assert 0, "Unknown unary operator: %s" % unop
+        return Done(cont.k, value_res)
+
 
 class __extend__(p4specast.MemE):
     def eval_exp(self, ctx):
@@ -1910,6 +1988,31 @@ class __extend__(p4specast.MemE):
         #   Ctx.add_edge ctx value_res value_e (Dep.Edges.Op MemOp);
         #   Ctx.add_edge ctx value_res value_s (Dep.Edges.Op MemOp);
         #   (ctx, value_res)
+
+    def eval_cps(self, ctx, k):
+        # First evaluate elem, then lst
+        cont = BinCont(self, ctx, k, None)
+        return Next(ctx, self.elem, cont)
+
+    def apply(self, cont, value):
+        if cont.left is None:
+            # just evaluated elem, now evaluate lst
+            new_cont = BinCont(self, cont.ctx, cont.k, value)
+            return Next(cont.ctx, self.lst, new_cont)
+        else:
+            # now compute membership
+            value_e = cont.left
+            value_s = value
+            assert isinstance(value_s, objects.ListV)
+            if value_s._get_size_list() == 0:
+                res = False
+            elif value_s._get_size_list() == 1:
+                res = value_e.eq(value_s._get_list(0))
+            else:
+                values_s = value_s.get_list()
+                res = _mem_list(value_e, values_s)
+            value_res = objects.BoolV.make(res, self.typ)
+            return Done(cont.k, value_res)
 
 def _mem_list(value_e, values_s):
     for v in values_s:
