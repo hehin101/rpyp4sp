@@ -4,7 +4,7 @@ from rpyp4sp import p4specast, objects, builtin, context, integers
 from rpyp4sp.error import (P4Error, P4EvaluationError, P4CastError,
                            P4NotImplementedError, P4RelationError)
 from rpyp4sp.sign import Res, Ret
-from rpyp4sp.continuation import Cont, Next, Done
+from rpyp4sp.continuation import (Cont, Next, Done, ListCont, BinCont)
 
 class VarList(object):
     _immutable_fields_ = ['vars[*]']

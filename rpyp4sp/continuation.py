@@ -20,7 +20,7 @@ class Cont(object):
         return self.exp.apply(self, value)
 
 
-class ListECont(Cont):
+class ListCont(Cont):
     _immutable_fields_ = ['exp', 'ctx', 'k', 'index', 'values[*]']
     def __init__(self, exp, ctx, k, index, values):
         self.exp = exp
@@ -30,7 +30,7 @@ class ListECont(Cont):
         self.values = values
 
 
-class BinECont(Cont):
+class BinCont(Cont):
     """Continuation for binary expressions (BinE, CmpE, ConsE, etc.) that stores the left operand."""
     _immutable_fields_ = ['exp', 'ctx', 'k', 'left']
     def __init__(self, exp, ctx, k, left):
