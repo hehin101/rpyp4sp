@@ -8,7 +8,7 @@ from rpython.rlib import jit
 
 
 class Cont(object):
-    _immutable_fields_ = ['exp', 'ctx', 'k']
+    _immutable_fields_ = ['exp', 'ctx', 'k',]
 
     def __init__(self, exp, ctx, k):
         self.exp = exp
@@ -18,6 +18,26 @@ class Cont(object):
     def apply(self, value):
         "application of k"
         return self.exp.apply(self, value)
+
+
+class ListECont(Cont):
+    _immutable_fields_ = ['exp', 'ctx', 'k', 'index', 'values[*]']
+    def __init__(self, exp, ctx, k, index, values):
+        self.exp = exp
+        self.ctx = ctx
+        self.k = k
+        self.index = index
+        self.values = values
+
+
+class BinECont(Cont):
+    """Continuation for binary expressions (BinE, CmpE, ConsE, etc.) that stores the left operand."""
+    _immutable_fields_ = ['exp', 'ctx', 'k', 'left']
+    def __init__(self, exp, ctx, k, left):
+        self.exp = exp
+        self.ctx = ctx
+        self.k = k
+        self.left = left
 
 
 # ==============
