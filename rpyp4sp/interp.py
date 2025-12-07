@@ -2070,6 +2070,21 @@ class __extend__(p4specast.DotE):
         #   in
         #   (ctx, value_res)
 
+    def eval_cps(self, ctx, k):
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.obj, cont)
+
+    def apply(self, cont, value):
+        if isinstance(cont.k, ValCont):
+            # now compute field
+            value_b = value.get_struct()
+            value_field = value_b.get_field(self.field)
+            return Done(cont.k.k, value_field)
+        else:
+            val_k = ValCont(value, cont.k)
+            new_cont = Cont(self, cont.ctx, val_k)
+            return Next(cont.ctx, self.field, new_cont)
+
 class __extend__(p4specast.SubE):
     def eval_exp(self, ctx):
         typ = self.check_typ
@@ -2088,6 +2103,18 @@ class __extend__(p4specast.SubE):
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op (SubOp typ));
         # (ctx, value_res)
         return ctx, value_res
+
+    def eval_cps(self, ctx, k):
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.exp, cont)
+
+    def apply(self, cont, value):
+        typ = self.check_typ
+        note = self.typ
+        ctx = cont.ctx
+        sub = subtyp(ctx, typ, value)
+        value_res = objects.BoolV.make(sub, note)
+        return Done(cont.k, value_res)
 
 class __extend__(p4specast.DownCastE):
     def eval_exp(self, ctx):
