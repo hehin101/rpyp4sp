@@ -11,6 +11,11 @@
 integrationtests/*.actual
 targetrpyp4sp-c*
 
+# fuzzer folders
+/fuzz_corpus/
+/fuzz_p4/
+/p4_compiler_output/
+
 .vscode/
 *.csv
 gcout
