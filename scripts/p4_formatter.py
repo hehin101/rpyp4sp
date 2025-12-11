@@ -14,6 +14,7 @@ def main(args):
             print(stderr)
             continue
         tmp_file = file + ".tmp"
+        assert not os.path.exists(tmp_file)
         with open(tmp_file, "w") as f:
             f.write(stdout)
 
