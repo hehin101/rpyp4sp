@@ -1,6 +1,7 @@
 .cache
 .hypothesis/
 .vscode/
+.DS_Store
 
 /pypy/
 /_pypy_binary/
