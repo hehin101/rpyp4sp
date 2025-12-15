@@ -8,24 +8,26 @@ def main(args):
         compile_command = [args.spectec, "p4-program-value-json", "-p", file]
         process = subprocess.Popen(compile_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         stdout, stderr = process.communicate()
-        if stderr:
+        if stderr or "parsing error" in stdout or "syntax error" in stdout:
             print(f"failed to compile '{file}'")
             print(stdout)
             print(stderr)
             continue
+        json = stdout
         tmp_file = file + ".tmp"
         assert not os.path.exists(tmp_file)
         with open(tmp_file, "w") as f:
-            f.write(stdout)
+            f.write(json)
 
         decompile_command = [args.spectec, "unparse-json-value", "-j", tmp_file]
         process = subprocess.Popen(decompile_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         stdout, stderr = process.communicate()
         os.remove(tmp_file)
-        if stderr:
+        if stderr or "parsing error" in stdout or "syntax error" in stdout:
             print(f"failed to decompile '{file}'")
             print(stdout)
             print(stderr)
+            print(json)
             continue
         with open(file, "w") as f:
             f.write(stdout)
