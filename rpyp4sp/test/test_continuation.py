@@ -1089,3 +1089,365 @@ def test_mem_apply_single_elem_list_cps():
     assert result.k is k, "Should use the original continuation"
     assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
     assert result.value.value == True, "42 should be in [42]"
+
+
+# ============================================================================
+# CPS Evaluation Tests - DownCastE
+# ============================================================================
+
+def make_downcast_exp(inner_exp, check_typ):
+    """Create a DownCastE expression (exp as typ)."""
+    exp = p4specast.DownCastE(check_typ, inner_exp, check_typ)
+    return exp
+
+
+def test_downcast_cps():
+    """Test CPS evaluation of DownCastE - should evaluate inner expression first."""
+    inner_exp = make_num_exp(42)
+    check_typ = p4specast.NumT.INT
+    exp = make_downcast_exp(inner_exp, check_typ)
+    ctx = None
+
+    k = MockCont()
+    result = exp.eval_cps(ctx, k)
+
+    # Should return Next to evaluate the inner expression first
+    assert isinstance(result, Next), "Expected Next object for DownCastE"
+    assert result.exp is inner_exp, "Should evaluate inner expression first"
+
+    # Verify the continuation is Cont
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert result.k.exp is exp, "Cont should reference the DownCastE expression"
+    assert result.k.k is k, "Cont should preserve the original continuation"
+
+
+def test_downcast_apply_nat_to_nat_cps():
+    """Test DownCastE continuation application - nat to nat (no-op)."""
+    inner_exp = make_nat_exp(42)
+    check_typ = p4specast.NumT.NAT
+    exp = make_downcast_exp(inner_exp, check_typ)
+
+    # Create a minimal context for downcast
+    from rpyp4sp.context import Context
+    ctx = Context()
+
+    k = MockCont()
+    inner_value = make_nat(42)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    # Should return Done with the same value (downcast nat -> nat is a no-op)
+    assert isinstance(result, Done), "Expected Done after applying downcast"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.NumV), "Value should be NumV"
+    assert result.value.value.val == 42, "Value should be 42"
+
+
+def test_downcast_apply_int_to_nat_cps():
+    """Test DownCastE continuation application - positive int to nat."""
+    inner_exp = make_num_exp(42)
+    check_typ = p4specast.NumT.NAT
+    exp = make_downcast_exp(inner_exp, check_typ)
+
+    from rpyp4sp.context import Context
+    ctx = Context()
+
+    k = MockCont()
+    inner_value = make_num(42)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    # Should return Done with the nat value
+    assert isinstance(result, Done), "Expected Done after applying downcast"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.NumV), "Value should be NumV"
+    assert result.value.value.val == 42, "Value should be 42"
+    assert result.value.get_what() == p4specast.NatT.INSTANCE, "Should be NatT"
+
+
+# ============================================================================
+# CPS Evaluation Tests - UpCastE
+# ============================================================================
+
+def make_upcast_exp(inner_exp, check_typ):
+    """Create an UpCastE expression (exp : typ)."""
+    exp = p4specast.UpCastE(check_typ, inner_exp, check_typ)
+    return exp
+
+
+def test_upcast_cps():
+    """Test CPS evaluation of UpCastE - should evaluate inner expression first."""
+    inner_exp = make_nat_exp(42)
+    check_typ = p4specast.NumT.INT
+    exp = make_upcast_exp(inner_exp, check_typ)
+    ctx = None
+
+    k = MockCont()
+    result = exp.eval_cps(ctx, k)
+
+    # Should return Next to evaluate the inner expression first
+    assert isinstance(result, Next), "Expected Next object for UpCastE"
+    assert result.exp is inner_exp, "Should evaluate inner expression first"
+
+    # Verify the continuation is Cont
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert result.k.exp is exp, "Cont should reference the UpCastE expression"
+    assert result.k.k is k, "Cont should preserve the original continuation"
+
+
+def test_upcast_apply_nat_to_int_cps():
+    """Test UpCastE continuation application - nat to int."""
+    inner_exp = make_nat_exp(42)
+    check_typ = p4specast.NumT.INT
+    exp = make_upcast_exp(inner_exp, check_typ)
+
+    from rpyp4sp.context import Context
+    ctx = Context()
+
+    k = MockCont()
+    inner_value = make_nat(42)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    # Should return Done with the int value
+    assert isinstance(result, Done), "Expected Done after applying upcast"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.NumV), "Value should be NumV"
+    assert result.value.value.val == 42, "Value should be 42"
+    assert result.value.get_what() == p4specast.IntT.INSTANCE, "Should be IntT"
+
+
+# ============================================================================
+# CPS Evaluation Tests - MatchE
+# ============================================================================
+
+def make_match_exp(inner_exp, pattern):
+    """Create a MatchE expression (exp matches pattern)."""
+    typ = p4specast.BoolT.INSTANCE
+    exp = p4specast.MatchE(inner_exp, pattern, typ)
+    return exp
+
+
+def test_match_cps():
+    """Test CPS evaluation of MatchE - should evaluate inner expression first."""
+    inner_exp = make_list_exp([])
+    pattern = p4specast.ListP(p4specast.Nil())
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    result = exp.eval_cps(ctx, k)
+
+    # Should return Next to evaluate the inner expression first
+    assert isinstance(result, Next), "Expected Next object for MatchE"
+    assert result.exp is inner_exp, "Should evaluate inner expression first"
+
+    # Verify the continuation is Cont
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert result.k.exp is exp, "Cont should reference the MatchE expression"
+    assert result.k.k is k, "Cont should preserve the original continuation"
+
+
+def test_match_apply_list_nil_match_cps():
+    """Test MatchE continuation application - empty list matches Nil pattern."""
+    inner_exp = make_list_exp([])
+    pattern = p4specast.ListP(p4specast.Nil())
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.ListV.make([], inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    # Should return Done with True (empty list matches Nil)
+    assert isinstance(result, Done), "Expected Done after applying match"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == True, "Empty list should match Nil pattern"
+
+
+def test_match_apply_list_nil_no_match_cps():
+    """Test MatchE continuation application - non-empty list doesn't match Nil pattern."""
+    inner_exp = make_list_exp([make_num_exp(1)])
+    pattern = p4specast.ListP(p4specast.Nil())
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.ListV.make([make_num(1)], inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    # Should return Done with False (non-empty list doesn't match Nil)
+    assert isinstance(result, Done), "Expected Done after applying match"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == False, "Non-empty list should not match Nil pattern"
+
+
+def test_match_apply_list_cons_match_cps():
+    """Test MatchE continuation application - non-empty list matches Cons pattern."""
+    inner_exp = make_list_exp([make_num_exp(1), make_num_exp(2)])
+    pattern = p4specast.ListP(p4specast.Cons())
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.ListV.make([make_num(1), make_num(2)], inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    # Should return Done with True (non-empty list matches Cons)
+    assert isinstance(result, Done), "Expected Done after applying match"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == True, "Non-empty list should match Cons pattern"
+
+
+def test_match_apply_list_cons_no_match_cps():
+    """Test MatchE continuation application - empty list doesn't match Cons pattern."""
+    inner_exp = make_list_exp([])
+    pattern = p4specast.ListP(p4specast.Cons())
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.ListV.make([], inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    # Should return Done with False (empty list doesn't match Cons)
+    assert isinstance(result, Done), "Expected Done after applying match"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == False, "Empty list should not match Cons pattern"
+
+
+def test_match_apply_list_fixed_match_cps():
+    """Test MatchE continuation application - list with exact length matches Fixed pattern."""
+    inner_exp = make_list_exp([make_num_exp(1), make_num_exp(2), make_num_exp(3)])
+    pattern = p4specast.ListP(p4specast.Fixed(3))
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.ListV.make([make_num(1), make_num(2), make_num(3)], inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    # Should return Done with True (list of length 3 matches Fixed(3))
+    assert isinstance(result, Done), "Expected Done after applying match"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == True, "List of length 3 should match Fixed(3) pattern"
+
+
+def test_match_apply_list_fixed_no_match_cps():
+    """Test MatchE continuation application - list with wrong length doesn't match Fixed pattern."""
+    inner_exp = make_list_exp([make_num_exp(1), make_num_exp(2)])
+    pattern = p4specast.ListP(p4specast.Fixed(3))
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.ListV.make([make_num(1), make_num(2)], inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    # Should return Done with False (list of length 2 doesn't match Fixed(3))
+    assert isinstance(result, Done), "Expected Done after applying match"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == False, "List of length 2 should not match Fixed(3) pattern"
+
+
+def test_match_apply_opt_some_match_cps():
+    """Test MatchE continuation application - Some value matches Some pattern."""
+    inner_num_exp = make_num_exp(42)
+    inner_exp = make_opt_exp(inner_num_exp)
+    pattern = p4specast.OptP('Some')
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.OptVSome(make_num(42), inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    # Should return Done with True (Some value matches Some pattern)
+    assert isinstance(result, Done), "Expected Done after applying match"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == True, "Some value should match Some pattern"
+
+
+def test_match_apply_opt_some_no_match_cps():
+    """Test MatchE continuation application - None value doesn't match Some pattern."""
+    inner_exp = make_opt_exp(None)
+    pattern = p4specast.OptP('Some')
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.OptV(inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    # Should return Done with False (None value doesn't match Some pattern)
+    assert isinstance(result, Done), "Expected Done after applying match"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == False, "None value should not match Some pattern"
+
+
+def test_match_apply_opt_none_match_cps():
+    """Test MatchE continuation application - None value matches None pattern."""
+    inner_exp = make_opt_exp(None)
+    pattern = p4specast.OptP('None')
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.OptV(inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    # Should return Done with True (None value matches None pattern)
+    assert isinstance(result, Done), "Expected Done after applying match"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == True, "None value should match None pattern"
+
+
+def test_match_apply_opt_none_no_match_cps():
+    """Test MatchE continuation application - Some value doesn't match None pattern."""
+    inner_num_exp = make_num_exp(42)
+    inner_exp = make_opt_exp(inner_num_exp)
+    pattern = p4specast.OptP('None')
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.OptVSome(make_num(42), inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    # Should return Done with False (Some value doesn't match None pattern)
+    assert isinstance(result, Done), "Expected Done after applying match"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == False, "Some value should not match None pattern"

@@ -181,6 +181,35 @@ def eval_args(ctx, args):
         values[i] = value
     return ctx, values
 
+def _invoke_func_with_values(ctx, calle, values_input):
+    """Invoke a function with pre-evaluated argument values (for CPS)."""
+    try:
+        return _invoke_func_with_values_impl(ctx, calle, values_input)
+    except P4Error as e:
+        e.traceback_add_frame('???', calle.region, calle)
+        raise
+
+def _invoke_func_with_values_impl(ctx, calle, values_input):
+    if builtin.is_builtin(calle.func.value):
+        value_output = builtin.invoke(ctx, calle.func, calle.targs, values_input)
+        return ctx, value_output
+    # invoke_func_def with pre-evaluated values
+    from rpyp4sp.type_helpers import subst_typ_ctx
+    func = ctx.find_func_local(calle.func, calle)
+    assert func.instrs
+    ctx_local = ctx.localize()
+    assert len(calle.targs) == len(func.tparams), "arity mismatch in type arguments"
+    if calle.targs:
+        targs = [subst_typ_ctx(ctx, targ) for targ in calle.targs]
+        for i, tparam in enumerate(func.tparams):
+            targ = targs[i]
+            ctx_local = ctx_local.add_typdef_local(tparam, ([], p4specast.PlainT(targ)))
+    try:
+        return invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=ctx_local)
+    except P4Error as e:
+        e.traceback_patch_last_name(func.id.value)
+        raise
+
 # ____________________________________________________________
 # relations
 
@@ -2124,6 +2153,15 @@ class __extend__(p4specast.DownCastE):
         # (ctx, value_res)
         return downcast(ctx, self.check_typ, value)
 
+    def eval_cps(self, ctx, k):
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.exp, cont)
+
+    def apply(self, cont, value):
+        ctx = cont.ctx
+        _, value_res = downcast(ctx, self.check_typ, value)
+        return Done(cont.k, value_res)
+
 class __extend__(p4specast.UpCastE):
     def eval_exp(self, ctx):
         # let ctx, value = eval_exp ctx exp in
@@ -2131,6 +2169,15 @@ class __extend__(p4specast.UpCastE):
         # let ctx, value_res = upcast ctx typ value in
         # (ctx, value_res)
         return upcast(ctx, self.check_typ, value)
+
+    def eval_cps(self, ctx, k):
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.exp, cont)
+
+    def apply(self, cont, value):
+        ctx = cont.ctx
+        _, value_res = upcast(ctx, self.check_typ, value)
+        return Done(cont.k, value_res)
 
 class __extend__(p4specast.MatchE):
     def eval_exp(self, ctx):
@@ -2184,11 +2231,81 @@ class __extend__(p4specast.MatchE):
         # (ctx, value_res)
         return ctx, value_res
 
+    def eval_cps(self, ctx, k):
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.exp, cont)
+
+    def apply(self, cont, value):
+        pattern = self.pattern
+        if (isinstance(pattern, p4specast.CaseP) and
+                isinstance(value, objects.CaseV)):
+            matches = pattern.mixop.mixop_eq(value.mixop)
+        elif (isinstance(pattern, p4specast.ListP) and
+                isinstance(value, objects.ListV)):
+            listpattern = pattern.element
+            len_v = value._get_size_list()
+            if isinstance(listpattern, p4specast.Cons):
+                matches = (len_v > 0)
+            elif isinstance(listpattern, p4specast.Fixed):
+                matches = (len_v == listpattern.value)
+            elif isinstance(listpattern, p4specast.Nil):
+                matches = (len_v == 0)
+            else:
+                assert 0, "should be unreachable"
+        elif (isinstance(pattern, p4specast.OptP) and
+              isinstance(value, objects.OptV)):
+            assert pattern.kind in ('Some', 'None')
+            matches = value.is_opt_none() == (pattern.kind == 'None')
+        else:
+            raise P4EvaluationError("TODO MatchE")
+        value_res = objects.BoolV.make(matches, self.typ)
+        return Done(cont.k, value_res)
+
 class __extend__(p4specast.CallE):
     def eval_exp(self, ctx):
         # let ctx, value_res = invoke_func ctx id targs args in
         # (ctx, value_res)
         return invoke_func(ctx, self)
+
+    def eval_cps(self, ctx, k):
+        # For CallE, we need to evaluate arguments first, then invoke the function
+        # Find which args need evaluation (ExpA args)
+        if not self.args:
+            # No args - invoke directly
+            ctx, value_res = invoke_func(ctx, self)
+            return Done(k, value_res)
+        # Start evaluating the first arg
+        first_arg = self.args[0]
+        cont = Cont(self, ctx, k)
+        if isinstance(first_arg, p4specast.ExpA):
+            return Next(ctx, first_arg.exp, cont)
+        else:
+            # DefA - no evaluation needed, create value and continue
+            value = objects.FuncV(first_arg.id, p4specast.FuncT.INSTANCE)
+            return self._apply_arg_value(cont, value, 0)
+
+    def _apply_arg_value(self, cont, value, index):
+        """Helper to handle applying an argument value at a given index."""
+        next_index = index + 1
+        new_k = ValCont(value, cont.k)
+        if next_index < len(self.args):
+            next_arg = self.args[next_index]
+            new_cont = Cont(self, cont.ctx, new_k)
+            if isinstance(next_arg, p4specast.ExpA):
+                return Next(cont.ctx, next_arg.exp, new_cont)
+            else:
+                # DefA - no evaluation needed
+                next_value = objects.FuncV(next_arg.id, p4specast.FuncT.INSTANCE)
+                return self._apply_arg_value(new_cont, next_value, next_index)
+        else:
+            # All args evaluated - invoke the function
+            values, original_k = _collect_values_from_val_conts(new_k, next_index)
+            ctx, value_res = _invoke_func_with_values(cont.ctx, self, values)
+            return Done(original_k, value_res)
+
+    def apply(self, cont, value):
+        index = _count_val_conts(cont.k)
+        return self._apply_arg_value(cont, value, index)
 
 class __extend__(p4specast.StrE):
     @jit.unroll_safe
@@ -2215,6 +2332,34 @@ class __extend__(p4specast.StrE):
         #     ctx.local.values_input;
         # (ctx, value_res)
         return ctx, objects.StructV.make(values, map, self.typ)
+
+    def eval_cps(self, ctx, k):
+        if not self.fields:
+            # Empty struct
+            map = objects.StructMap.EMPTY
+            value_res = objects.StructV.make([], map, self.typ)
+            return Done(k, value_res)
+        # Start evaluating the first field's expression
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.fields[0][1], cont)
+
+    def apply(self, cont, value):
+        # Count how many values we already have
+        index = _count_val_conts(cont.k)
+        next_index = index + 1
+        # Wrap the new value
+        new_k = ValCont(value, cont.k)
+        if next_index < len(self.fields):
+            new_cont = Cont(self, cont.ctx, new_k)
+            return Next(cont.ctx, self.fields[next_index][1], new_cont)
+        else:
+            # All fields evaluated - build the struct
+            values, original_k = _collect_values_from_val_conts(new_k, next_index)
+            map = objects.StructMap.EMPTY
+            for i in range(len(self.fields)):
+                map = map.add_field(self.fields[i][0].value)
+            value_res = objects.StructV.make(values, map, self.typ)
+            return Done(original_k, value_res)
 
 class __extend__(p4specast.CaseE):
     def eval_exp(self, ctx):
@@ -2243,6 +2388,37 @@ class __extend__(p4specast.CaseE):
         #     ctx.local.values_input;
         # (ctx, value_res)
         return ctx, value_res
+
+    def eval_cps(self, ctx, k):
+        mixop = self.notexp.mixop
+        exps = self.notexp.exps
+        if len(exps) == 0:
+            # No expressions - return immediately
+            value_res = objects.CaseV.make0(mixop, self.typ)
+            return Done(k, value_res)
+        # Start evaluating the first expression
+        cont = Cont(self, ctx, k)
+        return Next(ctx, exps[0], cont)
+
+    def apply(self, cont, value):
+        mixop = self.notexp.mixop
+        exps = self.notexp.exps
+        # Count how many values we already have
+        index = _count_val_conts(cont.k)
+        next_index = index + 1
+        # Wrap the new value
+        new_k = ValCont(value, cont.k)
+        if next_index < len(exps):
+            new_cont = Cont(self, cont.ctx, new_k)
+            return Next(cont.ctx, exps[next_index], new_cont)
+        else:
+            # All expressions evaluated - build the CaseV
+            values, original_k = _collect_values_from_val_conts(new_k, next_index)
+            if len(values) == 1:
+                value_res = objects.CaseV.make1(values[0], mixop, self.typ)
+            else:
+                value_res = objects.CaseV.make(values, mixop, self.typ)
+            return Done(original_k, value_res)
 
 class __extend__(p4specast.CatE):
     def eval_exp(self, ctx):
