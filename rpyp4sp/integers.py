@@ -185,6 +185,9 @@ class SmallInteger(Integer):
     def lshift(self, i):
         if i < 0:
             raise P4BuiltinError("negative shift amount")
+        # more than 100 MiB
+        if i > 100*8*1024*1024:
+            raise P4BuiltinError("shift amonunt too high")
         return self.lshift_i_i(self.val, i)
 
     def mod(self, other):
@@ -416,6 +419,9 @@ class BigInteger(Integer):
     def lshift(self, i):
         if i < 0:
             raise P4BuiltinError("negative shift amount")
+        # more than 100 MiB
+        if i > 100*8*1024*1024:
+            raise P4BuiltinError("shift amonunt too high")
         return BigInteger(self.rval.lshift(i))
 
     def mod(self, other):
