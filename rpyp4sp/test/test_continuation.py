@@ -220,7 +220,7 @@ def test_bool_cps_returns_correct_type():
 
     assert isinstance(result, Done)
     assert isinstance(result.value, objects.BoolV)
-    assert result.value.typ == p4specast.BoolT.INSTANCE
+    assert result.value.get_typ() == p4specast.BoolT.INSTANCE
 
 
 def test_bool_cps_with_different_continuations():
@@ -1449,3 +1449,267 @@ def test_match_apply_opt_none_no_match_cps():
     assert result.k is k
     assert isinstance(result.value, objects.BoolV)
     assert result.value.value == False
+
+
+def make_downcast_exp(inner_exp, check_typ):
+    """Create a DownCastE expression (exp as typ)."""
+    exp = p4specast.DownCastE(check_typ, inner_exp, check_typ)
+    return exp
+
+
+def test_downcast_cps():
+    """Test CPS evaluation of DownCastE - should evaluate inner expression first."""
+    inner_exp = make_num_exp(42)
+    check_typ = p4specast.NumT.NAT
+    exp = make_downcast_exp(inner_exp, check_typ)
+    ctx = None
+
+    k = MockCont()
+    result = exp.eval_cps(ctx, k)
+
+    # Should return Next to evaluate the inner expression first
+    assert isinstance(result, Next), "Expected Next object for DownCastE"
+    assert result.exp is inner_exp, "Should evaluate inner expression first"
+
+    # Verify the continuation is Cont
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert result.k.exp is exp, "Cont should reference the DownCastE expression"
+    assert result.k.k is k, "Cont should preserve the original continuation"
+
+
+def test_downcast_apply_int_to_nat_cps():
+    """Test DownCastE continuation application - int to nat (positive int)."""
+    inner_exp = make_num_exp(42)
+    check_typ = p4specast.NumT.NAT
+    exp = make_downcast_exp(inner_exp, check_typ)
+    ctx = None
+
+    k = MockCont()
+    inner_value = make_num(42)  # int value
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    # Should return Done with downcasted value
+    assert isinstance(result, Done), "Expected Done after applying downcast"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.NumV), "Value should be NumV"
+    assert result.value.value.val == 42, "Value should be 42"
+    assert result.value.get_what() == p4specast.NatT.INSTANCE, "Should be nat type"
+
+
+def test_downcast_apply_nat_to_nat_cps():
+    """Test DownCastE continuation application - nat to nat (no change)."""
+    inner_exp = make_nat_exp(42)
+    check_typ = p4specast.NumT.NAT
+    exp = make_downcast_exp(inner_exp, check_typ)
+    ctx = None
+
+    k = MockCont()
+    inner_value = make_nat(42)  # nat value
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    # Should return Done with same value (nat already)
+    assert isinstance(result, Done), "Expected Done after applying downcast"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.NumV), "Value should be NumV"
+    assert result.value.value.val == 42, "Value should be 42"
+    assert result.value.get_what() == p4specast.NatT.INSTANCE, "Should be nat type"
+
+
+def make_upcast_exp(inner_exp, check_typ):
+    """Create an UpCastE expression (exp : typ)."""
+    exp = p4specast.UpCastE(check_typ, inner_exp, check_typ)
+    return exp
+
+
+def test_upcast_cps():
+    """Test CPS evaluation of UpCastE - should evaluate inner expression first."""
+    inner_exp = make_nat_exp(42)
+    check_typ = p4specast.NumT.INT
+    exp = make_upcast_exp(inner_exp, check_typ)
+    ctx = None
+
+    k = MockCont()
+    result = exp.eval_cps(ctx, k)
+
+    # Should return Next to evaluate the inner expression first
+    assert isinstance(result, Next), "Expected Next object for UpCastE"
+    assert result.exp is inner_exp, "Should evaluate inner expression first"
+
+    # Verify the continuation is Cont
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert result.k.exp is exp, "Cont should reference the UpCastE expression"
+    assert result.k.k is k, "Cont should preserve the original continuation"
+
+
+def test_upcast_apply_nat_to_int_cps():
+    """Test UpCastE continuation application - nat to int."""
+    inner_exp = make_nat_exp(42)
+    check_typ = p4specast.NumT.INT
+    exp = make_upcast_exp(inner_exp, check_typ)
+    ctx = None
+
+    k = MockCont()
+    inner_value = make_nat(42)  # nat value
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    # Should return Done with upcasted value
+    assert isinstance(result, Done), "Expected Done after applying upcast"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.NumV), "Value should be NumV"
+    assert result.value.value.val == 42, "Value should be 42"
+    assert result.value.get_what() == p4specast.IntT.INSTANCE, "Should be int type"
+
+
+def make_cat_exp(left_exp, right_exp):
+    """Create a CatE expression (left ++ right)."""
+    typ = left_exp.typ
+    exp = p4specast.CatE(left_exp, right_exp, typ)
+    return exp
+
+
+def test_cat_cps():
+    """Test CPS evaluation of CatE - should evaluate left first."""
+    left_exp = make_text_exp("hello")
+    right_exp = make_text_exp(" world")
+    exp = make_cat_exp(left_exp, right_exp)
+    ctx = None
+
+    k = MockCont()
+    result = exp.eval_cps(ctx, k)
+
+    # Should return Next to evaluate the left expression first
+    assert isinstance(result, Next), "Expected Next object for CatE"
+    assert result.exp is left_exp, "Should evaluate left expression first"
+
+    # Verify the continuation is Cont
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert result.k.exp is exp, "Cont should reference the CatE expression"
+    assert result.k.k is k, "Cont should preserve the original continuation"
+
+
+def test_cat_apply_left_cps():
+    """Test CatE continuation application after evaluating left."""
+    left_exp = make_text_exp("hello")
+    right_exp = make_text_exp(" world")
+    exp = make_cat_exp(left_exp, right_exp)
+    ctx = None
+
+    k = MockCont()
+    left_value = make_text("hello")
+
+    # Create continuation (just evaluated left)
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, left_value)
+
+    # Should return Next to evaluate the right expression
+    from rpyp4sp.continuation import ValCont
+    assert isinstance(result, Next), "Expected Next after applying left"
+    assert result.exp is right_exp, "Should evaluate right expression"
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert isinstance(result.k.k, ValCont), "Cont.k should be ValCont"
+    assert result.k.k.value is left_value, "ValCont should store the left value"
+
+
+def test_cat_apply_right_text_cps():
+    """Test CatE continuation application for text concatenation."""
+    left_exp = make_text_exp("hello")
+    right_exp = make_text_exp(" world")
+    exp = make_cat_exp(left_exp, right_exp)
+    ctx = None
+
+    k = MockCont()
+    left_value = make_text("hello")
+    right_value = make_text(" world")
+
+    # Create continuation with ValCont wrapping left_value (just evaluated right)
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(left_value, k)
+    cont = Cont(exp, ctx, val_k)
+    result = exp.apply(cont, right_value)
+
+    # Should return Done with concatenated text
+    assert isinstance(result, Done), "Expected Done after applying right"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.TextV), "Value should be TextV"
+    assert result.value.value == "hello world", "Should be 'hello world'"
+
+
+def test_cat_apply_right_list_cps():
+    """Test CatE continuation application for list concatenation."""
+    left_exp = make_list_exp([make_num_exp(1), make_num_exp(2)])
+    right_exp = make_list_exp([make_num_exp(3), make_num_exp(4)])
+    exp = make_cat_exp(left_exp, right_exp)
+    ctx = None
+
+    k = MockCont()
+    left_value = objects.ListV.make([make_num(1), make_num(2)], left_exp.typ)
+    right_value = objects.ListV.make([make_num(3), make_num(4)], right_exp.typ)
+
+    # Create continuation with ValCont wrapping left_value (just evaluated right)
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(left_value, k)
+    cont = Cont(exp, ctx, val_k)
+    result = exp.apply(cont, right_value)
+
+    # Should return Done with concatenated list
+    assert isinstance(result, Done), "Expected Done after applying right"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.ListV), "Value should be ListV"
+    list_values = result.value.get_list()
+    assert len(list_values) == 4, "List should have 4 elements"
+    assert list_values[0].value.val == 1
+    assert list_values[1].value.val == 2
+    assert list_values[2].value.val == 3
+    assert list_values[3].value.val == 4
+
+
+def test_cat_apply_right_empty_left_list_cps():
+    """Test CatE continuation application for list concat with empty left."""
+    left_exp = make_list_exp([])
+    right_exp = make_list_exp([make_num_exp(1), make_num_exp(2)])
+    exp = make_cat_exp(left_exp, right_exp)
+    ctx = None
+
+    k = MockCont()
+    left_value = objects.ListV.make([], left_exp.typ)
+    right_value = objects.ListV.make([make_num(1), make_num(2)], right_exp.typ)
+
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(left_value, k)
+    cont = Cont(exp, ctx, val_k)
+    result = exp.apply(cont, right_value)
+
+    # Should return Done with right list (optimization for empty left)
+    assert isinstance(result, Done), "Expected Done after applying right"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.ListV), "Value should be ListV"
+    assert result.value is right_value, "Should return right list directly"
+
+
+def test_cat_apply_right_empty_right_list_cps():
+    """Test CatE continuation application for list concat with empty right."""
+    left_exp = make_list_exp([make_num_exp(1), make_num_exp(2)])
+    right_exp = make_list_exp([])
+    exp = make_cat_exp(left_exp, right_exp)
+    ctx = None
+
+    k = MockCont()
+    left_value = objects.ListV.make([make_num(1), make_num(2)], left_exp.typ)
+    right_value = objects.ListV.make([], right_exp.typ)
+
+    from rpyp4sp.continuation import ValCont
+    val_k = ValCont(left_value, k)
+    cont = Cont(exp, ctx, val_k)
+    result = exp.apply(cont, right_value)
+
+    # Should return Done with left list (optimization for empty right)
+    assert isinstance(result, Done), "Expected Done after applying right"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.ListV), "Value should be ListV"
+    assert result.value is left_value, "Should return left list directly"
