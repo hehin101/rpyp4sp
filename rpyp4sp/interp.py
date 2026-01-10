@@ -4,7 +4,7 @@ from rpyp4sp import p4specast, objects, builtin, context, integers
 from rpyp4sp.error import (P4Error, P4EvaluationError, P4CastError,
                            P4NotImplementedError, P4RelationError)
 from rpyp4sp.sign import Res, Ret
-from rpyp4sp.continuation import (Cont, Next, Done, ValCont)
+from rpyp4sp.continuation import (Cont, Next, Done, ValCont, IterState)
 
 class VarList(object):
     _immutable_fields_ = ['vars[*]']
@@ -320,6 +320,23 @@ class __extend__(p4specast.IfI):
             return eval_instrs(ctx, self.instrs)
         return ctx
 
+    def eval_cps(self, ctx, k):
+        if self.iters:
+            ctx, cond = eval_if_cond_iter(ctx, self)
+            if cond:
+                sign = eval_instrs(ctx, self.instrs)
+                return Done(k, sign)
+            return Done(k, ctx)
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.exp, cont)
+
+    def apply(self, cont, value):
+        cond = value.get_bool()
+        if cond:
+            sign = eval_instrs(cont.ctx, self.instrs)
+            return Done(cont.k, sign)
+        return Done(cont.k, cont.ctx)
+
 def eval_if_cond_iter(ctx, instr):
     # let iterexps = List.rev iterexps in
     iterexps = instr._get_reverse_iters()
@@ -533,9 +550,39 @@ class __extend__(p4specast.CaseI):
         # | None -> (ctx, Cont)
         return ctx
 
+    def eval_cps(self, ctx, k):
+        if not self.cases:
+            return Done(k, ctx)
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.cases_exps[0], cont)
+
+    def apply(self, cont, value):
+        index = _count_val_conts(cont.k)
+        cond = value.get_bool()
+        if cond:
+            instrs = self.cases[index].instrs
+            sign = eval_instrs(cont.ctx, instrs)
+            _, original_k = _collect_values_from_val_conts(cont.k, index)
+            return Done(original_k, sign)
+        else:
+            next_index = index + 1
+            new_k = ValCont(value, cont.k)
+            if next_index < len(self.cases):
+                new_cont = Cont(self, cont.ctx, new_k)
+                return Next(cont.ctx, self.cases_exps[next_index], new_cont)
+            else:
+                _, original_k = _collect_values_from_val_conts(new_k, next_index)
+                return Done(original_k, cont.ctx)
+
 class __extend__(p4specast.OtherwiseI):
     def eval_instr(self, ctx):
         return self.instr.eval_instr(ctx)
+
+    def eval_cps(self, ctx, k):
+        return self.instr.eval_cps(ctx, k)
+
+    def apply(self, cont, value):
+        return self.instr.apply(cont, value)
 
 class __extend__(p4specast.GroupI):
     def eval_instr(self, ctx):
@@ -556,12 +603,38 @@ class __extend__(p4specast.GroupI):
         else:
             raise P4EvaluationError("unexpected sign type in GroupI")
 
+    def eval_cps(self, ctx, k):
+        sign_group = eval_instrs(ctx, self.instrs)
+        if sign_group.sign_is_cont():
+            return Done(k, ctx)
+        elif isinstance(sign_group, Res):
+            return Done(k, sign_group)
+        elif isinstance(sign_group, Ret):
+            raise P4EvaluationError("cannot return from try instruction", region=self.id.region)
+        else:
+            raise P4EvaluationError("unexpected sign type in GroupI")
+
+    def apply(self, cont, value):
+        return Done(cont.k, value)
+
 class __extend__(p4specast.LetI):
     def eval_instr(self, ctx):
         # let ctx = eval_let_iter ctx exp_l exp_r iterexps in
         # (ctx, Cont)
         ctx = eval_let_iter(ctx, self)
         return ctx
+
+    def eval_cps(self, ctx, k):
+        if self.iters:
+            ctx = eval_let_iter(ctx, self)
+            return Done(k, ctx)
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.value, cont)
+
+    def apply(self, cont, value):
+        # Assign the evaluated value to the variable
+        ctx = assign_exp(cont.ctx, self.var, value)
+        return Done(cont.k, ctx)
 
 @jit.unroll_safe
 def _make_varlist(vars):
@@ -1021,6 +1094,43 @@ class __extend__(p4specast.RuleI):
             raise
         return ctx
 
+    def eval_cps(self, ctx, k):
+        if self.iters:
+            ctx = eval_rule_iter(ctx, self)
+            return Done(k, ctx)
+        rel = ctx.find_rel_local(self.id)
+        exps_input, exps_output = split_exps_without_idx(rel.inputs, self.notexp.exps)
+        if not exps_input:
+            relctx, values_output = invoke_rel(ctx, self.id, [])
+            if relctx is None:
+                raise P4RelationError("relation was not matched: %s" % self.id.value)
+            ctx = assign_exps(relctx, exps_output, values_output)
+            return Done(k, ctx)
+        rule_state = (rel, exps_input, exps_output)
+        state_k = ValCont(rule_state, k)
+        cont = Cont(self, ctx, state_k)
+        return Next(ctx, exps_input[0], cont)
+
+    def apply(self, cont, value):
+        state_k = cont.k
+        while isinstance(state_k, ValCont) and not isinstance(state_k.value, tuple):
+            state_k = state_k.k
+        rel, exps_input, exps_output = state_k.value
+        original_k = state_k.k
+        index = _count_val_conts(cont.k) - 1
+        next_index = index + 1
+        new_k = ValCont(value, cont.k)
+        if next_index < len(exps_input):
+            new_cont = Cont(self, cont.ctx, new_k)
+            return Next(cont.ctx, exps_input[next_index], new_cont)
+        else:
+            values_input, _ = _collect_values_from_val_conts(new_k, next_index)
+            relctx, values_output = invoke_rel(cont.ctx, self.id, values_input)
+            if relctx is None:
+                raise P4RelationError("relation was not matched: %s" % self.id.value)
+            ctx = assign_exps(relctx, exps_output, values_output)
+            return Done(original_k, ctx)
+
 
 def eval_hold_cond(ctx, id, notexp):
     #and eval_hold_cond (ctx : Ctx.t) (id : id) (notexp : notexp) :
@@ -1197,6 +1307,36 @@ class __extend__(p4specast.HoldI):
                 return ctx
         else:
             assert False, "unknown holdcase type: %s" % self.holdcase.__class__.__name__
+
+    def eval_cps(self, ctx, k):
+        # HoldI involves complex condition evaluation with iterations
+        # For now, evaluate the condition directly and handle the result
+        ctx, cond = eval_hold_cond_iter(ctx, self)
+        holdcase = self.holdcase
+        if isinstance(holdcase, p4specast.BothH):
+            if cond:
+                sign = eval_instrs(ctx, holdcase.hold_instrs)
+            else:
+                sign = eval_instrs(ctx, holdcase.nothold_instrs)
+            return Done(k, sign)
+        elif isinstance(holdcase, p4specast.HoldH):
+            if cond:
+                sign = eval_instrs(ctx, holdcase.hold_instrs)
+                return Done(k, sign)
+            else:
+                return Done(k, ctx)
+        elif isinstance(holdcase, p4specast.NotHoldH):
+            if not cond:
+                sign = eval_instrs(ctx, holdcase.nothold_instrs)
+                return Done(k, sign)
+            else:
+                return Done(k, ctx)
+        else:
+            assert False, "unknown holdcase type: %s" % self.holdcase.__class__.__name__
+
+    def apply(self, cont, value):
+        # HoldI doesn't use apply in normal flow since condition is evaluated directly
+        return Done(cont.k, value)
 
 @jit.unroll_safe
 def assign_exp(ctx, exp, value):
@@ -1547,12 +1687,43 @@ class __extend__(p4specast.ResultI):
         ctx, values = eval_exps(ctx, self.exps)
         return Res.make(values, ctx)
 
+    def eval_cps(self, ctx, k):
+        if not self.exps:
+            # No expressions - return Res immediately
+            return Done(k, Res.make0(ctx))
+        # Start evaluating the first expression
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.exps[0], cont)
+
+    def apply(self, cont, value):
+        # Count how many values we already have
+        index = _count_val_conts(cont.k)
+        next_index = index + 1
+        # Wrap the new value
+        new_k = ValCont(value, cont.k)
+        if next_index < len(self.exps):
+            new_cont = Cont(self, cont.ctx, new_k)
+            return Next(cont.ctx, self.exps[next_index], new_cont)
+        else:
+            # All expressions evaluated - build the Res
+            values, original_k = _collect_values_from_val_conts(new_k, next_index)
+            return Done(original_k, Res.make(values, cont.ctx))
+
 class __extend__(p4specast.ReturnI):
     def eval_instr(self, ctx):
         # let ctx, value = eval_exp ctx exp in
         # (ctx, Ret value)
         ctx, value = eval_exp(ctx, self.exp)
         return Ret(ctx, value)
+
+    def eval_cps(self, ctx, k):
+        # Evaluate the return expression
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.exp, cont)
+
+    def apply(self, cont, value):
+        # Create Ret with the evaluated value
+        return Done(cont.k, Ret(cont.ctx, value))
 
 # ____________________________________________________________
 # expressions
@@ -1669,19 +1840,20 @@ class __extend__(p4specast.OptE):
         #     List.iter
         #       (fun value_input ->
         #         Ctx.add_edge ctx value_res value_input Dep.Edges.Control)
-        #       ctx.local.values_input;
-        #   (ctx, value_res)
 
     def eval_cps(self, ctx, k):
-        if self.exp is not None:
-            return Next(ctx, self.exp, Cont(self, ctx, k))
-        else:
+        if self.exp is None:
+            # None case - return immediately
             value_res = self.typ.make_opt_value(None)
-            return Done(ctx, value_res)
+            return Done(k, value_res)
+        # Some case - evaluate the inner expression
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.exp, cont)
 
     def apply(self, cont, value):
-        result = self.typ.make_opt_value(value)
-        return Done(cont.k, result)
+        # Wrap the evaluated value in OptV (Some case)
+        value_res = self.typ.make_opt_value(value)
+        return Done(cont.k, value_res)
 
 
 def _count_val_conts(k):
