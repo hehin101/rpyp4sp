@@ -34,6 +34,13 @@ class ListCont(Cont):
         self.values = values
 
 
+class IterState(object):
+    _immutable_fields_ = ['ctxs_sub', 'values[*]']
+    def __init__(self, ctxs_sub, values):
+        self.ctxs_sub = ctxs_sub
+        self.values = values
+
+
 class ValCont(AbstractCont):
     """A continuation that captures a value."""
     _immutable_fields_ = ['value', 'k']
