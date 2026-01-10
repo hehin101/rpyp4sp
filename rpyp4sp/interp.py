@@ -2626,6 +2626,31 @@ class __extend__(p4specast.CatE):
         #   (ctx, value_res)
         return ctx, value_res
 
+    def eval_cps(self, ctx, k):
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.left, cont)
+
+    def apply(self, cont, value):
+        if isinstance(cont.k, ValCont):
+            value_l = cont.k.value
+            value_r = value
+            if isinstance(value_l, objects.TextV) and isinstance(value_r, objects.TextV):
+                value_res = objects.TextV(value_l.value + value_r.value, self.typ)
+            elif isinstance(value_l, objects.ListV) and isinstance(value_r, objects.ListV):
+                if not value_l._get_size_list():
+                    value_res = value_r
+                elif not value_r._get_size_list():
+                    value_res = value_l
+                else:
+                    value_res = objects.ListV.make(value_l.get_list() + value_r.get_list(), self.typ)
+            else:
+                assert 0, "concatenation expects either two texts or two lists"
+            return Done(cont.k.k, value_res)
+        else:
+            val_k = ValCont(value, cont.k)
+            new_cont = Cont(self, cont.ctx, val_k)
+            return Next(cont.ctx, self.right, new_cont)
+
 class __extend__(p4specast.LenE):
     def eval_exp(self, ctx):
         # let ctx, value = eval_exp ctx exp in
@@ -2648,6 +2673,21 @@ class __extend__(p4specast.LenE):
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op LenOp);
         # (ctx, value_res)
         return ctx, value_res
+
+    def eval_cps(self, ctx, k):
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.lst, cont)
+
+    def apply(self, cont, value):
+        assert isinstance(value, objects.ListV)
+        if value._get_size_list() == 0:
+            value_res = objects.NumV.NAT_ZERO
+        elif value._get_size_list() == 1:
+            value_res = objects.NumV.NAT_ONE
+        else:
+            int_val = integers.Integer.fromint(value.get_list_len())
+            value_res = objects.NumV.make(int_val, p4specast.NatT.INSTANCE, typ=self.typ)
+        return Done(cont.k, value_res)
 
 class __extend__(p4specast.SliceE):
     def eval_exp(self, ctx):
@@ -2686,6 +2726,38 @@ class __extend__(p4specast.SliceE):
         # in
         # Ctx.add_node ctx value_res;
         # (ctx, value_res)
+
+    def eval_cps(self, ctx, k):
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.lst, cont)
+
+    def apply(self, cont, value):
+        index = _count_val_conts(cont.k)
+        if index == 0:
+            val_k = ValCont(value, cont.k)
+            new_cont = Cont(self, cont.ctx, val_k)
+            return Next(cont.ctx, self.start, new_cont)
+        elif index == 1:
+            val_k = ValCont(value, cont.k)
+            new_cont = Cont(self, cont.ctx, val_k)
+            return Next(cont.ctx, self.length, new_cont)
+        else:
+            value_n = value
+            value_i = cont.k.value
+            value_b = cont.k.k.value
+            original_k = cont.k.k.k
+            values = value_b.get_list()
+            idx_l = value_i.get_num().toint()
+            idx_n = value_n.get_num().toint()
+            idx_h = idx_l + idx_n
+            assert idx_l >= 0
+            assert idx_h >= 0
+            values_slice = values[idx_l:idx_h]
+            if not values_slice:
+                value_res = self.typ.empty_list_value()
+            else:
+                value_res = objects.ListV.make(values_slice, self.typ)
+            return Done(original_k, value_res)
 
 @jit.unroll_safe
 def eval_access_path(value_b, path):
@@ -2745,6 +2817,21 @@ class __extend__(p4specast.UpdE):
         ctx, value_f = eval_exp(ctx, self.value)
         #   let value_res = eval_update_path ctx value_b path value_f in
         return ctx, eval_update_path(ctx, value_b, self.path, value_f)
+
+    def eval_cps(self, ctx, k):
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.exp, cont)
+
+    def apply(self, cont, value):
+        if isinstance(cont.k, ValCont):
+            value_b = cont.k.value
+            value_f = value
+            value_res = eval_update_path(cont.ctx, value_b, self.path, value_f)
+            return Done(cont.k.k, value_res)
+        else:
+            val_k = ValCont(value, cont.k)
+            new_cont = Cont(self, cont.ctx, val_k)
+            return Next(cont.ctx, self.value, new_cont)
 
 def eval_iter_exp_opt(note, ctx, exp, vars):
     #   let ctx_sub_opt = Ctx.sub_opt ctx vars in
@@ -2858,6 +2945,60 @@ class __extend__(p4specast.IterE):
         else:
             assert False, "Unknown iter kind: %s" % iter
 
+    def eval_cps(self, ctx, k):
+        if isinstance(self.iter, p4specast.Opt):
+            ctx_sub_opt = ctx.sub_opt(self.varlist)
+            if ctx_sub_opt is None:
+                value_res = self.typ.opt_none_value()
+                return Done(k, value_res)
+            else:
+                cont = Cont(self, ctx, k)
+                return Next(ctx_sub_opt, self.exp, cont)
+        elif isinstance(self.iter, p4specast.List):
+            if self.is_simple_list_expr():
+                exp = self.exp
+                assert isinstance(exp, p4specast.VarE)
+                value_res = ctx.find_value_local(exp.id, p4specast.IterList.EMPTY.append_list())
+                return Done(k, value_res)
+            ctxs_sub = ctx.sub_list(_make_varlist(self.varlist))
+            if ctxs_sub.length == 0:
+                value_res = self.typ.empty_list_value()
+                return Done(k, value_res)
+            else:
+                values = [None] * ctxs_sub.length
+                ctx_sub = ctxs_sub.get_item(0)
+                iter_state = IterState(ctxs_sub, values)
+                state_k = ValCont(iter_state, k)
+                cont = Cont(self, ctx, state_k)
+                return Next(ctx_sub, self.exp, cont)
+        else:
+            assert False, "Unknown iter kind: %s" % self.iter
+
+    def apply(self, cont, value):
+        if isinstance(self.iter, p4specast.Opt):
+            value_res = self.typ.make_opt_value(value)
+            return Done(cont.k, value_res)
+        else:
+            state_k = cont.k
+            while isinstance(state_k, ValCont) and not isinstance(state_k.value, IterState):
+                state_k = state_k.k
+            iter_state = state_k.value
+            original_k = state_k.k
+            index = _count_val_conts(cont.k) - 1
+            iter_state.values[index] = value
+            next_index = index + 1
+            if next_index < iter_state.ctxs_sub.length:
+                ctx_sub = iter_state.ctxs_sub.get_item(next_index)
+                new_k = ValCont(value, cont.k)
+                new_cont = Cont(self, cont.ctx, new_k)
+                return Next(ctx_sub, self.exp, new_cont)
+            else:
+                if len(iter_state.values) == 1:
+                    value_res = objects.ListV.make1(iter_state.values[0], self.typ)
+                else:
+                    value_res = objects.ListV.make(iter_state.values, self.typ)
+                return Done(original_k, value_res)
+
 class __extend__(p4specast.IdxE):
     def eval_exp(self, ctx):
         #   Ctx.t * value =
@@ -2873,6 +3014,23 @@ class __extend__(p4specast.IdxE):
         value_res = values[idx]
         # (ctx, value_res)
         return ctx, value_res
+
+    def eval_cps(self, ctx, k):
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.lst, cont)
+
+    def apply(self, cont, value):
+        if isinstance(cont.k, ValCont):
+            value_b = cont.k.value
+            value_i = value
+            values = value_b.get_list()
+            idx = value_i.get_num().toint()
+            value_res = values[idx]
+            return Done(cont.k.k, value_res)
+        else:
+            val_k = ValCont(value, cont.k)
+            new_cont = Cont(self, cont.ctx, val_k)
+            return Next(cont.ctx, self.idx, new_cont)
 
 class CtxTup(objects.SubBase):
     def __init__(self, ctx, value):
