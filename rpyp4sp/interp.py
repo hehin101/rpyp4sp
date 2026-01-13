@@ -510,6 +510,25 @@ class __extend__(p4specast.OtherwiseI):
     def eval_instr(self, ctx):
         return self.instr.eval_instr(ctx)
 
+class __extend__(p4specast.GroupI):
+    def eval_instr(self, ctx):
+        # and eval_group_instr (ctx : Ctx.t) (id_group : id) (_exps_group : exp list)
+        #   (instrs_group : instr list) : Ctx.t * Sign.t =
+        #   let ctx_group, sign_group = eval_instrs ctx Cont instrs_group in
+        #   match sign_group with
+        #   | Cont -> (ctx, Cont)
+        #   | Res values_output -> (ctx_group, Res values_output)
+        #   | Ret _ -> error id_group.at "cannot return from try instruction"
+        sign_group = eval_instrs(ctx, self.instrs)
+        if sign_group.sign_is_cont():
+            return ctx
+        elif isinstance(sign_group, Res):
+            return sign_group
+        elif isinstance(sign_group, Ret):
+            raise P4EvaluationError("cannot return from try instruction", region=self.id.region)
+        else:
+            raise P4EvaluationError("unexpected sign type in GroupI")
+
 class __extend__(p4specast.LetI):
     def eval_instr(self, ctx):
         # let ctx = eval_let_iter ctx exp_l exp_r iterexps in
@@ -557,14 +576,26 @@ def eval_let_list(ctx, exp_l, exp_r, vars_h, iterexps_t):
     #         List.init (List.length vars_binding) (fun _ -> [])
     #       in
     #       (ctx, values_binding)
-    if ctxs_sub.length == 0:
-        values_binding = [[] for _ in vars_binding_list.vars]
-    elif ctxs_sub.length == 1:
-        ctx_sub = next(ctxs_sub)
-        ctx_sub = eval_let_iter_tick(ctx_sub, exp_l, exp_r, iterexps_t)
-        ctx = ctx.commit(ctx_sub)
-        values_binding = [[ctx_sub.find_value_local(var_binding.id, var_binding.iter)]
-                          for var_binding in vars_binding_list.vars]
+    if ctxs_sub.length <= 1:
+        if ctxs_sub.length == 0:
+            values_binding = [
+                var_binding.typ.iterate(var_binding.iter.append_list()).empty_list_value()
+                for var_binding in vars_binding_list.vars]
+        else:
+            assert ctxs_sub.length == 1
+            ctx_sub = next(ctxs_sub)
+            ctx_sub = eval_let_iter_tick(ctx_sub, exp_l, exp_r, iterexps_t)
+            ctx = ctx.commit(ctx_sub)
+            values_binding = [None] * len(vars_binding_list.vars)
+            for i, var_binding in enumerate(vars_binding_list.vars):
+                iters_binding = var_binding.iter
+                list_typ = var_binding.typ.iterate(iters_binding.append_list())
+                value_binding = ctx_sub.find_value_local(var_binding.id, var_binding.iter)
+                values_binding[i] = objects.ListV.make1(value_binding, list_typ)
+        #       in
+        #       let values_binding = values_binding_batch |> Ctx.transpose in
+            assert len(values_binding) == len(vars_binding_list.vars)
+        return _dont_make_lists_and_assign(ctx, vars_binding_list, values_binding)
     #   (* Otherwise, evaluate the premise for each batch of bound values,
     #      and collect the resulting binding batches *)
     #   | _ ->
@@ -1526,6 +1557,10 @@ class __extend__(p4specast.Exp):
         #import pdb;pdb.set_trace()
         raise P4NotImplementedError("abstract base class %s" % self)
 
+class __extend__(p4specast.LiteralE):
+    def eval_exp(self, ctx):
+        return ctx, self.value
+
 class __extend__(p4specast.BoolE):
     def eval_exp(self, ctx):
         # let value_res =
@@ -1649,10 +1684,8 @@ class __extend__(p4specast.ConsE):
         #   in
         #   Ctx.add_node ctx value_res;
         #   (ctx, value_res)
-        exp_h = self.head
-        exp_t = self.tail
-        ctx, value_h = eval_exp(ctx, exp_h)
-        ctx, value_t = eval_exp(ctx, exp_t)
+        ctx, value_h = eval_exp(ctx, self.head)
+        ctx, value_t = eval_exp(ctx, self.tail)
         assert isinstance(value_t, objects.ListV)
         values_t = value_t.get_list()
         value_res = objects.ListV.make([value_h] + values_t, self.typ)
@@ -2005,35 +2038,23 @@ class __extend__(p4specast.CatE):
         #   (ctx, value_res)
         return ctx, value_res
 
-class __extend__(p4specast.ConsE):
-    def eval_exp(self, ctx):
-        # let ctx, value_h = eval_exp ctx exp_h in
-        ctx, value_h = eval_exp(ctx, self.head)
-        # let ctx, value_t = eval_exp ctx exp_t in
-        ctx, value_t = eval_exp(ctx, self.tail)
-        # let values_t = Value.get_list value_t in
-        values_t = value_t.get_list()
-        # let value_res =
-        #   let vid = Value.fresh () in
-        #   let typ = note in
-        #   Il.Ast.(ListV (value_h :: values_t) $$$ { vid; typ })
-        value_res = objects.ListV.make([value_h] + values_t, self.typ)
-        return ctx, value_res
-        # in
-        # Ctx.add_node ctx value_res;
-        # (ctx, value_res)
-
 class __extend__(p4specast.LenE):
     def eval_exp(self, ctx):
         # let ctx, value = eval_exp ctx exp in
         ctx, value = eval_exp(ctx, self.lst)
         # let len = value |> Value.get_list |> List.length |> Bigint.of_int in
-        value = integers.Integer.fromint(value.get_list_len())
+        assert isinstance(value, objects.ListV)
+        if value._get_size_list() == 0:
+            value_res = objects.NumV.NAT_ZERO
+        elif value._get_size_list() == 1:
+            value_res = objects.NumV.NAT_ONE
+        else:
+            value = integers.Integer.fromint(value.get_list_len())
         # let value_res =
         #   let vid = Value.fresh () in
         #   let typ = note in
         #   Il.Ast.(NumV (`Nat len) $$$ { vid; typ })
-        value_res = objects.NumV.make(value, p4specast.NatT.INSTANCE, typ=self.typ)
+            value_res = objects.NumV.make(value, p4specast.NatT.INSTANCE, typ=self.typ)
         # in
         # Ctx.add_node ctx value_res;
         # Ctx.add_edge ctx value_res value (Dep.Edges.Op LenOp);
@@ -2492,5 +2513,3 @@ def upcast(ctx, typ, value):
     #       | _ -> assert false)
     #   | _ -> (ctx, value)
     return ctx, value
-
-
