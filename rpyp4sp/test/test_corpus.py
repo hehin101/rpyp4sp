@@ -197,31 +197,6 @@ class TestFuzzCorpus(object):
         assert 0 in generations
         assert 3 in generations
 
-    def test_corpus_minimization_sorting(self):
-        """Test that corpus minimization correctly sorts by generation."""
-        test_corpus = corpus.FuzzCorpus(self.temp_corpus_dir)
-
-        # Add test cases with different generations (out of order)
-        bool_val = objects.BoolV.TRUE
-        test_corpus.add_test_case(bool_val, coverage_hash="gen1", generation=1)  # Gen 1
-        test_corpus.add_test_case(bool_val, coverage_hash="gen5", generation=5)  # Gen 5
-        test_corpus.add_test_case(bool_val, coverage_hash="gen0", generation=0)  # Gen 0 (seed)
-        test_corpus.add_test_case(bool_val, coverage_hash="gen3", generation=3)  # Gen 3
-        test_corpus.add_test_case(bool_val, coverage_hash="gen2", generation=2)  # Gen 2
-
-        # Minimize to keep only 3 cases (should keep highest generations)
-        test_corpus.minimize_corpus(target_size=3)
-
-        # Check that we kept the 3 highest generations (5, 3, 2)
-        assert len(test_corpus.test_cases) == 3
-        generations = [test_case.generation for test_case in test_corpus.test_cases]
-        assert 5 in generations
-        assert 3 in generations
-        assert 2 in generations
-        # Should not keep gen 1 or 0
-        assert 1 not in generations
-        assert 0 not in generations
-
     def test_testcase_from_file_valid(self):
         """Test TestCase.from_file with valid files."""
         # Create a test case file manually

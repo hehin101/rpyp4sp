@@ -231,6 +231,7 @@ def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
 
     # Main fuzzing loop
     try:
+        corpus_limit_reached = False
         for iteration in range(config.max_iterations):
             if progress_checker is not None:
                 progress_checker(iteration)
@@ -324,8 +325,9 @@ def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
                             print("New coverage at iteration %d: %s" % (iteration, saved_filename))
 
                     # Limit corpus size to prevent unlimited growth
-                    if len(fuzz_corpus.test_cases) > config.corpus_max_size:
-                        fuzz_corpus.minimize_corpus(config.corpus_max_size)
+                    if len(fuzz_corpus.test_cases) >= config.corpus_max_size:
+                        corpus_limit_reached = True
+                        break
 
                 except Exception as e:
                     if not objectmodel.we_are_translated():
@@ -333,6 +335,9 @@ def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
                     # Mutation or execution error - continue to next attempt
                     print("Mutation error at iteration %d: %s" % (iteration, str(e)))
                     continue
+
+            if corpus_limit_reached:
+                break
 
     except KeyboardInterrupt:
         print("\nFuzzing interrupted by user")
