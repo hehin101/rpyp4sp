@@ -122,8 +122,8 @@ def mutate_value(value, rng):
         return mutate_BoolV(value, rng)
     elif isinstance(value, NumV):
         return mutate_NumV(value, rng)
-    elif isinstance(value, TextV):
-        return mutate_TextV(value, rng)
+    # elif isinstance(value, TextV):
+    #     return mutate_TextV(value, rng)
     elif isinstance(value, TupleV):
         return mutate_TupleV(value, rng)
     elif isinstance(value, StructV):
@@ -307,7 +307,7 @@ def generate_TextV(typ, rng, storetyp=None):
     if storetyp is None: storetyp = typ
 
     # Choose string generation strategy
-    strategy = rng.randint(0, 3)
+    strategy = 2 # rng.randint(0, 3)
 
     if strategy == 0:
         # Empty string
