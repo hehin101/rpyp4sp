@@ -1,4 +1,5 @@
 import random
+import unittest
 from rpyp4sp.objects import BoolV, NumV, TextV, TupleV, StructV, StructMap, CaseV, ListV, OptV
 from rpyp4sp.mutatevalues import mutate_BoolV, mutate_NumV, mutate_TextV, mutate_TupleV, mutate_StructV, mutate_CaseV, mutate_ListV, mutate_OptV
 from rpyp4sp.mutatevalues import generate_BoolV, generate_NumV, generate_TextV, generate_OptV, find_subvalues, mutate_subvalue_with_path, mutate
@@ -295,7 +296,8 @@ class TestStructVMutation(object):
         assert mutated._get_size_list() == 2
         assert mutated.map is struct_map
         # First field should be mutated (TextV will change)
-        assert mutated._get_list(0).value == "hAello"  # "hello" with 'A' inserted at pos 1
+        # assert mutated._get_list(0).value == "hAello"  # "hello" with 'A' inserted at pos 1
+        assert mutated._get_list(0).value == "hello"  # string mutation is disabled
         # Second field should be unchanged
         assert mutated._get_list(1) is field_values[1]
 
@@ -375,7 +377,8 @@ class TestCaseVMutation(object):
         assert mutated._get_size_list() == 2
         assert mutated.mixop is mixop
         # First value should be mutated (TextV will change)
-        assert mutated._get_list(0).value == "hAello"  # "hello" with 'A' inserted at pos 1
+        # assert mutated._get_list(0).value == "hAello"  # "hello" with 'A' inserted at pos 1
+        assert mutated._get_list(0).value == "hello"  # string mutation is disabled
         # Second value should be unchanged
         assert mutated._get_list(1) is values[1]
 
@@ -629,6 +632,7 @@ class TestGenerateNumV(object):
 
 class TestGenerateTextV(object):
 
+    @unittest.skip("string mutation is disabled")
     def test_generate_empty_string(self):
         # Test strategy 0: empty string
         rng = MockRng([0])  # strategy=0
@@ -640,6 +644,7 @@ class TestGenerateTextV(object):
         assert generated.value == ""
         assert generated.get_typ() is text_type
 
+    @unittest.skip("string mutation is disabled")
     def test_generate_random_string(self):
         # Test strategy 1: random string
         # randint(1, 10) with val=2 gives: 1 + (2 % 10) = 3 (length=3)
@@ -662,9 +667,11 @@ class TestGenerateTextV(object):
         generated = generate_TextV(text_type, rng)
 
         assert isinstance(generated, TextV)
-        assert generated.value == "hello"
+        # assert generated.value == "hello"
+        assert generated.value == "test"  # string mutation is disabled -> no strategy selection
         assert generated.get_typ() is text_type
 
+    @unittest.skip("string mutation is disabled")
     def test_generate_special_char_only(self):
         # Test strategy 3: special character only
         rng = MockRng([3, 0, 0])  # strategy=3, special_char='"', choice=0 (char only)
@@ -676,6 +683,7 @@ class TestGenerateTextV(object):
         assert generated.value == '"'
         assert generated.get_typ() is text_type
 
+    @unittest.skip("string mutation is disabled")
     def test_generate_special_char_with_prefix(self):
         # Test strategy 3: special character with prefix
         rng = MockRng([3, 0, 1, 0])  # strategy=3, special_char='"', choice=1, prefix='a'
@@ -687,6 +695,7 @@ class TestGenerateTextV(object):
         assert generated.value == 'a"'
         assert generated.get_typ() is text_type
 
+    @unittest.skip("string mutation is disabled")
     def test_random_distribution(self):
         # Test with real random to verify various strategies work
         rng = random.Random(42)
@@ -755,6 +764,7 @@ class TestGenerateOptV(object):
         assert generated.get_opt_value().value.toint() == 42
         assert generated.get_typ() is opt_type
 
+    @unittest.skip("string mutation is disabled")
     def test_generate_some_text(self):
         # Test generating Some(TextV) (choice=1, then TextV="")
         rng = MockRng([1, 0])  # choice=1 (generate value), then TextV strategy=0 (empty)
@@ -998,7 +1008,8 @@ class TestMutateSubvalueWithPath(object):
         assert isinstance(mutated, ListV)
         assert mutated._get_size_list() == 2
         # First element should be mutated
-        assert mutated._get_list(0).value == "hAello"  # "hello" with 'A' inserted
+        # assert mutated._get_list(0).value == "hAello"  # "hello" with 'A' inserted
+        assert mutated._get_list(0).value == "hello"  # string mutation is disabled
         # Second element should be unchanged
         assert mutated._get_list(1) is text2
 
@@ -1091,7 +1102,8 @@ class TestMutateSubvalueWithPath(object):
         mutated_opt = mutated_list._get_list(1)
         mutated_text = mutated_opt.get_opt_value()
 
-        assert mutated_text.value == "dAeep"  # "deep" with 'A' inserted at pos 1
+        # assert mutated_text.value == "dAeep"  # "deep" with 'A' inserted at pos 1
+        assert mutated_text.value == "deep"  # string mutation is disabled
 
         # Verify unchanged parts
         assert mutated._get_list(1) is outer_num  # outer num unchanged
@@ -1271,7 +1283,8 @@ class TestMutate(object):
         ctx = make_context()
         rng = MockRng([0, 0, 0, 0, 0, 0, 0, 0, 0])
         value = generate_value(typ, rng, ctx)
-        assert value.tostring() == "(ConstD (BoolT) '' (BoolE false))"
+        # assert value.tostring() == "(ConstD (BoolT) '' (BoolE false))"
+        assert value.tostring() == "(ConstD (BoolT) 'hello' (BoolE false))"  # string mutation is diabled
 
         typ = p4specast.VarT(p4specast.Id('declaration', p4specast.NO_REGION), [])
         ctx = make_context()
