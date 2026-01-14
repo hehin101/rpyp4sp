@@ -4,7 +4,7 @@ from rpyp4sp import p4specast, objects, builtin, context, integers
 from rpyp4sp.error import (P4Error, P4EvaluationError, P4CastError,
                            P4NotImplementedError, P4RelationError)
 from rpyp4sp.sign import Res, Ret
-from rpyp4sp.continuation import (Cont, Next, Done, ValCont, IterState)
+from rpyp4sp.continuation import (Cont, Next, Done, ValCont, IterState, TerminalCont, eval_exp_cps)
 
 class VarList(object):
     _immutable_fields_ = ['vars[*]']
@@ -2507,29 +2507,26 @@ class __extend__(p4specast.StrE):
 
     def eval_cps(self, ctx, k):
         if not self.fields:
-            # Empty struct
             map = objects.StructMap.EMPTY
             value_res = objects.StructV.make([], map, self.typ)
             return Done(k, value_res)
-        # Start evaluating the first field's expression
         cont = Cont(self, ctx, k)
-        return Next(ctx, self.fields[0][1], cont)
+        _, first_exp = self.fields[0]
+        return Next(ctx, first_exp, cont)
 
     def apply(self, cont, value):
-        # Count how many values we already have
         index = _count_val_conts(cont.k)
         next_index = index + 1
-        # Wrap the new value
         new_k = ValCont(value, cont.k)
         if next_index < len(self.fields):
             new_cont = Cont(self, cont.ctx, new_k)
-            return Next(cont.ctx, self.fields[next_index][1], new_cont)
+            _, next_exp = self.fields[next_index]
+            return Next(cont.ctx, next_exp, new_cont)
         else:
-            # All fields evaluated - build the struct
             values, original_k = _collect_values_from_val_conts(new_k, next_index)
             map = objects.StructMap.EMPTY
-            for i in range(len(self.fields)):
-                map = map.add_field(self.fields[i][0].value)
+            for i, (atom, _) in enumerate(self.fields):
+                map = map.add_field(atom.value)
             value_res = objects.StructV.make(values, map, self.typ)
             return Done(original_k, value_res)
 
@@ -2565,10 +2562,8 @@ class __extend__(p4specast.CaseE):
         mixop = self.notexp.mixop
         exps = self.notexp.exps
         if len(exps) == 0:
-            # No expressions - return immediately
             value_res = objects.CaseV.make0(mixop, self.typ)
             return Done(k, value_res)
-        # Start evaluating the first expression
         cont = Cont(self, ctx, k)
         return Next(ctx, exps[0], cont)
 
@@ -2738,6 +2733,27 @@ class __extend__(p4specast.SliceE):
             new_cont = Cont(self, cont.ctx, val_k)
             return Next(cont.ctx, self.start, new_cont)
         elif index == 1:
+            val_k = ValCont(value, cont.k)
+            new_cont = Cont(self, cont.ctx, val_k)
+            return Next(cont.ctx, self.length, new_cont)
+        else:
+            value_n = value
+            value_i = cont.k.value
+            value_b = cont.k.k.value
+        # First evaluate lst, then start, then length
+        cont = Cont(self, ctx, k)
+        return Next(ctx, self.lst, cont)
+
+    def apply(self, cont, value):
+        # Count how many values we have
+        depth = _count_val_conts(cont.k)
+        if depth == 0:
+            # We just evaluated lst, now evaluate start
+            val_k = ValCont(value, cont.k)
+            new_cont = Cont(self, cont.ctx, val_k)
+            return Next(cont.ctx, self.start, new_cont)
+        elif depth == 1:
+            # We just evaluated start, now evaluate length
             val_k = ValCont(value, cont.k)
             new_cont = Cont(self, cont.ctx, val_k)
             return Next(cont.ctx, self.length, new_cont)

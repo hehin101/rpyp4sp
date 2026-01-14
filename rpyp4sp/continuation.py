@@ -71,3 +71,23 @@ class Done(object):
     def __init__(self, k, value):
         self.k = k
         self.value = value
+
+
+class TerminalCont(AbstractCont):
+    pass
+
+
+def eval_exp_cps(ctx, exp):
+    k = TerminalCont()
+    result = exp.eval_cps(ctx, k)
+
+    while True:
+        if isinstance(result, Done):
+            if isinstance(result.k, TerminalCont):
+                return ctx, result.value
+            result = result.k.apply(result.value)
+        elif isinstance(result, Next):
+            ctx = result.ctx
+            result = result.exp.eval_cps(result.ctx, result.k)
+        else:
+            raise AssertionError("Unexpected result type: %s" % type(result))

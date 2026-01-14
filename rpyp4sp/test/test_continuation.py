@@ -1713,3 +1713,864 @@ def test_cat_apply_right_empty_right_list_cps():
     assert result.k is k, "Should use the original continuation"
     assert isinstance(result.value, objects.ListV), "Value should be ListV"
     assert result.value is left_value, "Should return left list directly"
+
+
+# ============================================================================
+# CPS Evaluation Tests - MatchE
+# ============================================================================
+
+def make_match_exp(inner_exp, pattern):
+    """Create a MatchE expression."""
+    typ = p4specast.BoolT.INSTANCE
+    # MatchE takes (exp, pattern, typ) - exp is the value to match, pattern is what to match against
+    exp = p4specast.MatchE(inner_exp, pattern, typ)
+    return exp
+
+
+def test_match_cps():
+    """Test CPS evaluation of MatchE - should evaluate inner expression first."""
+    inner_exp = make_list_exp([make_num_exp(1), make_num_exp(2)])
+    pattern = p4specast.ListP(p4specast.Cons())
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    result = exp.eval_cps(ctx, k)
+
+    # Should return Next to evaluate the inner expression first
+    assert isinstance(result, Next), "Expected Next object for MatchE"
+    assert result.exp is inner_exp, "Should evaluate inner expression first"
+
+    # Verify the continuation is Cont
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert result.k.exp is exp, "Cont should reference the MatchE expression"
+    assert result.k.k is k, "Cont should preserve the original continuation"
+
+
+def test_match_apply_list_cons_true_cps():
+    """Test MatchE continuation application - non-empty list matches Cons pattern."""
+    inner_exp = make_list_exp([make_num_exp(1), make_num_exp(2)])
+    pattern = p4specast.ListP(p4specast.Cons())
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.ListV.make([make_num(1), make_num(2)], inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    assert isinstance(result, Done), "Expected Done after applying MatchE"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == True, "Non-empty list should match Cons pattern"
+
+
+def test_match_apply_list_cons_false_cps():
+    """Test MatchE continuation application - empty list does not match Cons pattern."""
+    inner_exp = make_list_exp([])
+    pattern = p4specast.ListP(p4specast.Cons())
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.ListV.make([], inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    assert isinstance(result, Done), "Expected Done after applying MatchE"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == False, "Empty list should not match Cons pattern"
+
+
+def test_match_apply_list_nil_true_cps():
+    """Test MatchE continuation application - empty list matches Nil pattern."""
+    inner_exp = make_list_exp([])
+    pattern = p4specast.ListP(p4specast.Nil())
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.ListV.make([], inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    assert isinstance(result, Done), "Expected Done after applying MatchE"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == True, "Empty list should match Nil pattern"
+
+
+def test_match_apply_list_nil_false_cps():
+    """Test MatchE continuation application - non-empty list does not match Nil pattern."""
+    inner_exp = make_list_exp([make_num_exp(1)])
+    pattern = p4specast.ListP(p4specast.Nil())
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.ListV.make([make_num(1)], inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    assert isinstance(result, Done), "Expected Done after applying MatchE"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == False, "Non-empty list should not match Nil pattern"
+
+
+def test_match_apply_list_fixed_true_cps():
+    """Test MatchE continuation application - list with exact length matches Fixed pattern."""
+    inner_exp = make_list_exp([make_num_exp(1), make_num_exp(2), make_num_exp(3)])
+    pattern = p4specast.ListP(p4specast.Fixed(3))
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.ListV.make([make_num(1), make_num(2), make_num(3)], inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    assert isinstance(result, Done), "Expected Done after applying MatchE"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == True, "List with 3 elements should match Fixed(3) pattern"
+
+
+def test_match_apply_list_fixed_false_cps():
+    """Test MatchE continuation application - list with wrong length does not match Fixed pattern."""
+    inner_exp = make_list_exp([make_num_exp(1), make_num_exp(2)])
+    pattern = p4specast.ListP(p4specast.Fixed(3))
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.ListV.make([make_num(1), make_num(2)], inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    assert isinstance(result, Done), "Expected Done after applying MatchE"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == False, "List with 2 elements should not match Fixed(3) pattern"
+
+
+def test_match_apply_opt_some_true_cps():
+    """Test MatchE continuation application - Some value matches Some pattern."""
+    inner_exp = make_opt_exp(make_num_exp(42))
+    pattern = p4specast.OptP('Some')
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.OptVSome(make_num(42), inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    assert isinstance(result, Done), "Expected Done after applying MatchE"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == True, "Some value should match Some pattern"
+
+
+def test_match_apply_opt_some_false_cps():
+    """Test MatchE continuation application - None value does not match Some pattern."""
+    inner_exp = make_opt_exp(None)
+    pattern = p4specast.OptP('Some')
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    # OptV (not OptVSome) represents None
+    inner_value = objects.OptV(inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    assert isinstance(result, Done), "Expected Done after applying MatchE"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == False, "None value should not match Some pattern"
+
+
+def test_match_apply_opt_none_true_cps():
+    """Test MatchE continuation application - None value matches None pattern."""
+    inner_exp = make_opt_exp(None)
+    pattern = p4specast.OptP('None')
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    # OptV (not OptVSome) represents None
+    inner_value = objects.OptV(inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    assert isinstance(result, Done), "Expected Done after applying MatchE"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == True, "None value should match None pattern"
+
+
+def test_match_apply_opt_none_false_cps():
+    """Test MatchE continuation application - Some value does not match None pattern."""
+    inner_exp = make_opt_exp(make_num_exp(42))
+    pattern = p4specast.OptP('None')
+    exp = make_match_exp(inner_exp, pattern)
+    ctx = None
+
+    k = MockCont()
+    inner_value = objects.OptVSome(make_num(42), inner_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    assert isinstance(result, Done), "Expected Done after applying MatchE"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.BoolV), "Value should be BoolV"
+    assert result.value.value == False, "Some value should not match None pattern"
+
+
+# ============================================================================
+# CPS Evaluation Tests - LenE
+# ============================================================================
+
+def make_len_exp(lst_exp):
+    """Create a LenE expression."""
+    typ = p4specast.NumT.NAT
+    exp = p4specast.LenE(lst_exp, typ)
+    return exp
+
+
+def test_len_cps():
+    """Test CPS evaluation of LenE - should evaluate list expression first."""
+    lst_exp = make_list_exp([make_num_exp(1), make_num_exp(2), make_num_exp(3)])
+    exp = make_len_exp(lst_exp)
+    ctx = None
+
+    k = MockCont()
+    result = exp.eval_cps(ctx, k)
+
+    # Should return Next to evaluate the list expression first
+    assert isinstance(result, Next), "Expected Next object for LenE"
+    assert result.exp is lst_exp, "Should evaluate list expression first"
+
+    # Verify the continuation is Cont
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert result.k.exp is exp, "Cont should reference the LenE expression"
+    assert result.k.k is k, "Cont should preserve the original continuation"
+
+
+def test_len_apply_empty_list_cps():
+    """Test LenE continuation application - empty list has length 0."""
+    lst_exp = make_list_exp([])
+    exp = make_len_exp(lst_exp)
+    ctx = None
+
+    k = MockCont()
+    lst_value = objects.ListV.make([], lst_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, lst_value)
+
+    assert isinstance(result, Done), "Expected Done after applying LenE"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.NumV), "Value should be NumV"
+    assert result.value.value.val == 0, "Empty list should have length 0"
+
+
+def test_len_apply_single_elem_list_cps():
+    """Test LenE continuation application - single element list has length 1."""
+    lst_exp = make_list_exp([make_num_exp(42)])
+    exp = make_len_exp(lst_exp)
+    ctx = None
+
+    k = MockCont()
+    lst_value = objects.ListV.make([make_num(42)], lst_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, lst_value)
+
+    assert isinstance(result, Done), "Expected Done after applying LenE"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.NumV), "Value should be NumV"
+    assert result.value.value.val == 1, "Single element list should have length 1"
+
+
+def test_len_apply_multiple_elem_list_cps():
+    """Test LenE continuation application - multiple element list."""
+    lst_exp = make_list_exp([make_num_exp(1), make_num_exp(2), make_num_exp(3), make_num_exp(4), make_num_exp(5)])
+    exp = make_len_exp(lst_exp)
+    ctx = None
+
+    k = MockCont()
+    lst_value = objects.ListV.make([make_num(1), make_num(2), make_num(3), make_num(4), make_num(5)], lst_exp.typ)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, lst_value)
+
+    assert isinstance(result, Done), "Expected Done after applying LenE"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.NumV), "Value should be NumV"
+    assert result.value.value.val == 5, "List with 5 elements should have length 5"
+
+
+# ============================================================================
+# CPS Evaluation Tests - IdxE
+# ============================================================================
+
+def make_idx_exp(lst_exp, idx_exp):
+    """Create an IdxE expression."""
+    # Get the inner type from the list type
+    lst_typ = lst_exp.typ
+    if hasattr(lst_typ, 'inner'):
+        inner_typ = lst_typ.inner
+    else:
+        inner_typ = p4specast.NumT.INT
+    exp = p4specast.IdxE(lst_exp, idx_exp, inner_typ)
+    return exp
+
+
+def test_idx_cps():
+    """Test CPS evaluation of IdxE - should evaluate list expression first."""
+    lst_exp = make_list_exp([make_num_exp(10), make_num_exp(20), make_num_exp(30)])
+    idx_exp = make_nat_exp(1)
+    exp = make_idx_exp(lst_exp, idx_exp)
+    ctx = None
+
+    k = MockCont()
+    result = exp.eval_cps(ctx, k)
+
+    # Should return Next to evaluate the list expression first
+    assert isinstance(result, Next), "Expected Next object for IdxE"
+    assert result.exp is lst_exp, "Should evaluate list expression first"
+
+    # Verify the continuation is Cont
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert result.k.exp is exp, "Cont should reference the IdxE expression"
+    assert result.k.k is k, "Cont should preserve the original continuation"
+
+
+def test_idx_apply_lst_cps():
+    """Test IdxE continuation application after evaluating list."""
+    lst_exp = make_list_exp([make_num_exp(10), make_num_exp(20), make_num_exp(30)])
+    idx_exp = make_nat_exp(1)
+    exp = make_idx_exp(lst_exp, idx_exp)
+    ctx = None
+
+    k = MockCont()
+    lst_value = objects.ListV.make([make_num(10), make_num(20), make_num(30)], lst_exp.typ)
+
+    # Create continuation (just evaluated lst)
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, lst_value)
+
+    # Should return Next to evaluate the index expression
+    assert isinstance(result, Next), "Expected Next after applying lst"
+    assert result.exp is idx_exp, "Should evaluate idx expression"
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert isinstance(result.k.k, ValCont), "Cont.k should be ValCont"
+    assert result.k.k.value is lst_value, "ValCont should store the lst value"
+
+
+def test_idx_apply_idx_first_elem_cps():
+    """Test IdxE continuation application - index 0 (first element)."""
+    lst_exp = make_list_exp([make_num_exp(10), make_num_exp(20), make_num_exp(30)])
+    idx_exp = make_nat_exp(0)
+    exp = make_idx_exp(lst_exp, idx_exp)
+    ctx = None
+
+    k = MockCont()
+    lst_value = objects.ListV.make([make_num(10), make_num(20), make_num(30)], lst_exp.typ)
+    idx_value = make_nat(0)
+
+    # Create continuation with ValCont wrapping lst_value (just evaluated idx)
+    val_k = ValCont(lst_value, k)
+    cont = Cont(exp, ctx, val_k)
+    result = exp.apply(cont, idx_value)
+
+    assert isinstance(result, Done), "Expected Done after applying idx"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.NumV), "Value should be NumV"
+    assert result.value.value.val == 10, "Index 0 should return first element (10)"
+
+
+def test_idx_apply_idx_middle_elem_cps():
+    """Test IdxE continuation application - index 1 (middle element)."""
+    lst_exp = make_list_exp([make_num_exp(10), make_num_exp(20), make_num_exp(30)])
+    idx_exp = make_nat_exp(1)
+    exp = make_idx_exp(lst_exp, idx_exp)
+    ctx = None
+
+    k = MockCont()
+    lst_value = objects.ListV.make([make_num(10), make_num(20), make_num(30)], lst_exp.typ)
+    idx_value = make_nat(1)
+
+    val_k = ValCont(lst_value, k)
+    cont = Cont(exp, ctx, val_k)
+    result = exp.apply(cont, idx_value)
+
+    assert isinstance(result, Done), "Expected Done after applying idx"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.NumV), "Value should be NumV"
+    assert result.value.value.val == 20, "Index 1 should return second element (20)"
+
+
+def test_idx_apply_idx_last_elem_cps():
+    """Test IdxE continuation application - index 2 (last element)."""
+    lst_exp = make_list_exp([make_num_exp(10), make_num_exp(20), make_num_exp(30)])
+    idx_exp = make_nat_exp(2)
+    exp = make_idx_exp(lst_exp, idx_exp)
+    ctx = None
+
+    k = MockCont()
+    lst_value = objects.ListV.make([make_num(10), make_num(20), make_num(30)], lst_exp.typ)
+    idx_value = make_nat(2)
+
+    val_k = ValCont(lst_value, k)
+    cont = Cont(exp, ctx, val_k)
+    result = exp.apply(cont, idx_value)
+
+    assert isinstance(result, Done), "Expected Done after applying idx"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.NumV), "Value should be NumV"
+    assert result.value.value.val == 30, "Index 2 should return third element (30)"
+
+
+# ============================================================================
+# CPS Evaluation Tests - SliceE
+# ============================================================================
+
+def make_slice_exp(lst_exp, start_exp, length_exp):
+    """Create a SliceE expression."""
+    typ = lst_exp.typ
+    exp = p4specast.SliceE(lst_exp, start_exp, length_exp, typ)
+    return exp
+
+
+def test_slice_cps():
+    """Test CPS evaluation of SliceE - should evaluate list expression first."""
+    lst_exp = make_list_exp([make_num_exp(1), make_num_exp(2), make_num_exp(3), make_num_exp(4), make_num_exp(5)])
+    start_exp = make_nat_exp(1)
+    length_exp = make_nat_exp(3)
+    exp = make_slice_exp(lst_exp, start_exp, length_exp)
+    ctx = None
+
+    k = MockCont()
+    result = exp.eval_cps(ctx, k)
+
+    # Should return Next to evaluate the list expression first
+    assert isinstance(result, Next), "Expected Next object for SliceE"
+    assert result.exp is lst_exp, "Should evaluate list expression first"
+
+    # Verify the continuation is Cont
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert result.k.exp is exp, "Cont should reference the SliceE expression"
+    assert result.k.k is k, "Cont should preserve the original continuation"
+
+
+def test_slice_apply_lst_cps():
+    """Test SliceE continuation application after evaluating list."""
+    lst_exp = make_list_exp([make_num_exp(1), make_num_exp(2), make_num_exp(3)])
+    start_exp = make_nat_exp(0)
+    length_exp = make_nat_exp(2)
+    exp = make_slice_exp(lst_exp, start_exp, length_exp)
+    ctx = None
+
+    k = MockCont()
+    lst_value = objects.ListV.make([make_num(1), make_num(2), make_num(3)], lst_exp.typ)
+
+    # Create continuation (just evaluated lst, depth=0)
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, lst_value)
+
+    # Should return Next to evaluate the start expression
+    assert isinstance(result, Next), "Expected Next after applying lst"
+    assert result.exp is start_exp, "Should evaluate start expression"
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert isinstance(result.k.k, ValCont), "Cont.k should be ValCont"
+    assert result.k.k.value is lst_value, "ValCont should store the lst value"
+
+
+def test_slice_apply_start_cps():
+    """Test SliceE continuation application after evaluating start."""
+    lst_exp = make_list_exp([make_num_exp(1), make_num_exp(2), make_num_exp(3)])
+    start_exp = make_nat_exp(0)
+    length_exp = make_nat_exp(2)
+    exp = make_slice_exp(lst_exp, start_exp, length_exp)
+    ctx = None
+
+    k = MockCont()
+    lst_value = objects.ListV.make([make_num(1), make_num(2), make_num(3)], lst_exp.typ)
+    start_value = make_nat(0)
+
+    # Create continuation with one ValCont (depth=1, just evaluated start)
+    val_k = ValCont(lst_value, k)
+    cont = Cont(exp, ctx, val_k)
+    result = exp.apply(cont, start_value)
+
+    # Should return Next to evaluate the length expression
+    assert isinstance(result, Next), "Expected Next after applying start"
+    assert result.exp is length_exp, "Should evaluate length expression"
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    # Should have two ValConts now
+    assert isinstance(result.k.k, ValCont), "Cont.k should be ValCont"
+    assert result.k.k.value is start_value, "ValCont should store start value"
+    assert isinstance(result.k.k.k, ValCont), "Nested ValCont for lst"
+    assert result.k.k.k.value is lst_value, "Nested ValCont should store lst value"
+
+
+def test_slice_apply_length_cps():
+    """Test SliceE continuation application - full slice operation."""
+    lst_exp = make_list_exp([make_num_exp(1), make_num_exp(2), make_num_exp(3), make_num_exp(4), make_num_exp(5)])
+    start_exp = make_nat_exp(1)
+    length_exp = make_nat_exp(3)
+    exp = make_slice_exp(lst_exp, start_exp, length_exp)
+    ctx = None
+
+    k = MockCont()
+    lst_value = objects.ListV.make([make_num(1), make_num(2), make_num(3), make_num(4), make_num(5)], lst_exp.typ)
+    start_value = make_nat(1)
+    length_value = make_nat(3)
+
+    # Create continuation with two ValConts (depth=2, just evaluated length)
+    val_k1 = ValCont(lst_value, k)
+    val_k2 = ValCont(start_value, val_k1)
+    cont = Cont(exp, ctx, val_k2)
+    result = exp.apply(cont, length_value)
+
+    assert isinstance(result, Done), "Expected Done after applying length"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.ListV), "Value should be ListV"
+    slice_values = result.value.get_list()
+    assert len(slice_values) == 3, "Slice should have 3 elements"
+    assert slice_values[0].value.val == 2, "First element should be 2"
+    assert slice_values[1].value.val == 3, "Second element should be 3"
+    assert slice_values[2].value.val == 4, "Third element should be 4"
+
+
+def test_slice_apply_empty_result_cps():
+    """Test SliceE continuation application - empty slice."""
+    lst_exp = make_list_exp([make_num_exp(1), make_num_exp(2), make_num_exp(3)])
+    start_exp = make_nat_exp(1)
+    length_exp = make_nat_exp(0)
+    exp = make_slice_exp(lst_exp, start_exp, length_exp)
+    ctx = None
+
+    k = MockCont()
+    lst_value = objects.ListV.make([make_num(1), make_num(2), make_num(3)], lst_exp.typ)
+    start_value = make_nat(1)
+    length_value = make_nat(0)
+
+    val_k1 = ValCont(lst_value, k)
+    val_k2 = ValCont(start_value, val_k1)
+    cont = Cont(exp, ctx, val_k2)
+    result = exp.apply(cont, length_value)
+
+    assert isinstance(result, Done), "Expected Done after applying length"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.ListV), "Value should be ListV"
+    slice_values = result.value.get_list()
+    assert len(slice_values) == 0, "Slice with length 0 should be empty"
+
+
+def test_slice_apply_from_start_cps():
+    """Test SliceE continuation application - slice from beginning."""
+    lst_exp = make_list_exp([make_num_exp(1), make_num_exp(2), make_num_exp(3)])
+    start_exp = make_nat_exp(0)
+    length_exp = make_nat_exp(2)
+    exp = make_slice_exp(lst_exp, start_exp, length_exp)
+    ctx = None
+
+    k = MockCont()
+    lst_value = objects.ListV.make([make_num(1), make_num(2), make_num(3)], lst_exp.typ)
+    start_value = make_nat(0)
+    length_value = make_nat(2)
+
+    val_k1 = ValCont(lst_value, k)
+    val_k2 = ValCont(start_value, val_k1)
+    cont = Cont(exp, ctx, val_k2)
+    result = exp.apply(cont, length_value)
+
+    assert isinstance(result, Done), "Expected Done after applying length"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.ListV), "Value should be ListV"
+    slice_values = result.value.get_list()
+    assert len(slice_values) == 2, "Slice should have 2 elements"
+    assert slice_values[0].value.val == 1, "First element should be 1"
+    assert slice_values[1].value.val == 2, "Second element should be 2"
+
+
+# ============================================================================
+# CPS Evaluation Tests - StrE (Struct Expression)
+# ============================================================================
+
+def make_str_exp(fields):
+    """Create a StrE expression.
+
+    fields: list of (atom_name, exp) pairs
+    """
+    field_pairs = []
+    for name, inner_exp in fields:
+        atom = p4specast.AtomT(name)
+        field_pairs.append((atom, inner_exp))
+    # For struct type, we use TupleT as a stand-in since StructT has different creation requirements
+    if fields:
+        typ = p4specast.TupleT([inner_exp.typ for name, inner_exp in fields])
+    else:
+        typ = p4specast.TupleT([])
+    exp = p4specast.StrE(field_pairs, typ)
+    return exp
+
+
+def test_str_empty_cps():
+    """Test CPS evaluation of empty StrE."""
+    exp = make_str_exp([])
+    ctx = None
+
+    k = MockCont()
+    result = exp.eval_cps(ctx, k)
+
+    # Empty struct should return Done immediately
+    assert isinstance(result, Done), "Expected Done object for empty struct"
+    assert result.k is k, "Continuation should be preserved"
+    assert isinstance(result.value, objects.StructV), "Value should be StructV"
+
+
+def test_str_single_field_cps():
+    """Test CPS evaluation of StrE with single field."""
+    inner_exp = make_num_exp(42)
+    exp = make_str_exp([("x", inner_exp)])
+    ctx = None
+
+    k = MockCont()
+    result = exp.eval_cps(ctx, k)
+
+    # Should return Next to evaluate the first field expression
+    assert isinstance(result, Next), "Expected Next object for StrE"
+    assert result.exp is inner_exp, "Should evaluate field expression"
+
+    # Verify the continuation is Cont
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert result.k.exp is exp, "Cont should reference the StrE expression"
+    assert result.k.k is k, "Cont should preserve the original continuation"
+
+
+def test_str_apply_single_field_cps():
+    """Test StrE continuation application for single field struct."""
+    inner_exp = make_num_exp(42)
+    exp = make_str_exp([("x", inner_exp)])
+    ctx = None
+
+    k = MockCont()
+    inner_value = make_num(42)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    assert isinstance(result, Done), "Expected Done after applying single field"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.StructV), "Value should be StructV"
+
+
+def test_str_multiple_fields_cps():
+    """Test CPS evaluation of StrE with multiple fields."""
+    exp1 = make_num_exp(1)
+    exp2 = make_num_exp(2)
+    exp3 = make_num_exp(3)
+    exp = make_str_exp([("a", exp1), ("b", exp2), ("c", exp3)])
+    ctx = None
+
+    k = MockCont()
+    result = exp.eval_cps(ctx, k)
+
+    # Should return Next to evaluate the first field
+    assert isinstance(result, Next), "Expected Next object"
+    assert result.exp is exp1, "Should evaluate the first field expression"
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert result.k.k is k, "Cont should preserve the original continuation"
+
+
+def test_str_apply_multiple_fields_cps():
+    """Test StrE continuation application for multiple fields."""
+    exp1 = make_num_exp(1)
+    exp2 = make_num_exp(2)
+    exp3 = make_num_exp(3)
+    exp = make_str_exp([("a", exp1), ("b", exp2), ("c", exp3)])
+    ctx = None
+
+    k = MockCont()
+    val1 = make_num(1)
+    val2 = make_num(2)
+    val3 = make_num(3)
+
+    # First apply - no ValCont yet
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, val1)
+
+    assert isinstance(result, Next), "Expected Next after first apply"
+    assert result.exp is exp2, "Should evaluate second field expression"
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert isinstance(result.k.k, ValCont), "Cont.k should be ValCont"
+    assert result.k.k.value is val1, "ValCont should store val1"
+
+    # Second apply - one ValCont
+    cont2 = result.k
+    result2 = exp.apply(cont2, val2)
+
+    assert isinstance(result2, Next), "Expected Next after second apply"
+    assert result2.exp is exp3, "Should evaluate third field expression"
+    assert isinstance(result2.k.k, ValCont), "Cont.k should be ValCont"
+    assert result2.k.k.value is val2, "ValCont should store val2"
+
+    # Third apply - two ValConts (final)
+    cont3 = result2.k
+    result3 = exp.apply(cont3, val3)
+
+    assert isinstance(result3, Done), "Expected Done after final apply"
+    assert result3.k is k, "Should use original continuation"
+    assert isinstance(result3.value, objects.StructV), "Value should be StructV"
+
+
+# ============================================================================
+# CPS Evaluation Tests - CaseE (Variant Expression)
+# ============================================================================
+
+def make_case_exp(mixop, exps):
+    """Create a CaseE expression."""
+    # Create notexp
+    notexp = p4specast.NotExp(mixop, exps)
+    # For case type, we use TupleT as a stand-in
+    if exps:
+        typ = p4specast.TupleT([e.typ for e in exps])
+    else:
+        typ = p4specast.TupleT([])
+    exp = p4specast.CaseE(notexp, typ)
+    return exp
+
+
+def make_mixop(name):
+    """Create a simple MixOp with a single atom."""
+    # MixOp takes a flat list of atoms/None, not nested lists
+    return p4specast.MixOp([p4specast.AtomT(name)])
+
+
+def test_case_empty_cps():
+    """Test CPS evaluation of CaseE with no inner expressions."""
+    mixop = make_mixop("None")
+    exp = make_case_exp(mixop, [])
+    ctx = None
+
+    k = MockCont()
+    result = exp.eval_cps(ctx, k)
+
+    # Empty case should return Done immediately
+    assert isinstance(result, Done), "Expected Done object for case with no args"
+    assert result.k is k, "Continuation should be preserved"
+    assert isinstance(result.value, objects.CaseV), "Value should be CaseV"
+
+
+def test_case_single_cps():
+    """Test CPS evaluation of CaseE with single inner expression."""
+    mixop = make_mixop("Some")
+    inner_exp = make_num_exp(42)
+    exp = make_case_exp(mixop, [inner_exp])
+    ctx = None
+
+    k = MockCont()
+    result = exp.eval_cps(ctx, k)
+
+    # Should return Next to evaluate the inner expression
+    assert isinstance(result, Next), "Expected Next object for case with one arg"
+    assert result.exp is inner_exp, "Should evaluate inner expression"
+
+    # Verify the continuation is Cont
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert result.k.exp is exp, "Cont should reference the CaseE expression"
+    assert result.k.k is k, "Cont should preserve the original continuation"
+
+
+def test_case_apply_single_cps():
+    """Test CaseE continuation application for single arg case."""
+    mixop = make_mixop("Some")
+    inner_exp = make_num_exp(42)
+    exp = make_case_exp(mixop, [inner_exp])
+    ctx = None
+
+    k = MockCont()
+    inner_value = make_num(42)
+
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, inner_value)
+
+    assert isinstance(result, Done), "Expected Done after applying single arg"
+    assert result.k is k, "Should use the original continuation"
+    assert isinstance(result.value, objects.CaseV), "Value should be CaseV"
+
+
+def test_case_multiple_cps():
+    """Test CPS evaluation of CaseE with multiple inner expressions."""
+    mixop = make_mixop("Pair")
+    exp1 = make_num_exp(1)
+    exp2 = make_num_exp(2)
+    exp = make_case_exp(mixop, [exp1, exp2])
+    ctx = None
+
+    k = MockCont()
+    result = exp.eval_cps(ctx, k)
+
+    # Should return Next to evaluate the first expression
+    assert isinstance(result, Next), "Expected Next object"
+    assert result.exp is exp1, "Should evaluate the first expression"
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert result.k.k is k, "Cont should preserve the original continuation"
+
+
+def test_case_apply_multiple_cps():
+    """Test CaseE continuation application for multiple args."""
+    mixop = make_mixop("Pair")
+    exp1 = make_num_exp(1)
+    exp2 = make_num_exp(2)
+    exp3 = make_num_exp(3)
+    exp = make_case_exp(mixop, [exp1, exp2, exp3])
+    ctx = None
+
+    k = MockCont()
+    val1 = make_num(1)
+    val2 = make_num(2)
+    val3 = make_num(3)
+
+    # First apply - no ValCont yet
+    cont = Cont(exp, ctx, k)
+    result = exp.apply(cont, val1)
+
+    assert isinstance(result, Next), "Expected Next after first apply"
+    assert result.exp is exp2, "Should evaluate second expression"
+    assert isinstance(result.k, Cont), "Continuation should be Cont"
+    assert isinstance(result.k.k, ValCont), "Cont.k should be ValCont"
+    assert result.k.k.value is val1, "ValCont should store val1"
+
+    # Second apply - one ValCont
+    cont2 = result.k
+    result2 = exp.apply(cont2, val2)
+
+    assert isinstance(result2, Next), "Expected Next after second apply"
+    assert result2.exp is exp3, "Should evaluate third expression"
+    assert isinstance(result2.k.k, ValCont), "Cont.k should be ValCont"
+    assert result2.k.k.value is val2, "ValCont should store val2"
+
+    # Third apply - two ValConts (final)
+    cont3 = result2.k
+    result3 = exp.apply(cont3, val3)
+
+    assert isinstance(result3, Done), "Expected Done after final apply"
+    assert result3.k is k, "Should use original continuation"
+    assert isinstance(result3.value, objects.CaseV), "Value should be CaseV"
