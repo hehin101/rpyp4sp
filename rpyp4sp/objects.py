@@ -655,7 +655,6 @@ class ListV(BaseVWithTyp):
 
     _immutable_fields_ = []
     def __init__(self, typ=None):
-        assert isinstance(typ, p4specast.IterT) or typ is None
         self.typ = typ # type: p4specast.Type | None
 
     @staticmethod

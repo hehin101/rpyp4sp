@@ -136,8 +136,8 @@ def run_test_case(ctx, value, config):
 
     except Exception as e:
         # Unexpected crash
-        if not objectmodel.we_are_translated():
-            import pdb; pdb.xpm()
+        # if not objectmodel.we_are_translated():
+        #     import pdb; pdb.xpm()
         error_msg = str(e)
         coverage_hash = 'crash' + hex(objectmodel.compute_hash(error_msg))[2:]
         return TestResult(coverage_hash, crashed=True, error_msg=error_msg)
@@ -180,8 +180,8 @@ def load_seeds(seed_files, ctx):
             seeds.append((seed_value, result.coverage_hash, result.error_msg if result.crashed else None))
 
         except Exception as e:
-            if not objectmodel.we_are_translated():
-                import pdb;pdb.xpm()
+            # if not objectmodel.we_are_translated():
+            #     import pdb;pdb.xpm()
             print("  Failed to load seed %s: %s" % (corpus.basename(seed_file), str(e)))
             continue
 
@@ -330,8 +330,8 @@ def fuzz_main_loop(config, seed_files, ctx, rng, progress_checker=None):
                         break
 
                 except Exception as e:
-                    if not objectmodel.we_are_translated():
-                        import pdb; pdb.xpm()
+                    # if not objectmodel.we_are_translated():
+                    #     import pdb; pdb.xpm()
                     # Mutation or execution error - continue to next attempt
                     print("Mutation error at iteration %d: %s" % (iteration, str(e)))
                     continue

@@ -377,8 +377,8 @@ def command_fuzz(argv):
         return 1
 
     except Exception as e:
-        if not objectmodel.we_are_translated():
-            import pdb;pdb.xpm()
+        # if not objectmodel.we_are_translated():
+        #     import pdb;pdb.xpm()
         print("\n=== Fuzzing Error ===")
         print("Error: %s" % str(e))
         return 1
