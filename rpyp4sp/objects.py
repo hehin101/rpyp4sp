@@ -79,6 +79,10 @@ class BoolV(BaseV):
         # | BoolV b -> string_of_bool b
         return "true" if self.value else "false"
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        return [rpyjson.JsonString("BoolV"), rpyjson.json_true if self.value else rpyjson.json_false]
+
     @staticmethod
     def fromjson(content, typ):
         return BoolV.make(content.get_list_item(1).value_bool(), typ)
@@ -107,7 +111,12 @@ class NumV(BaseV):
         raise NotImplementedError("abstract method")
 
     @staticmethod
-    def make(value, what, typ):
+    def make(value, what, typ=None):
+        if typ is None:
+            if isinstance(what, p4specast.IntT):
+                typ = p4specast.NumT.INT
+            else:
+                typ = p4specast.NumT.NAT
         if isinstance(typ, p4specast.NumT) and isinstance(what, p4specast.IntT):
             assert type(typ.typ) is type(what)
             return IntV(value, what)
@@ -115,6 +124,7 @@ class NumV(BaseV):
             assert type(typ.typ) is type(what)
             return NatV(value, what)
         else:
+            assert isinstance(typ, p4specast.Type)
             return NumVWithTyp(value, what, typ)
 
     def compare(self, other):
@@ -198,6 +208,15 @@ class NumV(BaseV):
     def fromstr(value, what, typ=None):
         return NumV.make(integers.Integer.fromstr(value), what, typ)
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        if isinstance(self.get_what(), p4specast.IntT):
+            what_str = "Int"
+        else:
+            what_str = "Nat"
+        inner_array = rpyjson.JsonArray.make([rpyjson.JsonString(what_str), rpyjson.JsonString(self.value.str())])
+        return [rpyjson.JsonString("NumV"), inner_array]
+
     @staticmethod
     def fromjson(content, typ):
         inner = content.get_list_item(1)
@@ -219,7 +238,8 @@ class IntV(NumV):
         return p4specast.IntT.INSTANCE
 
     def get_typ(self):
-        return p4specast.IntT.INSTANCE
+        return p4specast.NumT.INT
+
 
 class NatV(NumV):
     def __init__(self, value, what):
@@ -230,7 +250,8 @@ class NatV(NumV):
         return p4specast.NatT.INSTANCE
 
     def get_typ(self):
-        return p4specast.NatT.INSTANCE
+        return p4specast.NumT.NAT
+
 
 class NumVWithTyp(NumV):
     _immutable_fields_ = ['_what', 'typ']
@@ -248,8 +269,8 @@ class NumVWithTyp(NumV):
     def get_typ(self):
         return self.typ
 
-NumV.NAT_ZERO = NumV.fromstr('0', p4specast.NatT.INSTANCE, p4specast.NatT.INSTANCE)
-NumV.NAT_ONE = NumV.fromstr('1', p4specast.NatT.INSTANCE, p4specast.NatT.INSTANCE)
+NumV.NAT_ZERO = NumV.fromstr('0', p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
+NumV.NAT_ONE = NumV.fromstr('1', p4specast.NatT.INSTANCE, p4specast.NumT.NAT)
 
 class TextV(BaseVWithTyp):
     _compare_tag = 2
@@ -277,6 +298,10 @@ class TextV(BaseVWithTyp):
     def tostring(self, short=False, level=0):
         # | TextV s -> "\"" ^ s ^ "\""
         return string_escape_encode(self.value)
+
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        return [rpyjson.JsonString("TextV"), rpyjson.JsonString(self.value)]
 
     @staticmethod
     def fromjson(content, typ):
@@ -404,6 +429,16 @@ class StructV(BaseVWithTyp):
 
         return "{ %s }" % ";\n".join(parts)
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        fields_json = []
+        for fieldname, index in self.map.fieldpos.items():
+            value = self._get_list(index)
+            atom = p4specast.AtomT(fieldname)
+            field_array = rpyjson.JsonArray.make([atom.tojson(), value.tojson()])
+            fields_json.append(field_array)
+        return [rpyjson.JsonString("StructV"), rpyjson.JsonArray.make(fields_json)]
+
     @staticmethod
     def fromjson(content, typ):
         values = []
@@ -468,6 +503,12 @@ class CaseV(BaseVWithTyp):
 
         return "(" + " ".join(result_parts) + ")"
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        values_json = [self._get_list(i).tojson() for i in range(self._get_size_list())]
+        case_array = rpyjson.JsonArray.make([self.mixop.tojson(), rpyjson.JsonArray.make(values_json)])
+        return [rpyjson.JsonString("CaseV"), case_array]
+
     @staticmethod
     def fromjson(content, typ):
         mixop_content, valuelist_content = content.get_list_item(1).value_array()
@@ -528,6 +569,11 @@ class TupleV(BaseVWithTyp):
         element_strs = [self._get_list(i).tostring(short, level + 1) for i in range(self._get_size_list())]
         return "(%s)" % ", ".join(element_strs)
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        elements_json = [self._get_list(i).tojson() for i in range(self._get_size_list())]
+        return [rpyjson.JsonString("TupleV"), rpyjson.JsonArray.make(elements_json)]
+
     @staticmethod
     def fromjson(content, typ):
         elements = [BaseV.fromjson(e) for e in content.get_list_item(1).value_array()]
@@ -576,6 +622,13 @@ class OptV(BaseVWithTyp):
             return "None"
         else:
             return "Some(%s)" % self.get_opt_value().tostring(short, level + 1)
+
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        if self.get_opt_value() is None:
+            return [rpyjson.JsonString("OptV"), rpyjson.json_null]
+        else:
+            return [rpyjson.JsonString("OptV"), self.get_opt_value().tojson()]
 
     @staticmethod
     def fromjson(content, typ):
@@ -670,6 +723,11 @@ class ListV(BaseVWithTyp):
 
         return "[ %s ]" % ",\n".join(parts)
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        elements_json = [self._get_list(i).tojson() for i in range(self._get_size_list())]
+        return [rpyjson.JsonString("ListV"), rpyjson.JsonArray.make(elements_json)]
+
     @staticmethod
     def fromjson(content, typ):
         elements = [BaseV.fromjson(e) for e in content.get_list_item(1).value_array()]
@@ -689,6 +747,10 @@ class FuncV(BaseVWithTyp):
     def tostring(self, short=False, level=0):
         # | FuncV id -> string_of_defid id
         return self.id.value
+
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        return [rpyjson.JsonString("FuncV"), self.id.tojson()]
 
     @staticmethod
     def fromjson(content, typ):

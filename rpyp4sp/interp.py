@@ -131,6 +131,7 @@ def invoke_func_def_attempt_clauses(ctx, func, values_input, ctx_local=None):
     ctx_local = assign_args(ctx, ctx_local, func, values_input)
     sign = _func_eval_instrs(ctx_local, func)
     # let ctx = Ctx.commit ctx ctx_local in
+    ctx = ctx.commit_coverage_or_none(sign.sign_get_cover())
     # match sign with
     if isinstance(sign, Ret):
     # | Ret value_output ->
@@ -207,7 +208,7 @@ def invoke_rel(ctx, id, values_input):
     #   let ctx_local, sign = eval_instrs ctx_local Cont instrs in
     sign = _rel_eval_instrs(ctx_local, reld)
     #   let ctx = Ctx.commit ctx ctx_local in
-    #ctx = ctx.commit(sign.sign_get_ctx())
+    ctx = ctx.commit_coverage_or_none(sign.sign_get_cover())
     #   match sign with
     #   | Res values_output ->
     if isinstance(sign, Res):
@@ -285,6 +286,7 @@ class __extend__(p4specast.IfI):
         #     | Some (pid, _) -> Ctx.cover ctx (not cond) pid vid
         #     | None -> ctx
         #   in
+        ctx = ctx.cover(not cond, self.phantom)
         #   if cond then eval_instrs ctx Cont instrs_then else (ctx, Cont)
         if cond:
             return eval_instrs(ctx, self.instrs)
@@ -496,6 +498,7 @@ class __extend__(p4specast.CaseI):
         #   | Some (pid, _) -> Ctx.cover ctx (Option.is_none instrs_opt) pid vid
         #   | None -> ctx
         # in
+        ctx = ctx.cover(instrs_opt is None, self.phantom)
         # match instrs_opt with
         # | Some instrs -> eval_instrs ctx Cont instrs
         if instrs_opt is not None:
@@ -1122,6 +1125,7 @@ class __extend__(p4specast.HoldI):
         #    (iterexps : iterexp list) (holdcase : holdcase) : Ctx.t * Sign.t =
         #  (* Copy the current coverage information *)
         #  let cover_backup = !(ctx.cover) in
+        cover_backup = ctx.get_cover()
         #  (* Evaluate the hold condition *)
         #  let ctx, cond, value_cond = eval_hold_cond_iter ctx id notexp iterexps in
         ctx, cond = eval_hold_cond_iter(ctx, self)
@@ -1135,10 +1139,11 @@ class __extend__(p4specast.HoldI):
         #      if cond then eval_instrs ctx Cont instrs_hold
             if cond:
                 return eval_instrs(ctx, holdcase.hold_instrs)
+            else:
         #      else (
         #        ctx.cover := cover_backup;
         #        eval_instrs ctx Cont instrs_not_hold)
-            else:
+                ctx = ctx.restore_cover(cover_backup)
                 return eval_instrs(ctx, holdcase.nothold_instrs)
         #  | HoldH (instrs_hold, phantom_opt) ->
         elif isinstance(holdcase, p4specast.HoldH):
@@ -1148,6 +1153,7 @@ class __extend__(p4specast.HoldI):
         #        | None -> ctx
         #      in
         #      if cond then eval_instrs ctx Cont instrs_hold else (ctx, Cont)
+            ctx = ctx.cover(not cond, holdcase.phantom)
             if cond:
                 return eval_instrs(ctx, holdcase.hold_instrs)
             else:
@@ -1155,18 +1161,20 @@ class __extend__(p4specast.HoldI):
         #  | NotHoldH (instrs_not_hold, phantom_opt) ->
         elif isinstance(holdcase, p4specast.NotHoldH):
         #      ctx.cover := cover_backup;
+            ctx = ctx.restore_cover(cover_backup)
         #      let ctx =
         #        match phantom_opt with
         #        | Some (pid, _) -> Ctx.cover ctx cond pid vid
         #        | None -> ctx
         #      in
+            ctx = ctx.cover(cond, holdcase.phantom)
         #      if not cond then eval_instrs ctx Cont instrs_not_hold else (ctx, Cont)
             if not cond:
                 return eval_instrs(ctx, holdcase.nothold_instrs)
             else:
                 return ctx
         else:
-            assert False, "unknown holdcase type: %s" % self.holdcase.__class__.__name__
+            assert False, "unknown holdcase type: %s" % holdcase.__class__.__name__
 
 @jit.unroll_safe
 def assign_exp(ctx, exp, value):
@@ -1522,7 +1530,7 @@ class __extend__(p4specast.ReturnI):
         # let ctx, value = eval_exp ctx exp in
         # (ctx, Ret value)
         ctx, value = eval_exp(ctx, self.exp)
-        return Ret(ctx, value)
+        return Ret.make(ctx, value)
 
 # ____________________________________________________________
 # expressions

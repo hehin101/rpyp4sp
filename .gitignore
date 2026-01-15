@@ -1,14 +1,23 @@
 .cache
 .hypothesis/
 .vscode/
+.DS_Store
 
 /pypy/
-/pypy_binary/
+/_pypy_binary/
+/rpyp4sp/.hypothesis/
+.cache
 *.pyc
 *.json
 integrationtests/*.actual
 targetrpyp4sp-c*
 
+# fuzzer folders
+/fuzz_corpus/
+/fuzz_p4/
+/p4_compiler_output/
+
+.vscode/
 *.csv
 gcout
 

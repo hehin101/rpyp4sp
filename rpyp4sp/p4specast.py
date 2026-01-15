@@ -47,8 +47,8 @@ class AstBase(object):
         arcs = []
         label = [self.__class__.__name__]
         for key, value in self.__dict__.items():
-            if key == 'phantom':
-                continue
+            #if key == 'phantom':
+            #    continue
             if isinstance(value, (Region, Position)):
                 continue
             if isinstance(value, AstBase):
@@ -82,6 +82,10 @@ def define_enum(basename, *names):
                     return cls.INSTANCE
             assert 0
 
+        def tojson(self):
+            from rpyp4sp import rpyjson
+            return rpyjson.JsonArray.make([rpyjson.JsonString(self.__class__.__name__)])
+
         def __repr__(self):
             return "p4specast." + self.__class__.__name__ + ".INSTANCE"
     Base.__name__ = basename
@@ -112,6 +116,11 @@ class Position(AstBase):
         if isinstance(value, rpyjson.JsonAdapterPosition):
             return value.position
         return Position(value.get_dict_value('file').value_string(), value.get_dict_value('line').value_int(), value.get_dict_value('column').value_int())
+
+    def tojson(self):
+        from rpyp4sp import rpyjson
+        file_map = rpyjson.ROOT_MAP.get_next("file").get_next("line").get_next("column")
+        return rpyjson.JsonObject3(file_map, rpyjson.JsonString(self.file), rpyjson.JsonInt(self.line), rpyjson.JsonInt(self.column))
 
     def has_information(self):
         return self.file != '' or self.line != 0 or self.column != 0
@@ -150,6 +159,11 @@ class Region(AstBase):
         if not left.has_information() and not right.has_information():
             return NO_REGION
         return Region(left, right)
+
+    def tojson(self):
+        from rpyp4sp import rpyjson
+        region_map = rpyjson.ROOT_MAP.get_next("left").get_next("right")
+        return rpyjson.JsonObject2(region_map, self.left.tojson(), self.right.tojson())
 
     @staticmethod
     def line_span(file, line, column_start, column_end):
@@ -222,6 +236,11 @@ class Id(AstBase):
         if cache is not None:
             cache.id_cache[id_value] = result
         return result
+
+    def tojson(self):
+        from rpyp4sp import rpyjson
+        id_map = rpyjson.ROOT_MAP.get_next("it").get_next("note").get_next("at")
+        return rpyjson.JsonObject3(id_map, rpyjson.JsonString(self.value), rpyjson.json_null, self.region.tojson())
 
     def __repr__(self):
         return "p4specast.Id(%r, %s)" % (self.value, self.region)
@@ -1576,10 +1595,23 @@ class Type(AstBase):
     # has a .region, but only sometimes (eg exp uses typ')
 
     _attr_ = ['region', '_iterlist', '_iteropt']
+    region = None
     _iterlist = None
     _iteropt = None
 
     def tostring(self):
+        assert 0  # abstract method
+
+    def tojson(self, as_bare_typ=False):
+        from rpyp4sp import rpyjson
+        content = self._tojson_content()
+        if as_bare_typ:
+            return rpyjson.JsonArray.make(content)
+        else:
+            root_map = rpyjson.ROOT_MAP.get_next("at").get_next("it").get_next("note")
+            return rpyjson.JsonObject3(root_map, self.region.tojson(), rpyjson.JsonArray.make(content), rpyjson.json_null)
+
+    def _tojson_content(self):
         assert 0  # abstract method
 
     @staticmethod
@@ -1642,6 +1674,12 @@ class Type(AstBase):
             res = res.iter_of(iter)
         return res
 
+    def empty_list_value(self):
+        assert 0
+
+    def opt_none_value(self):
+        assert 0
+
 
 class BoolT(Type):
     def __init__(self, region=None):
@@ -1655,6 +1693,10 @@ class BoolT(Type):
         if self.region is not None and not self.region.eq(NO_REGION):
             return "p4specast.BoolT(region=%r)" % (self.region,)
         return "p4specast.BoolT.INSTANCE"
+
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        return [rpyjson.JsonString("BoolT")]
 
     @staticmethod
     def fromjson(content, region, cache=None):
@@ -1694,6 +1736,10 @@ class NumT(Type):
         else:
             return "p4specast.NumT(%r%s)" % (self.typ, region_str)
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        return [rpyjson.JsonString("NumT"), self.typ.tojson()]
+
     @staticmethod
     def fromjson(content, region, cache=None):
         typ = NumTyp.fromjson(content.get_list_item(1), cache)
@@ -1720,6 +1766,10 @@ class TextT(Type):
         if self.region is not None and not self.region.eq(NO_REGION):
             return "p4specast.TextT(region=%r)" % (self.region,)
         return "p4specast.TextT.INSTANCE"
+
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        return [rpyjson.JsonString("TextT")]
 
     @staticmethod
     def fromjson(content, region, cache=None):
@@ -1750,6 +1800,11 @@ class VarT(Type):
         if self.region is not None and not self.region.eq(NO_REGION):
             region_str = ", region=%r" % (self.region,)
         return "p4specast.VarT(%r, %r%s)" % (self.id, self.targs, region_str)
+
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        targs_json = [targ.tojson() for targ in self.targs]
+        return [rpyjson.JsonString("VarT"), self.id.tojson(), rpyjson.JsonArray.make(targs_json)]
 
     @staticmethod
     def fromjson(content, region, cache=None):
@@ -1790,6 +1845,11 @@ class TupleT(Type):
             region_str = ", region=%r" % (self.region,)
         return "p4specast.TupleT(%r%s)" % (self.elts, region_str)
 
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        elts_json = [elt.tojson() for elt in self.elts]
+        return [rpyjson.JsonString("TupleT"), rpyjson.JsonArray.make(elts_json)]
+
     @staticmethod
     def fromjson(content, region, cache=None):
         return TupleT(
@@ -1810,10 +1870,18 @@ class IterT(Type):
         return "%s%s" % (self.typ.tostring(), string_of_iter(self.iter))
 
     def __repr__(self):
-        region_str = ""
         if self.region is not None and not self.region.eq(NO_REGION):
             region_str = ", region=%r" % (self.region,)
-        return "p4specast.IterT(%r, %r%s)" % (self.typ, self.iter, region_str)
+            return "p4specast.IterT(%r, %r%s)" % (self.typ, self.iter, region_str)
+        else:
+            if isinstance(self.iter, List):
+                return "%r.list_of()" % (self.typ, )
+            else:
+                return "%r.opt_of()" % (self.typ, )
+
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        return [rpyjson.JsonString("IterT"), self.typ.tojson(), self.iter.tojson()]
 
     @staticmethod
     def fromjson(content, region, cache=None):
@@ -1872,6 +1940,10 @@ class FuncT(Type):
         if self.region is not None and not self.region.eq(NO_REGION):
             return "p4specast.FuncT(region=%r)" % (self.region,)
         return "p4specast.FuncT.INSTANCE"
+
+    def _tojson_content(self):
+        from rpyp4sp import rpyjson
+        return [rpyjson.JsonString("FuncT")]
 
     @staticmethod
     def fromjson(content, region, cache=None):
@@ -2101,10 +2173,10 @@ class IfI(InstrWithIters):
         iterexps_str = string_of_iterexps(self.iters)
         instrs_str = string_of_instrs(self.instrs, level + 1)
 
-        if self.phantom.is_null:  # None case
+        if self.phantom is None:  # None case
             return "%sIf (%s)%s, then\n\n%s" % (order, self.exp.tostring(), iterexps_str, instrs_str)
         else:  # Some phantom case
-            phantom_str = "TODO_phantom"  # TODO: implement string_of_phantom
+            phantom_str = self.phantom.tostring()
             return "%sIf (%s)%s, then\n\n%s\n\n%sElse %s" % (order, self.exp.tostring(), iterexps_str, instrs_str, order, phantom_str)
 
     @staticmethod
@@ -2113,7 +2185,7 @@ class IfI(InstrWithIters):
             exp=Exp.fromjson(content.get_list_item(1), cache),
             iters=[IterExp.fromjson(ite, cache) for ite in content.get_list_item(2).value_array()],
             instrs=[Instr.fromjson(instr, cache) for instr in content.get_list_item(3).value_array()],
-            phantom=content.get_list_item(4)
+            phantom=Phantom.fromjson(content.get_list_item(4), cache),
         )
 
     def __repr__(self):
@@ -2211,7 +2283,7 @@ class CaseI(Instr):
         if self.phantom.is_null:  # None case
             return "%sCase analysis on %s\n\n%s" % (order, self.exp.tostring(), cases_str)
         else:  # Some phantom case
-            phantom_str = "TODO_phantom"  # TODO: implement string_of_phantom
+            phantom_str = self.phantom.tostring()
             return "%sCase analysis on %s\n\n%s\n\n%sElse %s" % (order, self.exp.tostring(), cases_str, order, phantom_str)
 
     @staticmethod
@@ -2219,7 +2291,7 @@ class CaseI(Instr):
         return CaseI(
             exp=Exp.fromjson(content.get_list_item(1), cache),
             cases=[Case.fromjson(case, cache) for case in content.get_list_item(2).value_array()],
-            phantom=content.get_list_item(3)
+            phantom=Phantom.fromjson(content.get_list_item(3), cache),
         )
 
     def __repr__(self):
@@ -2477,7 +2549,7 @@ class HoldH(HoldCase):
     def fromjson(content, cache=None):
         return HoldH(
             hold_instrs=[Instr.fromjson(instr, cache) for instr in content.get_list_item(1).value_array()],
-            phantom=content.get_list_item(2)
+            phantom=Phantom.fromjson(content.get_list_item(2), cache),
         )
 
     def tostring(self, level=0):
@@ -2495,7 +2567,7 @@ class HoldH(HoldCase):
         if self.phantom.is_null:  # None case
             return "%sHolds:\n\n%s" % (indent, hold_str)
         else:  # Some phantom case
-            phantom_str = "TODO_phantom"  # TODO: implement string_of_phantom
+            phantom_str = self.phantom.tostring()
             return "%sHolds:\n\n%s\n\n%sElse %s" % (indent, hold_str, indent, phantom_str)
 
     def __repr__(self):
@@ -2511,7 +2583,7 @@ class NotHoldH(HoldCase):
     def fromjson(content, cache=None):
         return NotHoldH(
             nothold_instrs=[Instr.fromjson(instr, cache) for instr in content.get_list_item(1).value_array()],
-            phantom=content.get_list_item(2)
+            phantom=Phantom.fromjson(content.get_list_item(2), cache),
         )
 
     def tostring(self, level=0):
@@ -2529,7 +2601,7 @@ class NotHoldH(HoldCase):
         if self.phantom.is_null:  # None case
             return "%sDoes not hold:\n\n%s" % (indent, nothold_str)
         else:  # Some phantom case
-            phantom_str = "TODO_phantom"  # TODO: implement string_of_phantom
+            phantom_str = self.phantom.tostring()
             return "%sDoes not hold:\n\n%s\n\n%sElse %s" % (indent, nothold_str, indent, phantom_str)
 
 
@@ -2950,6 +3022,207 @@ class DotP(Path):
     def __repr__(self):
         return "p4specast.DotP(%r, %r)" % (self.path, self.atom)
 
+# and pid = int
+# and phantom = pid * pathcond list
+
+class Phantom(AstBase):
+    def __init__(self, pid, pathconds):
+        self.pid = pid # type: int
+        self.pathconds = pathconds # type: list[PathCond]
+
+    def tostring(self):
+        # and string_of_pid pid = Format.asprintf "Phantom#%d" pid
+
+        # and string_of_phantom phantom =
+        #   let pid, _ = phantom in
+        #   string_of_pid pid
+        return "Phantom#%d" % self.pid
+
+    def tostring_of_pathconds(self):
+        #  and string_of_pathconds pathconds =
+        #   List.map string_of_pathcond pathconds |> String.concat " /\\ "
+       return " /\\ ".join([pc.tostring() for pc in self.pathconds])
+
+    @staticmethod
+    def fromjson(content, cache=None):
+        if content.is_null:
+            return None
+        return Phantom(
+            pid=content.get_list_item(0).value_int(),
+            pathconds=[PathCond.fromjson(pc) for pc in content.get_list_item(1).value_array()]
+        )
+
+    def __repr__(self):
+        return "p4specast.Phantom(%r, %r)" % (self.pid, self.pathconds)
+
+
+
+# and pathcond =
+#   | ForallC of pathcond * iterexp list
+#   | ExistsC of pathcond * iterexp list
+#   | PlainC of exp
+#   | HoldC of id * notexp
+#   | NotHoldC of id * notexp
+
+# and string_of_pathcond pathcond =
+#   match pathcond with
+#   | ForallC (pathcond, iterexps) ->
+#       Format.asprintf "(forall %s)%s"
+#         (string_of_pathcond pathcond)
+#         (string_of_iterexps iterexps)
+#   | ExistsC (pathcond, iterexps) ->
+#       Format.asprintf "(exists %s)%s"
+#         (string_of_pathcond pathcond)
+#         (string_of_iterexps iterexps)
+#   | PlainC exp -> "(" ^ string_of_exp exp ^ ")"
+#   | HoldC (relid, notexp) ->
+#       Format.asprintf "(%s: %s holds)" (string_of_relid relid)
+#         (string_of_notexp notexp)
+#   | NotHoldC (relid, notexp) ->
+#       Format.asprintf "(%s: %s does not hold)" (string_of_relid relid)
+#         (string_of_notexp notexp)
+
+
+class PathCond(AstBase):
+    @staticmethod
+    def fromjson(value):
+        kind = value.get_list_item(0).value_string()
+        if kind == 'ForallC':
+            return ForallC.fromjson(value)
+        elif kind == 'ExistsC':
+            return ExistsC.fromjson(value)
+        elif kind == 'PlainC':
+            return PlainC.fromjson(value)
+        elif kind == 'HoldC':
+            return HoldC.fromjson(value)
+        elif kind == 'NotHoldC':
+            return NotHoldC.fromjson(value)
+        else:
+            raise P4UnknownTypeError("Unknown PathCond: %s" % kind)
+
+    def tostring(self):
+        assert 0  # abstract method
+
+
+class ForallC(PathCond):
+    def __init__(self, pathcond, iters):
+        self.pathcond = pathcond # type: PathCond
+        self.iters = iters # type: list[IterExp]
+
+    def tostring(self):
+        # | ForallC (pathcond, iterexps) ->
+        #     Format.asprintf "(forall %s)%s"
+        #       (string_of_pathcond pathcond)
+        #       (string_of_iterexps iterexps)
+        return "(forall %s)%s" % (
+            self.pathcond.tostring(),
+            string_of_iterexps(self.iters)
+        )
+
+    @staticmethod
+    def fromjson(content):
+        return ForallC(
+            pathcond=PathCond.fromjson(content.get_list_item(1)),
+            iters=[IterExp.fromjson(ite) for ite in content.get_list_item(2).value_array()]
+        )
+
+    def __repr__(self):
+        return "p4specast.ForallC(%r, %r)" % (self.pathcond, self.iters)
+
+
+class ExistsC(PathCond):
+    def __init__(self, pathcond, iters):
+        self.pathcond = pathcond # type: PathCond
+        self.iters = iters # type: list[IterExp]
+
+    def tostring(self):
+        # | ExistsC (pathcond, iterexps) ->
+        #     Format.asprintf "(exists %s)%s"
+        #       (string_of_pathcond pathcond)
+        #       (string_of_iterexps iterexps)
+        return "(exists %s)%s" % (
+            self.pathcond.tostring(),
+            string_of_iterexps(self.iters)
+        )
+
+    @staticmethod
+    def fromjson(content):
+        return ExistsC(
+            pathcond=PathCond.fromjson(content.get_list_item(1)),
+            iters=[IterExp.fromjson(ite) for ite in content.get_list_item(2).value_array()]
+        )
+
+    def __repr__(self):
+        return "p4specast.ExistsC(%r, %r)" % (self.pathcond, self.iters)
+
+
+class PlainC(PathCond):
+    def __init__(self, exp):
+        self.exp = exp # type: Exp
+
+    def tostring(self):
+        # | PlainC exp -> "(" ^ string_of_exp exp ^ ")"
+        return "(%s)" % self.exp.tostring()
+
+    @staticmethod
+    def fromjson(content):
+        return PlainC(
+            exp=Exp.fromjson(content.get_list_item(1))
+        )
+
+    def __repr__(self):
+        return "p4specast.PlainC(%r)" % (self.exp,)
+
+
+class HoldC(PathCond):
+    def __init__(self, id, notexp):
+        self.id = id # type: Id
+        self.notexp = notexp # type: NotExp
+
+    def tostring(self):
+        # | HoldC (relid, notexp) ->
+        #     Format.asprintf "(%s: %s holds)" (string_of_relid relid)
+        #       (string_of_notexp notexp)
+        return "(%s: %s holds)" % (
+            self.id.value,
+            self.notexp.tostring()
+        )
+
+    @staticmethod
+    def fromjson(content):
+        return HoldC(
+            id=Id.fromjson(content.get_list_item(1)),
+            notexp=NotExp.fromjson(content.get_list_item(2))
+        )
+
+    def __repr__(self):
+        return "p4specast.HoldC(%r, %r)" % (self.id, self.notexp)
+
+class NotHoldC(PathCond):
+    def __init__(self, id, notexp):
+        self.id = id # type: Id
+        self.notexp = notexp # type: NotExp
+
+    def tostring(self):
+        # | NotHoldC (relid, notexp) ->
+        #     Format.asprintf "(%s: %s does not hold)" (string_of_relid relid)
+        #       (string_of_notexp notexp)
+        return "(%s: %s does not hold)" % (
+            self.id.value,
+            self.notexp.tostring()
+        )
+
+    @staticmethod
+    def fromjson(content):
+        return NotHoldC(
+            id=Id.fromjson(content.get_list_item(1)),
+            notexp=NotExp.fromjson(content.get_list_item(2))
+        )
+
+    def __repr__(self):
+        return "p4specast.NotHoldC(%r, %r)" % (self.id, self.notexp)
+
+
 # type Mixop.t = Atom.t phrase list list
 
 class MixOp(AstBase):
@@ -3017,6 +3290,24 @@ class MixOp(AstBase):
         res = MixOp(atoms_with_holes[:])
         res._str = builder.build()
         return res
+
+    def tojson(self):
+        from rpyp4sp import rpyjson
+        phrases = []
+        curr = []
+        for atom_or_hole in self.atoms_with_holes:
+            if atom_or_hole is None:
+                phrases.append(curr)
+                curr = []
+            else:
+                curr.append(atom_or_hole)
+        phrases.append(curr)
+
+        phrases_json = []
+        for phrase_group in phrases:
+            group_json = [atom.tojson() for atom in phrase_group]
+            phrases_json.append(rpyjson.JsonArray.make(group_json))
+        return rpyjson.JsonArray.make(phrases_json)
 
     def __repr__(self):
         return "p4specast.MixOp(%r)" % (self.atoms_with_holes,)
@@ -3095,6 +3386,23 @@ class AtomT(AstBase):
                 value=atom_type_to_value(kind),
                 region=region
             )
+
+    def tojson(self):
+        from rpyp4sp import rpyjson
+        # Find the atom type for this value, or use 'Atom' as default
+        atom_type = None
+        for type_name, type_value in atom_type_map.items():
+            if type_value == self.value:
+                atom_type = type_name
+                break
+
+        if atom_type is not None:
+            content = rpyjson.JsonArray.make([rpyjson.JsonString(atom_type)])
+        else:
+            content = rpyjson.JsonArray.make([rpyjson.JsonString('Atom'), rpyjson.JsonString(self.value)])
+
+        atom_map = rpyjson.ROOT_MAP.get_next("it").get_next("note").get_next("at")
+        return rpyjson.JsonObject3(atom_map, content, rpyjson.json_null, self.region.tojson())
 
 def atom_type_to_value(kind):
     return atom_type_map[kind]
