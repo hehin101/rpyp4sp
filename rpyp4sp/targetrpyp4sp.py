@@ -303,6 +303,10 @@ def main(argv):
         except ValueError:
             print("invalid jit option")
             return 1
+    # Enable CPS-style evaluation if --cps flag is present
+    if parse_flag(argv, "--cps"):
+        interp.set_cps_mode(True)
+        print("CPS mode enabled")
     if len(argv) < 3:
         print("usage: %s run-test-jsonl/run-p4-json/bench-p4-json <fns>" % argv[0])
         return 1

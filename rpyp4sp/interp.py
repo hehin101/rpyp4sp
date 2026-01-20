@@ -6,6 +6,14 @@ from rpyp4sp.error import (P4Error, P4EvaluationError, P4CastError,
 from rpyp4sp.sign import Res, Ret
 from rpyp4sp.continuation import (Cont, Next, Done, ValCont, IterState, TerminalCont, eval_exp_cps)
 
+_use_cps = [False]
+
+def set_cps_mode(enabled):
+    _use_cps[0] = enabled
+
+def get_cps_mode():
+    return _use_cps[0]
+
 class VarList(object):
     _immutable_fields_ = ['vars[*]']
 
@@ -3067,8 +3075,45 @@ def recreate_tuple(tup_or_value, ctx):
     return ctx, tup_or_value
 
 @objectmodel.always_inline
-def eval_exp(ctx, exp):
+def _eval_exp_direct(ctx, exp):
     return recreate_tuple(exp.tuplifying_eval_exp(ctx), ctx)
+
+
+def get_printable_location_cps(exp):
+    return "run_cps %s" % exp.tostring()
+
+run_cps_jit_driver = jit.JitDriver(
+    reds='auto',
+    greens=['exp'],
+    name='run_cps',
+    get_printable_location=get_printable_location_cps,
+    is_recursive=True)
+
+
+def run_cps(ctx, exp):
+    k = TerminalCont()
+    result = exp.eval_cps(ctx, k)
+
+    while True:
+        if isinstance(result, Done):
+            if isinstance(result.k, TerminalCont):
+                return ctx, result.value
+            result = result.k.apply(result.value)
+        elif isinstance(result, Next):
+            ctx = result.ctx
+            exp = result.exp
+            exp = jit.promote(exp)
+            run_cps_jit_driver.jit_merge_point(exp=exp)
+            result = exp.eval_cps(result.ctx, result.k)
+        else:
+            raise AssertionError("Unexpected result type: %s" % type(result))
+
+
+def eval_exp(ctx, exp):
+    if _use_cps[0]:
+        return run_cps(ctx, exp)
+    return _eval_exp_direct(ctx, exp)
+
 
 def _patch_exp_subcls(cls):
     def tuplifying_eval_exp(self, ctx_orig):
