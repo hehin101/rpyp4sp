@@ -194,7 +194,7 @@ def inline_small_list(sizemax=5, sizemin=0, immutable=False, nonull=False,
             else:
                 l = getattr(self, attrname)
                 reslist = [None] * (len(l) + 1)
-                i = 0
+                i = -1
                 for i, oldvalue in enumerate(l):
                     reslist[i] = oldvalue
                 reslist[i + 1] = value

@@ -213,7 +213,7 @@ def test_groupi_with_resultI():
 
     from rpyp4sp.sign import Res
     assert isinstance(result, Res)
-    assert result._size_list == 1
+    assert result._get_size_list() == 1
     assert result._get_list(0).eq(objects.NumV.fromstr('5', p4specast.NatT.INSTANCE, p4specast.NumT.NAT))
 
 def test_groupi_empty():
