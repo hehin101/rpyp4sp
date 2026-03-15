@@ -28,7 +28,7 @@ def data_from_log(fuzzer_log):
     return data
 
 def plot_data(data, plot_file):
-    plt.figure("Fuzzer plot", figsize=(16,9))
+    plt.figure("Fuzzer plot", figsize=(10,6))
     hit_x, hit_y = zip(*data["hit"])
     plt.plot(hit_x, hit_y, label="new hits")
     miss_x, miss_y = zip(*data["miss"])
@@ -39,8 +39,8 @@ def plot_data(data, plot_file):
     plt.plot(error_miss_x, error_miss_y, label="new error misses")
     plt.xlabel("Iterations")
     plt.ylabel("Amount")
-    plt.legend(loc='upper left')
-    plt.savefig(plot_file, bbox_inches='tight')
+    plt.legend()
+    plt.savefig(plot_file, format='pdf', bbox_inches='tight')
 
 def main(args):
     assert os.path.exists(args.fuzzer_log)
