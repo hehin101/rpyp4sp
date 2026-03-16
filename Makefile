@@ -34,7 +34,7 @@ _pypy_binary/bin/python:  ## Download a PyPy binary
 
 p4-spectec/p4spectec:
 	if [ ! -d p4-spectec ]; then git clone --recursive https://github.com/kaist-plrg/p4-spectec.git; fi
-	cd p4-spectec && make
+	cd p4-spectec && git checkout c88741c61f && make
 
 .PHONY: ast.json
 ast.json: _pypy_binary/bin/python p4-spectec/p4spectec ## regenerate the AST json file
