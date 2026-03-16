@@ -21,6 +21,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: kaist-plrg/p4-spectec
+          ref: c88741c61f
           path: p4-spectec
           submodules: recursive
           fetch-depth: 1
