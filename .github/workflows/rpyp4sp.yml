@@ -21,10 +21,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: kaist-plrg/p4-spectec
-          ref: c88741c61f
           path: p4-spectec
           submodules: recursive
           fetch-depth: 0
+
+      - name: Checkout fixed commit
+        run: |
+          cd p4-spectec
+          git checkout c88741c61f
 
       - name: Set up OCaml
         uses: ocaml/setup-ocaml@v3
