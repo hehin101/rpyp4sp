@@ -24,7 +24,7 @@ jobs:
           ref: c88741c61f
           path: p4-spectec
           submodules: recursive
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Set up OCaml
         uses: ocaml/setup-ocaml@v3
